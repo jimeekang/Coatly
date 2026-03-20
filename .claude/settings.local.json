@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Notion__notion-fetch",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --skip-git)",
+      "Bash(npx create-next-app@latest \"C:/Users/kjm12/OneDrive/바탕 화면/Project/paintmate-init\" --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --skip-git)",
+      "Bash(printf \"No\\\\nNo\\\\n\")",
+      "Bash(yes \"\")",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e \"const s = require\\(''''stripe''''\\); console.log\\(Object.keys\\(s\\)\\)\")",
+      "Bash(node -e \"const s = require\\(''stripe''\\); console.log\\(s.API_VERSION\\)\")"
+    ]
+  }
+}

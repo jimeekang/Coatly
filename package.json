@@ -9,9 +9,19 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@react-pdf/renderer": "^4.3.2",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.99.3",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.577.0",
     "next": "16.2.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.71.2",
+    "stripe": "^20.4.1",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -20,6 +30,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
