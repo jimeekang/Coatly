@@ -4,3 +4,10 @@
 .env.test.local
 .env.production.local
 .env.*.local
+.next
+.next-dev
+node_modules
+.git
+.vscode
+coverage
+*.tsbuildinfo
