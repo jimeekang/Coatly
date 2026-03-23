@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 import Link from 'next/link';
 import {
   QUOTE_STATUS_LABELS,
@@ -48,10 +48,12 @@ function matchesQuery(quote: QuoteListItem, query: string) {
 export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | QuoteStatus>('all');
+  const deferredQuery = useDeferredValue(query);
+  const normalizedQuery = deferredQuery.trim();
 
   const filtered = quotes.filter((quote) => {
     const matchesStatus = status === 'all' ? true : quote.status === status;
-    const matchesSearch = query.trim() ? matchesQuery(quote, query.trim()) : true;
+    const matchesSearch = normalizedQuery ? matchesQuery(quote, normalizedQuery) : true;
     return matchesStatus && matchesSearch;
   });
 
@@ -241,7 +243,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
             </table>
           </div>
 
-          {(query.trim() || status !== 'all') && (
+          {(normalizedQuery || status !== 'all') && (
             <p className="text-xs text-pm-secondary text-right">
               {filtered.length} of {quotes.length} quotes
             </p>

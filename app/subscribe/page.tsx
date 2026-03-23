@@ -5,7 +5,6 @@ import PricingSection from '@/components/settings/PricingSection';
 import { APP_NAME } from '@/config/constants';
 import { buildSubscriptionSnapshot } from '@/lib/subscription/access';
 import {
-  getProfileWithOnboardingFallback,
   inferOnboardingCompleted,
 } from '@/lib/profile/onboarding';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -13,6 +12,10 @@ import { getStripeClient } from '@/lib/stripe/client';
 import { syncSubscription } from '@/lib/stripe/subscription-sync';
 import { syncSubscriptionCacheForUser } from '@/lib/stripe/subscription-sync';
 import { createServerClient } from '@/lib/supabase/server';
+import {
+  getOnboardingProfileForCurrentUser,
+  requireCurrentUser,
+} from '@/lib/supabase/request-context';
 
 export const metadata: Metadata = { title: 'Choose Plan' };
 
@@ -66,12 +69,7 @@ function getStatusMessage(subscriptionState?: string) {
 }
 
 export default async function SubscribePage({ searchParams }: SubscribePageProps) {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
+  const user = await requireCurrentUser();
 
   const resolvedSearchParams = await searchParams;
   if (resolvedSearchParams?.subscription === 'success') {
@@ -83,10 +81,10 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
   }
 
   const [{ data: profile }, subscription] = await Promise.all([
-    getProfileWithOnboardingFallback(supabase, user.id),
+    getOnboardingProfileForCurrentUser(),
     syncSubscriptionCacheForUser(user.id).catch(async (subscriptionError) => {
       console.error('Failed to reconcile subscription cache for subscribe page', subscriptionError);
-
+      const supabase = await createServerClient();
       const { data } = await supabase
         .from('subscriptions')
         .select(

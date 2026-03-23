@@ -81,23 +81,19 @@ export async function completeOnboarding(data: {
     return { error: error.message };
   }
 
-  const businessAddress = [
-    data.addressLine1.trim(),
-    data.city.trim(),
-    data.state.trim(),
-    data.postcode.trim(),
-  ].join(', ');
-
   const { error: businessError } = await saveBusinessProfileForUser({
     supabase,
     user,
     input: {
       name: data.businessName.trim(),
       abn,
-      address: businessAddress,
+      addressLine1: data.addressLine1.trim(),
+      city: data.city.trim(),
+      state: data.state.trim(),
+      postcode: data.postcode.trim(),
       phone: data.phone.trim(),
       email: user.email ?? '',
-      logo_url: '',
+      logo_url: undefined,
     },
   });
 

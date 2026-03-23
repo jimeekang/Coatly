@@ -3,21 +3,13 @@ import type { Metadata } from 'next';
 import { getQuotes } from '@/app/actions/quotes';
 import { QuoteTable } from '@/components/quotes/QuoteTable';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
-import { createServerClient } from '@/lib/supabase/server';
-import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server';
+import { getMonthlyActiveQuoteUsageForCurrentUser } from '@/lib/supabase/request-context';
 
 export const metadata: Metadata = { title: 'Quotes' };
 
 export default async function QuotesPage() {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const { data, error } = await getQuotes();
-  const usageResult = user
-    ? await getLiveMonthlyActiveQuoteUsageForUser(supabase, user.id)
-    : null;
-  const quoteUsage = usageResult?.usage ?? null;
+  const quoteUsage = await getMonthlyActiveQuoteUsageForCurrentUser();
 
   return (
     <div className="flex flex-col gap-6">

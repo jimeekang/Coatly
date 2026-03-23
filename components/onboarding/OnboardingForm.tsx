@@ -1,11 +1,13 @@
 'use client';
 
-import { useTransition } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useTransition } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Sparkles } from 'lucide-react';
 import { completeOnboarding } from '@/app/actions/profile';
+import { normalizeAbn } from '@/lib/abn-lookup';
+import { useAbnLookup } from '@/hooks/useAbnLookup';
 
 const AU_STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'] as const;
 
@@ -57,7 +59,10 @@ export default function OnboardingForm({ defaultValues }: Props) {
   const {
     register,
     handleSubmit,
+    setValue,
     setError,
+    clearErrors,
+    control,
     formState: { errors },
   } = useForm<FormInput>({
     resolver: zodResolver(schema),
@@ -66,6 +71,48 @@ export default function OnboardingForm({ defaultValues }: Props) {
       createExampleData: false,
     },
   });
+  const abnValue = useWatch({ control, name: 'abn' }) ?? '';
+  const abnLookup = useAbnLookup(abnValue);
+
+  useEffect(() => {
+    if (abnLookup.status !== 'success') return;
+
+    const { data } = abnLookup;
+    setValue('businessName', data.businessName, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    if (data.addressLine1) {
+      setValue('addressLine1', data.addressLine1, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (data.suburb) {
+      setValue('city', data.suburb, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (data.state) {
+      setValue('state', data.state, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+
+    if (data.postcode) {
+      setValue('postcode', data.postcode, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+
+    clearErrors('abn');
+  }, [abnLookup, clearErrors, setValue]);
 
   function onSubmit(data: FormInput) {
     startTransition(async () => {
@@ -112,8 +159,25 @@ export default function OnboardingForm({ defaultValues }: Props) {
             {...register('abn')}
           />
           {errors.abn && <p className={errorClass}>{errors.abn.message as string}</p>}
-          <p className="mt-1.5 text-xs text-pm-secondary">
-            ABN lookup is temporarily unavailable. Enter your ABN manually for now.
+          <p
+            className={`mt-1.5 text-xs ${
+              abnLookup.status === 'error'
+                ? 'text-pm-coral-dark'
+                : abnLookup.status === 'success'
+                  ? 'text-pm-teal-hover'
+                  : 'text-pm-secondary'
+            }`}
+          >
+            {abnLookup.status === 'loading' && 'Looking up ABN details...'}
+            {abnLookup.status === 'success' &&
+              `${
+                abnLookup.data.businessName
+              } loaded. Review any missing address fields before saving.`}
+            {abnLookup.status === 'error' && abnLookup.error}
+            {abnLookup.status === 'idle' &&
+              (normalizeAbn(abnValue).length === 11
+                ? 'ABN looks valid. Details will load shortly.'
+                : 'Enter all 11 ABN digits to auto-fill business details.')}
           </p>
         </div>
 

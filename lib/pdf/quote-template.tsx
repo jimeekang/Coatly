@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Image, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { APP_NAME } from '@/config/constants';
 import type { QuoteDetail } from '@/lib/quotes';
 import { formatABN, formatAUD, formatDate } from '@/utils/format';
@@ -15,7 +15,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 32,
+  },
+  brandBlock: {
+    maxWidth: '58%',
+  },
+  logo: {
+    width: 110,
+    height: 56,
+    objectFit: 'contain',
+    marginBottom: 10,
   },
   businessName: {
     fontSize: 20,
@@ -98,18 +108,24 @@ export function QuoteTemplate({
   abn,
   phone,
   email,
+  logoUrl,
 }: {
   quote: QuoteDetail;
   businessName: string;
   abn: string | null;
   phone: string | null;
   email: string | null;
+  logoUrl: string | null;
 }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <View>
+          <View style={styles.brandBlock}>
+            {logoUrl && (
+              // eslint-disable-next-line jsx-a11y/alt-text
+              <Image src={logoUrl} style={styles.logo} />
+            )}
             <Text style={styles.businessName}>{businessName}</Text>
             {abn && <Text style={styles.label}>ABN: {formatABN(abn)}</Text>}
             {phone && <Text style={styles.label}>{phone}</Text>}

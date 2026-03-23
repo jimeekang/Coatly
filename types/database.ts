@@ -43,36 +43,48 @@ export type Database = {
         Row: {
           abn: string | null
           address: string | null
+          address_line1: string | null
+          city: string | null
           created_at: string
           default_rates: Json
           email: string | null
           logo_url: string | null
           name: string
           phone: string | null
+          postcode: string | null
+          state: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           abn?: string | null
           address?: string | null
+          address_line1?: string | null
+          city?: string | null
           created_at?: string
           default_rates?: Json
           email?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
+          postcode?: string | null
+          state?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           abn?: string | null
           address?: string | null
+          address_line1?: string | null
+          city?: string | null
           created_at?: string
           default_rates?: Json
           email?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
+          postcode?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string
         }

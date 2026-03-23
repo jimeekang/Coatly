@@ -1,27 +1,16 @@
 import { redirect } from 'next/navigation';
 import { BrandLogo } from '@/components/branding/BrandLogo';
-import { createServerClient } from '@/lib/supabase/server';
 import {
-  getProfileWithOnboardingFallback,
   inferOnboardingCompleted,
 } from '@/lib/profile/onboarding';
 import OnboardingForm from '@/components/onboarding/OnboardingForm';
+import { getOnboardingProfileForCurrentUser, requireCurrentUser } from '@/lib/supabase/request-context';
 
 export const metadata = { title: 'Set up your business' };
 
 export default async function OnboardingPage() {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
-  const { data: profile } = await getProfileWithOnboardingFallback(
-    supabase,
-    user.id,
-    true
-  );
+  await requireCurrentUser();
+  const { data: profile } = await getOnboardingProfileForCurrentUser(true);
 
   if (inferOnboardingCompleted(profile)) redirect('/dashboard');
 

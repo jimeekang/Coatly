@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-dev/
 /out/
 
 # production
@@ -22,6 +23,7 @@
 
 # misc
 .DS_Store
+.vscode/
 *.pem
 
 # debug
@@ -37,7 +39,11 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 .env.*.local
+.env.development
+.env.test
+.env.production
 !.env.local.example
+!.env.example
 
 # vercel
 .vercel

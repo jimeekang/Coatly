@@ -1,33 +1,30 @@
 import { redirect } from 'next/navigation';
-import { createServerClient } from '@/lib/supabase/server';
-import {
-  getProfileWithOnboardingFallback,
-  inferOnboardingCompleted,
-} from '@/lib/profile/onboarding';
+import { inferOnboardingCompleted } from '@/lib/profile/onboarding';
 import DashboardSidebar from '@/components/dashboard/Sidebar';
-import { getLiveSubscriptionSnapshotForUser } from '@/lib/subscription/server';
+import {
+  getOnboardingProfileForCurrentUser,
+  getSubscriptionSnapshotForCurrentUser,
+  requireCurrentUser,
+} from '@/lib/supabase/request-context';
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
-  const [{ data: profile }, subscription] = await Promise.all([
-    getProfileWithOnboardingFallback(supabase, user.id),
-    getLiveSubscriptionSnapshotForUser(user.id),
+  const [user, profileResult, subscription] = await Promise.all([
+    requireCurrentUser(),
+    getOnboardingProfileForCurrentUser(),
+    getSubscriptionSnapshotForCurrentUser(),
   ]);
 
-  if (!inferOnboardingCompleted(profile)) redirect('/onboarding');
+  const profile = profileResult.data;
+  const onboardingCompleted = inferOnboardingCompleted(profile);
+
+  if (onboardingCompleted === false) redirect('/onboarding');
   if (!subscription.active) redirect('/subscribe');
 
-  const businessName = profile?.business_name ?? user.email ?? 'My Business';
+  const businessName = profile?.business_name?.trim() || user.email || 'My Business';
 
   return (
     <div className="flex min-h-screen bg-pm-surface">

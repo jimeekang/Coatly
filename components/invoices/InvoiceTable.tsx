@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 import Link from 'next/link';
 import type { InvoiceListItem, InvoiceStatus } from '@/types/invoice';
 import { formatCustomerLocation } from '@/lib/invoices';
@@ -49,10 +49,12 @@ function matchesQuery(invoice: InvoiceListItem, query: string) {
 export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all');
+  const deferredQuery = useDeferredValue(query);
+  const normalizedQuery = deferredQuery.trim();
 
   const filtered = invoices.filter((invoice) => {
     const matchesStatus = status === 'all' ? true : invoice.status === status;
-    const matchesSearch = query.trim() ? matchesQuery(invoice, query.trim()) : true;
+    const matchesSearch = normalizedQuery ? matchesQuery(invoice, normalizedQuery) : true;
     return matchesStatus && matchesSearch;
   });
 
@@ -272,7 +274,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
             </table>
           </div>
 
-          {(query.trim() || status !== 'all') && (
+          {(normalizedQuery || status !== 'all') && (
             <p className="text-right text-xs text-pm-secondary">
               {filtered.length} of {invoices.length} invoices
             </p>

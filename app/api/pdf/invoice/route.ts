@@ -37,13 +37,15 @@ export async function GET(request: NextRequest) {
   // Fetch business profile
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('business_name, abn, phone')
+    .select('business_name, abn, phone, email, logo_url')
     .eq('user_id', user.id)
     .maybeSingle();
   const profile = profileData as {
     business_name: string;
     abn: string | null;
     phone: string | null;
+    email: string | null;
+    logo_url: string | null;
   } | null;
 
   const invoiceData = mapInvoiceDetail(
@@ -109,7 +111,8 @@ export async function GET(request: NextRequest) {
       businessName: profile?.business_name ?? 'My Painting Business',
       abn: profile?.abn ?? null,
       phone: profile?.phone ?? null,
-      email: user.email ?? null,
+      email: profile?.email ?? user.email ?? null,
+      logoUrl: profile?.logo_url ?? null,
     })
   );
 

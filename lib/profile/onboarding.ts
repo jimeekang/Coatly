@@ -17,6 +17,20 @@ function hasMissingOnboardingColumn(error: { message?: string } | null) {
   return error?.message?.includes(MISSING_ONBOARDING_COLUMN) ?? false;
 }
 
+export function getOnboardingCompletedFromHeaders(headerStore: Headers) {
+  const value = headerStore.get('x-paintmate-onboarding-completed');
+
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+
+  return null;
+}
+
+export function getBusinessNameFromHeaders(headerStore: Headers) {
+  const value = headerStore.get('x-paintmate-business-name')?.trim();
+  return value ? value : null;
+}
+
 export function inferOnboardingCompleted(profile: ProfileRecord | null | undefined) {
   if (!profile) return false;
 

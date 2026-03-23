@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import {
@@ -12,14 +13,34 @@ import {
   UserRound,
 } from 'lucide-react';
 import { runWorkspaceAssistant } from '@/app/actions/workspace-assistant';
-import { CustomerForm } from '@/components/customers/CustomerForm';
-import { InvoiceForm, type InvoiceFormQuoteOption } from '@/components/invoices/InvoiceForm';
-import { QuoteForm } from '@/components/quotes/QuoteForm';
+import type {
+  InvoiceFormCustomerOption,
+  InvoiceFormQuoteOption,
+} from '@/components/invoices/InvoiceForm';
 import type { WorkspaceAssistantMatch, WorkspaceAssistantResult } from '@/lib/ai/draft-types';
 import type { QuoteCustomerOption } from '@/lib/quotes';
 import { createInvoice } from '@/app/actions/invoices';
 import { createQuote } from '@/app/actions/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
+
+const CustomerForm = dynamic(
+  () => import('@/components/customers/CustomerForm').then((module) => module.CustomerForm),
+  {
+    loading: () => <AssistantFormLoading />,
+  }
+);
+const QuoteForm = dynamic(
+  () => import('@/components/quotes/QuoteForm').then((module) => module.QuoteForm),
+  {
+    loading: () => <AssistantFormLoading />,
+  }
+);
+const InvoiceForm = dynamic(
+  () => import('@/components/invoices/InvoiceForm').then((module) => module.InvoiceForm),
+  {
+    loading: () => <AssistantFormLoading />,
+  }
+);
 
 const EXAMPLES = [
   'Add Mark Johnson as a new customer in Bondi',
@@ -68,6 +89,14 @@ function formatMatchDate(dateLabel: string | null) {
   return dateLabel;
 }
 
+function AssistantFormLoading() {
+  return (
+    <div className="rounded-2xl border border-pm-border bg-pm-surface px-4 py-6 text-sm text-pm-secondary">
+      Loading draft form...
+    </div>
+  );
+}
+
 export function WorkspaceAssistant({
   customers,
   quotes,
@@ -75,6 +104,7 @@ export function WorkspaceAssistant({
   customers: QuoteCustomerOption[];
   quotes: InvoiceFormQuoteOption[];
 }) {
+  const invoiceCustomers = customers as InvoiceFormCustomerOption[];
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState<WorkspaceAssistantResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -337,7 +367,7 @@ export function WorkspaceAssistant({
               {result.intent === 'create_invoice' && (
                 <InvoiceForm
                   key={`invoice-${formKey}`}
-                  customers={customers}
+                  customers={invoiceCustomers}
                   quotes={quotes}
                   defaultValues={
                     result.invoice

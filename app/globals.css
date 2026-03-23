@@ -31,7 +31,7 @@
 @theme inline {
   --color-background: var(--pm-bg);
   --color-foreground: var(--pm-gray-900);
-  --font-sans: var(--font-inter);
+  --font-sans: "Segoe UI", "Avenir Next", system-ui, sans-serif;
 
   /* Coatly palette — usable as bg-pm-teal etc. */
   --color-pm-teal: #085041;
@@ -53,7 +53,7 @@
 body {
   background: var(--pm-bg);
   color: var(--pm-gray-900);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: "Segoe UI", "Avenir Next", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

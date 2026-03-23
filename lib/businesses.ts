@@ -21,6 +21,10 @@ type BusinessRow = {
   name: string;
   abn: string | null;
   address: string | null;
+  address_line1: string | null;
+  city: string | null;
+  state: string | null;
+  postcode: string | null;
   phone: string | null;
   email: string | null;
   logo_url: string | null;
@@ -29,7 +33,10 @@ type BusinessRow = {
 export type BusinessFormValues = {
   name: string;
   abn: string;
-  address: string;
+  addressLine1: string;
+  city: string;
+  state: string;
+  postcode: string;
   phone: string;
   email: string;
   logoUrl: string;
@@ -42,6 +49,10 @@ type ParsedBusinessInput =
         name: string;
         abn: string | null;
         address: string | null;
+        address_line1: string | null;
+        city: string | null;
+        state: string | null;
+        postcode: string | null;
         phone: string | null;
         email: string | null;
         logo_url: string | null;
@@ -52,16 +63,28 @@ type ParsedBusinessInput =
       error: string;
     };
 
-function formatAddressFromProfile(profile: ProfileFallbackRecord | null) {
-  if (!profile) return '';
+function hasMissingBusinessesColumn(error: { message?: string } | null, column: string) {
+  const message = error?.message ?? '';
 
+  return (
+    message.includes(`businesses.${column}`) ||
+    message.includes(`'${column}' column of 'businesses'`) ||
+    message.includes(`column "${column}" of relation "businesses"`)
+  );
+}
+
+function formatStructuredAddress(input: {
+  addressLine1?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+}) {
   return [
-    profile.address_line1,
-    profile.city,
-    profile.state,
-    profile.postcode,
+    input.addressLine1?.trim() ?? '',
+    input.city?.trim() ?? '',
+    input.state?.trim() ?? '',
+    input.postcode?.trim() ?? '',
   ]
-    .map((value) => value?.trim() ?? '')
     .filter(Boolean)
     .join(', ');
 }
@@ -79,17 +102,23 @@ function toFormValues({
     return {
       name: business.name,
       abn: business.abn ?? '',
-      address: business.address ?? '',
-      phone: business.phone ?? '',
-      email: business.email ?? fallbackEmail ?? '',
-      logoUrl: business.logo_url ?? '',
+      addressLine1: business.address_line1 ?? profile?.address_line1 ?? '',
+      city: business.city ?? profile?.city ?? '',
+      state: business.state ?? profile?.state ?? '',
+      postcode: business.postcode ?? profile?.postcode ?? '',
+      phone: business.phone ?? profile?.phone ?? '',
+      email: business.email ?? profile?.email ?? fallbackEmail ?? '',
+      logoUrl: business.logo_url ?? profile?.logo_url ?? '',
     };
   }
 
   return {
     name: profile?.business_name ?? '',
     abn: profile?.abn ?? '',
-    address: formatAddressFromProfile(profile),
+    addressLine1: profile?.address_line1 ?? '',
+    city: profile?.city ?? '',
+    state: profile?.state ?? '',
+    postcode: profile?.postcode ?? '',
     phone: profile?.phone ?? '',
     email: profile?.email ?? fallbackEmail ?? '',
     logoUrl: profile?.logo_url ?? '',
@@ -118,7 +147,16 @@ function parseBusinessInput(
     data: {
       name: parsed.data.name,
       abn: parsed.data.abn ?? null,
-      address: parsed.data.address ?? null,
+      address: formatStructuredAddress({
+        addressLine1: parsed.data.addressLine1,
+        city: parsed.data.city,
+        state: parsed.data.state,
+        postcode: parsed.data.postcode,
+      }) || null,
+      address_line1: parsed.data.addressLine1 ?? null,
+      city: parsed.data.city ?? null,
+      state: parsed.data.state ?? null,
+      postcode: parsed.data.postcode ?? null,
       phone: parsed.data.phone ?? null,
       email: parsed.data.email ?? fallbackEmail ?? null,
       logo_url: parsed.data.logo_url ?? null,
@@ -131,14 +169,25 @@ export async function getBusinessProfile(
   userId: string,
   fallbackEmail: string | null
 ): Promise<{ data: BusinessFormValues | null; error: string | null }> {
-  const { data: business, error: businessError } = await supabase
+  const businessQuery = supabase
     .from('businesses')
-    .select('user_id, name, abn, address, phone, email, logo_url')
-    .eq('user_id', userId)
-    .maybeSingle();
+    .select(
+      'user_id, name, abn, address, address_line1, city, state, postcode, phone, email, logo_url'
+    )
+    .eq('user_id', userId);
 
-  if (businessError) {
-    return { data: null, error: businessError.message };
+  let businessResult = await businessQuery.maybeSingle();
+
+  if (hasMissingBusinessesColumn(businessResult.error, 'address_line1')) {
+    businessResult = await supabase
+      .from('businesses')
+      .select('user_id, name, abn, address, phone, email, logo_url')
+      .eq('user_id', userId)
+      .maybeSingle();
+  }
+
+  if (businessResult.error) {
+    return { data: null, error: businessResult.error.message };
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -155,7 +204,7 @@ export async function getBusinessProfile(
 
   return {
     data: toFormValues({
-      business: (business as BusinessRow | null) ?? null,
+      business: (businessResult.data as BusinessRow | null) ?? null,
       profile: (profile as ProfileFallbackRecord | null) ?? null,
       fallbackEmail,
     }),
@@ -178,13 +227,32 @@ export async function saveBusinessProfileForUser({
     return { error: parsed.error };
   }
 
-  const { error: businessError } = await supabase.from('businesses').upsert(
-    {
-      user_id: user.id,
-      ...parsed.data,
-    },
-    { onConflict: 'user_id' }
-  );
+  let businessError = (
+    await supabase.from('businesses').upsert(
+      {
+        user_id: user.id,
+        ...parsed.data,
+      },
+      { onConflict: 'user_id' }
+    )
+  ).error;
+
+  if (hasMissingBusinessesColumn(businessError, 'address_line1')) {
+    businessError = (
+      await supabase.from('businesses').upsert(
+        {
+          user_id: user.id,
+          name: parsed.data.name,
+          abn: parsed.data.abn,
+          address: parsed.data.address,
+          phone: parsed.data.phone,
+          email: parsed.data.email,
+          logo_url: parsed.data.logo_url,
+        },
+        { onConflict: 'user_id' }
+      )
+    ).error;
+  }
 
   if (businessError) {
     return { error: businessError.message };
@@ -195,6 +263,10 @@ export async function saveBusinessProfileForUser({
       user_id: user.id,
       business_name: parsed.data.name,
       abn: parsed.data.abn,
+      address_line1: parsed.data.address_line1,
+      city: parsed.data.city,
+      state: parsed.data.state,
+      postcode: parsed.data.postcode,
       phone: parsed.data.phone,
       email: parsed.data.email,
       logo_url: parsed.data.logo_url,

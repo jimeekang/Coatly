@@ -7,6 +7,26 @@ const optionalTrimmedString = z
   .nullable()
   .optional();
 
+const optionalPostcodeString = z
+  .string()
+  .trim()
+  .refine((value) => value === '' || /^\d{4}$/.test(value), {
+    message: 'Postcode must be 4 digits',
+  })
+  .transform((value) => (value === '' ? null : value))
+  .nullable()
+  .optional();
+
+const optionalStateString = z
+  .string()
+  .trim()
+  .refine((value) => value === '' || /^(ACT|NSW|NT|QLD|SA|TAS|VIC|WA)$/.test(value), {
+    message: 'State must be a valid Australian state',
+  })
+  .transform((value) => (value === '' ? null : value))
+  .nullable()
+  .optional();
+
 const optionalUrlString = z
   .string()
   .trim()
@@ -41,7 +61,10 @@ const optionalAbnString = z
 export const businessUpdateSchema = z.object({
   name: z.string().trim().min(1, 'Business name is required'),
   abn: optionalAbnString,
-  address: optionalTrimmedString,
+  addressLine1: optionalTrimmedString,
+  city: optionalTrimmedString,
+  state: optionalStateString,
+  postcode: optionalPostcodeString,
   phone: optionalTrimmedString,
   email: optionalEmailString,
   logo_url: optionalUrlString,

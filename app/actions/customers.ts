@@ -5,6 +5,7 @@ import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
 } from '@/lib/subscription/access';
+import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 
 export interface Customer {
@@ -67,11 +68,7 @@ function buildCustomerPayload(data: CustomerFormData) {
 }
 
 export async function getCustomers(): Promise<{ data: Customer[]; error: string | null }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
   const { data, error } = await supabase
     .from('customers')
@@ -88,11 +85,7 @@ export async function getCustomers(): Promise<{ data: Customer[]; error: string 
 export async function getCustomer(
   id: string
 ): Promise<{ data: Customer | null; error: string | null }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
   const { data, error } = await supabase
     .from('customers')

@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('business_name, abn, phone')
+    .select('business_name, abn, phone, email, logo_url')
     .eq('user_id', user.id)
     .single();
 
@@ -109,7 +109,8 @@ export async function GET(request: NextRequest) {
       businessName: profile?.business_name ?? 'My Painting Business',
       abn: profile?.abn ?? null,
       phone: profile?.phone ?? null,
-      email: user.email ?? null,
+      email: profile?.email ?? user.email ?? null,
+      logoUrl: profile?.logo_url ?? null,
     })
   );
 

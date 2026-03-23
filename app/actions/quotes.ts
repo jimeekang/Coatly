@@ -18,6 +18,7 @@ import {
   getMonthlyActiveQuoteUsageForUser,
   getSubscriptionSnapshotForUser,
 } from '@/lib/subscription/access';
+import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import type { QuoteCreateInput } from '@/lib/supabase/validators';
 
@@ -59,18 +60,13 @@ type QuoteListRow = {
         postcode: string | null;
       }>
     | null;
-  rooms?: Array<{ id: string; surfaces?: Array<{ id: string }> | null }> | null;
 };
 
 export async function getQuoteFormOptions(): Promise<{
   data: { customers: QuoteCustomerOption[] };
   error: string | null;
 }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
   const { data, error } = await supabase
     .from('customers')
@@ -96,16 +92,12 @@ export async function getQuoteFormOptions(): Promise<{
 }
 
 export async function getQuotes(): Promise<{ data: QuoteListItem[]; error: string | null }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
   const { data, error } = await supabase
     .from('quotes')
     .select(
-      'id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, city, state, postcode), rooms:quote_rooms(id, surfaces:quote_room_surfaces(id))'
+      'id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, city, state, postcode)'
     )
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
@@ -136,11 +128,7 @@ export async function getQuote(id: string): Promise<{
   data: QuoteDetail | null;
   error: string | null;
 }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')

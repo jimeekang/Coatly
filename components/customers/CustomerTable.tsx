@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 import Link from 'next/link';
 import type { Customer } from '@/app/actions/customers';
 
@@ -26,9 +26,11 @@ function matchesQuery(c: Customer, q: string): boolean {
 
 export function CustomerTable({ customers }: CustomerTableProps) {
   const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
+  const normalizedQuery = deferredQuery.trim();
 
-  const filtered = query.trim()
-    ? customers.filter((c) => matchesQuery(c, query.trim()))
+  const filtered = normalizedQuery
+    ? customers.filter((c) => matchesQuery(c, normalizedQuery))
     : customers;
 
   return (
@@ -139,7 +141,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
             </table>
           </div>
 
-          {query.trim() && (
+          {normalizedQuery && (
             <p className="text-xs text-pm-secondary text-right">
               {filtered.length} of {customers.length} customers
             </p>

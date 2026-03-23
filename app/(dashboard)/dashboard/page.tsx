@@ -1,9 +1,8 @@
-import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { WorkspaceAssistant } from '@/components/dashboard/WorkspaceAssistant';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import { createServerClient } from '@/lib/supabase/server';
-import { getLiveSubscriptionSnapshotForUser } from '@/lib/subscription/server';
+import { getSubscriptionSnapshotForCurrentUser, requireCurrentUser } from '@/lib/supabase/request-context';
 import { formatAUD } from '@/utils/format';
 
 export const metadata: Metadata = { title: 'Dashboard' };
@@ -17,18 +16,16 @@ function getSydneyYearMonth(date: string | Date) {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
+  const [supabase, user, subscription] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+    getSubscriptionSnapshotForCurrentUser(),
+  ]);
 
   const businessName =
     (user.user_metadata?.business_name as string | undefined) ??
     user.email?.split('@')[0] ??
     'there';
-  const subscription = await getLiveSubscriptionSnapshotForUser(user.id);
 
   const [{ data: customers }, { data: quotes }, { data: invoices }] = await Promise.all([
     supabase

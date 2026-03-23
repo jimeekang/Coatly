@@ -13,6 +13,7 @@ import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
 } from '@/lib/subscription/access';
+import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import type { InvoiceListItem, InvoiceWithCustomer } from '@/types/invoice';
 
@@ -139,11 +140,7 @@ export async function getInvoices(): Promise<{
   data: InvoiceListItem[];
   error: string | null;
 }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
   const { data, error } = await supabase
     .from('invoices')
@@ -183,11 +180,7 @@ export async function getInvoiceFormOptions(): Promise<{
   };
   error: string | null;
 }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
   const [customersResult, quotesResult] = await Promise.all([
     getInvoiceCustomerOptions(supabase, user.id),
@@ -209,11 +202,7 @@ export async function getInvoice(id: string): Promise<{
   data: InvoiceWithCustomer | null;
   error: string | null;
 }> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
   const { data, error } = await supabase
     .from('invoices')

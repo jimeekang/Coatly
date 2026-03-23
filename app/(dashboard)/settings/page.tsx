@@ -30,7 +30,7 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-10">
+    <div className="mx-auto max-w-4xl space-y-10">
       <div>
         <h2 className="text-2xl font-bold text-pm-body">Business Settings</h2>
         <p className="mt-1 text-sm text-pm-secondary">

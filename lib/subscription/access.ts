@@ -4,6 +4,7 @@ import { APP_NAME } from '@/config/constants';
 const SYDNEY_TIME_ZONE = 'Australia/Sydney';
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due']);
 const ACTIVE_QUOTE_STATUSES = ['draft', 'sent', 'accepted'] as const;
+const PROFILE_PLAN_COLUMN = 'subscription_tier';
 
 export const STARTER_ACTIVE_QUOTES_MONTHLY_LIMIT = 10;
 
@@ -66,6 +67,10 @@ type CountQuery = {
   };
 };
 
+function hasMissingProfilesColumn(error: { message?: string } | null, column: string) {
+  return error?.message?.includes(`profiles.${column}`) ?? false;
+}
+
 function getPlanFeatures(plan: PlanId): SubscriptionFeatures {
   return {
     ai: plan === 'pro',
@@ -122,6 +127,13 @@ export function getSubscriptionSnapshotFromHeaders(headerStore: Headers): Subscr
   return snapshot;
 }
 
+export function hasSubscriptionSnapshotHeaders(headerStore: Headers) {
+  return (
+    headerStore.has('x-paintmate-subscription-plan') ||
+    headerStore.has('x-paintmate-subscription-status')
+  );
+}
+
 function getSydneyYearMonth(date: Date) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: SYDNEY_TIME_ZONE,
@@ -168,31 +180,43 @@ async function loadProfilePlan(
   userId: string
 ): Promise<string | null> {
   const profilesTable = supabase.from('profiles') as MaybeSingleSelect;
-
   const profileByUserId = await profilesTable
-    .select('subscription_tier')
+    .select(PROFILE_PLAN_COLUMN)
     .eq('user_id', userId)
     .maybeSingle();
+
+  if (hasMissingProfilesColumn(profileByUserId.error, PROFILE_PLAN_COLUMN)) {
+    return null;
+  }
+
+  if (hasMissingProfilesColumn(profileByUserId.error, 'user_id')) {
+    const profileById = await profilesTable
+      .select(PROFILE_PLAN_COLUMN)
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (
+      hasMissingProfilesColumn(profileById.error, PROFILE_PLAN_COLUMN) ||
+      hasMissingProfilesColumn(profileById.error, 'id')
+    ) {
+      return null;
+    }
+
+    if (profileById.error) {
+      throw new Error(profileById.error.message ?? 'Failed to load profile plan');
+    }
+
+    return profileById.data?.subscription_tier
+      ? String(profileById.data.subscription_tier)
+      : null;
+  }
 
   if (profileByUserId.error) {
     throw new Error(profileByUserId.error.message ?? 'Failed to load profile plan');
   }
 
-  if (profileByUserId.data?.subscription_tier) {
-    return String(profileByUserId.data.subscription_tier);
-  }
-
-  const profileById = await profilesTable
-    .select('subscription_tier')
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (profileById.error) {
-    throw new Error(profileById.error.message ?? 'Failed to load profile plan');
-  }
-
-  return profileById.data?.subscription_tier
-    ? String(profileById.data.subscription_tier)
+  return profileByUserId.data?.subscription_tier
+    ? String(profileByUserId.data.subscription_tier)
     : null;
 }
 
