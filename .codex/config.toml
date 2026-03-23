@@ -1,0 +1,9 @@
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+review_model = "gpt-5.4"
+personality = "pragmatic"
+project_doc_max_bytes = 65536
+
+[agents]
+max_threads = 6
+max_depth = 1

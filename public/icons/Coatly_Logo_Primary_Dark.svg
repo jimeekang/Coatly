@@ -1,0 +1,9 @@
+<svg width="320" height="72" viewBox="0 0 320 72" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0,6)">
+    <rect x="4" y="8" width="52" height="52" rx="12" fill="#0AAE8F"/>
+    <path d="M16 40 Q16 24 30 20 Q44 16 44 28 L44 32 Q44 40 36 42 L24 46 Q16 48 16 40Z" fill="#1a1a1a" opacity="0.9"/>
+    <path d="M20 38 Q20 28 30 25 Q38 22 38 30 L38 33 Q38 38 33 40 L26 42 Q20 44 20 38Z" fill="#0AAE8F" opacity="0.5"/>
+    <path d="M24 36 Q24 30 30 28 Q34 27 34 31 L34 33 Q34 36 31 37 L28 38 Q24 39 24 36Z" fill="#fff" opacity="0.3"/>
+  </g>
+  <text x="70" y="48" font-family="Plus Jakarta Sans, sans-serif" font-weight="700" font-size="38" fill="#ffffff" letter-spacing="-1">Coatly</text>
+</svg>

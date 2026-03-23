@@ -1,26 +1,99 @@
 @import "tailwindcss";
 
+/* ── Coatly Design Tokens ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Teal */
+  --pm-teal-900: #085041;
+  --pm-teal-700: #0F6E56;
+  --pm-teal-100: #E1F5EE;
+  --pm-teal-400: #1D9E75;
+  --pm-teal-300: #5DCAA5;
+
+  /* Coral */
+  --pm-coral-400: #D85A30;
+  --pm-coral-100: #FAECE7;
+  --pm-coral-800: #712B13;
+  --pm-coral-600: #993C1D;
+
+  /* Neutral / Warm Gray */
+  --pm-gray-900: #2C2C2A;
+  --pm-gray-600: #5F5E5A;
+  --pm-gray-300: #D3D1C7;
+  --pm-gray-100: #F1EFE8;
+
+  /* Semantic */
+  --pm-success: #1D9E75;
+  --pm-warning: #EF9F27;
+  --pm-danger: #D85A30;
+  --pm-bg: #ffffff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-background: var(--pm-bg);
+  --color-foreground: var(--pm-gray-900);
+  --font-sans: var(--font-inter);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Coatly palette — usable as bg-pm-teal etc. */
+  --color-pm-teal: #085041;
+  --color-pm-teal-hover: #0F6E56;
+  --color-pm-teal-light: #E1F5EE;
+  --color-pm-teal-mid: #1D9E75;
+  --color-pm-teal-pale: #5DCAA5;
+  --color-pm-coral: #D85A30;
+  --color-pm-coral-light: #FAECE7;
+  --color-pm-coral-dark: #712B13;
+  --color-pm-coral-mid: #993C1D;
+  --color-pm-body: #2C2C2A;
+  --color-pm-secondary: #5F5E5A;
+  --color-pm-border: #D3D1C7;
+  --color-pm-surface: #F1EFE8;
+  --color-pm-warning: #EF9F27;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--pm-bg);
+  color: var(--pm-gray-900);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Reusable form field style ── */
+.field {
+  width: 100%;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid var(--pm-gray-300);
+  background: white;
+  padding: 0 16px;
+  font-size: 16px;
+  color: var(--pm-gray-900);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field:focus {
+  border-color: var(--pm-teal-400);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-teal-300) 30%, transparent);
+}
+
+.field::placeholder {
+  color: var(--pm-gray-600);
+  opacity: 0.7;
+}
+
+.field-error {
+  border-color: var(--pm-coral-400);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--pm-gray-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--pm-gray-300);
+  border-radius: 3px;
 }

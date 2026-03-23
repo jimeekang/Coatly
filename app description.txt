@@ -1,0 +1,7 @@
+템플렛 있으면 프롬프트 입력시 ai가 자동으로 입력해줌
+Invoice, quote, subscription, profile, customer
+quotation 템플릿 / 이거 강조해서 넣어줘, 이거 이런 설명 넣어줘. 이런식으로 아이템 작성 가능
+스케쥴링 기능
+메일 발송 기능
+
+estimate calculator? 

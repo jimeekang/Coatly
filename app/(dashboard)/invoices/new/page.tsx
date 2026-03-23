@@ -1,12 +1,78 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getInvoiceFormOptions } from '@/app/actions/invoices';
+import { InvoiceCreateScreen } from '@/components/invoices/InvoiceCreateScreen';
+import { createServerClient } from '@/lib/supabase/server';
+import { getLiveSubscriptionSnapshotForUser } from '@/lib/subscription/server';
 
 export const metadata: Metadata = { title: 'New Invoice' };
 
-export default function NewInvoicePage() {
+export default async function NewInvoicePage() {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const subscription = user
+    ? await getLiveSubscriptionSnapshotForUser(user.id)
+    : null;
+  const { data, error } = await getInvoiceFormOptions();
+  const customers = data.customers;
+  const quotes = data.quotes;
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">New Invoice</h2>
-      <p className="text-gray-500">Invoice creation coming in Phase 1.</p>
+    <div className="mx-auto max-w-lg px-4 pt-4">
+      <div className="mb-6 flex items-center gap-3">
+        <Link
+          href="/invoices"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors hover:bg-pm-teal-light hover:text-pm-teal"
+          aria-label="Back to invoices"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </Link>
+        <div>
+          <h1 className="text-[22px] font-semibold text-pm-body">New Invoice</h1>
+          <p className="mt-0.5 text-sm text-pm-secondary">
+            Save an invoice against a customer and optionally link the quote.
+          </p>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
+          <p className="text-sm text-pm-coral-dark">{error}</p>
+        </div>
+      ) : customers.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-pm-border bg-pm-surface px-5 py-8">
+          <h2 className="text-base font-semibold text-pm-body">Add a customer first</h2>
+          <p className="mt-1 text-sm text-pm-secondary">
+            Invoices are linked to a saved customer in your workspace.
+          </p>
+          <Link
+            href="/customers/new"
+            className="mt-4 inline-flex h-11 items-center rounded-lg bg-pm-teal px-4 text-sm font-medium text-white transition-colors hover:bg-pm-teal-hover"
+          >
+            Go to New Customer
+          </Link>
+        </div>
+      ) : (
+        <InvoiceCreateScreen
+          customers={customers}
+          quotes={quotes}
+          canUseAI={subscription?.features.ai ?? false}
+        />
+      )}
     </div>
   );
 }

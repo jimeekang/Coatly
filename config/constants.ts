@@ -1,5 +1,7 @@
-export const APP_NAME = 'PaintMate';
+export const APP_NAME = 'Coatly';
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+export const APP_DESCRIPTION =
+  'Job management for Australian painters — quote, invoice, and manage customers faster.';
 
 /** Australian GST rate */
 export const GST_RATE = 0.1;

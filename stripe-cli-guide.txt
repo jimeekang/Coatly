@@ -1,0 +1,191 @@
+========================================
+  Stripe CLI 사용법 가이드 (Coatly)
+========================================
+
+실행 파일 위치: C:\Users\kjm12\stripe-cli\stripe.exe
+이하 "stripe" = C:\Users\kjm12\stripe-cli\stripe.exe 로 대체해서 실행
+
+
+----------------------------------------
+1. 로그인
+----------------------------------------
+
+stripe login
+
+  - 브라우저가 열리면 Stripe 계정으로 인증
+  - 완료되면 터미널에 "Done! Logged in as ..." 출력
+
+
+----------------------------------------
+2. 로컬 Webhook 포워딩 (개발 필수)
+----------------------------------------
+
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+
+  - 실행하면 whsec_xxx 출력 → .env.local의 STRIPE_WEBHOOK_SECRET에 입력
+  - 결제 이벤트가 발생할 때마다 로컬 서버로 전달
+  - 개발 서버(npm run dev)와 함께 항상 켜두어야 함
+  - 종료: Ctrl + C
+  - 기존 `/api/webhooks/stripe` 경로도 계속 동작하지만, 앞으로는 `/api/stripe/webhook`를 기준으로 사용
+
+
+----------------------------------------
+3. 상품(Product) 생성
+----------------------------------------
+
+# Starter 상품
+stripe products create --name="Coatly Starter"
+
+# Pro 상품
+stripe products create --name="Coatly Pro"
+
+  - 출력된 "id": "prod_xxx" 값을 아래 가격 생성 시 사용
+
+
+----------------------------------------
+4. 가격(Price) 생성
+----------------------------------------
+
+Hosted billing portal로 플랜 변경을 처리하려면:
+- 모든 구독용 가격은 recurring price여야 함
+- "Pro -> Starter를 갱신 시점에 반영"하려면 Starter와 Pro 가격이 같은 Stripe product 아래에 있어야 함
+- Starter/Pro를 서로 다른 product로 만들면 업그레이드는 가능해도, 갱신 시점 다운그레이드는 포털에서 제한될 수 있음
+
+## Starter 월간 (A$39/mo)
+stripe prices create \
+  --unit-amount=3900 \
+  --currency=aud \
+  --recurring[interval]=month \
+  --product=prod_xxx
+
+## Starter 연간 (A$450/yr)
+stripe prices create \
+  --unit-amount=45000 \
+  --currency=aud \
+  --recurring[interval]=year \
+  --product=prod_xxx
+
+## Pro 월간 (A$59/mo)
+stripe prices create \
+  --unit-amount=5900 \
+  --currency=aud \
+  --recurring[interval]=month \
+  --product=prod_yyy
+
+## Pro 연간 (A$680/yr)
+stripe prices create \
+  --unit-amount=68000 \
+  --currency=aud \
+  --recurring[interval]=year \
+  --product=prod_yyy
+
+  ※ unit-amount 단위: cents (A$39 = 3900)
+  ※ 출력된 "id": "price_xxx" 를 .env.local에 입력
+
+
+----------------------------------------
+5. .env.local 입력 항목 정리
+----------------------------------------
+
+STRIPE_SECRET_KEY=rk_test_...           ← Restricted Key (대시보드 → API Keys)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...  ← 대시보드 → API Keys
+STRIPE_WEBHOOK_SECRET=whsec_...         ← stripe listen 실행 시 출력
+
+STRIPE_PRICE_STARTER_MONTHLY=price_...  ← Starter 월간 price id
+STRIPE_PRICE_STARTER_ANNUAL=price_...   ← Starter 연간 price id
+STRIPE_PRICE_PRO_MONTHLY=price_...      ← Pro 월간 price id
+STRIPE_PRICE_PRO_ANNUAL=price_...       ← Pro 연간 price id
+
+
+----------------------------------------
+6. 이벤트 조회 & 재전송
+----------------------------------------
+
+# 최근 이벤트 목록
+stripe events list
+
+# 특정 이벤트 재전송 (webhook 테스트 실패 시)
+stripe events resend evt_xxx
+
+
+----------------------------------------
+6-1. Stripe Dashboard Webhook 엔드포인트 등록 (배포 환경)
+----------------------------------------
+
+테스트 모드 Dashboard → Developers → Webhooks → Add destination
+
+Endpoint URL:
+https://<your-domain>/api/stripe/webhook
+
+권장 이벤트:
+- checkout.session.completed
+- customer.subscription.created
+- customer.subscription.updated
+- customer.subscription.deleted
+- invoice.payment_failed
+
+등록 후:
+- Signing secret (whsec_...) 값을 복사
+- 배포 환경 변수 `STRIPE_WEBHOOK_SECRET`에 저장
+- 재배포 후 Stripe에서 "Send test webhook"으로 확인
+
+CLI로 생성하려면:
+stripe webhook_endpoints create ^
+  --url "https://<your-domain>/api/stripe/webhook" ^
+  --enabled-events checkout.session.completed ^
+  --enabled-events customer.subscription.created ^
+  --enabled-events customer.subscription.updated ^
+  --enabled-events customer.subscription.deleted ^
+  --enabled-events invoice.payment_failed
+
+주의:
+- `http://localhost:3000/api/stripe/webhook` 는 Dashboard 엔드포인트로 등록하지 말 것
+- 로컬 개발은 Dashboard 등록 대신 `stripe listen --forward-to localhost:3000/api/stripe/webhook` 사용
+
+
+----------------------------------------
+7. 가격 목록 확인
+----------------------------------------
+
+stripe prices list
+
+  - 생성된 price_xxx 목록 조회
+  - --limit=20 옵션으로 더 많이 표시 가능
+
+
+----------------------------------------
+8. 테스트 카드 번호
+----------------------------------------
+
+성공:           4242 4242 4242 4242
+인증 필요:      4000 0025 0000 3155
+잔액 부족:      4000 0000 0000 9995
+
+만료일: 미래 아무 날짜 (예: 12/34)
+CVC:   아무 3자리 숫자
+주소:  아무 값
+
+
+----------------------------------------
+9. 개발 시 기본 실행 순서
+----------------------------------------
+
+터미널 A:  npm run dev
+터미널 B:  stripe listen --forward-to localhost:3000/api/stripe/webhook
+
+브라우저:  http://localhost:3000/settings
+           → 플랜 선택 → 테스트 카드 결제
+           → Supabase subscriptions 테이블 확인
+
+
+----------------------------------------
+10. Stripe 대시보드 주요 링크 (Test 모드)
+----------------------------------------
+
+API Keys:   https://dashboard.stripe.com/test/apikeys
+Webhooks:   https://dashboard.stripe.com/test/webhooks
+Products:   https://dashboard.stripe.com/test/products
+Events:     https://dashboard.stripe.com/test/events
+Customers:  https://dashboard.stripe.com/test/customers
+
+========================================

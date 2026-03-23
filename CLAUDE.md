@@ -1,4 +1,4 @@
-# PaintMate — Project Context
+# Coatly — Project Context
 
 ## Stack
 
@@ -112,5 +112,5 @@ GPS tracking · Team scheduling · Supplier integrations · Native app · Multi-
   → /release "feat: 기능명"
 ```
 
-Agent 파일 위치: `.claude/agents/`
+Agent 파일 위치: `.agents/skills/`
 Skill 파일 위치: `.claude/skills/`

@@ -1,14 +1,38 @@
-import type { Metadata } from 'next';
+import LoginPageClient from '@/components/auth/LoginPageClient';
 
-export const metadata: Metadata = { title: 'Login' };
+type LoginPageProps = {
+  searchParams?: Promise<{
+    error?: string;
+    message?: string;
+  }>;
+};
 
-export default function LoginPage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center p-8">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-blue-800 mb-6">Sign in to PaintMate</h1>
-        <p className="text-gray-500 text-sm">Login form coming in Phase 0 Week 2.</p>
-      </div>
-    </main>
+function getInitialError(error?: string, message?: string): string | null {
+  if (message) {
+    return message;
+  }
+
+  if (error === 'auth_callback_failed') {
+    return 'Google sign-in could not be completed. Please try again.';
+  }
+
+  if (error === 'oauth_callback_failed') {
+    return 'Google sign-in could not be completed.';
+  }
+
+  if (error === 'access_denied') {
+    return 'Google sign-in was cancelled.';
+  }
+
+  return null;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const initialError = getInitialError(
+    resolvedSearchParams?.error,
+    resolvedSearchParams?.message
   );
+
+  return <LoginPageClient initialError={initialError} />;
 }

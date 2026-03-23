@@ -1,21 +1,37 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getInvoices } from '@/app/actions/invoices';
+import { InvoiceTable } from '@/components/invoices/InvoiceTable';
 
 export const metadata: Metadata = { title: 'Invoices' };
 
-export default function InvoicesPage() {
+export default async function InvoicesPage() {
+  const { data: invoices, error } = await getInvoices();
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Invoices</h2>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-[28px] font-bold text-pm-body">Invoices</h1>
+          {invoices.length > 0 && (
+            <p className="mt-0.5 text-sm text-pm-secondary">{invoices.length} total</p>
+          )}
+        </div>
         <Link
           href="/invoices/new"
-          className="rounded-lg bg-blue-700 px-4 py-2 text-sm text-white font-medium hover:bg-blue-800 transition-colors"
+          className="rounded-lg bg-pm-teal px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-pm-teal-hover"
         >
-          New Invoice
+          + New Invoice
         </Link>
       </div>
-      <p className="text-gray-500">Invoice list coming in Phase 1.</p>
+
+      {error ? (
+        <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
+          <p className="text-sm text-pm-coral-dark">{error}</p>
+        </div>
+      ) : (
+        <InvoiceTable invoices={invoices} />
+      )}
     </div>
   );
 }
