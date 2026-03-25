@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js';
+import { createSignedStorageUrl } from '@/lib/supabase/storage';
 import { businessUpdateSchema, type BusinessUpdateInput } from '@/lib/supabase/validators';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -40,6 +41,16 @@ export type BusinessFormValues = {
   phone: string;
   email: string;
   logoUrl: string;
+  logoPreviewUrl: string;
+};
+
+export type BusinessDocumentBranding = {
+  name: string;
+  abn: string | null;
+  phone: string | null;
+  email: string | null;
+  logoPath: string | null;
+  logoUrl: string | null;
 };
 
 type ParsedBusinessInput =
@@ -93,10 +104,14 @@ function toFormValues({
   business,
   profile,
   fallbackEmail,
+  logoUrl,
+  logoPreviewUrl,
 }: {
   business: BusinessRow | null;
   profile: ProfileFallbackRecord | null;
   fallbackEmail: string | null;
+  logoUrl: string;
+  logoPreviewUrl: string;
 }): BusinessFormValues {
   if (business) {
     return {
@@ -108,7 +123,8 @@ function toFormValues({
       postcode: business.postcode ?? profile?.postcode ?? '',
       phone: business.phone ?? profile?.phone ?? '',
       email: business.email ?? profile?.email ?? fallbackEmail ?? '',
-      logoUrl: business.logo_url ?? profile?.logo_url ?? '',
+      logoUrl,
+      logoPreviewUrl,
     };
   }
 
@@ -121,7 +137,8 @@ function toFormValues({
     postcode: profile?.postcode ?? '',
     phone: profile?.phone ?? '',
     email: profile?.email ?? fallbackEmail ?? '',
-    logoUrl: profile?.logo_url ?? '',
+    logoUrl,
+    logoPreviewUrl,
   };
 }
 
@@ -164,11 +181,7 @@ function parseBusinessInput(
   };
 }
 
-export async function getBusinessProfile(
-  supabase: AppSupabaseClient,
-  userId: string,
-  fallbackEmail: string | null
-): Promise<{ data: BusinessFormValues | null; error: string | null }> {
+async function loadBusinessRecords(supabase: AppSupabaseClient, userId: string) {
   const businessQuery = supabase
     .from('businesses')
     .select(
@@ -187,7 +200,11 @@ export async function getBusinessProfile(
   }
 
   if (businessResult.error) {
-    return { data: null, error: businessResult.error.message };
+    return {
+      business: null,
+      profile: null,
+      error: businessResult.error.message,
+    };
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -199,14 +216,94 @@ export async function getBusinessProfile(
     .maybeSingle();
 
   if (profileError) {
-    return { data: null, error: profileError.message };
+    return {
+      business: null,
+      profile: null,
+      error: profileError.message,
+    };
   }
 
   return {
+    business: (businessResult.data as BusinessRow | null) ?? null,
+    profile: (profile as ProfileFallbackRecord | null) ?? null,
+    error: null,
+  };
+}
+
+function mergeBusinessIdentity({
+  business,
+  profile,
+  fallbackEmail,
+}: {
+  business: BusinessRow | null;
+  profile: ProfileFallbackRecord | null;
+  fallbackEmail: string | null;
+}) {
+  return {
+    name: business?.name ?? profile?.business_name ?? '',
+    abn: business?.abn ?? profile?.abn ?? null,
+    phone: business?.phone ?? profile?.phone ?? null,
+    email: business?.email ?? profile?.email ?? fallbackEmail ?? null,
+    logoPath: business?.logo_url ?? profile?.logo_url ?? null,
+  };
+}
+
+export async function getBusinessDocumentBranding(
+  supabase: AppSupabaseClient,
+  userId: string,
+  fallbackEmail: string | null
+): Promise<{ data: BusinessDocumentBranding | null; error: string | null }> {
+  const result = await loadBusinessRecords(supabase, userId);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  const merged = mergeBusinessIdentity({
+    business: result.business,
+    profile: result.profile,
+    fallbackEmail,
+  });
+
+  return {
+    data: {
+      name: merged.name,
+      abn: merged.abn,
+      phone: merged.phone,
+      email: merged.email,
+      logoPath: merged.logoPath,
+      logoUrl: await createSignedStorageUrl(supabase, merged.logoPath),
+    },
+    error: null,
+  };
+}
+
+export async function getBusinessProfile(
+  supabase: AppSupabaseClient,
+  userId: string,
+  fallbackEmail: string | null
+): Promise<{ data: BusinessFormValues | null; error: string | null }> {
+  const result = await loadBusinessRecords(supabase, userId);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  const merged = mergeBusinessIdentity({
+    business: result.business,
+    profile: result.profile,
+    fallbackEmail,
+  });
+  const logoUrl = merged.logoPath ?? '';
+  const logoPreviewUrl = (await createSignedStorageUrl(supabase, logoUrl)) ?? '';
+
+  return {
     data: toFormValues({
-      business: (businessResult.data as BusinessRow | null) ?? null,
-      profile: (profile as ProfileFallbackRecord | null) ?? null,
+      business: result.business,
+      profile: result.profile,
       fallbackEmail,
+      logoUrl,
+      logoPreviewUrl,
     }),
     error: null,
   };

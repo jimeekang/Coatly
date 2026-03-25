@@ -6,6 +6,7 @@
 - `backend_supabase` -> Supabase schema, RLS-safe queries, server actions, API routes, data validation
 - `app_tester_reviewer` -> review findings, regression checks, targeted tests, and validation
 - `data_analyst` -> SQL, reporting logic, metric definitions, and business analysis
+- `vercel_deploy` -> Vercel login checks, preview/production deployments, alias updates, and release verification
 
 ## Shared Handoff Template
 
@@ -69,6 +70,18 @@ Constraints: Use only fields and behavior that exist today
 Deliverable: SQL, metric definition, concise summary, or reporting recommendation
 Validation: Cross-check assumptions against schema or code
 Out of scope: Shipping product code unless explicitly requested
+```
+
+### `vercel_deploy`
+
+```text
+Objective: Deploy or verify the app on Vercel.
+Scope: [preview/production deploy, login state, project linkage, alias/domain action, deployment debugging]
+Inputs: [target environment, desired URL behavior, login status, relevant deployment error]
+Constraints: ask before login, confirm target environment, avoid accidental production impact, use Vercel CLI
+Deliverable: deployment result, deployment URL, alias update, or exact blocker identified
+Validation: Confirm login state first, check deployment output, and verify the resulting URL
+Out of scope: Unrelated application feature work
 ```
 
 ## Recommended Flow

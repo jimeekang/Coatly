@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidStorageReference } from '@/lib/supabase/storage';
 
 const optionalTrimmedString = z
   .string()
@@ -27,10 +28,12 @@ const optionalStateString = z
   .nullable()
   .optional();
 
-const optionalUrlString = z
+const optionalLogoReferenceString = z
   .string()
   .trim()
-  .url('Logo URL must be a valid URL')
+  .refine((value) => isValidStorageReference(value), {
+    message: 'Logo reference is invalid',
+  })
   .transform((value) => (value === '' ? null : value))
   .or(z.literal(''))
   .transform((value) => (value === '' ? null : value))
@@ -67,7 +70,7 @@ export const businessUpdateSchema = z.object({
   postcode: optionalPostcodeString,
   phone: optionalTrimmedString,
   email: optionalEmailString,
-  logo_url: optionalUrlString,
+  logo_url: optionalLogoReferenceString,
 });
 
 export type BusinessUpdateInput = z.input<typeof businessUpdateSchema>;

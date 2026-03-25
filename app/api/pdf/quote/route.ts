@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createServerClient } from '@/lib/supabase/server';
+import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import {
   buildQuoteCustomerAddress,
   mapQuoteDetail,
   type QuoteCoatingType,
   type QuoteSurfaceType,
 } from '@/lib/quotes';
+import { getBusinessDocumentBranding } from '@/lib/businesses';
 import { QuoteTemplate } from '@/lib/pdf/quote-template';
 
 export async function GET(request: NextRequest) {
@@ -57,11 +59,15 @@ export async function GET(request: NextRequest) {
         .in('room_id', roomIds)
     : { data: [] };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('business_name, abn, phone, email, logo_url')
-    .eq('user_id', user.id)
-    .single();
+  const { data: businessBranding } = await getBusinessDocumentBranding(
+    supabase,
+    user.id,
+    user.email ?? null
+  );
+  const logoUrl = await createStorageObjectDataUrl(
+    supabase,
+    businessBranding?.logoPath ?? null
+  );
 
   const quoteData = mapQuoteDetail({
     ...quote,
@@ -106,11 +112,11 @@ export async function GET(request: NextRequest) {
   const pdfBuffer = await renderToBuffer(
     QuoteTemplate({
       quote: quoteData,
-      businessName: profile?.business_name ?? 'My Painting Business',
-      abn: profile?.abn ?? null,
-      phone: profile?.phone ?? null,
-      email: profile?.email ?? user.email ?? null,
-      logoUrl: profile?.logo_url ?? null,
+      businessName: businessBranding?.name || 'My Painting Business',
+      abn: businessBranding?.abn ?? null,
+      phone: businessBranding?.phone ?? null,
+      email: businessBranding?.email ?? user.email ?? null,
+      logoUrl,
     })
   );
 

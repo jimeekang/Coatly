@@ -33,6 +33,7 @@ export default function BusinessProfileForm({
   const [isPending, startTransition] = useTransition();
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState(defaultValues.logoPreviewUrl);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const {
@@ -58,7 +59,7 @@ export default function BusinessProfileForm({
     },
   });
   const abnValue = useWatch({ control, name: 'abn' }) ?? '';
-  const logoUrl = useWatch({ control, name: 'logo_url' }) ?? '';
+  const logoValue = useWatch({ control, name: 'logo_url' }) ?? '';
   const abnLookup = useAbnLookup(abnValue);
 
   useEffect(() => {
@@ -117,17 +118,22 @@ export default function BusinessProfileForm({
         body: formData,
       });
 
-      const payload = (await response.json()) as { url?: string; error?: string };
+      const payload = (await response.json()) as {
+        path?: string;
+        signedUrl?: string;
+        error?: string;
+      };
 
-      if (!response.ok || !payload.url) {
+      if (!response.ok || !payload.path || !payload.signedUrl) {
         setLogoUploadError(payload.error ?? 'Logo upload failed.');
         return;
       }
 
-      setValue('logo_url', payload.url, {
+      setValue('logo_url', payload.path, {
         shouldDirty: true,
         shouldValidate: true,
       });
+      setLogoPreviewUrl(payload.signedUrl);
     } catch (error) {
       setLogoUploadError(
         error instanceof Error ? error.message : 'Logo upload failed.'
@@ -376,9 +382,9 @@ export default function BusinessProfileForm({
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-pm-border bg-white">
-              {logoUrl ? (
+              {logoPreviewUrl ? (
                 <img
-                  src={logoUrl}
+                  src={logoPreviewUrl}
                   alt="Business logo preview"
                   className="h-full w-full object-contain"
                 />
@@ -389,23 +395,24 @@ export default function BusinessProfileForm({
 
             <div className="space-y-1">
               <p className="text-sm font-medium text-pm-body">
-                {logoUrl ? 'Logo ready to save' : 'No logo uploaded yet'}
+                {logoValue ? 'Logo ready to save' : 'No logo uploaded yet'}
               </p>
               <p className="text-xs text-pm-secondary">
-                {logoUrl
+                {logoValue
                   ? 'Save business details to apply this logo across your documents.'
                   : 'Best results come from a square or wide image with a transparent background.'}
               </p>
-              {logoUrl && (
+              {logoValue && (
                 <button
                   type="button"
                   disabled={isPending || isUploadingLogo}
-                  onClick={() =>
+                  onClick={() => {
+                    setLogoPreviewUrl('');
                     setValue('logo_url', '', {
                       shouldDirty: true,
                       shouldValidate: true,
-                    })
-                  }
+                    });
+                  }}
                   className="text-xs font-semibold text-pm-teal transition-colors hover:text-pm-teal-hover"
                 >
                   Remove logo

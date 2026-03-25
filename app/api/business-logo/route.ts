@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
+import { BUSINESS_LOGO_BUCKET } from '@/lib/supabase/storage';
 
-const BUSINESS_LOGO_BUCKET = 'business-assets';
 const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg']);
 const MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024;
 
@@ -19,7 +19,7 @@ async function ensureBusinessLogoBucket() {
   }
 
   const createResult = await admin.storage.createBucket(BUSINESS_LOGO_BUCKET, {
-    public: true,
+    public: false,
     fileSizeLimit: `${MAX_FILE_SIZE_BYTES}`,
     allowedMimeTypes: [...ALLOWED_MIME_TYPES],
   });
@@ -82,13 +82,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
 
-    const {
-      data: { publicUrl },
-    } = admin.storage.from(BUSINESS_LOGO_BUCKET).getPublicUrl(filePath);
+    const { data: signedUrlData, error: signedUrlError } = await admin.storage
+      .from(BUSINESS_LOGO_BUCKET)
+      .createSignedUrl(filePath, 60 * 60);
+
+    if (signedUrlError) {
+      return NextResponse.json({ error: signedUrlError.message }, { status: 500 });
+    }
 
     return NextResponse.json({
-      url: publicUrl,
-      path: filePath,
+      path: `${BUSINESS_LOGO_BUCKET}/${filePath}`,
+      signedUrl: signedUrlData.signedUrl,
     });
   } catch (error) {
     return NextResponse.json(

@@ -3,6 +3,8 @@ import type { NextRequest } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { mapInvoiceDetail } from '@/lib/invoices';
 import { createServerClient } from '@/lib/supabase/server';
+import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
+import { getBusinessDocumentBranding } from '@/lib/businesses';
 import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
 
 export async function GET(request: NextRequest) {
@@ -35,18 +37,15 @@ export async function GET(request: NextRequest) {
   }
 
   // Fetch business profile
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('business_name, abn, phone, email, logo_url')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  const profile = profileData as {
-    business_name: string;
-    abn: string | null;
-    phone: string | null;
-    email: string | null;
-    logo_url: string | null;
-  } | null;
+  const { data: businessBranding } = await getBusinessDocumentBranding(
+    supabase,
+    user.id,
+    user.email ?? null
+  );
+  const logoUrl = await createStorageObjectDataUrl(
+    supabase,
+    businessBranding?.logoPath ?? null
+  );
 
   const invoiceData = mapInvoiceDetail(
     invoice as {
@@ -108,11 +107,11 @@ export async function GET(request: NextRequest) {
   const pdfBuffer = await renderToBuffer(
     InvoiceTemplate({
       invoice: invoiceData,
-      businessName: profile?.business_name ?? 'My Painting Business',
-      abn: profile?.abn ?? null,
-      phone: profile?.phone ?? null,
-      email: profile?.email ?? user.email ?? null,
-      logoUrl: profile?.logo_url ?? null,
+      businessName: businessBranding?.name || 'My Painting Business',
+      abn: businessBranding?.abn ?? null,
+      phone: businessBranding?.phone ?? null,
+      email: businessBranding?.email ?? user.email ?? null,
+      logoUrl,
     })
   );
 

@@ -17,26 +17,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 32,
+    marginBottom: 28,
   },
   brandBlock: {
-    maxWidth: '58%',
+    maxWidth: '60%',
   },
   logo: {
-    width: 110,
-    height: 56,
+    width: 132,
+    height: 68,
     objectFit: 'contain',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   businessName: {
-    fontSize: 20,
+    fontSize: 19,
     fontFamily: 'Helvetica-Bold',
-    color: '#1e40af',
+    color: '#0f172a',
+    marginBottom: 8,
   },
-  label: {
-    fontSize: 8,
+  metaLine: {
+    fontSize: 9,
     color: '#6b7280',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   invoiceTitle: {
     fontSize: 16,
@@ -140,17 +141,19 @@ export function InvoiceTemplate({
               <Image src={logoUrl} style={styles.logo} />
             )}
             <Text style={styles.businessName}>{businessName}</Text>
-            {abn && <Text style={styles.label}>ABN: {formatABN(abn)}</Text>}
-            {phone && <Text style={styles.label}>{phone}</Text>}
-            {email && <Text style={styles.label}>{email}</Text>}
+            {phone && <Text style={styles.metaLine}>Phone: {phone}</Text>}
+            {email && <Text style={styles.metaLine}>Email: {email}</Text>}
+            {abn && <Text style={styles.metaLine}>ABN: {formatABN(abn)}</Text>}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.invoiceTitle}>TAX INVOICE</Text>
-            <Text style={styles.label}>Invoice No: {invoice.invoice_number}</Text>
-            <Text style={styles.label}>Issue Date: {formatDate(invoice.created_at)}</Text>
-            <Text style={styles.label}>Due Date: {formatDate(invoice.due_date)}</Text>
+            <Text style={styles.metaLine}>Invoice No: {invoice.invoice_number}</Text>
+            <Text style={styles.metaLine}>Issue Date: {formatDate(invoice.created_at)}</Text>
+            <Text style={styles.metaLine}>Due Date: {formatDate(invoice.due_date)}</Text>
             {isPaid && invoice.paid_at && (
-              <Text style={[styles.label, { color: '#16a34a', fontFamily: 'Helvetica-Bold' }]}>
+              <Text
+                style={[styles.metaLine, { color: '#16a34a', fontFamily: 'Helvetica-Bold' }]}
+              >
                 PAID {formatDate(invoice.paid_at)}
               </Text>
             )}
@@ -161,10 +164,10 @@ export function InvoiceTemplate({
           <Text style={styles.sectionTitle}>Bill To</Text>
           <Text>{invoice.customer.name}</Text>
           {formatCustomerAddress(invoice.customer) && (
-            <Text style={styles.label}>{formatCustomerAddress(invoice.customer)}</Text>
+            <Text style={styles.metaLine}>{formatCustomerAddress(invoice.customer)}</Text>
           )}
-          {invoice.customer.email && <Text style={styles.label}>{invoice.customer.email}</Text>}
-          {invoice.customer.phone && <Text style={styles.label}>{invoice.customer.phone}</Text>}
+          {invoice.customer.email && <Text style={styles.metaLine}>{invoice.customer.email}</Text>}
+          {invoice.customer.phone && <Text style={styles.metaLine}>{invoice.customer.phone}</Text>}
         </View>
 
         <View style={styles.section}>

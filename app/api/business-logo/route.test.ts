@@ -6,16 +6,16 @@ const {
   getBucketMock,
   createBucketMock,
   uploadMock,
-  getPublicUrlMock,
+  createSignedUrlMock,
   fromMock,
 } = vi.hoisted(() => {
   const getBucket = vi.fn();
   const createBucket = vi.fn();
   const upload = vi.fn();
-  const getPublicUrl = vi.fn();
+  const createSignedUrl = vi.fn();
   const from = vi.fn(() => ({
     upload,
-    getPublicUrl,
+    createSignedUrl,
   }));
 
   return {
@@ -24,7 +24,7 @@ const {
     getBucketMock: getBucket,
     createBucketMock: createBucket,
     uploadMock: upload,
-    getPublicUrlMock: getPublicUrl,
+    createSignedUrlMock: createSignedUrl,
     fromMock: from,
   };
 });
@@ -61,13 +61,17 @@ describe('/api/business-logo', () => {
     });
 
     getBucketMock.mockResolvedValue({
-      data: { id: 'business-assets' },
+      data: { id: 'logos' },
       error: null,
     });
-    createBucketMock.mockResolvedValue({ data: { name: 'business-assets' }, error: null });
+    createBucketMock.mockResolvedValue({ data: { name: 'logos' }, error: null });
     uploadMock.mockResolvedValue({ data: { path: 'user-1/logo-1700000000000.png' }, error: null });
-    getPublicUrlMock.mockReturnValue({
-      data: { publicUrl: 'https://example.supabase.co/storage/v1/object/public/business-assets/user-1/logo-1700000000000.png' },
+    createSignedUrlMock.mockResolvedValue({
+      data: {
+        signedUrl:
+          'https://example.supabase.co/storage/v1/object/sign/logos/user-1/logo-1700000000000.png?token=test',
+      },
+      error: null,
     });
 
     createAdminClientMock.mockReturnValue({
@@ -100,9 +104,9 @@ describe('/api/business-logo', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(getBucketMock).toHaveBeenCalledWith('business-assets');
+    expect(getBucketMock).toHaveBeenCalledWith('logos');
     expect(createBucketMock).not.toHaveBeenCalled();
-    expect(fromMock).toHaveBeenCalledWith('business-assets');
+    expect(fromMock).toHaveBeenCalledWith('logos');
     expect(uploadMock).toHaveBeenCalledWith(
       'user-1/logo-1700000000000.png',
       expect.any(Uint8Array),
@@ -112,9 +116,14 @@ describe('/api/business-logo', () => {
         upsert: true,
       }
     );
+    expect(createSignedUrlMock).toHaveBeenCalledWith(
+      'user-1/logo-1700000000000.png',
+      3600
+    );
     await expect(response.json()).resolves.toEqual({
-      url: 'https://example.supabase.co/storage/v1/object/public/business-assets/user-1/logo-1700000000000.png',
-      path: 'user-1/logo-1700000000000.png',
+      path: 'logos/user-1/logo-1700000000000.png',
+      signedUrl:
+        'https://example.supabase.co/storage/v1/object/sign/logos/user-1/logo-1700000000000.png?token=test',
     });
   });
 
@@ -129,8 +138,8 @@ describe('/api/business-logo', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(createBucketMock).toHaveBeenCalledWith('business-assets', {
-      public: true,
+    expect(createBucketMock).toHaveBeenCalledWith('logos', {
+      public: false,
       fileSizeLimit: '3145728',
       allowedMimeTypes: ['image/png', 'image/jpeg'],
     });

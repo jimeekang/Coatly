@@ -104,6 +104,7 @@ GPS tracking · Team scheduling · Supplier integrations · Native app · Multi-
 | Backend & Data API | `backend_supabase` | Supabase queries, RLS-safe data access, server actions, API routes, onboarding/profile schema migrations |
 | App Tester & Reviewer | `app_tester_reviewer` | Bug reproduction, code review, tests, regression checks |
 | Data Analyst | `data_analyst` | SQL, metrics, reporting logic, business and product analysis |
+| Vercel Deployment | `vercel_deploy` | Vercel login 확인, preview/production 배포, alias/domain 조정, 배포 검증 |
 
 Subagent definitions live under `.codex/agents/`.
 Shared handoff templates live in `.codex/AGENTS.md`.
