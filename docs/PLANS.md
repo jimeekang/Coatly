@@ -77,6 +77,15 @@
 
 ## Phase 2 — AI & Advanced Features (예정)
 
+> **시작 조건:** Phase 1 이월 항목(Jobs/Schedule/Materials) 완료 OR 별도 결정
+> **예상 시작:** 2026-Q2
+
+### Phase 1 이월 항목
+- [ ] Jobs 페이지 구현 (현재 placeholder — TD-004)
+- [ ] Schedule 페이지 구현 (현재 placeholder — TD-004)
+- [ ] Materials & Services 페이지 구현 (현재 placeholder — TD-004)
+
+### 신규 기능
 - [ ] AI quote drafting (Gemini integration — 기반 코드 존재)
 - [ ] Workspace Assistant (AI chat — 기반 코드 존재)
 - [ ] Smart pricing suggestions
