@@ -1,0 +1,39 @@
+# Coatly Design System — LLM Reference
+
+## UI Framework
+- shadcn/ui (Radix UI primitives + Tailwind CSS)
+- components/ui/ 파일 직접 수정 금지
+- 새 프리미티브 필요 시: npx shadcn@latest add [component]
+
+## Tailwind Usage
+- Mobile-first: 기본이 모바일, sm:/md:/lg:로 확장
+- 터치 타겟: h-12 이상 (48px), 최소 h-11 (44px)
+- 간격: gap-4 (16px) 기본, gap-2 (8px) 최소
+- 텍스트: text-base (16px) 본문, text-lg~2xl 제목
+
+## Color Tokens (CSS Variables)
+- --primary, --primary-foreground
+- --secondary, --secondary-foreground
+- --destructive, --destructive-foreground
+- --muted, --muted-foreground
+- --accent, --accent-foreground
+- --card, --card-foreground
+- --popover, --popover-foreground
+
+## Component Import Pattern
+```tsx
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+```
+
+## Available Primitives (components/ui/)
+button, input, card, select, label, textarea, badge, separator, skeleton, dialog, dropdown-menu
+
+## Coatly-Specific Patterns
+- 금액 표시: formatAUD() from @/lib/utils
+- 숫자 입력: inputMode="numeric" pattern="[0-9]*"
+- CTA 버튼: className="h-14 w-full text-base" (하단 고정)
+- 로딩: <Skeleton className="h-20 w-full" />
+- 에러: <p className="text-destructive text-sm">{error}</p>

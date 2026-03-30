@@ -14,7 +14,7 @@ description: >
 2. 변경 유형 분류 (신규 기능 / 버그픽스 / 스키마 변경 / 의존성 업데이트)
 3. Notion PRD 페이지에서 관련 섹션 찾기
 4. 업데이트 내용 작성 → Notion API 호출
-5. CLAUDE.md의 `## Current Phase` 체크리스트 업데이트
+5. `docs/PLANS.md`의 Phase 체크리스트 업데이트
 
 ## Notion 페이지 ID
 - PRD 메인: `3289ccac-a102-819f-a0e4-ce578509d683`

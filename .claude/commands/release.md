@@ -19,7 +19,7 @@ allowed-tools: Read, Write, Bash(git*), Bash(vercel*)
 4. git push origin main
 5. Vercel 배포 확인 (자동 트리거 또는 vercel --prod)
 6. Notion PRD 업데이트 (doc-sync skill 지침 따르기)
-7. CLAUDE.md의 Current Phase 체크리스트 업데이트
+7. docs/PLANS.md의 Phase 체크리스트 업데이트
 
 ## 커밋 메시지 규칙
 
@@ -41,4 +41,4 @@ allowed-tools: Read, Write, Bash(git*), Bash(vercel*)
 커밋: [hash] [message]
 배포: [Vercel URL]
 Notion: [업데이트된 항목]
-CLAUDE.md: [체크된 항목]
+docs/PLANS.md: [체크된 항목]

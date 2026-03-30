@@ -58,6 +58,6 @@ create policy "users can only see their own {table}"
 ```
 
 ## 제약
-- `supabase` CLI 없으면 현재 CLAUDE.md의 schema 섹션 기준으로 생성
+- `supabase` CLI 없으면 `docs/generated/db-schema.md` 기준으로 생성
 - 절대 `any` 타입 사용 금지
 - join 타입은 inline으로 정의 (별도 파일 X)
