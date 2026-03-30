@@ -8,7 +8,7 @@
 | Phase | 이름 | 상태 | 기간 |
 |-------|------|------|------|
 | 0 | Foundation | ✅ 완료 | Week 1–2 |
-| 1 | Core Features | ✅ 거의 완료 | Week 3–6 |
+| 1 | Core Features | ✅ 완료 | Week 3–6 |
 | 2 | AI & Advanced | 🔜 예정 | TBD |
 | 3 | Integrations | 📋 계획 | TBD |
 
@@ -17,14 +17,14 @@
 ## Phase 0 — Foundation ✅
 
 - [x] Project init + folder structure
-- [x] Supabase schema + RLS policies (13 migrations)
+- [x] Supabase schema + RLS policies (15 migrations)
 - [x] Auth flows (email/password + onboarding)
 - [x] Stripe subscription setup (checkout, portal, webhook)
 - [x] Vercel deployment
 
 ---
 
-## Phase 1 — Core Features ✅
+## Phase 1 — Core Features ✅ (2026-03 완료)
 
 ### Quote Builder
 - [x] Quote CRUD (create, read, update, delete)
@@ -58,14 +58,20 @@
 - [x] Cancellation & renewal flow
 - [x] Feature gating (Starter vs Pro)
 
+### Interior Estimate & Quick Quote
+- [x] InteriorEstimateBuilder 컴포넌트
+- [x] QuickQuoteBuilder 컴포넌트
+- [x] Rate Settings (price-rates 페이지 + PriceRatesForm)
+- [x] interior-estimates, rate-settings, quick-quote-mapper 라이브러리
+
 ### Testing
 - [x] Vitest + Testing Library setup
-- [x] 20 test files (actions, API routes, components, utils)
+- [x] 20+ test files (actions, API routes, components, utils)
 
-### Remaining
-- [ ] Jobs page (placeholder exists)
-- [ ] Schedule page (placeholder exists)
-- [ ] Materials & Services page (placeholder exists)
+### Phase 2로 이월 (placeholder 상태)
+- [ ] Jobs 페이지
+- [ ] Schedule 페이지
+- [ ] Materials & Services 페이지
 
 ---
 

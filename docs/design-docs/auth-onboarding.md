@@ -1,5 +1,7 @@
 # Design Doc: Auth & Onboarding
 
+> 사용자 스토리·수용 기준 → [`product-specs/new-user-onboarding.md`](../product-specs/new-user-onboarding.md)
+
 ## Overview
 
 이메일/비밀번호 인증 + 신규 사용자 온보딩 플로우.

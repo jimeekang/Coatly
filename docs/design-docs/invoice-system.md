@@ -1,5 +1,7 @@
 # Design Doc: Invoice System
 
+> 사용자 스토리·수용 기준 → [`product-specs/invoice-workflow.md`](../product-specs/invoice-workflow.md)
+
 ## Overview
 
 견적서를 기반으로 청구서를 생성하거나, 독립적으로 청구서를 작성하는 시스템.

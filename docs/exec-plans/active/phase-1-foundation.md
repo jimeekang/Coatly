@@ -1,6 +1,6 @@
 # Execution Plan: Phase 1 — Core Features
 
-> Status: ✅ 거의 완료 (2026-03 기준)
+> Status: ✅ 완료 (2026-03-30 기준)
 
 ## 목표
 
@@ -48,7 +48,7 @@
 
 ## DB Migrations 현황
 
-13개 마이그레이션 완료 (001~013):
+15개 마이그레이션 완료 (001~015):
 - 001: 초기 스키마
 - 002: RLS 정책
 - 003: DB 함수
@@ -62,3 +62,5 @@
 - 011: 모호한 FK 제거
 - 012: 구독 취소 상태
 - 013: 비공개 비즈니스 스토리지 버킷
+- 014: Quote estimate items & context 컬럼
+- 015: Quote manual adjustment 컬럼

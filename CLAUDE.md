@@ -50,26 +50,9 @@ const { data } = await supabase.from('quotes').select('*');
 | UI/컴포넌트 구현 | `.claude/skills/ui-spec/SKILL.md` |
 | PRD/Notion 문서 업데이트 | `.claude/skills/doc-sync/SKILL.md` |
 
-## Agents (slash command로 호출)
+## Agents
 
-| Command | 설명 |
-|---------|------|
-| `/plan [기능]` | 작업 분해 + 라우팅 결정 |
-| `/build [기능]` | UI + backend + DB 통합 구현 |
-| `/quality [파일]` | 테스트 + 리뷰 + 타입 검증 |
-| `/release [msg]` | git + vercel + 문서 동기화 |
-
-### Codex Subagents
-
-| Role | Agent | 용도 |
-|------|-------|------|
-| Frontend UI/UX | `frontend_uiux` | 화면, 모바일 UX, 폼 |
-| Backend & Data | `backend_supabase` | Supabase, RLS, 서버 액션 |
-| Tester & Reviewer | `app_tester_reviewer` | 테스트, 코드 리뷰 |
-| Data Analyst | `data_analyst` | SQL, 메트릭, 분석 |
-| Deployment | `vercel_deploy` | Vercel 배포, 도메인 |
-
-핸드오프 템플릿: `.codex/AGENTS.md`
+Slash command 및 Codex Subagent 정의 → [`AGENTS.md`](./AGENTS.md)
 
 ### 일반적인 작업 흐름
 
@@ -88,4 +71,4 @@ GPS tracking · Team scheduling · Supplier integrations · Native app · Multi-
 
 - Skill 파일: `.claude/skills/`
 - Slash command: `.claude/commands/`
-- Codex subagent: `.codex/AGENTS.md`
+- Codex subagent 상세: `AGENTS.md` → `.codex/AGENTS.md`

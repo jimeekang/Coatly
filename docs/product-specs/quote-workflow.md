@@ -1,5 +1,7 @@
 # Spec: Quote Workflow
 
+> 기술 구현 상세(데이터 모델, 계산 로직) → [`design-docs/quote-builder.md`](../design-docs/quote-builder.md)
+
 ## User Story
 
 > 페인터로서, 현장에서 방별로 면적을 입력하면 자동으로 가격이 계산되고, 전문적인 PDF 견적서를 고객에게 보내고 싶다.

@@ -1,5 +1,7 @@
 # Design Doc: Subscription & Billing
 
+> 사용자 관점 플랜 스펙 → [`product-specs/subscription-plans.md`](../product-specs/subscription-plans.md)
+
 ## Overview
 
 Stripe를 통한 구독 관리. Checkout → Webhook → DB 동기화.

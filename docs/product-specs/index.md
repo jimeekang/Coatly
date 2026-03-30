@@ -1,5 +1,8 @@
 # Product Specs — Index
 
+> **이 디렉토리의 역할**: "무엇(What) & 누가(Who)" — 사용자 스토리, 수용 기준, 플로우
+> 기술 구현 상세("왜/어떻게")는 → [`docs/design-docs/`](../design-docs/index.md)
+
 기능별 제품 스펙(PRD) 목록. 각 문서는 사용자 스토리, 수용 기준, 엣지케이스를 정의한다.
 
 | 스펙 | Phase | 상태 |

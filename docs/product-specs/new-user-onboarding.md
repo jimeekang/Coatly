@@ -1,5 +1,7 @@
 # Spec: New User Onboarding
 
+> 인증 미들웨어·ABN autofill 구현 상세 → [`design-docs/auth-onboarding.md`](../design-docs/auth-onboarding.md)
+
 ## User Story
 
 > 호주 페인터로서, 가입 후 사업자 정보를 입력하면 바로 견적서를 만들 수 있도록 안내받고 싶다.

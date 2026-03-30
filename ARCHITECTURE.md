@@ -45,8 +45,9 @@ coatly/
 │
 ├── components/
 │   ├── ui/                       # shadcn/ui primitives (do not modify)
-│   ├── quotes/                   # Quote-specific components
+│   ├── quotes/                   # Quote-specific components (incl. InteriorEstimateBuilder, QuickQuoteBuilder)
 │   ├── invoices/                 # Invoice-specific components
+│   ├── rates/                    # Price rate form components
 │   └── pdf/                      # PDF rendering components
 │
 ├── lib/
@@ -76,11 +77,15 @@ coatly/
 │   ├── quotes.ts                 # Quote business logic (calculations, mapping)
 │   ├── invoices.ts               # Invoice business logic
 │   ├── businesses.ts             # Business profile query (incl. PDF branding)
+│   ├── interior-estimates.ts     # Interior estimate calculation logic
+│   ├── rate-settings.ts          # User rate settings (price-rates page)
+│   ├── quick-quote-mapper.ts     # QuickQuote → full Quote mapping
 │   └── abn-lookup.ts             # ABR web service integration
 │
 ├── config/
 │   ├── plans.ts                  # Starter / Pro plan definitions and feature lists
 │   ├── paint-rates.ts            # Default paint rate table (surface × coating type)
+│   ├── interior-estimate-anchors.ts  # Anchor rates for interior estimate builder
 │   └── constants.ts              # App constants: GST_RATE, QUOTE_VALID_DAYS, etc.
 │
 ├── types/
@@ -95,7 +100,7 @@ coatly/
 ├── scripts/
 │   └── seed-demo-data.ts         # Demo data seed script (dev/demo only)
 └── supabase/
-    └── migrations/               # SQL migration files (001 – 013)
+    └── migrations/               # SQL migration files (001 – 015)
 ```
 
 ---
@@ -488,8 +493,9 @@ coatly/
 │
 ├── components/
 │   ├── ui/                       # shadcn/ui 기본 프리미티브 (수정 금지)
-│   ├── quotes/                   # 견적서 전용 컴포넌트
+│   ├── quotes/                   # 견적서 전용 컴포넌트 (InteriorEstimateBuilder, QuickQuoteBuilder 포함)
 │   ├── invoices/                 # 청구서 전용 컴포넌트
+│   ├── rates/                    # 단가 설정 폼 컴포넌트
 │   └── pdf/                      # PDF 렌더링 컴포넌트
 │
 ├── lib/
@@ -519,11 +525,15 @@ coatly/
 │   ├── quotes.ts                 # 견적서 비즈니스 로직 (계산, 매핑)
 │   ├── invoices.ts               # 청구서 비즈니스 로직
 │   ├── businesses.ts             # 사업자 프로필 조회 (PDF 브랜딩 포함)
+│   ├── interior-estimates.ts     # 인테리어 견적 계산 로직
+│   ├── rate-settings.ts          # 사용자 단가 설정 (price-rates 페이지)
+│   ├── quick-quote-mapper.ts     # QuickQuote → 견적서 변환
 │   └── abn-lookup.ts             # ABR 웹서비스 연동
 │
 ├── config/
 │   ├── plans.ts                  # Starter / Pro 플랜 정의 및 기능 목록
 │   ├── paint-rates.ts            # 기본 도색 단가표 (면 종류 × 코팅 방식)
+│   ├── interior-estimate-anchors.ts  # 인테리어 견적 빌더 기준 단가
 │   └── constants.ts              # GST_RATE, QUOTE_VALID_DAYS 등 앱 상수
 │
 ├── types/
@@ -538,7 +548,7 @@ coatly/
 ├── scripts/
 │   └── seed-demo-data.ts         # 개발/데모 환경 테스트 데이터 시드
 └── supabase/
-    └── migrations/               # SQL 마이그레이션 파일 (001 ~ 013)
+    └── migrations/               # SQL 마이그레이션 파일 (001 ~ 015)
 ```
 
 ---

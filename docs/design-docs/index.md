@@ -1,5 +1,8 @@
 # Design Documents — Index
 
+> **이 디렉토리의 역할**: "왜(Why) & 어떻게(How)" — 기술 결정, 데이터 모델, 설계 대안, 구현 패턴
+> 사용자 관점의 "무엇(What)" 스펙은 → [`docs/product-specs/`](../product-specs/index.md)
+
 기능별 설계 문서 목록. 각 문서는 해당 기능의 설계 결정, 데이터 흐름, 엣지케이스를 기록한다.
 
 | 문서 | 상태 | 관련 Phase |

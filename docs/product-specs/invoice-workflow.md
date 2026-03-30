@@ -1,5 +1,7 @@
 # Spec: Invoice Workflow
 
+> 기술 구현 상세(데이터 모델, 상태 워크플로우) → [`design-docs/invoice-system.md`](../design-docs/invoice-system.md)
+
 ## User Story
 
 > 페인터로서, 견적서를 승인받은 후 청구서를 생성하고, 고객의 결제 상태를 추적하고 싶다.
@@ -32,5 +34,5 @@
 
 ## Payment Terms
 
-기본: 14일 (`profiles.default_payment_terms`)
-사용자 커스터마이즈 가능
+기본: 14일 (`profiles.default_payment_terms` — integer, 일 단위)
+사용자가 Settings에서 커스터마이즈 가능

@@ -1,5 +1,7 @@
 # Design Doc: Quote Builder
 
+> 사용자 스토리·수용 기준 → [`product-specs/quote-workflow.md`](../product-specs/quote-workflow.md)
+
 ## Overview
 
 페인터가 현장에서 방별로 도색 면적을 입력하면 자동으로 가격을 계산하고 PDF 견적서를 생성하는 시스템.

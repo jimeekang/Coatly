@@ -1,5 +1,7 @@
 # Spec: Subscription Plans
 
+> Stripe 연동 구현 상세(Webhook, Checkout 플로우) → [`design-docs/subscription-billing.md`](../design-docs/subscription-billing.md)
+
 ## Plans
 
 | | Starter | Pro |
