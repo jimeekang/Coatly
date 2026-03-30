@@ -1,0 +1,71 @@
+# Supabase RLS Patterns — LLM Reference
+
+## Coatly RLS Model
+- 모든 최상위 테이블: user_id = auth.uid()
+- 자식 테이블: EXISTS 서브쿼리로 부모 체인 확인
+- subscriptions: SELECT만 허용 (INSERT/UPDATE는 service_role)
+
+## Standard RLS Policy Template
+```sql
+-- 최상위 테이블 (user_id 직접 보유)
+ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "{table}_select_own" ON {table}
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "{table}_insert_own" ON {table}
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "{table}_update_own" ON {table}
+  FOR UPDATE USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "{table}_delete_own" ON {table}
+  FOR DELETE USING (user_id = auth.uid());
+```
+
+## Child Table RLS (no user_id column)
+```sql
+-- quote_rooms → quotes 체인
+CREATE POLICY "quote_rooms_select" ON quote_rooms
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM quotes
+      WHERE quotes.id = quote_rooms.quote_id
+      AND quotes.user_id = auth.uid()
+    )
+  );
+```
+
+## Supabase Client Types
+```ts
+// Browser client (클라이언트 컴포넌트)
+import { createBrowserClient } from '@/lib/supabase/client'
+
+// Server client (서버 컴포넌트, 서버 액션)
+import { createServerClient } from '@/lib/supabase/server'
+
+// Admin client (webhook, 번호생성만)
+import { createAdminClient } from '@/lib/supabase/admin'
+// ⚠️ RLS 우회 — server-only import guard 적용
+```
+
+## Query Pattern
+```ts
+// Server Component — RLS가 자동 필터링
+const supabase = await createServerClient()
+const { data: { user } } = await supabase.auth.getUser()
+if (!user) redirect('/login')
+
+const { data } = await supabase.from('quotes').select('*')
+// user_id 필터 자동 적용됨 (RLS)
+```
+
+## Migration File Naming
+supabase/migrations/{timestamp}_{description}.sql
+예: 20240101000001_add_quotes_table.sql
+
+## Type Generation
+```bash
+supabase gen types typescript --local > types/database.ts
+```

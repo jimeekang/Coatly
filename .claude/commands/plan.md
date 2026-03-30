@@ -8,7 +8,7 @@ allowed-tools: Read
 
 아래 순서로 진행:
 
-1. CLAUDE.md를 읽고 Current Phase와 Out of Scope를 확인
+1. CLAUDE.md를 읽고 Out of Scope 확인, docs/PLANS.md에서 Current Phase 확인
 2. 요청이 Out of Scope면 거절하고 이유 설명
 3. 요청을 독립적인 subtask로 분해
 4. 각 subtask마다 어떤 커맨드를 실행해야 하는지 출력
