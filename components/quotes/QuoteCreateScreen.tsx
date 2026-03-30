@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useTransition } from 'react';
 import { generateAIDraft } from '@/app/actions/ai-drafts';
@@ -8,13 +8,16 @@ import { QuoteForm } from '@/components/quotes/QuoteForm';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import type { AIQuoteDraft } from '@/lib/ai/draft-types';
 import type { QuoteCustomerOption } from '@/lib/quotes';
+import type { UserRateSettings } from '@/lib/rate-settings';
 
 export function QuoteCreateScreen({
   customers,
   canUseAI,
+  rateSettings,
 }: {
   customers: QuoteCustomerOption[];
   canUseAI: boolean;
+  rateSettings?: UserRateSettings | null;
 }) {
   const [prompt, setPrompt] = useState('');
   const [draft, setDraft] = useState<AIQuoteDraft | null>(null);
@@ -84,6 +87,7 @@ export function QuoteCreateScreen({
       <QuoteForm
         key={resetKey}
         customers={customers}
+        rateSettings={rateSettings}
         defaultValues={
           draft
             ? {
@@ -105,3 +109,4 @@ export function QuoteCreateScreen({
     </>
   );
 }
+

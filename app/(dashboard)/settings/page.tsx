@@ -15,11 +15,7 @@ export default async function SettingsPage() {
 
   if (!user) redirect('/login');
 
-  const { data: business, error } = await getBusinessProfile(
-    supabase,
-    user.id,
-    user.email ?? null
-  );
+  const { data: business, error } = await getBusinessProfile(supabase, user.id, user.email ?? null);
 
   if (error || !business) {
     return (
@@ -39,6 +35,25 @@ export default async function SettingsPage() {
       </div>
 
       <BusinessProfileForm defaultValues={business} />
+
+      <hr className="border-pm-border" />
+
+      <section className="rounded-2xl border border-pm-border bg-white p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-pm-body">Price Rates</h3>
+            <p className="mt-1 text-sm text-pm-secondary">
+              Configure your default rates for surfaces, doors and windows — and control which options appear in the estimator.
+            </p>
+          </div>
+          <Link
+            href="/price-rates"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-pm-teal px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
+          >
+            Manage rates
+          </Link>
+        </div>
+      </section>
 
       <hr className="border-pm-border" />
 

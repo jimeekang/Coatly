@@ -204,7 +204,10 @@ describe('WorkspaceAssistant', () => {
       ).toBeInTheDocument()
     );
 
-    expect(screen.getByLabelText('Room Name')).toHaveValue('Living Room');
+    // Form renders with AI-drafted title pre-filled (advanced mode due to pre-filled rooms)
+    await waitFor(() =>
+      expect(screen.getByLabelText('Title')).toHaveValue('Living room and ceiling repaint')
+    );
     expect(screen.getByText('Customer match was inferred from Mark Johnson.')).toBeInTheDocument();
   });
 });

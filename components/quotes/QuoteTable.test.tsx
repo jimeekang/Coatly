@@ -19,6 +19,7 @@ describe('QuoteTable', () => {
             subtotal_cents: 100000,
             gst_cents: 10000,
             total_cents: 110000,
+            estimate_category: 'manual',
             created_at: '2026-03-01T00:00:00.000Z',
             updated_at: '2026-03-01T00:00:00.000Z',
             customer: {
@@ -44,6 +45,7 @@ describe('QuoteTable', () => {
             subtotal_cents: 200000,
             gst_cents: 20000,
             total_cents: 220000,
+            estimate_category: 'interior',
             created_at: '2026-03-02T00:00:00.000Z',
             updated_at: '2026-03-02T00:00:00.000Z',
             customer: {

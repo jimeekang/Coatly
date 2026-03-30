@@ -382,6 +382,59 @@ export type Database = {
           },
         ]
       }
+      quote_estimate_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          label: string
+          metadata: Json
+          quantity: number
+          quote_id: string
+          sort_order: number
+          total_cents: number
+          unit: string
+          unit_price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          label: string
+          metadata?: Json
+          quantity?: number
+          quote_id: string
+          sort_order?: number
+          total_cents: number
+          unit: string
+          unit_price_cents: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string
+          metadata?: Json
+          quantity?: number
+          quote_id?: string
+          sort_order?: number
+          total_cents?: number
+          unit?: string
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_estimate_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_rooms: {
         Row: {
           created_at: string
@@ -433,12 +486,17 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string
+          estimate_category: string
+          estimate_context: Json
+          estimate_mode: string | null
           gst_cents: number
           id: string
           internal_notes: string | null
           labour_margin_percent: number
           material_margin_percent: number
           notes: string | null
+          pricing_snapshot: Json
+          property_type: string | null
           quote_number: string
           status: string
           subtotal_cents: number
@@ -452,12 +510,17 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_id: string
+          estimate_category?: string
+          estimate_context?: Json
+          estimate_mode?: string | null
           gst_cents?: number
           id?: string
           internal_notes?: string | null
           labour_margin_percent?: number
           material_margin_percent?: number
           notes?: string | null
+          pricing_snapshot?: Json
+          property_type?: string | null
           quote_number: string
           status?: string
           subtotal_cents?: number
@@ -471,12 +534,17 @@ export type Database = {
         Update: {
           created_at?: string
           customer_id?: string
+          estimate_category?: string
+          estimate_context?: Json
+          estimate_mode?: string | null
           gst_cents?: number
           id?: string
           internal_notes?: string | null
           labour_margin_percent?: number
           material_margin_percent?: number
           notes?: string | null
+          pricing_snapshot?: Json
+          property_type?: string | null
           quote_number?: string
           status?: string
           subtotal_cents?: number

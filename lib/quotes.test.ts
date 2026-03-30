@@ -78,8 +78,10 @@ describe('lib/quotes', () => {
         tier: 'better',
         labour_margin_percent: 10,
         material_margin_percent: 5,
+        manual_adjustment_cents: 0,
         notes: 'Client-facing note',
         internal_notes: 'Internal note',
+        interior_estimate: null,
         rooms: [
           {
             name: 'Living Room',
@@ -99,6 +101,139 @@ describe('lib/quotes', () => {
           },
         ],
       },
+    });
+  });
+
+  it('normalizes an interior estimate payload for anchor pricing', () => {
+    const parsed = parseQuoteCreateInput({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: '  Apartment repaint  ',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      tier: 'better',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: '  Client-facing note  ',
+      internal_notes: '  Internal note  ',
+      rooms: [],
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'trim'],
+        property_details: {
+          apartment_type: '2_bedroom_standard',
+        },
+        rooms: [
+          {
+            name: '  Living Room  ',
+            anchor_room_type: 'Living Room',
+            room_type: 'interior',
+            include_walls: true,
+            include_ceiling: false,
+            include_trim: true,
+          },
+        ],
+        opening_items: [
+          {
+            opening_type: 'door',
+            paint_system: 'oil_2coat',
+            quantity: 2,
+            door_type: 'standard',
+            door_scope: 'door_and_frame',
+          },
+        ],
+        trim_items: [
+          {
+            trim_type: 'skirting',
+            paint_system: 'water_3coat_white_finish',
+            quantity: 12.5,
+          },
+        ],
+      },
+    });
+
+    expect(parsed).toEqual({
+      success: true,
+      data: {
+        customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        title: 'Apartment repaint',
+        status: 'draft',
+        valid_until: '2026-04-10',
+        tier: 'better',
+        labour_margin_percent: 10,
+        material_margin_percent: 5,
+        manual_adjustment_cents: 0,
+        notes: 'Client-facing note',
+        internal_notes: 'Internal note',
+        interior_estimate: {
+          property_type: 'apartment',
+          estimate_mode: 'specific_areas',
+          condition: 'fair',
+          scope: ['walls', 'trim'],
+          property_details: {
+            apartment_type: '2_bedroom_standard',
+            sqm: null,
+            bedrooms: null,
+            bathrooms: null,
+            storeys: null,
+          },
+          rooms: [
+            {
+              name: 'Living Room',
+              anchor_room_type: 'Living Room',
+              room_type: 'interior',
+              length_m: null,
+              width_m: null,
+              height_m: null,
+              include_walls: true,
+              include_ceiling: false,
+              include_trim: true,
+            },
+          ],
+          opening_items: [
+            {
+              opening_type: 'door',
+              paint_system: 'oil_2coat',
+              quantity: 2,
+              room_index: null,
+              door_type: 'standard',
+              door_scope: 'door_and_frame',
+              window_type: undefined,
+              window_scope: undefined,
+            },
+          ],
+          trim_items: [
+            {
+              trim_type: 'skirting',
+              paint_system: 'water_3coat_white_finish',
+              quantity: 12.5,
+              room_index: null,
+            },
+          ],
+        },
+        rooms: [],
+      },
+    });
+  });
+
+  it('rejects quote creation when neither manual rooms nor an interior estimate is provided', () => {
+    const parsed = parseQuoteCreateInput({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Apartment repaint',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      tier: 'better',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+    });
+
+    expect(parsed).toEqual({
+      success: false,
+      error: 'Add at least one room',
     });
   });
 

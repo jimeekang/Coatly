@@ -83,7 +83,7 @@ export default async function NewQuotePage() {
           </Link>
         </div>
       ) : (
-        <QuoteCreateScreen customers={customers} canUseAI={subscription?.features.ai ?? false} />
+        <QuoteCreateScreen customers={customers} canUseAI={subscription?.features.ai ?? false} rateSettings={data.userRates} />
       )}
     </div>
   );

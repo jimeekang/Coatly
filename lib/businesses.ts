@@ -2,6 +2,8 @@ import type { User } from '@supabase/supabase-js';
 import { createSignedStorageUrl } from '@/lib/supabase/storage';
 import { businessUpdateSchema, type BusinessUpdateInput } from '@/lib/supabase/validators';
 import { createServerClient } from '@/lib/supabase/server';
+import { parseUserRateSettings } from '@/lib/rate-settings';
+import type { UserRateSettings } from '@/lib/rate-settings';
 
 type AppSupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -307,6 +309,49 @@ export async function getBusinessProfile(
     }),
     error: null,
   };
+}
+
+export async function getBusinessRateSettings(
+  supabase: AppSupabaseClient,
+  userId: string
+): Promise<{ data: UserRateSettings | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('default_rates')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) return { data: null, error: error.message };
+
+  return { data: parseUserRateSettings(data?.default_rates ?? {}), error: null };
+}
+
+export async function saveBusinessRateSettings(
+  supabase: AppSupabaseClient,
+  userId: string,
+  rates: UserRateSettings
+): Promise<{ error: string | null }> {
+  // Try to update existing row first
+  const { data: existing } = await supabase
+    .from('businesses')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from('businesses')
+      .update({ default_rates: rates })
+      .eq('user_id', userId);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase
+      .from('businesses')
+      .insert({ user_id: userId, name: 'My Business', default_rates: rates });
+    if (error) return { error: error.message };
+  }
+
+  return { error: null };
 }
 
 export async function saveBusinessProfileForUser({

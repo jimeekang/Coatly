@@ -13,6 +13,7 @@ import {
   Users,
   Settings,
   LogOut,
+  DollarSign,
 } from 'lucide-react';
 import { signOut } from '@/app/actions/auth';
 import type { SubscriptionSnapshot } from '@/lib/subscription/access';
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { href: '/jobs', label: 'Jobs', icon: BriefcaseBusiness },
   { href: '/invoices', label: 'Invoices', icon: Receipt },
   { href: '/materials-service', label: 'Material / Service', icon: Boxes },
+  { href: '/price-rates', label: 'Price Rates', icon: DollarSign },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

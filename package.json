@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:types": "node scripts/generate-supabase-types.mjs",
+    "supabase:auth": "node .agents/skills/db-schema/scripts/ensure-supabase-auth.mjs",
     "test": "vitest",
     "test:run": "vitest run",
     "seed:demo": "npx tsx scripts/seed-demo-data.ts"

@@ -2,10 +2,16 @@ import {
   PAINT_RATES,
   SURFACE_TYPE_LABELS,
   COATING_TYPE_LABELS,
-  type SurfaceType,
 } from '@/config/paint-rates';
 import {
+  getRatePerM2Cents,
+  type RatePresetSurfaceType,
+  type UserRateSettings,
+} from '@/lib/rate-settings';
+import type { InteriorEstimateInput as NormalizedInteriorEstimateInput } from '@/lib/interior-estimates';
+import {
   quoteCreateSchema,
+  type InteriorEstimate,
   type QuoteCreateInput,
   type QuoteSurface,
 } from '@/lib/supabase/validators';
@@ -14,6 +20,14 @@ export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'expired'
 export type QuoteTier = 'good' | 'better' | 'best';
 export type QuoteRoomType = 'interior' | 'exterior';
 export type QuoteSurfaceType = 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
+export type QuoteEstimateCategory = 'manual' | 'interior';
+export type QuoteEstimateItemCategory =
+  | 'entire_property'
+  | 'room'
+  | 'door'
+  | 'window'
+  | 'skirting'
+  | 'modifier';
 export type QuoteCoatingType =
   | 'touch_up_1coat'
   | 'repaint_2coat'
@@ -65,6 +79,19 @@ export type QuoteCustomerSummary = {
   address: string | null;
 };
 
+export type QuoteEstimateItemDraft = {
+  id: string;
+  quote_id: string;
+  category: QuoteEstimateItemCategory;
+  label: string;
+  quantity: number;
+  unit: string;
+  unit_price_cents: number;
+  total_cents: number;
+  sort_order: number;
+  metadata: Record<string, unknown>;
+};
+
 export type QuoteListItem = {
   id: string;
   user_id: string;
@@ -77,6 +104,7 @@ export type QuoteListItem = {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  estimate_category: QuoteEstimateCategory;
   created_at: string;
   updated_at: string;
   customer: QuoteCustomerSummary;
@@ -100,10 +128,16 @@ export type QuoteDetail = {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  estimate_category: QuoteEstimateCategory;
+  property_type: 'apartment' | 'house' | null;
+  estimate_mode: 'entire_property' | 'specific_areas' | null;
+  estimate_context: Record<string, unknown>;
+  pricing_snapshot: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   customer: QuoteCustomerSummary;
   rooms: QuoteRoomDraft[];
+  estimate_items: QuoteEstimateItemDraft[];
 };
 
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -144,7 +178,54 @@ const RATE_TIER_MULTIPLIER: Record<QuoteTier, number> = {
 
 const MATERIAL_COST_SHARE = 0.32;
 
-function mapRateSurfaceType(surfaceType: QuoteSurfaceType): SurfaceType {
+function normalizeInteriorEstimate(
+  estimate: InteriorEstimate | undefined
+): NormalizedInteriorEstimateInput | null {
+  if (!estimate) return null;
+
+  return {
+    property_type: estimate.property_type,
+    estimate_mode: estimate.estimate_mode,
+    condition: estimate.condition,
+    scope: estimate.scope,
+    property_details: {
+      apartment_type: estimate.property_details.apartment_type ?? null,
+      sqm: estimate.property_details.sqm ?? null,
+      bedrooms: estimate.property_details.bedrooms ?? null,
+      bathrooms: estimate.property_details.bathrooms ?? null,
+      storeys: estimate.property_details.storeys ?? null,
+    },
+    rooms: estimate.rooms.map((room) => ({
+      name: room.name.trim(),
+      anchor_room_type: room.anchor_room_type,
+      room_type: room.room_type,
+      length_m: room.length_m ?? null,
+      width_m: room.width_m ?? null,
+      height_m: room.height_m ?? null,
+      include_walls: room.include_walls,
+      include_ceiling: room.include_ceiling,
+      include_trim: room.include_trim,
+    })),
+    opening_items: estimate.opening_items.map((item) => ({
+      opening_type: item.opening_type,
+      paint_system: item.paint_system,
+      quantity: item.quantity,
+      room_index: item.room_index ?? null,
+      door_type: item.door_type,
+      door_scope: item.door_scope,
+      window_type: item.window_type,
+      window_scope: item.window_scope,
+    })),
+    trim_items: estimate.trim_items.map((item) => ({
+      trim_type: item.trim_type,
+      paint_system: item.paint_system,
+      quantity: item.quantity,
+      room_index: item.room_index ?? null,
+    })),
+  };
+}
+
+function mapRateSurfaceType(surfaceType: QuoteSurfaceType): RatePresetSurfaceType {
   switch (surfaceType) {
     case 'walls':
     case 'ceiling':
@@ -194,11 +275,15 @@ export function buildQuoteCustomerAddress(customer: {
 export function getSuggestedRatePerM2Cents(
   surfaceType: QuoteSurfaceType,
   coatingType: QuoteCoatingType,
-  tier: QuoteTier
+  tier: QuoteTier,
+  userRates?: UserRateSettings | null
 ) {
-  const surfaceRates = PAINT_RATES[mapRateSurfaceType(surfaceType)];
-  const baseRate = surfaceRates[mapRateCoatingType(coatingType)];
-  return Math.round(baseRate.ratePerSqm * RATE_TIER_MULTIPLIER[tier]);
+  const surface = mapRateSurfaceType(surfaceType);
+  const coating = mapRateCoatingType(coatingType);
+  const baseRateCents = userRates
+    ? getRatePerM2Cents(userRates, surface, coating)
+    : PAINT_RATES[surface][coating].ratePerSqm;
+  return Math.round(baseRateCents * RATE_TIER_MULTIPLIER[tier]);
 }
 
 export function getSuggestedPaintLitres(
@@ -314,8 +399,10 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       tier: parsed.data.tier,
       labour_margin_percent: parsed.data.labour_margin_percent,
       material_margin_percent: parsed.data.material_margin_percent,
+      manual_adjustment_cents: parsed.data.manual_adjustment_cents ?? 0,
       notes: parsed.data.notes?.trim() || null,
       internal_notes: parsed.data.internal_notes?.trim() || null,
+      interior_estimate: normalizeInteriorEstimate(parsed.data.interior_estimate),
       rooms: parsed.data.rooms.map((room) => ({
         name: room.name.trim(),
         room_type: room.room_type,
@@ -346,6 +433,7 @@ export function mapQuoteListItem(row: {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  estimate_category?: string | null;
   created_at: string;
   updated_at: string;
   customer: QuoteCustomerSummary | QuoteCustomerSummary[] | null;
@@ -370,6 +458,7 @@ export function mapQuoteListItem(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
+    estimate_category: (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
     created_at: row.created_at,
     updated_at: row.updated_at,
     customer: {
@@ -401,6 +490,11 @@ export function mapQuoteDetail(row: {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  estimate_category?: string | null;
+  property_type?: string | null;
+  estimate_mode?: string | null;
+  estimate_context?: Record<string, unknown> | null;
+  pricing_snapshot?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   customer: QuoteCustomerSummary | null;
@@ -425,6 +519,7 @@ export function mapQuoteDetail(row: {
       notes: string | null;
     }>;
   }>;
+  estimate_items?: QuoteEstimateItemDraft[];
 }): QuoteDetail {
   return {
     id: row.id,
@@ -442,6 +537,11 @@ export function mapQuoteDetail(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
+    estimate_category: (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
+    property_type: (row.property_type as QuoteDetail['property_type']) ?? null,
+    estimate_mode: (row.estimate_mode as QuoteDetail['estimate_mode']) ?? null,
+    estimate_context: row.estimate_context ?? {},
+    pricing_snapshot: row.pricing_snapshot ?? {},
     created_at: row.created_at,
     updated_at: row.updated_at,
     customer: {
@@ -479,5 +579,6 @@ export function mapQuoteDetail(row: {
         surfaces,
       };
     }),
+    estimate_items: row.estimate_items ?? [],
   };
 }
