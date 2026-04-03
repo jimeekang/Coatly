@@ -81,7 +81,7 @@ export type AIQuoteDraft = {
   title: string;
   status: 'draft' | 'sent';
   valid_until: string;
-  tier: 'good' | 'better' | 'best';
+  complexity: 'standard' | 'moderate' | 'complex';
   labour_margin_percent: number;
   material_margin_percent: number;
   notes: string;

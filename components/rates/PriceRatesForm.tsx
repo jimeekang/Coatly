@@ -131,7 +131,7 @@ function SurfaceRatesSection({
                   <td key={coating} className="px-4 py-2 text-center">
                     <PriceInput
                       value={rates[surface][coating]}
-                      unit="/m²"
+                      unit="/sqm"
                       onChange={(v) => onSurfaceChange(surface, coating, v)}
                     />
                   </td>
@@ -460,7 +460,7 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
 
       <div className="sticky bottom-4 flex items-center justify-between rounded-2xl border border-pm-border bg-white/90 px-5 py-3 shadow-sm backdrop-blur-sm">
         <p className="text-xs text-pm-secondary">
-          Rates pre-fill new quotes. Toggle "Offer" to control which options appear in the estimator.
+          Rates pre-fill new quotes. Toggle &lsquo;Offer&rsquo; to control which options appear in the estimator.
         </p>
         <button
           type="submit"

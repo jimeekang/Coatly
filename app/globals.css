@@ -1,59 +1,84 @@
 @import "tailwindcss";
 
-/* ── Coatly Design Tokens ── */
-:root {
-  /* Teal */
-  --pm-teal-900: #085041;
-  --pm-teal-700: #0F6E56;
-  --pm-teal-100: #E1F5EE;
-  --pm-teal-400: #1D9E75;
-  --pm-teal-300: #5DCAA5;
-
-  /* Coral */
-  --pm-coral-400: #D85A30;
-  --pm-coral-100: #FAECE7;
-  --pm-coral-800: #712B13;
-  --pm-coral-600: #993C1D;
-
-  /* Neutral / Warm Gray */
-  --pm-gray-900: #2C2C2A;
-  --pm-gray-600: #5F5E5A;
-  --pm-gray-300: #D3D1C7;
-  --pm-gray-100: #F1EFE8;
-
-  /* Semantic */
-  --pm-success: #1D9E75;
-  --pm-warning: #EF9F27;
-  --pm-danger: #D85A30;
-  --pm-bg: #ffffff;
-}
-
 @theme inline {
-  --color-background: var(--pm-bg);
-  --color-foreground: var(--pm-gray-900);
-  --font-sans: "Segoe UI", "Avenir Next", system-ui, sans-serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
 
-  /* Coatly palette — usable as bg-pm-teal etc. */
-  --color-pm-teal: #085041;
-  --color-pm-teal-hover: #0F6E56;
-  --color-pm-teal-light: #E1F5EE;
-  --color-pm-teal-mid: #1D9E75;
-  --color-pm-teal-pale: #5DCAA5;
-  --color-pm-coral: #D85A30;
-  --color-pm-coral-light: #FAECE7;
-  --color-pm-coral-dark: #712B13;
-  --color-pm-coral-mid: #993C1D;
-  --color-pm-body: #2C2C2A;
-  --color-pm-secondary: #5F5E5A;
-  --color-pm-border: #D3D1C7;
-  --color-pm-surface: #F1EFE8;
-  --color-pm-warning: #EF9F27;
+  /* ── Material Design 3 Color Tokens ── */
+  --color-primary: #6f4627;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #8b5e3c;
+  --color-on-primary-container: #ffe3d1;
+  --color-primary-fixed: #ffdcc5;
+  --color-primary-fixed-dim: #f4bb92;
+  --color-on-primary-fixed: #301400;
+  --color-on-primary-fixed-variant: #653d1e;
+  --color-inverse-primary: #f4bb92;
+
+  --color-secondary: #635d59;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #eae1db;
+  --color-on-secondary-container: #69635f;
+  --color-secondary-fixed: #eae1db;
+  --color-secondary-fixed-dim: #cdc5bf;
+  --color-on-secondary-fixed: #1f1b18;
+  --color-on-secondary-fixed-variant: #4b4642;
+
+  --color-tertiary: #265763;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #406f7c;
+  --color-on-tertiary-container: #c1f0ff;
+  --color-tertiary-fixed: #baeaf9;
+  --color-tertiary-fixed-dim: #9ecedd;
+  --color-on-tertiary-fixed: #001f26;
+  --color-on-tertiary-fixed-variant: #1a4d59;
+
+  --color-surface: #fcf9f4;
+  --color-surface-dim: #dcdad5;
+  --color-surface-bright: #fcf9f4;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3ee;
+  --color-surface-container: #f0ede8;
+  --color-surface-container-high: #ebe8e3;
+  --color-surface-container-highest: #e5e2dd;
+  --color-surface-variant: #e5e2dd;
+  --color-surface-tint: #805533;
+
+  --color-on-surface: #1c1c19;
+  --color-on-surface-variant: #51443c;
+  --color-on-background: #1c1c19;
+  --color-background: #fcf9f4;
+
+  --color-outline: #83746b;
+  --color-outline-variant: #d5c3b8;
+  --color-inverse-surface: #31302d;
+  --color-inverse-on-surface: #f3f0eb;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* ── Legacy pm-* aliases (backward compat) ── */
+  --color-pm-teal: #6f4627;
+  --color-pm-teal-hover: #5c3a1e;
+  --color-pm-teal-light: #f6f3ee;
+  --color-pm-teal-mid: #8b5e3c;
+  --color-pm-teal-pale: #f4bb92;
+  --color-pm-coral: #ba1a1a;
+  --color-pm-coral-light: #ffdad6;
+  --color-pm-coral-dark: #93000a;
+  --color-pm-coral-mid: #ba1a1a;
+  --color-pm-body: #1c1c19;
+  --color-pm-secondary: #51443c;
+  --color-pm-border: #d5c3b8;
+  --color-pm-surface: #f0ede8;
+  --color-pm-warning: #ef9f27;
 }
 
 body {
-  background: var(--pm-bg);
-  color: var(--pm-gray-900);
-  font-family: "Segoe UI", "Avenir Next", system-ui, sans-serif;
+  background: #fcf9f4;
+  color: #1c1c19;
+  font-family: "Manrope", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -62,27 +87,27 @@ body {
   width: 100%;
   height: 48px;
   border-radius: 8px;
-  border: 1px solid var(--pm-gray-300);
+  border: 1px solid #d5c3b8;
   background: white;
   padding: 0 16px;
   font-size: 16px;
-  color: var(--pm-gray-900);
+  color: #1c1c19;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .field:focus {
-  border-color: var(--pm-teal-400);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-teal-300) 30%, transparent);
+  border-color: #8b5e3c;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #f4bb92 30%, transparent);
 }
 
 .field::placeholder {
-  color: var(--pm-gray-600);
+  color: #51443c;
   opacity: 0.7;
 }
 
 .field-error {
-  border-color: var(--pm-coral-400);
+  border-color: #ba1a1a;
 }
 
 /* ── Scrollbar ── */
@@ -91,9 +116,9 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--pm-gray-100);
+  background: #f6f3ee;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--pm-gray-300);
+  background: #d5c3b8;
   border-radius: 3px;
 }

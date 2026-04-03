@@ -61,9 +61,9 @@ export function QuoteCreateScreen({
         <AIDraftPanel
           entityLabel="Quote"
           prompt={prompt}
-          placeholder="Example: Create a better-tier quote for Sarah Johnson at Harbor Cafe, living room and ceiling repaint, valid for 14 days, include prep notes and internal timing note."
+          placeholder="Example: Create a standard-complexity quote for Sarah Johnson at Harbor Cafe, living room and ceiling repaint, valid for 14 days, include prep notes and internal timing note."
           examples={[
-            'Better-tier quote for Harbor Cafe interior repaint',
+            'Standard-complexity quote for Harbor Cafe interior repaint',
             'Quote for living room walls and ceiling repaint in Bondi',
           ]}
           pending={isPending}
@@ -95,7 +95,7 @@ export function QuoteCreateScreen({
                 title: draft.title,
                 status: draft.status,
                 valid_until: draft.valid_until,
-                tier: draft.tier,
+                complexity: draft.complexity,
                 labour_margin_percent: draft.labour_margin_percent,
                 material_margin_percent: draft.material_margin_percent,
                 notes: draft.notes,

@@ -3,7 +3,7 @@ import { APP_NAME } from '@/config/constants';
 
 const SYDNEY_TIME_ZONE = 'Australia/Sydney';
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due']);
-const ACTIVE_QUOTE_STATUSES = ['draft', 'sent', 'accepted'] as const;
+const ACTIVE_QUOTE_STATUSES = ['draft', 'sent', 'approved'] as const;
 const PROFILE_PLAN_COLUMN = 'subscription_tier';
 
 export const STARTER_ACTIVE_QUOTES_MONTHLY_LIMIT = 10;

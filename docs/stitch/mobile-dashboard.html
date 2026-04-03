@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Coatly Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#8B5E3C", // Muted Bronze
+              "surface": "#FBFBF9", // Soft Neutral
+              "surface-container": "#F5F2ED", // Warm Sand
+              "on-surface": "#1C1C1C", // High-contrast charcoal
+              "on-surface-variant": "#4A4A4A",
+              "outline": "#D1CDC7",
+              "primary-container": "#F5F2ED",
+              "on-primary-container": "#8B5E3C",
+              "secondary": "#4A4A4A",
+              "on-secondary": "#FFFFFF",
+              "tertiary": "#5E635E",
+            },
+            fontFamily: {
+              "headline": ["Manrope", "sans-serif"],
+              "body": ["Manrope", "sans-serif"],
+              "label": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "0.5rem",
+              "lg": "0.5rem",
+              "xl": "0.75rem",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Manrope', sans-serif; }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md border-b border-outline/20 shadow-sm">
+<div class="flex justify-between items-center px-6 h-16 w-full max-w-screen-xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="text-primary hover:bg-surface-container transition-colors p-2 rounded-lg active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<span class="text-primary font-black italic font-headline text-2xl tracking-tight">Coatly</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center overflow-hidden border border-outline/30">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="portrait of a professional man in his 40s with a friendly smile, outdoor natural lighting, soft background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8xA00nGq86_yzA5E-7ccjIuAf74B5G_1lSRzHf6uiV4lsNFNuK1k00hHcGet7STezxTN2c_q2yzUaOmc7ViELMEri5YFIGmRj2rzRfHXmJDUBPwmBnjEyMwgvNrFKYIi7iOQCrSpsnIuPMo9wxhqOGSemqHHKrdnFpwS-tWiWsb-Gp0aIOjh3NVhIzgyKrdRVNpxSVpePi5T8xkUbKM5uaqGXh44QmBWCsjckX1WUG9zOsYOOnYANObbftFTx9Z8C-OijQ8b1puTH"/>
+</div>
+</div>
+</header>
+<main class="pt-24 px-6 max-w-md mx-auto space-y-8">
+<!-- Welcome Message -->
+<section class="relative">
+<h1 class="text-4xl font-extrabold tracking-tight text-on-surface leading-tight">
+            Good morning, <br/>
+<span class="text-primary italic">Alex</span>
+</h1>
+<div class="absolute -top-4 -right-2 w-24 h-24 bg-primary/5 rounded-full blur-3xl -z-10"></div>
+</section>
+<!-- AI Insights - Refined Card -->
+<section class="bg-surface-container border border-outline/20 rounded-lg p-5 flex gap-4 items-start shadow-sm">
+<div class="bg-primary p-2 rounded-lg text-white">
+<span class="material-symbols-outlined" data-icon="lightbulb" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+</div>
+<div>
+<p class="font-bold text-on-surface tracking-tight font-headline">AI Insights</p>
+<p class="text-sm text-on-surface-variant leading-relaxed mt-1">
+                You have 2 high-margin quotes to follow up today.
+            </p>
+</div>
+</section>
+<!-- Quick Actions - Industrial Bento Grid -->
+<section class="grid grid-cols-2 gap-4">
+<button class="flex flex-col items-start justify-between p-5 bg-primary text-white rounded-lg h-32 shadow-md active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined text-3xl" data-icon="add_circle">add_circle</span>
+<span class="font-bold uppercase tracking-wider text-xs">New Quote</span>
+</button>
+<div class="grid grid-rows-2 gap-4">
+<button class="flex items-center justify-center gap-2 bg-surface-container text-on-surface font-bold rounded-lg h-[3.75rem] border border-outline/20 active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined text-primary" data-icon="person_add">person_add</span>
+<span class="text-xs uppercase tracking-wider">Customer</span>
+</button>
+<button class="flex items-center justify-center gap-2 bg-secondary text-on-secondary font-bold rounded-lg h-[3.75rem] active:scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+<span class="text-xs uppercase tracking-wider">Schedule</span>
+</button>
+</div>
+</section>
+<!-- Key Stats - Editorial Cards -->
+<section class="space-y-4">
+<h2 class="text-xl font-bold tracking-tight px-1 text-on-surface">Performance</h2>
+<!-- Revenue Card -->
+<div class="bg-white rounded-lg p-6 shadow-sm border border-outline/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-xs font-bold text-secondary uppercase tracking-widest">Monthly Revenue</span>
+<span class="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded-lg">+12%</span>
+</div>
+<div class="text-3xl font-extrabold text-on-surface">$12,450</div>
+<div class="mt-4 h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full w-[70%]"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Pending Quotes -->
+<div class="bg-surface-container rounded-lg p-5 border border-outline/10">
+<span class="material-symbols-outlined text-primary mb-3" data-icon="pending_actions">pending_actions</span>
+<p class="text-2xl font-black text-on-surface">3</p>
+<p class="text-xs font-medium text-on-surface-variant uppercase tracking-tighter">Pending Quotes</p>
+</div>
+<!-- Next Job -->
+<div class="bg-surface-container rounded-lg p-5 border border-outline/10 relative group">
+<div class="bg-primary/10 text-primary p-1 rounded-md inline-block mb-3">
+<span class="material-symbols-outlined text-sm" data-icon="event" style="font-variation-settings: 'FILL' 1;">event</span>
+</div>
+<p class="text-sm font-bold text-on-surface">10 AM</p>
+<p class="text-xs text-on-surface-variant font-medium">(Richmond)</p>
+<p class="text-[10px] font-bold text-primary uppercase mt-2 tracking-widest">Next Job</p>
+</div>
+</div>
+</section>
+<!-- Visual Anchor - Image Card -->
+<section class="relative h-48 rounded-lg overflow-hidden shadow-lg">
+<img alt="Painter working" class="w-full h-full object-cover" data-alt="Close up of a professional painter's hands holding a premium brush applying rich terracotta paint to a textured white wall, warm sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtbEVLdQutskfNIfjmvGHLWFXvKF5EDgro3rnxUe8n7gsDW0OZsJL5IXQo8c2jrYE90qJGqzlr5RM_u9lQpNisi9YTqpvGIAOfX9QIP37lUTu4N0SAbmqEwOKd9p1I0ghnO2-hbeYG-SOZc6it6uFcJL1chZiOF_YjZXVwxSkz2f8mL-nYlBZpSvFjYdy0UWV61KF76q08wnhOSrUCP9N3jXYuYD9y4mCqF2H_vUGOISiY-HZ-EywuClykjb3gOy3r_3k_5rJQ1mX6"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
+<span class="text-white/70 text-[10px] uppercase tracking-widest font-bold">Today's Focus</span>
+<h3 class="text-white text-lg font-bold">Heritage Restoration: Richmond Project</h3>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-surface/90 backdrop-blur-md z-50 border-t border-outline/20">
+<!-- Dashboard - Active -->
+<a class="flex flex-col items-center justify-center bg-primary/10 text-primary rounded-lg px-4 py-1 active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-headline font-semibold text-[10px] uppercase tracking-wider mt-1">Dashboard</span>
+</a>
+<!-- Quotes -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="request_quote">request_quote</span>
+<span class="font-headline font-semibold text-[10px] uppercase tracking-wider mt-1">Quotes</span>
+</a>
+<!-- Customers -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-headline font-semibold text-[10px] uppercase tracking-wider mt-1">Customers</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary active:scale-90 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-headline font-semibold text-[10px] uppercase tracking-wider mt-1">Settings</span>
+</a>
+</nav>
+</body></html>

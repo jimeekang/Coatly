@@ -12,7 +12,7 @@ import {
   parseQuoteCreateInput,
   type QuoteCustomerOption,
   type QuoteStatus,
-  type QuoteTier,
+  type QuoteComplexity,
 } from '@/lib/quotes';
 import type { QuoteCreateInput } from '@/lib/supabase/validators';
 import type { UserRateSettings } from '@/lib/rate-settings';
@@ -55,7 +55,7 @@ type QuoteFormDefaultValues = {
   title: string;
   status: QuoteStatus;
   valid_until: string;
-  tier?: QuoteTier;
+  complexity?: QuoteComplexity;
   labour_margin_percent?: number;
   material_margin_percent?: number;
   notes: string;
@@ -74,7 +74,7 @@ const intVal = (value: string, fallback = 0) => {
 
 function defaultValidUntil() {
   const date = new Date();
-  date.setDate(date.getDate() + 14);
+  date.setDate(date.getDate() + 30);
   return date.toISOString().slice(0, 10);
 }
 
@@ -225,6 +225,8 @@ export function QuoteForm({
     valid_until: defaultValues?.valid_until ?? defaultValidUntil(),
     notes: defaultValues?.notes ?? '',
     internal_notes: defaultValues?.internal_notes ?? '',
+    labour_markup: String(defaultValues?.labour_margin_percent ?? 0),
+    material_markup: String(defaultValues?.material_margin_percent ?? 0),
   });
 
   // Quick mode state
@@ -240,7 +242,18 @@ export function QuoteForm({
   // Live preview totals
   const quickPreview = useMemo(() => calculateQuickQuotePreview(quickState), [quickState]);
 
-  const displayTotal = estimateMode === 'quick' ? quickPreview.total_cents : 0;
+  // Markup calculations (applied on top of base estimate)
+  const labourMarkupPct = intVal(form.labour_markup, 0);
+  const materialMarkupPct = intVal(form.material_markup, 0);
+  const baseSubtotal = quickPreview.subtotal_cents;
+  const labourMarkupCents = Math.round(baseSubtotal * labourMarkupPct / 100);
+  const materialMarkupCents = Math.round(baseSubtotal * materialMarkupPct / 100);
+  const subtotalWithMarkup = baseSubtotal + labourMarkupCents + materialMarkupCents;
+  const gstCents = Math.round(subtotalWithMarkup * 0.1);
+  const adjustmentCents = quickPreview.adjustment_cents;
+  const totalWithMarkup = subtotalWithMarkup + gstCents + adjustmentCents;
+
+  const displayTotal = estimateMode === 'quick' ? totalWithMarkup : 0;
 
   const canSubmit = Boolean(
     onSubmit &&
@@ -277,9 +290,9 @@ export function QuoteForm({
       title: form.title.trim(),
       status: form.status,
       valid_until: form.valid_until,
-      tier: 'better',
-      labour_margin_percent: 0,
-      material_margin_percent: 0,
+      complexity: 'standard',
+      labour_margin_percent: labourMarkupPct,
+      material_margin_percent: materialMarkupPct,
       manual_adjustment_cents: estimateMode === 'quick' ? quickState.manual_adjustment_cents : 0,
       notes: form.notes,
       internal_notes: form.internal_notes,
@@ -374,8 +387,8 @@ export function QuoteForm({
               >
                 <option value="draft">Draft</option>
                 <option value="sent">Sent</option>
-                <option value="accepted">Accepted</option>
-                <option value="declined">Declined</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
                 <option value="expired">Expired</option>
               </select>
             </div>
@@ -476,6 +489,124 @@ export function QuoteForm({
           </div>
         </div>
       </section>
+
+      {/* Markup Settings */}
+      <section className="rounded-2xl border border-pm-border bg-white p-4">
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+            Markup
+          </h3>
+          <p className="mt-0.5 text-xs text-pm-secondary">
+            Internal only — not visible on the quote PDF
+          </p>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="labour_markup" className={LABEL}>
+              Labour Markup
+            </label>
+            <div className="relative">
+              <input
+                id="labour_markup"
+                name="labour_markup"
+                type="number"
+                min="0"
+                max="500"
+                step="1"
+                value={form.labour_markup}
+                onChange={handleChange}
+                className="h-12 w-full rounded-xl border border-pm-border bg-white pl-4 pr-10 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-pm-secondary">
+                %
+              </span>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="material_markup" className={LABEL}>
+              Materials Markup
+            </label>
+            <div className="relative">
+              <input
+                id="material_markup"
+                name="material_markup"
+                type="number"
+                min="0"
+                max="500"
+                step="1"
+                value={form.material_markup}
+                onChange={handleChange}
+                className="h-12 w-full rounded-xl border border-pm-border bg-white pl-4 pr-10 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-pm-secondary">
+                %
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Live Cost Breakdown — quick mode only */}
+      {estimateMode === 'quick' && quickState.rooms.length > 0 && (
+        <section className="rounded-2xl border border-pm-border bg-white p-4">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+            Cost Breakdown
+          </h3>
+          <p className="mt-0.5 text-xs text-pm-secondary">Internal — not shown to client</p>
+
+          {/* Per-room subtotals */}
+          <div className="mt-4 space-y-2">
+            {quickState.rooms.map((room, idx) => (
+              <div key={idx} className="flex justify-between text-sm">
+                <span className="text-pm-body">{room.name || `Room ${idx + 1}`}</span>
+                <span className="font-medium text-pm-body">
+                  {formatAUD(quickPreview.per_room_cents[idx] ?? 0)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Totals */}
+          <div className="mt-4 space-y-2.5 border-t border-pm-border pt-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-pm-secondary">Base subtotal</span>
+              <span className="text-pm-body">{formatAUD(baseSubtotal)}</span>
+            </div>
+            {labourMarkupPct > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-pm-secondary">Labour markup ({labourMarkupPct}%)</span>
+                <span className="text-pm-body">+{formatAUD(labourMarkupCents)}</span>
+              </div>
+            )}
+            {materialMarkupPct > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-pm-secondary">Materials markup ({materialMarkupPct}%)</span>
+                <span className="text-pm-body">+{formatAUD(materialMarkupCents)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-pm-secondary">Subtotal (ex GST)</span>
+              <span className="font-medium text-pm-body">{formatAUD(subtotalWithMarkup)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-pm-secondary">GST (10%)</span>
+              <span className="text-pm-body">{formatAUD(gstCents)}</span>
+            </div>
+            {adjustmentCents !== 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-pm-secondary">Adjustment</span>
+                <span className={adjustmentCents < 0 ? 'text-pm-coral-mid' : 'text-pm-body'}>
+                  {adjustmentCents > 0 ? '+' : ''}{formatAUD(adjustmentCents)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-pm-border pt-2">
+              <span className="font-semibold text-pm-body">Total (inc GST)</span>
+              <span className="text-base font-bold text-pm-teal">{formatAUD(totalWithMarkup)}</span>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Validation error */}
       {error && (

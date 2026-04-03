@@ -27,7 +27,7 @@ export default async function DashboardLayout({
   const businessName = profile?.business_name?.trim() || user.email || 'My Business';
 
   return (
-    <div className="flex min-h-screen bg-pm-surface">
+    <div className="flex min-h-screen bg-surface">
       <DashboardSidebar businessName={businessName} subscription={subscription} />
       {/* pt-14 offsets fixed mobile top bar; pb-20 for bottom tab bar */}
       <main className="flex-1 pt-14 pb-20 md:pt-0 md:pb-0 overflow-x-hidden">

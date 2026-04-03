@@ -29,9 +29,9 @@
 ### Quote Builder
 - [x] Quote CRUD (create, read, update, delete)
 - [x] Room-by-room surface breakdown
-- [x] Good/Better/Best tier pricing
+- [x] Standard/Moderate/Complex complexity pricing
 - [x] Quote PDF generation (React-PDF + business branding)
-- [x] Quote status workflow (draft → sent → accepted/declined/expired)
+- [x] Quote status workflow (draft → sent → approved/rejected/expired)
 
 ### Invoice System
 - [x] Invoice CRUD

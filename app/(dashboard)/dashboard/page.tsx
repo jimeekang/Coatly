@@ -71,11 +71,11 @@ export default async function DashboardPage() {
 
   const currentSydneyMonth = getSydneyYearMonth(new Date());
   const activeQuoteCount =
-    quotes?.filter((quote) => ['draft', 'sent', 'accepted'].includes(quote.status)).length ?? 0;
+    quotes?.filter((quote) => ['draft', 'sent', 'approved'].includes(quote.status)).length ?? 0;
   const starterQuoteUsageThisMonth =
     quotes?.filter(
       (quote) =>
-        ['draft', 'sent', 'accepted'].includes(quote.status) &&
+        ['draft', 'sent', 'approved'].includes(quote.status) &&
         getSydneyYearMonth(quote.created_at) === currentSydneyMonth
     ).length ?? 0;
   const quoteLimit = subscription.features.activeQuoteLimit;
@@ -101,7 +101,7 @@ export default async function DashboardPage() {
       value: String(activeQuoteCount),
       hint:
         quoteLimit === null
-          ? 'Unlimited draft, sent, and accepted quotes'
+          ? 'Unlimited draft, sent, and approved quotes'
           : `${starterQuoteUsageThisMonth}/${quoteLimit} active quotes used this month`,
     },
     {
@@ -122,50 +122,61 @@ export default async function DashboardPage() {
   ] as const;
 
   return (
-    <div>
-      <h1 className="mb-1 text-[28px] font-bold text-pm-body">
-        G&apos;day, {businessName}!
-      </h1>
-      <p className="mb-8 text-sm text-pm-secondary">
-        {subscription.plan === 'pro'
-          ? 'Run your workspace from one place and let AI draft the paperwork first.'
-          : 'Run your workspace from one place and keep track of quotes, invoices, and customers.'}
-      </p>
+    <div className="space-y-8">
+      {/* Welcome header */}
+      <div>
+        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface leading-tight">
+          G&apos;day, <span className="text-primary">{businessName}</span>
+        </h1>
+        <p className="mt-2 text-on-surface-variant font-medium">
+          {subscription.plan === 'pro'
+            ? 'Run your workspace from one place and let AI draft the paperwork first.'
+            : 'Run your workspace from one place and keep track of quotes, invoices, and customers.'}
+        </p>
+      </div>
 
       {quoteSlotsRemaining !== null && (
-        <div className="mb-8 rounded-2xl border border-pm-border bg-white px-4 py-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pm-secondary">
+        <div className="rounded-xl border border-outline-variant bg-surface-container-low px-5 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
             Starter Usage
           </p>
-          <p className="mt-1 text-base font-semibold text-pm-body">
+          <p className="mt-1 text-base font-semibold text-on-surface">
             {quoteSlotsRemaining} of {quoteLimit} active quote slots remaining this month
           </p>
-          <p className="mt-1 text-sm text-pm-secondary">
-            Starter includes up to {quoteLimit} draft, sent, or accepted quotes each Sydney
+          <p className="mt-1 text-sm text-on-surface-variant">
+            Starter includes up to {quoteLimit} draft, sent, or approved quotes each Sydney
             month. Upgrade to Pro for unlimited quoting and AI tools.
           </p>
         </div>
       )}
 
+      {/* Overview stats */}
       <section aria-labelledby="overview-heading">
         <h2
           id="overview-heading"
-          className="mb-3 text-xs font-semibold uppercase tracking-wider text-pm-secondary"
+          className="mb-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant"
         >
           Overview
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {overviewStats.map((stat) => (
-            <div key={stat.label} className="rounded-lg bg-pm-surface p-5">
-              <div className="mb-1 text-xs text-pm-secondary">{stat.label}</div>
-              <div className="text-2xl font-bold text-pm-body">{stat.value}</div>
-              <div className="mt-1 text-xs text-pm-secondary">{stat.hint}</div>
+            <div
+              key={stat.label}
+              className="bg-surface-container-low p-6 rounded-2xl hover:bg-surface-container transition-colors"
+            >
+              <p className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
+                {stat.label}
+              </p>
+              <div className="text-3xl font-extrabold tracking-tighter text-on-surface">
+                {stat.value}
+              </div>
+              <p className="mt-1.5 text-[11px] text-on-surface-variant">{stat.hint}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <div className="mt-8">
+      <div>
         {subscription.features.ai ? (
           <WorkspaceAssistant customers={customerOptions} quotes={quoteOptions} />
         ) : (

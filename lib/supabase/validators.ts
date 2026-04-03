@@ -145,8 +145,8 @@ const nonNegativeIntegerSchema = z
   .number()
   .int('Value must be a whole number')
   .min(0, 'Value must be zero or greater');
-const quoteStatusSchema = z.enum(['draft', 'sent', 'accepted', 'declined', 'expired']);
-const quoteTierSchema = z.enum(['good', 'better', 'best']);
+const quoteStatusSchema = z.enum(['draft', 'sent', 'approved', 'rejected', 'expired']);
+const quoteTierSchema = z.enum(['standard', 'moderate', 'complex']);
 const quoteEstimateCategorySchema = z.enum(['manual', 'interior']);
 const quotePropertyTypeSchema = z.enum(['apartment', 'house']);
 const quoteEstimateModeSchema = z.enum(['entire_property', 'specific_areas']);
@@ -476,9 +476,9 @@ export const interiorEstimateSchema = z
 export const quoteCreateSchema = z.object({
   customer_id: z.string().trim().uuid('Select a customer'),
   title: z.string().trim().min(1, 'Quote title is required'),
-  status: z.enum(['draft', 'sent', 'accepted', 'declined', 'expired']).default('draft'),
+  status: z.enum(['draft', 'sent', 'approved', 'rejected', 'expired']).default('draft'),
   valid_until: optionalIsoDateString,
-  tier: z.enum(['good', 'better', 'best']).default('better'),
+  complexity: z.enum(['standard', 'moderate', 'complex']).default('standard'),
   labour_margin_percent: z
     .number()
     .int('Labour margin must be a whole number')

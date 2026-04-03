@@ -319,14 +319,21 @@ export async function createQuote(
     : null;
   const adjustmentCents = parsed.data.manual_adjustment_cents ?? 0;
   const preview = interiorEstimate
-    ? {
-        rooms: [],
-        base_subtotal_cents: interiorEstimate.subtotal_cents,
-        subtotal_cents: interiorEstimate.subtotal_cents,
-        gst_cents: interiorEstimate.gst_cents,
-        // Apply manual adjustment to the final total only
-        total_cents: interiorEstimate.total_cents + adjustmentCents,
-      }
+    ? (() => {
+        const base = interiorEstimate.subtotal_cents;
+        const labourMarkup = Math.round(base * (parsed.data.labour_margin_percent / 100));
+        const materialMarkup = Math.round(base * (parsed.data.material_margin_percent / 100));
+        const subtotal = base + labourMarkup + materialMarkup;
+        const gst = Math.round(subtotal * 0.1);
+        return {
+          rooms: [],
+          base_subtotal_cents: base,
+          subtotal_cents: subtotal,
+          gst_cents: gst,
+          // Apply manual adjustment to the final total only
+          total_cents: subtotal + gst + adjustmentCents,
+        };
+      })()
     : calculateQuotePreview(parsed.data);
 
   const { data: quoteNumber, error: quoteNumberError } = await supabase.rpc(
@@ -349,7 +356,7 @@ export async function createQuote(
       title: parsed.data.title,
       status: parsed.data.status,
       valid_until: parsed.data.valid_until,
-      tier: parsed.data.tier,
+      tier: parsed.data.complexity,
       notes: parsed.data.notes,
       internal_notes: parsed.data.internal_notes,
       labour_margin_percent: parsed.data.labour_margin_percent,
@@ -426,7 +433,7 @@ export async function createQuote(
           material_cost_cents: surface.material_cost_cents,
           labour_cost_cents: surface.labour_cost_cents,
           paint_litres_needed: surface.paint_litres_needed,
-          tier: parsed.data.tier,
+          tier: parsed.data.complexity,
           notes: surface.notes,
         }))
       );

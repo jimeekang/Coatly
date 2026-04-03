@@ -10,26 +10,63 @@ import {
 import { formatAUD, formatDate } from '@/utils/format';
 
 const QUOTE_STATUS_STYLES: Record<QuoteStatus, string> = {
-  draft: 'bg-pm-surface text-pm-secondary',
-  sent: 'bg-pm-teal-light text-pm-teal',
-  accepted: 'bg-pm-teal-mid text-white',
-  declined: 'bg-pm-coral-light text-pm-coral-mid',
-  expired: 'bg-pm-surface text-pm-secondary',
+  draft:    'bg-secondary/10 text-secondary',
+  sent:     'bg-primary/10 text-primary',
+  approved: 'bg-tertiary/10 text-tertiary',
+  rejected: 'bg-error/10 text-error',
+  expired:  'bg-surface-container-high text-on-surface-variant',
+};
+
+const QUOTE_LEFT_BORDER: Record<QuoteStatus, string> = {
+  draft:    'border-l-secondary',
+  sent:     'border-l-primary',
+  approved: 'border-l-tertiary',
+  rejected: 'border-l-error',
+  expired:  'border-l-outline',
 };
 
 const STATUS_OPTIONS: Array<{ value: 'all' | QuoteStatus; label: string }> = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'sent', label: 'Sent' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'declined', label: 'Declined' },
-  { value: 'expired', label: 'Expired' },
+  { value: 'all',      label: 'All' },
+  { value: 'draft',    label: 'Draft' },
+  { value: 'sent',     label: 'Sent' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'expired',  label: 'Expired' },
 ];
 
+type DateFilter = 'all' | '30d' | '90d' | 'this_month';
+
+const DATE_FILTER_OPTIONS: Array<{ value: DateFilter; label: string }> = [
+  { value: 'all',        label: 'All time' },
+  { value: 'this_month', label: 'This month' },
+  { value: '30d',        label: 'Last 30 days' },
+  { value: '90d',        label: 'Last 90 days' },
+];
+
+function getDateFilterCutoff(filter: DateFilter): Date | null {
+  const now = new Date();
+  if (filter === '30d') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 30);
+    return d;
+  }
+  if (filter === '90d') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 90);
+    return d;
+  }
+  if (filter === 'this_month') {
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return null;
+}
+
 function QuoteStatusBadge({ status }: { status: QuoteStatus }) {
-  const style = QUOTE_STATUS_STYLES[status] ?? 'bg-pm-surface text-pm-secondary';
+  const style = QUOTE_STATUS_STYLES[status] ?? 'bg-surface-container-high text-on-surface-variant';
   return (
-    <span className={`inline-flex rounded px-2.5 py-1 text-xs font-medium capitalize ${style}`}>
+    <span
+      className={`inline-flex rounded px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${style}`}
+    >
       {QUOTE_STATUS_LABELS[status]}
     </span>
   );
@@ -48,203 +85,181 @@ function matchesQuery(quote: QuoteListItem, query: string) {
 export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | QuoteStatus>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim();
+
+  const cutoff = getDateFilterCutoff(dateFilter);
 
   const filtered = quotes.filter((quote) => {
     const matchesStatus = status === 'all' ? true : quote.status === status;
     const matchesSearch = normalizedQuery ? matchesQuery(quote, normalizedQuery) : true;
-    return matchesStatus && matchesSearch;
+    const matchesDate = cutoff ? new Date(quote.created_at) >= cutoff : true;
+    return matchesStatus && matchesSearch && matchesDate;
   });
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_200px]">
-        <div className="relative">
-          <span className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-pm-secondary">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-          </span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by quote number, title, or customer..."
-            className="w-full h-12 rounded-lg border border-pm-border bg-white pl-10 pr-4 text-base text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery('')}
-              className="absolute inset-y-0 right-3.5 flex items-center text-pm-secondary hover:text-pm-body"
-              aria-label="Clear search"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          )}
-        </div>
+  const hasActiveFilters = normalizedQuery || status !== 'all' || dateFilter !== 'all';
 
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value as 'all' | QuoteStatus)}
-          className="h-12 rounded-lg border border-pm-border bg-white px-4 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
-          aria-label="Filter by quote status"
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Search */}
+      <div className="relative">
+        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+        </span>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search quotes..."
+          className="w-full bg-surface-container border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            className="absolute inset-y-0 right-4 flex items-center text-outline hover:text-on-surface"
+            aria-label="Clear search"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
       </div>
 
+      {/* Status filter chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        {STATUS_OPTIONS.map((option) => {
+          const active = status === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setStatus(option.value)}
+              className={`px-5 py-2 rounded-lg text-sm font-bold tracking-tight whitespace-nowrap transition-colors ${
+                active
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Date filter chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        {DATE_FILTER_OPTIONS.map((option) => {
+          const active = dateFilter === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDateFilter(option.value)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-tight whitespace-nowrap transition-colors border ${
+                active
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-outline-variant bg-transparent text-on-surface-variant hover:bg-surface-container-high'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Empty states */}
       {quotes.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-pm-border bg-pm-surface py-16 text-center">
-          <p className="text-base text-pm-secondary">No quotes yet.</p>
-          <p className="mt-1 text-sm text-pm-secondary opacity-70">
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-16 text-center">
+          <p className="text-base text-on-surface-variant">No quotes yet.</p>
+          <p className="mt-1 text-sm text-on-surface-variant opacity-70">
             Create your first quote to get started.
           </p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-pm-border bg-pm-surface py-12 text-center">
-          <p className="text-base text-pm-secondary">No quotes match this search.</p>
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-12 text-center">
+          <p className="text-base text-on-surface-variant">No quotes match this search.</p>
           <button
             type="button"
-            onClick={() => {
-              setQuery('');
-              setStatus('all');
-            }}
-            className="mt-2 text-sm text-pm-teal-hover hover:underline"
+            onClick={() => { setQuery(''); setStatus('all'); setDateFilter('all'); }}
+            className="mt-2 text-sm text-primary hover:underline"
           >
             Clear search and filters
           </button>
         </div>
       ) : (
         <>
-          <ul className="flex flex-col gap-3 sm:hidden">
-            {filtered.map((quote) => (
-              <li key={quote.id}>
-                <Link
-                  href={`/quotes/${quote.id}`}
-                  className="flex items-center justify-between rounded-xl border border-pm-border bg-white px-4 py-4 transition-colors hover:bg-pm-teal-light active:bg-pm-teal-light"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-pm-body">{quote.quote_number}</p>
-                    <p className="truncate text-sm text-pm-secondary">
-                      {quote.title || quote.customer.company_name || quote.customer.name}
-                    </p>
-                    <div className="mt-1.5">
+          {/* Card list */}
+          <ul className="flex flex-col gap-3">
+            {filtered.map((quote) => {
+              const borderClass = QUOTE_LEFT_BORDER[quote.status] ?? 'border-l-outline';
+              return (
+                <li key={quote.id}>
+                  <Link
+                    href={`/quotes/${quote.id}`}
+                    className={`block bg-surface-container-lowest p-5 rounded-lg shadow-sm border border-black/5 border-l-4 ${borderClass} hover:shadow-md transition-shadow`}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-on-surface text-base leading-tight">
+                          {quote.customer.company_name || quote.customer.name}
+                        </h3>
+                        <p className="text-on-surface-variant text-sm font-medium mt-0.5">
+                          {quote.title || quote.quote_number}
+                        </p>
+                      </div>
                       <QuoteStatusBadge status={quote.status} />
                     </div>
-                  </div>
-                  <div className="ml-3 text-right shrink-0">
-                    <p className="text-sm font-semibold text-pm-body">
-                      {formatAUD(quote.total_cents)}
-                    </p>
-                    <svg
-                      className="ml-auto mt-2 text-pm-secondary"
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  </div>
-                </Link>
-              </li>
-            ))}
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                          Created {formatDate(quote.created_at)}
+                        </div>
+                        {quote.valid_until && (
+                          <div className={`flex items-center gap-1.5 text-xs font-medium ${
+                            new Date(quote.valid_until) < new Date() && quote.status !== 'expired'
+                              ? 'text-error'
+                              : 'text-outline'
+                          }`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"/>
+                              <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            Valid until {formatDate(quote.valid_until)}
+                            {new Date(quote.valid_until) < new Date() && quote.status !== 'expired' && (
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-error">Overdue</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-outline font-bold uppercase tracking-wider">Amount</p>
+                        <p className="text-lg font-extrabold text-on-surface tracking-tight">
+                          {formatAUD(quote.total_cents)}{' '}
+                          <span className="text-[10px] font-bold text-outline">AUD</span>
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
-          <div className="hidden overflow-x-auto rounded-xl border border-pm-border bg-white sm:block">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-pm-border bg-pm-surface">
-                <tr>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Quote
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Customer
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Valid Until
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Total
-                  </th>
-                  <th className="px-5 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-pm-border">
-                {filtered.map((quote) => (
-                  <tr key={quote.id} className="transition-colors hover:bg-pm-teal-light">
-                    <td className="px-5 py-4">
-                      <p className="font-medium text-pm-body">{quote.quote_number}</p>
-                      <p className="mt-0.5 text-xs text-pm-secondary">
-                        {quote.title || 'Untitled quote'}
-                      </p>
-                    </td>
-                    <td className="px-5 py-4 text-pm-secondary">
-                      {quote.customer.company_name || quote.customer.name}
-                    </td>
-                    <td className="px-5 py-4">
-                      <QuoteStatusBadge status={quote.status} />
-                    </td>
-                    <td className="px-5 py-4 text-pm-secondary">
-                      {quote.valid_until ? formatDate(quote.valid_until) : '-'}
-                    </td>
-                    <td className="px-5 py-4 font-medium text-pm-body">
-                      {formatAUD(quote.total_cents)}
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <Link
-                        href={`/quotes/${quote.id}`}
-                        className="font-medium text-pm-teal-hover hover:underline"
-                      >
-                        View →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {(normalizedQuery || status !== 'all') && (
-            <p className="text-xs text-pm-secondary text-right">
+          {hasActiveFilters && (
+            <p className="text-xs text-on-surface-variant text-right">
               {filtered.length} of {quotes.length} quotes
             </p>
           )}

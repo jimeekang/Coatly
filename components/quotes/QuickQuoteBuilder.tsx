@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import {
-  type InteriorPaintSystem,
   type InteriorRoomType,
   type InteriorWallPaintSystem,
   INTERIOR_PAINT_SYSTEM_LABELS,

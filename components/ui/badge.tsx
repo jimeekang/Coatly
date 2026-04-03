@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 
-export type BadgeVariant = 'default' | 'success' | 'accepted' | 'warning' | 'danger' | 'info' | 'draft';
+export type BadgeVariant = 'default' | 'success' | 'approved' | 'warning' | 'danger' | 'info' | 'draft';
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -12,7 +12,7 @@ const VARIANT: Record<BadgeVariant, string> = {
   default:  'bg-pm-surface text-pm-secondary',
   draft:    'bg-pm-surface text-pm-secondary',
   success:  'bg-pm-teal-light text-pm-teal',
-  accepted: 'bg-pm-teal-mid text-white',
+  approved: 'bg-pm-teal-mid text-white',
   warning:  'bg-amber-50 text-amber-700',
   danger:   'bg-pm-coral-light text-pm-coral-mid',
   info:     'bg-blue-50 text-blue-600',

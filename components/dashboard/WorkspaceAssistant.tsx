@@ -349,7 +349,7 @@ export function WorkspaceAssistant({
                           title: result.quote.title,
                           status: result.quote.status,
                           valid_until: result.quote.valid_until,
-                          tier: result.quote.tier,
+                          complexity: result.quote.complexity,
                           labour_margin_percent: result.quote.labour_margin_percent,
                           material_margin_percent: result.quote.material_margin_percent,
                           notes: result.quote.notes,

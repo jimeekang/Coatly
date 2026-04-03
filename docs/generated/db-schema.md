@@ -1,7 +1,7 @@
 # Generated: DB Schema Summary
 
 > ⚠️ 이 파일은 참조용 스냅샷입니다. 정확한 스키마는 `supabase/migrations/`와 `types/database.ts`를 확인하세요.
-> 마지막 업데이트: 2026-03-29 (migration 013 기준)
+> 마지막 업데이트: 2026-03-30 (migration 016 기준)
 
 ## Tables
 
@@ -15,13 +15,13 @@
 `id(PK) | user_id(FK) | name | email | phone | company_name | address | notes | is_archived`
 
 ### quotes
-`id(PK) | user_id(FK) | customer_id(FK) | quote_number | title | status | tier | margins | totals_cents | valid_until | notes`
+`id(PK) | user_id(FK) | customer_id(FK) | quote_number | title | status | tier(complexity: standard|moderate|complex) | margins | totals_cents | valid_until | notes`
 
 ### quote_rooms
 `id(PK) | quote_id(FK) | name | room_type | dimensions(m) | sort_order`
 
 ### quote_room_surfaces
-`id(PK) | room_id(FK) | surface_type | area_m2 | coating_type | rate_per_m2_cents | costs_cents | tier | notes`
+`id(PK) | room_id(FK) | surface_type | area_sqm | coating_type | rate_per_sqm_cents | costs_cents | tier(complexity) | notes`
 
 ### invoices
 `id(PK) | user_id(FK) | customer_id(FK) | quote_id(FK,nullable) | invoice_number | status | invoice_type | totals_cents | amount_paid_cents | due_date | paid_at`

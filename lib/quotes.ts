@@ -16,8 +16,8 @@ import {
   type QuoteSurface,
 } from '@/lib/supabase/validators';
 
-export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'expired';
-export type QuoteTier = 'good' | 'better' | 'best';
+export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
+export type QuoteComplexity = 'standard' | 'moderate' | 'complex';
 export type QuoteRoomType = 'interior' | 'exterior';
 export type QuoteSurfaceType = 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
 export type QuoteEstimateCategory = 'manual' | 'interior';
@@ -100,7 +100,7 @@ export type QuoteListItem = {
   title: string | null;
   status: QuoteStatus;
   valid_until: string | null;
-  tier: QuoteTier | null;
+  complexity: QuoteComplexity | null;
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
@@ -120,7 +120,7 @@ export type QuoteDetail = {
   title: string | null;
   status: QuoteStatus;
   valid_until: string | null;
-  tier: QuoteTier | null;
+  complexity: QuoteComplexity | null;
   notes: string | null;
   internal_notes: string | null;
   labour_margin_percent: number;
@@ -143,15 +143,15 @@ export type QuoteDetail = {
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   draft: 'Draft',
   sent: 'Sent',
-  accepted: 'Accepted',
-  declined: 'Declined',
+  approved: 'Approved',
+  rejected: 'Rejected',
   expired: 'Expired',
 };
 
-export const QUOTE_TIER_LABELS: Record<QuoteTier, string> = {
-  good: 'Good',
-  better: 'Better',
-  best: 'Best',
+export const COMPLEXITY_LABELS: Record<QuoteComplexity, string> = {
+  standard: 'Standard',
+  moderate: 'Moderate',
+  complex: 'Complex',
 };
 
 export const QUOTE_SURFACE_LABELS: Record<QuoteSurfaceType, string> = {
@@ -170,10 +170,15 @@ export const QUOTE_COATING_LABELS: Record<QuoteCoatingType, string> = {
   specialty: 'Specialty Finish',
 };
 
-const RATE_TIER_MULTIPLIER: Record<QuoteTier, number> = {
-  good: 0.92,
-  better: 1,
-  best: 1.12,
+/** Labour complexity multiplier applied on top of base rate.
+ * standard = normal conditions (easy access, good surfaces)
+ * moderate = some challenges (2-storey, minor prep, tight spaces)
+ * complex  = difficult (scaffolding, heavy prep, heritage detail, high ceilings)
+ */
+const COMPLEXITY_MULTIPLIER: Record<QuoteComplexity, number> = {
+  standard: 1.0,
+  moderate: 1.25,
+  complex: 1.5,
 };
 
 const MATERIAL_COST_SHARE = 0.32;
@@ -272,10 +277,10 @@ export function buildQuoteCustomerAddress(customer: {
   return address || null;
 }
 
-export function getSuggestedRatePerM2Cents(
+export function getSuggestedRatePerSqmCents(
   surfaceType: QuoteSurfaceType,
   coatingType: QuoteCoatingType,
-  tier: QuoteTier,
+  complexity: QuoteComplexity,
   userRates?: UserRateSettings | null
 ) {
   const surface = mapRateSurfaceType(surfaceType);
@@ -283,7 +288,7 @@ export function getSuggestedRatePerM2Cents(
   const baseRateCents = userRates
     ? getRatePerM2Cents(userRates, surface, coating)
     : PAINT_RATES[surface][coating].ratePerSqm;
-  return Math.round(baseRateCents * RATE_TIER_MULTIPLIER[tier]);
+  return Math.round(baseRateCents * COMPLEXITY_MULTIPLIER[complexity]);
 }
 
 export function getSuggestedPaintLitres(
@@ -328,7 +333,7 @@ export function calculateQuoteSurface(surface: {
 }
 
 export function calculateQuotePreview(input: {
-  tier: QuoteTier;
+  complexity?: QuoteComplexity;
   labour_margin_percent: number;
   material_margin_percent: number;
   rooms: Array<{
@@ -396,7 +401,7 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       title: parsed.data.title.trim(),
       status: parsed.data.status,
       valid_until: parsed.data.valid_until,
-      tier: parsed.data.tier,
+      complexity: parsed.data.complexity,
       labour_margin_percent: parsed.data.labour_margin_percent,
       material_margin_percent: parsed.data.material_margin_percent,
       manual_adjustment_cents: parsed.data.manual_adjustment_cents ?? 0,
@@ -454,7 +459,7 @@ export function mapQuoteListItem(row: {
     title: row.title,
     status: row.status as QuoteStatus,
     valid_until: row.valid_until,
-    tier: (row.tier as QuoteTier | null) ?? null,
+    complexity: (row.tier as QuoteComplexity | null) ?? null,
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
@@ -529,7 +534,7 @@ export function mapQuoteDetail(row: {
     title: row.title,
     status: row.status as QuoteStatus,
     valid_until: row.valid_until,
-    tier: (row.tier as QuoteTier | null) ?? null,
+    complexity: (row.tier as QuoteComplexity | null) ?? null,
     notes: row.notes,
     internal_notes: row.internal_notes,
     labour_margin_percent: row.labour_margin_percent,

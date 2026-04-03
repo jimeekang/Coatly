@@ -162,8 +162,8 @@ export function QuoteTemplate({
           <Text style={styles.sectionTitle}>Scope of Work</Text>
           <View style={styles.tableHeader}>
             <Text style={styles.col1}>Description</Text>
-            <Text style={styles.col2}>Area (m²)</Text>
-            <Text style={styles.col3}>Rate/m²</Text>
+            <Text style={styles.col2}>Area (sqm)</Text>
+            <Text style={styles.col3}>Rate/sqm</Text>
             <Text style={styles.col4}>Amount</Text>
           </View>
           {quote.rooms.map((room) => (
@@ -185,7 +185,7 @@ export function QuoteTemplate({
                     {surface.area_m2.toFixed(2)}
                   </Text>
                   <Text style={[styles.col3, { color: '#6b7280' }]}>
-                    {formatAUD(surface.rate_per_m2_cents)}/m²
+                    {formatAUD(surface.rate_per_m2_cents)}/sqm
                   </Text>
                   <Text style={[styles.col4, { color: '#6b7280' }]}>
                     {formatAUD(surface.total_cents)}

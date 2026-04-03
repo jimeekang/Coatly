@@ -1,22 +1,22 @@
 import type { SurfaceType, CoatingType } from '@/config/paint-rates';
 
-export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'declined' | 'expired';
-export type RateTier = 'good' | 'better' | 'best';
+export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
+export type ComplexityLevel = 'standard' | 'moderate' | 'complex';
 
 export interface QuoteRoomSurface {
   id: string;
   room_id: string;
   surface_type: SurfaceType;
-  /** Paintable area in m² after deductions */
+  /** Paintable area in sqm after deductions */
   area_m2: number;
   coating_type: CoatingType;
-  /** Rate in AUD cents per m² */
+  /** Rate in AUD cents per sqm */
   rate_per_sqm: number;
   /** Calculated price in AUD cents (ex-GST) */
   price_cents: number;
   /** Estimated litres of paint required */
   paint_litres: number;
-  rate_tier: RateTier;
+  complexity: ComplexityLevel;
 }
 
 export interface QuoteRoom {
@@ -56,8 +56,8 @@ export interface Quote {
   /** Internal notes (not shown on PDF) */
   internal_notes: string | null;
   rooms: QuoteRoom[];
-  /** Whether this quote offers Good/Better/Best tier options */
-  has_tiers: boolean;
+  /** Whether this quote offers complexity-based pricing options */
+  has_complexity_options: boolean;
   /** Subtotal in AUD cents (ex-GST) */
   subtotal_cents: number;
   /** GST amount in AUD cents */

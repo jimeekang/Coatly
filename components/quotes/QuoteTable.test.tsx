@@ -15,7 +15,7 @@ describe('QuoteTable', () => {
             title: 'Mark living room repaint',
             status: 'sent',
             valid_until: '2026-04-10',
-            tier: 'better',
+            complexity: 'standard',
             subtotal_cents: 100000,
             gst_cents: 10000,
             total_cents: 110000,
@@ -39,9 +39,9 @@ describe('QuoteTable', () => {
             customer_id: 'customer-2',
             quote_number: 'QUO-0013',
             title: 'Shara studio exterior',
-            status: 'accepted',
+            status: 'approved',
             valid_until: '2026-04-15',
-            tier: 'best',
+            complexity: 'complex',
             subtotal_cents: 200000,
             gst_cents: 20000,
             total_cents: 220000,
@@ -63,24 +63,22 @@ describe('QuoteTable', () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText(/Search by quote number/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Search quotes/i), {
       target: { value: 'Mark' },
     });
 
-    expect(screen.getAllByText('QUO-0012').length).toBeGreaterThan(0);
-    expect(screen.queryByText('QUO-0013')).not.toBeInTheDocument();
+    expect(screen.getByText('Mark Johnson')).toBeInTheDocument();
+    expect(screen.queryByText('Shara Studio')).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Filter by quote status/i), {
-      target: { value: 'accepted' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Approved' }));
 
     expect(screen.getByText('No quotes match this search.')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText(/Search by quote number/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Search quotes/i), {
       target: { value: '' },
     });
 
-    expect(screen.getAllByText('QUO-0013').length).toBeGreaterThan(0);
-    expect(screen.queryByText('QUO-0012')).not.toBeInTheDocument();
+    expect(screen.getByText('Shara Studio')).toBeInTheDocument();
+    expect(screen.queryByText('Mark Johnson')).not.toBeInTheDocument();
   });
 });

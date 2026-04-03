@@ -35,7 +35,7 @@ export type WindowScope = (typeof WINDOW_SCOPES)[number];
 export type DoorUnitRates = {
   [PS in TrimPaintSystem]: {
     [DT in RateDoorType]: {
-      [S in DoorScope]: number; // AUD cents per door
+      [S in DoorScope]: number; // AUD cents per door (fixed rate)
     };
   };
 };
@@ -139,7 +139,7 @@ export const DEFAULT_WINDOW_UNIT_RATES: WindowUnitRates = {
  */
 export type UserRateSettings = {
   [S in RatePresetSurfaceType]: {
-    [C in RatePresetCoatingType]: number; // AUD cents per m²
+    [C in RatePresetCoatingType]: number; // AUD cents per sqm
   };
 } & {
   door_unit_rates: DoorUnitRates;

@@ -421,7 +421,7 @@ async function run(): Promise<void> {
   const quoteIds: string[] = [];
 
   // ----
-  // DEMO-Q001  status=accepted  | Interior repaint, 2 rooms
+  // DEMO-Q001  status=approved  | Interior repaint, 2 rooms
   // Sarah Mitchell, Bondi Beach
   //   Living Room   walls 45m²@$18  = $810   labour $720 material $90
   //                 ceiling 15m²@$20 = $300   labour $240 material $60
@@ -435,8 +435,8 @@ async function run(): Promise<void> {
       customer_id: customerIds[0],
       quote_number: 'DEMO-Q001',
       title: 'Interior Repaint – Bondi Beach',
-      status: 'accepted',
-      tier: 'better',
+      status: 'approved',
+      tier: 'standard',
       labour_margin_percent: 15,
       material_margin_percent: 10,
       subtotal_cents: q1Subtotal,
@@ -461,7 +461,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 1800,
             labour_cost_cents: 72_000,
             material_cost_cents: 9_000,
-            tier: 'better',
+            tier: 'standard',
           },
           {
             surface_type: 'ceiling',
@@ -470,7 +470,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 2000,
             labour_cost_cents: 24_000,
             material_cost_cents: 6_000,
-            tier: 'better',
+            tier: 'standard',
           },
         ],
       },
@@ -488,7 +488,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 1800,
             labour_cost_cents: 48_000,
             material_cost_cents: 6_000,
-            tier: 'better',
+            tier: 'standard',
           },
         ],
       },
@@ -511,7 +511,7 @@ async function run(): Promise<void> {
       quote_number: 'DEMO-Q002',
       title: 'Kitchen & Bathroom Refresh',
       status: 'sent',
-      tier: 'good',
+      tier: 'standard',
       labour_margin_percent: 10,
       material_margin_percent: 5,
       subtotal_cents: q2Subtotal,
@@ -536,7 +536,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 1800,
             labour_cost_cents: 44_800,
             material_cost_cents: 5_600,
-            tier: 'good',
+            tier: 'standard',
           },
           {
             surface_type: 'trim',
@@ -545,7 +545,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 3500,
             labour_cost_cents: 24_000,
             material_cost_cents: 4_000,
-            tier: 'good',
+            tier: 'standard',
           },
         ],
       },
@@ -563,7 +563,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 1800,
             labour_cost_cents: 28_800,
             material_cost_cents: 3_600,
-            tier: 'good',
+            tier: 'standard',
           },
           {
             surface_type: 'ceiling',
@@ -572,7 +572,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 2000,
             labour_cost_cents: 11_200,
             material_cost_cents: 2_800,
-            tier: 'good',
+            tier: 'standard',
           },
         ],
       },
@@ -594,7 +594,7 @@ async function run(): Promise<void> {
       quote_number: 'DEMO-Q003',
       title: 'Full Exterior Repaint – Brunswick Heritage Cottage',
       status: 'draft',
-      tier: 'best',
+      tier: 'complex',
       labour_margin_percent: 20,
       material_margin_percent: 15,
       subtotal_cents: q3Subtotal,
@@ -618,7 +618,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 3000,
             labour_cost_cents: 288_000,
             material_cost_cents: 72_000,
-            tier: 'best',
+            tier: 'complex',
           },
           {
             surface_type: 'exterior_trim',
@@ -627,7 +627,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 4500,
             labour_cost_cents: 64_800,
             material_cost_cents: 16_200,
-            tier: 'best',
+            tier: 'complex',
           },
           {
             surface_type: 'fascia',
@@ -636,7 +636,7 @@ async function run(): Promise<void> {
             rate_per_m2_cents: 4000,
             labour_cost_cents: 44_800,
             material_cost_cents: 11_200,
-            tier: 'best',
+            tier: 'complex',
           },
         ],
       },
@@ -651,7 +651,7 @@ async function run(): Promise<void> {
   const invoiceIds: string[] = [];
 
   // ----
-  // DEMO-I001  status=paid  | Full invoice for Q001 (accepted job)
+  // DEMO-I001  status=paid  | Full invoice for Q001 (approved job)
   // subtotal $1,650  gst $165  total $1,815
   // ----
   const i1Subtotal = q1Subtotal;

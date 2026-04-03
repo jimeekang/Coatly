@@ -14,6 +14,40 @@ export default async function QuoteDetailPage({
   const { id } = await params;
   const { data: quote, error } = await getQuote(id);
 
+  // ── Internal cost breakdown (not shown in PDF) ──────────────────────────
+  const hasManualRooms = (quote?.rooms?.length ?? 0) > 0;
+  const labourBaseTotal = hasManualRooms
+    ? (quote?.rooms ?? []).reduce(
+        (sum, room) => sum + room.surfaces.reduce((s, surf) => s + surf.labour_cost_cents, 0),
+        0
+      )
+    : null;
+  const materialsBaseTotal = hasManualRooms
+    ? (quote?.rooms ?? []).reduce(
+        (sum, room) => sum + room.surfaces.reduce((s, surf) => s + surf.material_cost_cents, 0),
+        0
+      )
+    : null;
+  // Total pre-markup base: for manual rooms = sum of surfaces, for interior = reverse-calculate
+  const baseSubtotalForMarkup = (() => {
+    if (labourBaseTotal !== null && materialsBaseTotal !== null) {
+      return labourBaseTotal + materialsBaseTotal;
+    }
+    if (!quote) return 0;
+    const totalMarkupFraction = (quote.labour_margin_percent + quote.material_margin_percent) / 100;
+    return totalMarkupFraction > 0
+      ? Math.round(quote.subtotal_cents / (1 + totalMarkupFraction))
+      : quote.subtotal_cents;
+  })();
+  const labourMarkupAmount = quote
+    ? Math.round(baseSubtotalForMarkup * quote.labour_margin_percent / 100)
+    : 0;
+  const materialsMarkupAmount = quote
+    ? Math.round(baseSubtotalForMarkup * quote.material_margin_percent / 100)
+    : 0;
+  const showBreakdown =
+    quote && (quote.labour_margin_percent > 0 || quote.material_margin_percent > 0 || hasManualRooms);
+
   return (
     <div className="mx-auto max-w-lg px-4 pt-4">
       <div className="mb-6 flex items-center gap-3">
@@ -163,6 +197,73 @@ export default async function QuoteDetailPage({
             </section>
           )}
 
+          {/* Internal Cost Breakdown — not shown on PDF */}
+          {showBreakdown && (
+            <section className="rounded-xl border border-pm-border bg-white">
+              <div className="flex items-center justify-between gap-2 rounded-t-xl bg-amber-50 px-5 py-3">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                  Cost Breakdown
+                </h2>
+                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                  Internal
+                </span>
+              </div>
+              <div className="space-y-3 px-5 py-4 text-sm">
+                {/* Per-room subtotals with labour/materials split (manual rooms only) */}
+                {hasManualRooms && quote.rooms.map((room) => {
+                  const roomLabour = room.surfaces.reduce((s, surf) => s + surf.labour_cost_cents, 0);
+                  const roomMaterials = room.surfaces.reduce((s, surf) => s + surf.material_cost_cents, 0);
+                  return (
+                    <div key={room.id} className="rounded-lg border border-pm-border bg-pm-surface px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-pm-body">{room.name}</span>
+                        <span className="font-semibold text-pm-body">{formatAUD(room.total_cents)}</span>
+                      </div>
+                      <div className="mt-2 flex gap-4 text-xs text-pm-secondary">
+                        <span>Labour: {formatAUD(roomLabour)}</span>
+                        <span>Materials: {formatAUD(roomMaterials)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Aggregate markup breakdown */}
+                {(quote.labour_margin_percent > 0 || quote.material_margin_percent > 0) && (
+                  <div className="space-y-2 border-t border-pm-border pt-3">
+                    {labourBaseTotal !== null && materialsBaseTotal !== null && (
+                      <>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-pm-secondary">Labour (base)</span>
+                          <span className="text-pm-body">{formatAUD(labourBaseTotal)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-pm-secondary">Materials (base)</span>
+                          <span className="text-pm-body">{formatAUD(materialsBaseTotal)}</span>
+                        </div>
+                      </>
+                    )}
+                    {quote.labour_margin_percent > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-pm-secondary">
+                          Labour markup ({quote.labour_margin_percent}%)
+                        </span>
+                        <span className="text-pm-body">+{formatAUD(labourMarkupAmount)}</span>
+                      </div>
+                    )}
+                    {quote.material_margin_percent > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-pm-secondary">
+                          Materials markup ({quote.material_margin_percent}%)
+                        </span>
+                        <span className="text-pm-body">+{formatAUD(materialsMarkupAmount)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           <section className="rounded-xl border border-pm-border bg-white">
             <div className="rounded-t-xl bg-pm-surface px-5 py-3">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
@@ -171,17 +272,17 @@ export default async function QuoteDetailPage({
             </div>
             <div className="space-y-3 px-5 py-4 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-pm-secondary">Subtotal</span>
+                <span className="text-pm-secondary">Subtotal (ex GST)</span>
                 <span className="font-medium text-pm-body">
                   {formatAUD(quote.subtotal_cents)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-pm-secondary">GST</span>
+                <span className="text-pm-secondary">GST (10%)</span>
                 <span className="font-medium text-pm-body">{formatAUD(quote.gst_cents)}</span>
               </div>
               <div className="flex items-center justify-between border-t border-pm-border pt-3">
-                <span className="font-semibold text-pm-body">Total</span>
+                <span className="font-semibold text-pm-body">Total (inc GST)</span>
                 <span className="text-base font-semibold text-pm-body">
                   {formatAUD(quote.total_cents)}
                 </span>

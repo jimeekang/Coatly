@@ -16,10 +16,10 @@ Quote (견적서)
   │     ├── dimensions: length × width × height(m)
   │     └── QuoteRoomSurface (도색 면) × N
   │           ├── surface_type: walls | ceiling | trim | doors | ...
-  │           ├── area_m2: 자동 계산 or 수동 입력
+  │           ├── area_sqm: 자동 계산 or 수동 입력
   │           ├── coating_type: touch_up_1coat | repaint_2coat | ...
-  │           ├── tier: good | better | best
-  │           ├── rate_per_m2_cents: 단가
+  │           ├── complexity: standard | moderate | complex
+  │           ├── rate_per_sqm_cents: 단가 (base × complexity multiplier)
   │           ├── material_cost_cents, labour_cost_cents
   │           └── paint_litres_needed: 필요 도료량
   └── Totals
@@ -30,13 +30,14 @@ Quote (견적서)
 
 ## 가격 티어 시스템
 
-| Tier | 의미 | 사용 |
-|------|------|------|
-| Good | 기본 품질 | 경제적 옵션 |
-| Better | 중간 품질 | 기본 추천 |
-| Best | 프리미엄 품질 | 고급 마감 |
+| Complexity | 의미 | Labour multiplier |
+|------------|------|-------------------|
+| Standard | 일반 조건 (쉬운 접근, 양호한 표면) | 1.0× (기준) |
+| Moderate | 일부 어려움 (2층, 소규모 prep, 좁은 공간) | 1.25× |
+| Complex | 난이도 높음 (비계, 대규모 prep, 헤리티지, 고천장) | 1.5× |
 
-- `config/paint-rates.ts`에 면 종류 × 코팅 방식 × 티어별 기본 단가 정의
+- Complexity는 **labour cost에 적용되는 배율**로, 같은 면적·코팅이어도 현장 조건에 따라 단가가 달라짐
+- `config/paint-rates.ts`에 면 종류 × 코팅 방식별 기본 단가 정의
 - 사용자가 단가 커스터마이즈 가능
 
 ## 상태 워크플로우

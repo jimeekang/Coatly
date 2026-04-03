@@ -59,7 +59,7 @@ export default async function NewQuotePage() {
             {quoteUsage.remaining} of {quoteUsage.limit} active quote slots remaining this month
           </p>
           <p className="mt-1 text-sm text-pm-secondary">
-            Starter includes up to {quoteUsage.limit} draft, sent, or accepted quotes each
+            Starter includes up to {quoteUsage.limit} draft, sent, or approved quotes each
             month. Upgrade to Pro for unlimited quoting and AI drafting.
           </p>
         </div>

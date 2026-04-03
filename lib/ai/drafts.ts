@@ -114,7 +114,7 @@ const quoteDraftSchema = z.object({
   title: z.string(),
   status: z.enum(['draft', 'sent']),
   valid_until: z.string(),
-  tier: z.enum(['good', 'better', 'best']),
+  complexity: z.enum(['standard', 'moderate', 'complex']),
   labour_margin_percent: z.number(),
   material_margin_percent: z.number(),
   notes: z.string(),

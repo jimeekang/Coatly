@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   calculateQuotePreview,
-  getSuggestedRatePerM2Cents,
+  getSuggestedRatePerSqmCents,
   parseQuoteCreateInput,
 } from '@/lib/quotes';
 
 describe('lib/quotes', () => {
   it('calculates quoted totals from rooms, surfaces, and margins', () => {
     const preview = calculateQuotePreview({
-      tier: 'better',
+      complexity: 'standard',
       labour_margin_percent: 10,
       material_margin_percent: 5,
       rooms: [
@@ -43,7 +43,7 @@ describe('lib/quotes', () => {
       title: '  Harbor Cafe repaint  ',
       status: 'draft',
       valid_until: '2026-04-10',
-      tier: 'better',
+      complexity: 'standard',
       labour_margin_percent: 10,
       material_margin_percent: 5,
       notes: '  Client-facing note  ',
@@ -75,7 +75,7 @@ describe('lib/quotes', () => {
         title: 'Harbor Cafe repaint',
         status: 'draft',
         valid_until: '2026-04-10',
-        tier: 'better',
+        complexity: 'standard',
         labour_margin_percent: 10,
         material_margin_percent: 5,
         manual_adjustment_cents: 0,
@@ -110,7 +110,7 @@ describe('lib/quotes', () => {
       title: '  Apartment repaint  ',
       status: 'draft',
       valid_until: '2026-04-10',
-      tier: 'better',
+      complexity: 'standard',
       labour_margin_percent: 10,
       material_margin_percent: 5,
       notes: '  Client-facing note  ',
@@ -160,7 +160,7 @@ describe('lib/quotes', () => {
         title: 'Apartment repaint',
         status: 'draft',
         valid_until: '2026-04-10',
-        tier: 'better',
+        complexity: 'standard',
         labour_margin_percent: 10,
         material_margin_percent: 5,
         manual_adjustment_cents: 0,
@@ -223,7 +223,7 @@ describe('lib/quotes', () => {
       title: 'Apartment repaint',
       status: 'draft',
       valid_until: '2026-04-10',
-      tier: 'better',
+      complexity: 'standard',
       labour_margin_percent: 10,
       material_margin_percent: 5,
       notes: '',
@@ -237,9 +237,9 @@ describe('lib/quotes', () => {
     });
   });
 
-  it('provides a suggested rate for a surface and tier', () => {
-    expect(getSuggestedRatePerM2Cents('walls', 'repaint_2coat', 'better')).toBe(1800);
-    expect(getSuggestedRatePerM2Cents('walls', 'repaint_2coat', 'best')).toBeGreaterThan(
+  it('provides a suggested rate for a surface and complexity level', () => {
+    expect(getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'standard')).toBe(1800);
+    expect(getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'complex')).toBeGreaterThan(
       1800
     );
   });
