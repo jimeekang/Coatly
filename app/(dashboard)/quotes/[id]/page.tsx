@@ -3,6 +3,9 @@ import type { Metadata } from 'next';
 import { getQuote } from '@/app/actions/quotes';
 import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
+import { ProfitabilityCard } from '@/components/quotes/ProfitabilityCard';
+import { getBusinessRateSettings } from '@/lib/businesses';
+import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Quote Detail' };
 
@@ -12,7 +15,12 @@ export default async function QuoteDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { data: quote, error } = await getQuote(id);
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const [{ data: quote, error }, { data: rateSettings }] = await Promise.all([
+    getQuote(id),
+    user ? getBusinessRateSettings(supabase, user.id) : Promise.resolve({ data: null, error: null }),
+  ]);
 
   // ── Internal cost breakdown (not shown in PDF) ──────────────────────────
   const hasManualRooms = (quote?.rooms?.length ?? 0) > 0;
@@ -96,6 +104,7 @@ export default async function QuoteDetailPage({
               <p className="text-lg font-semibold text-pm-body">
                 {quote.title || 'Untitled quote'}
               </p>
+              <p>Quote number: {quote.quote_number}</p>
               <p>Status: {QUOTE_STATUS_LABELS[quote.status]}</p>
               <p>Valid until: {quote.valid_until ? formatDate(quote.valid_until) : '—'}</p>
               <p>Total: {formatAUD(quote.total_cents)}</p>
@@ -198,6 +207,11 @@ export default async function QuoteDetailPage({
           )}
 
           {/* Internal Cost Breakdown — not shown on PDF */}
+          <ProfitabilityCard
+            quote={quote}
+            targetDailyEarningsCents={rateSettings?.pricing?.target_daily_earnings_cents}
+          />
+
           {showBreakdown && (
             <section className="rounded-xl border border-pm-border bg-white">
               <div className="flex items-center justify-between gap-2 rounded-t-xl bg-amber-50 px-5 py-3">

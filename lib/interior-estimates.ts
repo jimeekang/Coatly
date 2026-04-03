@@ -1,4 +1,6 @@
 import { INTERIOR_ESTIMATE_ANCHORS, INTERIOR_SCOPE_SHARE } from '@/config/interior-estimate-anchors';
+import { PAINT_RATES } from '@/config/paint-rates';
+import type { UserRateSettings } from '@/lib/rate-settings';
 
 export const INTERIOR_APARTMENT_TYPES = ['studio', '1_bedroom', '2_bedroom_standard', '2_bedroom_large', '3_bedroom'] as const;
 export const INTERIOR_CONDITIONS = ['excellent', 'fair', 'poor'] as const;
@@ -119,7 +121,7 @@ export type InteriorPricingSnapshot = {
   pricing_items: InteriorPricingItem[];
   line_items: InteriorPricingItem[];
   snapshot: {
-    price_source: 'anchor';
+    price_source: 'anchor' | 'mixed';
     anchor_version: '2026-sydney-northern-beaches';
     anchor_path: string;
     property_type: InteriorPropertyType;
@@ -128,7 +130,7 @@ export type InteriorPricingSnapshot = {
     scope: InteriorScope[];
     property_details: InteriorEstimateInput['property_details'];
     range_cents: { min: number; median: number; max: number };
-    adjustments: { scope_multiplier: number; storey_multiplier: number; quantity_scale_factor: number };
+    adjustments: { scope_multiplier: number; storey_multiplier: number; quantity_scale_factor: number; surface_rate_multiplier: number };
   };
 };
 
@@ -212,8 +214,11 @@ function getDoorTypeMultiplier(doorType: InteriorDoorType) {
 function getDoorPrice(
   paintSystem: InteriorPaintSystem,
   scope: InteriorDoorScope,
-  doorType: InteriorDoorType
+  doorType: InteriorDoorType,
+  userRates?: UserRateSettings | null
 ) {
+  const configured = userRates?.door_unit_rates?.[paintSystem]?.[doorType]?.[scope];
+  if (typeof configured === 'number') return configured;
   const scopeLabel =
     INTERIOR_DOOR_SCOPE_LABELS[scope] as keyof (typeof INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.trim_items.doors)[InteriorPaintSystem];
   return (
@@ -223,7 +228,14 @@ function getDoorPrice(
   );
 }
 
-function getWindowPrice(paintSystem: InteriorPaintSystem, windowType: InteriorWindowType, scope: InteriorWindowScope) {
+function getWindowPrice(
+  paintSystem: InteriorPaintSystem,
+  windowType: InteriorWindowType,
+  scope: InteriorWindowScope,
+  userRates?: UserRateSettings | null
+) {
+  const configured = userRates?.window_unit_rates?.[paintSystem]?.[windowType]?.[scope];
+  if (typeof configured === 'number') return configured;
   const typeLabel =
     INTERIOR_WINDOW_TYPE_LABELS[windowType] as keyof (typeof INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.trim_items.windows)[InteriorPaintSystem];
   const scopeLabel =
@@ -243,11 +255,72 @@ function getQuantityScaleFactor(quantity: number) {
   return 1;
 }
 
+function getSurfaceRateMultiplier(scope: InteriorScope[], userRates?: UserRateSettings | null) {
+  const normalized = [...new Set(scope)];
+  if (!userRates || normalized.length === 0) return 1;
+
+  const weights: Record<InteriorScope, number> = {
+    walls: INTERIOR_SCOPE_SHARE.walls_only,
+    ceiling: INTERIOR_SCOPE_SHARE.ceiling_only,
+    trim: INTERIOR_SCOPE_SHARE.trim_only,
+  };
+
+  const ratios: Record<InteriorScope, number> = {
+    walls: userRates.walls.repaint_2coat / PAINT_RATES.walls.repaint_2coat.ratePerSqm,
+    ceiling: userRates.ceiling.repaint_2coat / PAINT_RATES.ceiling.repaint_2coat.ratePerSqm,
+    trim: userRates.trim.repaint_2coat / PAINT_RATES.trim.repaint_2coat.ratePerSqm,
+  };
+
+  const totalWeight = normalized.reduce((sum, item) => sum + weights[item], 0);
+  if (totalWeight === 0) return 1;
+
+  return normalized.reduce((sum, item) => sum + weights[item] * ratios[item], 0) / totalWeight;
+}
+
+/**
+ * Checks whether a computed door price differs from the corresponding anchor price,
+ * indicating the user has applied custom per-unit rates.
+ */
+function isDoorPriceCustomized(
+  computedPrice: number,
+  paintSystem: InteriorPaintSystem,
+  scope: InteriorDoorScope,
+  doorType: InteriorDoorType
+): boolean {
+  const scopeLabel =
+    INTERIOR_DOOR_SCOPE_LABELS[scope] as keyof (typeof INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.trim_items.doors)[InteriorPaintSystem];
+  const anchorPrice = Math.round(
+    INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.trim_items.doors[paintSystem][scopeLabel] *
+    getDoorTypeMultiplier(doorType) *
+    100
+  );
+  return computedPrice !== anchorPrice;
+}
+
+/**
+ * Checks whether a computed window price differs from the corresponding anchor price,
+ * indicating the user has applied custom per-unit rates.
+ */
+function isWindowPriceCustomized(
+  computedPrice: number,
+  paintSystem: InteriorPaintSystem,
+  windowType: InteriorWindowType,
+  scope: InteriorWindowScope
+): boolean {
+  const typeLabel =
+    INTERIOR_WINDOW_TYPE_LABELS[windowType] as keyof (typeof INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.trim_items.windows)[InteriorPaintSystem];
+  const scopeLabel =
+    INTERIOR_WINDOW_SCOPE_LABELS[scope] as keyof (typeof INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.trim_items.windows)[InteriorPaintSystem][typeof typeLabel];
+  const anchorPrice = INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.trim_items.windows[paintSystem][typeLabel][scopeLabel] * 100;
+  return computedPrice !== anchorPrice;
+}
+
 function buildSnapshot(
   input: InteriorEstimateInput,
   range: RangeCents,
-  adjustments: { scope_multiplier: number; storey_multiplier: number; quantity_scale_factor: number },
-  pricing_items: InteriorPricingItem[]
+  adjustments: { scope_multiplier: number; storey_multiplier: number; quantity_scale_factor: number; surface_rate_multiplier: number },
+  pricing_items: InteriorPricingItem[],
+  price_source: 'anchor' | 'mixed' = 'anchor'
 ): InteriorPricingSnapshot {
   const subtotal_cents = cap(range.median);
   const gst_cents = Math.round(subtotal_cents * 0.1);
@@ -258,7 +331,7 @@ function buildSnapshot(
     pricing_items,
     line_items: pricing_items,
     snapshot: {
-      price_source: 'anchor',
+      price_source,
       anchor_version: '2026-sydney-northern-beaches',
       anchor_path: `interior.${input.property_type}.${input.estimate_mode}`,
       property_type: input.property_type,
@@ -272,24 +345,26 @@ function buildSnapshot(
   };
 }
 
-function calculateEntireApartmentEstimate(input: InteriorEstimateInput): InteriorPricingSnapshot {
+function calculateEntireApartmentEstimate(input: InteriorEstimateInput, userRates?: UserRateSettings | null): InteriorPricingSnapshot {
   const apartmentType = input.property_details.apartment_type ?? '2_bedroom_standard';
   const condition = getCondition('apartment', input.condition);
   const scope_multiplier = getScopeMultiplier(input.scope);
+  const surface_rate_multiplier = getSurfaceRateMultiplier(input.scope, userRates);
   const baseRange = input.property_details.sqm != null
     ? { min: interpolateMedian(INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_sqm_curve, input.property_details.sqm) * 0.88 * 100, median: interpolateMedian(INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_sqm_curve, input.property_details.sqm) * 100, max: interpolateMedian(INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_sqm_curve, input.property_details.sqm) * 1.14 * 100 }
     : { min: INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_apt_type[apartmentType].min * 100, median: INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_apt_type[apartmentType].median * 100, max: INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_apt_type[apartmentType].max * 100 };
 
   const range = clampRangeGap(
     {
-      min: baseRange.min * scope_multiplier * condition.min_mult,
-      median: baseRange.median * scope_multiplier * ((condition.min_mult + condition.max_mult) / 2),
-      max: baseRange.max * scope_multiplier * condition.max_mult,
+      min: baseRange.min * scope_multiplier * condition.min_mult * surface_rate_multiplier,
+      median: baseRange.median * scope_multiplier * ((condition.min_mult + condition.max_mult) / 2) * surface_rate_multiplier,
+      max: baseRange.max * scope_multiplier * condition.max_mult * surface_rate_multiplier,
     },
     baseRange.median <= 500000 ? 120000 : 180000
   );
 
-  return buildSnapshot(input, range, { scope_multiplier, storey_multiplier: 1, quantity_scale_factor: 1 }, [
+  // entire_property never uses per-unit door/window rates — always anchor
+  return buildSnapshot(input, range, { scope_multiplier, storey_multiplier: 1, quantity_scale_factor: 1, surface_rate_multiplier }, [
     {
       category: 'entire_property',
       label: `Apartment interior repaint (${INTERIOR_APARTMENT_TYPE_LABELS[apartmentType]})`,
@@ -299,25 +374,27 @@ function calculateEntireApartmentEstimate(input: InteriorEstimateInput): Interio
       total_cents: cap(range.median),
       metadata: { apartment_type: apartmentType, sqm: input.property_details.sqm ?? null },
     },
-  ]);
+  ], 'anchor');
 }
 
-function calculateEntireHouseEstimate(input: InteriorEstimateInput): InteriorPricingSnapshot {
+function calculateEntireHouseEstimate(input: InteriorEstimateInput, userRates?: UserRateSettings | null): InteriorPricingSnapshot {
   const config = inferHouseConfig(input.property_details);
   const baseRange = INTERIOR_ESTIMATE_ANCHORS.house.entire_property.by_config[config];
   const condition = getCondition('house', input.condition);
   const scope_multiplier = getScopeMultiplier(input.scope);
   const storey_multiplier = getStoreyMultiplier(input.property_details.storeys);
+  const surface_rate_multiplier = getSurfaceRateMultiplier(input.scope, userRates);
   const range = clampRangeGap(
     {
-      min: baseRange.min * 100 * scope_multiplier * storey_multiplier * condition.min_mult,
-      median: baseRange.median * 100 * scope_multiplier * storey_multiplier * ((condition.min_mult + condition.max_mult) / 2),
-      max: baseRange.max * 100 * scope_multiplier * storey_multiplier * condition.max_mult,
+      min: baseRange.min * 100 * scope_multiplier * storey_multiplier * condition.min_mult * surface_rate_multiplier,
+      median: baseRange.median * 100 * scope_multiplier * storey_multiplier * ((condition.min_mult + condition.max_mult) / 2) * surface_rate_multiplier,
+      max: baseRange.max * 100 * scope_multiplier * storey_multiplier * condition.max_mult * surface_rate_multiplier,
     },
     baseRange.median <= 10000 ? 180000 : 250000
   );
 
-  return buildSnapshot(input, range, { scope_multiplier, storey_multiplier, quantity_scale_factor: 1 }, [
+  // entire_property never uses per-unit door/window rates — always anchor
+  return buildSnapshot(input, range, { scope_multiplier, storey_multiplier, quantity_scale_factor: 1, surface_rate_multiplier }, [
     {
       category: 'entire_property',
       label: `House interior repaint (${config.replaceAll('_', ' ')})`,
@@ -327,15 +404,16 @@ function calculateEntireHouseEstimate(input: InteriorEstimateInput): InteriorPri
       total_cents: cap(range.median),
       metadata: { config, bedrooms: input.property_details.bedrooms ?? null, bathrooms: input.property_details.bathrooms ?? null, sqm: input.property_details.sqm ?? null, storeys: input.property_details.storeys ?? null },
     },
-  ]);
+  ], 'anchor');
 }
 
-function calculateSpecificAreasEstimate(input: InteriorEstimateInput): InteriorPricingSnapshot {
+function calculateSpecificAreasEstimate(input: InteriorEstimateInput, userRates?: UserRateSettings | null): InteriorPricingSnapshot {
   const roomAnchors = input.property_type === 'apartment' ? INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.rooms : INTERIOR_ESTIMATE_ANCHORS.house.specific_areas.rooms;
   const condition = getCondition(input.property_type, input.condition);
   const storey_multiplier = input.property_type === 'house' ? getStoreyMultiplier(input.property_details.storeys) : 1;
   const conditionMedian = (condition.min_mult + condition.max_mult) / 2;
   const quantityScaleFactor = getQuantityScaleFactor(input.opening_items.reduce((sum, item) => sum + item.quantity, 0));
+  const defaultSurfaceRateMultiplier = getSurfaceRateMultiplier(input.scope, userRates);
   const pricing_items: InteriorPricingItem[] = [];
   let min = 0;
   let median = 0;
@@ -346,35 +424,47 @@ function calculateSpecificAreasEstimate(input: InteriorEstimateInput): InteriorP
     if (room.include_walls) roomScope.push('walls');
     if (room.include_ceiling) roomScope.push('ceiling');
     if (room.include_trim) roomScope.push('trim');
-    const scopeMultiplier = getScopeMultiplier(roomScope.length > 0 ? roomScope : input.scope);
+    const activeScope = roomScope.length > 0 ? roomScope : input.scope;
+    const scopeMultiplier = getScopeMultiplier(activeScope);
+    const surfaceRateMultiplier = getSurfaceRateMultiplier(activeScope, userRates);
     const anchor = roomAnchors[room.anchor_room_type];
-    const itemMedian = cap(anchor.median * 100 * scopeMultiplier * storey_multiplier * conditionMedian);
-    min += cap(anchor.min * 100 * scopeMultiplier * storey_multiplier * condition.min_mult);
+    const itemMedian = cap(anchor.median * 100 * scopeMultiplier * storey_multiplier * conditionMedian * surfaceRateMultiplier);
+    min += cap(anchor.min * 100 * scopeMultiplier * storey_multiplier * condition.min_mult * surfaceRateMultiplier);
     median += itemMedian;
-    max += cap(anchor.max * 100 * scopeMultiplier * storey_multiplier * condition.max_mult);
-    pricing_items.push({ category: 'room_anchor', label: room.name || room.anchor_room_type, quantity: 1, unit: 'room', unit_price_cents: itemMedian, total_cents: itemMedian, room_index: roomIndex, metadata: { anchor_room_type: room.anchor_room_type, include_walls: room.include_walls, include_ceiling: room.include_ceiling, include_trim: room.include_trim } });
+    max += cap(anchor.max * 100 * scopeMultiplier * storey_multiplier * condition.max_mult * surfaceRateMultiplier);
+    pricing_items.push({ category: 'room_anchor', label: room.name || room.anchor_room_type, quantity: 1, unit: 'room', unit_price_cents: itemMedian, total_cents: itemMedian, room_index: roomIndex, metadata: { anchor_room_type: room.anchor_room_type, include_walls: room.include_walls, include_ceiling: room.include_ceiling, include_trim: room.include_trim, surface_rate_multiplier: Number(surfaceRateMultiplier.toFixed(3)) } });
   });
+
+  let usedCustomUnitRates = false;
 
   input.opening_items.forEach((item) => {
     if (item.opening_type === 'door') {
       const doorType = item.door_type ?? 'standard';
       const doorScope = item.door_scope ?? 'door_and_frame';
-      const unit = cap(getDoorPrice(item.paint_system, doorScope, doorType) * quantityScaleFactor);
+      const rawPrice = getDoorPrice(item.paint_system, doorScope, doorType, userRates);
+      const unit = cap(rawPrice * quantityScaleFactor);
       const total = cap(unit * item.quantity);
       min += total;
       median += total;
       max += total;
+      if (isDoorPriceCustomized(rawPrice, item.paint_system, doorScope, doorType)) {
+        usedCustomUnitRates = true;
+      }
       pricing_items.push({ category: 'door', label: `${INTERIOR_DOOR_TYPE_LABELS[doorType]} ${INTERIOR_DOOR_SCOPE_LABELS[doorScope]}`, quantity: item.quantity, unit: 'item', unit_price_cents: unit, total_cents: total, room_index: item.room_index ?? null, metadata: { paint_system: item.paint_system, quantity_scale_factor: quantityScaleFactor } });
       return;
     }
 
     const windowType = item.window_type ?? 'normal';
     const windowScope = item.window_scope ?? 'window_and_frame';
-    const unit = cap(getWindowPrice(item.paint_system, windowType, windowScope) * quantityScaleFactor);
+    const rawPrice = getWindowPrice(item.paint_system, windowType, windowScope, userRates);
+    const unit = cap(rawPrice * quantityScaleFactor);
     const total = cap(unit * item.quantity);
     min += total;
     median += total;
     max += total;
+    if (isWindowPriceCustomized(rawPrice, item.paint_system, windowType, windowScope)) {
+      usedCustomUnitRates = true;
+    }
     pricing_items.push({ category: 'window', label: `${INTERIOR_WINDOW_TYPE_LABELS[windowType]} ${INTERIOR_WINDOW_SCOPE_LABELS[windowScope]}`, quantity: item.quantity, unit: 'item', unit_price_cents: unit, total_cents: total, room_index: item.room_index ?? null, metadata: { paint_system: item.paint_system, quantity_scale_factor: quantityScaleFactor } });
   });
 
@@ -387,11 +477,17 @@ function calculateSpecificAreasEstimate(input: InteriorEstimateInput): InteriorP
     pricing_items.push({ category: 'trim', label: 'Skirting / Trim', quantity: item.quantity, unit: 'linear_metre', unit_price_cents: unit, total_cents: total, room_index: item.room_index ?? null, metadata: { paint_system: item.paint_system } });
   });
 
-  return buildSnapshot(input, { min, median, max }, { scope_multiplier: 1, storey_multiplier, quantity_scale_factor: quantityScaleFactor }, pricing_items);
+  return buildSnapshot(
+    input,
+    { min, median, max },
+    { scope_multiplier: 1, storey_multiplier, quantity_scale_factor: quantityScaleFactor, surface_rate_multiplier: defaultSurfaceRateMultiplier },
+    pricing_items,
+    usedCustomUnitRates ? 'mixed' : 'anchor'
+  );
 }
 
-export function calculateInteriorEstimate(input: InteriorEstimateInput): InteriorPricingSnapshot {
-  if (input.estimate_mode === 'entire_property' && input.property_type === 'apartment') return calculateEntireApartmentEstimate(input);
-  if (input.estimate_mode === 'entire_property' && input.property_type === 'house') return calculateEntireHouseEstimate(input);
-  return calculateSpecificAreasEstimate(input);
+export function calculateInteriorEstimate(input: InteriorEstimateInput, userRates?: UserRateSettings | null): InteriorPricingSnapshot {
+  if (input.estimate_mode === 'entire_property' && input.property_type === 'apartment') return calculateEntireApartmentEstimate(input, userRates);
+  if (input.estimate_mode === 'entire_property' && input.property_type === 'house') return calculateEntireHouseEstimate(input, userRates);
+  return calculateSpecificAreasEstimate(input, userRates);
 }

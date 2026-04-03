@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getQuoteFormOptions } from '@/app/actions/quotes';
+import { getMaterialItemsForPicker } from '@/app/actions/materials';
 import { QuoteCreateScreen } from '@/components/quotes/QuoteCreateScreen';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server';
@@ -8,7 +9,10 @@ import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server
 export const metadata: Metadata = { title: 'New Quote' };
 
 export default async function NewQuotePage() {
-  const { data, error } = await getQuoteFormOptions();
+  const [{ data, error }, { data: libraryItems }] = await Promise.all([
+    getQuoteFormOptions(),
+    getMaterialItemsForPicker(),
+  ]);
   const customers = data.customers;
   const supabase = await createServerClient();
   const {
@@ -21,7 +25,7 @@ export default async function NewQuotePage() {
   const quoteUsage = usageResult?.usage ?? null;
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4">
+    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-7xl">
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/quotes"
@@ -83,7 +87,13 @@ export default async function NewQuotePage() {
           </Link>
         </div>
       ) : (
-        <QuoteCreateScreen customers={customers} canUseAI={subscription?.features.ai ?? false} rateSettings={data.userRates} />
+        <QuoteCreateScreen
+          customers={customers}
+          canUseAI={subscription?.features.ai ?? false}
+          quoteNumberPreview={data.nextQuoteNumber ?? undefined}
+          rateSettings={data.userRates}
+          libraryItems={libraryItems}
+        />
       )}
     </div>
   );

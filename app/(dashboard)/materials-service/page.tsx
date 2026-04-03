@@ -1,50 +1,58 @@
 import type { Metadata } from 'next';
+import { getMaterialItems } from '@/app/actions/materials';
+import { MaterialItemList } from '@/components/materials/MaterialItemList';
+import { MATERIAL_ITEM_CATEGORY_LABELS } from '@/lib/supabase/validators';
 
-export const metadata: Metadata = { title: 'Material / Service' };
+export const metadata: Metadata = { title: 'Materials & Services' };
 
-export default function MaterialsServicePage() {
+export default async function MaterialsServicePage() {
+  const { data: items, error } = await getMaterialItems();
+
+  const paintCount = items.filter((i) => i.category === 'paint').length;
+  const primerCount = items.filter((i) => i.category === 'primer').length;
+  const supplyCount = items.filter((i) => i.category === 'supply').length;
+  const serviceCount = items.filter((i) => i.category === 'service').length;
+  const otherCount = items.filter((i) => i.category === 'other').length;
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto max-w-2xl space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-[28px] font-bold text-pm-body">Material / Service</h1>
+        <h1 className="text-[28px] font-bold text-pm-body">Materials &amp; Services</h1>
         <p className="mt-1 text-sm text-pm-secondary">
-          Keep your pricing items in one place for paints, prep work, and common services.
+          Save reusable paints, supplies, and services to quickly add them to quotes.
         </p>
       </div>
 
-      <section className="rounded-2xl border border-pm-border bg-white p-5 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wider text-pm-secondary">
-          Coming Next
-        </p>
-        <h2 className="mt-2 text-lg font-semibold text-pm-body">
-          Material and service library is not built yet
-        </h2>
-        <p className="mt-2 text-sm text-pm-secondary">
-          This page will hold reusable rate cards, service items, and material lists that
-          can feed quotes and invoices.
-        </p>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl bg-pm-surface p-4">
-            <p className="text-sm font-semibold text-pm-body">Materials</p>
-            <p className="mt-1 text-sm text-pm-secondary">
-              Store paints, sundries, and supplier references.
-            </p>
-          </div>
-          <div className="rounded-xl bg-pm-surface p-4">
-            <p className="text-sm font-semibold text-pm-body">Services</p>
-            <p className="mt-1 text-sm text-pm-secondary">
-              Save common labour items like prep, patching, and finishing.
-            </p>
-          </div>
-          <div className="rounded-xl bg-pm-surface p-4">
-            <p className="text-sm font-semibold text-pm-body">Reusable Pricing</p>
-            <p className="mt-1 text-sm text-pm-secondary">
-              Reuse standard items across quotes, jobs, and invoices.
-            </p>
-          </div>
+      {/* Summary chips */}
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: MATERIAL_ITEM_CATEGORY_LABELS.paint, count: paintCount },
+            { label: MATERIAL_ITEM_CATEGORY_LABELS.primer, count: primerCount },
+            { label: MATERIAL_ITEM_CATEGORY_LABELS.supply, count: supplyCount },
+            { label: MATERIAL_ITEM_CATEGORY_LABELS.service, count: serviceCount },
+            { label: MATERIAL_ITEM_CATEGORY_LABELS.other, count: otherCount },
+          ]
+            .filter((c) => c.count > 0)
+            .map((c) => (
+              <span
+                key={c.label}
+                className="rounded-full border border-pm-border bg-white px-3 py-1 text-xs font-medium text-pm-secondary"
+              >
+                {c.label} · {c.count}
+              </span>
+            ))}
         </div>
-      </section>
+      )}
+
+      {error && (
+        <p className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark">
+          {error}
+        </p>
+      )}
+
+      <MaterialItemList initialItems={items} />
     </div>
   );
 }

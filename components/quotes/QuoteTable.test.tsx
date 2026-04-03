@@ -68,6 +68,7 @@ describe('QuoteTable', () => {
     });
 
     expect(screen.getByText('Mark Johnson')).toBeInTheDocument();
+    expect(screen.getByText('QUO-0012')).toBeInTheDocument();
     expect(screen.queryByText('Shara Studio')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Approved' }));

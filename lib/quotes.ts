@@ -13,8 +13,10 @@ import {
   quoteCreateSchema,
   type InteriorEstimate,
   type QuoteCreateInput,
+  type QuoteLineItemFormInput,
   type QuoteSurface,
 } from '@/lib/supabase/validators';
+import type { PricingMethod, PricingMethodInputs } from '@/types/quote';
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
 export type QuoteComplexity = 'standard' | 'moderate' | 'complex';
@@ -92,6 +94,56 @@ export type QuoteEstimateItemDraft = {
   metadata: Record<string, unknown>;
 };
 
+export type QuoteLineItemRecord = {
+  id: string;
+  quote_id: string;
+  material_item_id: string | null;
+  name: string;
+  category: string;
+  unit: string;
+  quantity: number;
+  unit_price_cents: number;
+  total_cents: number;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type QuotePricedLineItem = Pick<QuoteLineItemRecord, 'quantity' | 'unit_price_cents' | 'total_cents'> |
+  Pick<QuoteLineItemFormInput, 'quantity' | 'unit_price_cents'>;
+
+export function calculateQuoteLineItemsSubtotal(items: QuotePricedLineItem[] = []) {
+  return items.reduce((sum, item) => {
+    const total =
+      'total_cents' in item && typeof item.total_cents === 'number'
+        ? item.total_cents
+        : Math.round(item.quantity * item.unit_price_cents);
+    return sum + total;
+  }, 0);
+}
+
+export function composeQuoteTotals({
+  base_subtotal_cents,
+  adjustment_cents = 0,
+  line_items = [],
+}: {
+  base_subtotal_cents: number;
+  adjustment_cents?: number;
+  line_items?: QuotePricedLineItem[];
+}) {
+  const line_items_subtotal_cents = calculateQuoteLineItemsSubtotal(line_items);
+  const subtotal_cents = base_subtotal_cents + line_items_subtotal_cents;
+  const gst_cents = Math.round(subtotal_cents * 0.1);
+
+  return {
+    line_items_subtotal_cents,
+    subtotal_cents,
+    gst_cents,
+    total_cents: subtotal_cents + gst_cents + adjustment_cents,
+  };
+}
+
 export type QuoteListItem = {
   id: string;
   user_id: string;
@@ -133,11 +185,14 @@ export type QuoteDetail = {
   estimate_mode: 'entire_property' | 'specific_areas' | null;
   estimate_context: Record<string, unknown>;
   pricing_snapshot: Record<string, unknown>;
+  pricing_method: PricingMethod;
+  pricing_method_inputs: PricingMethodInputs | null;
   created_at: string;
   updated_at: string;
   customer: QuoteCustomerSummary;
   rooms: QuoteRoomDraft[];
   estimate_items: QuoteEstimateItemDraft[];
+  line_items: QuoteLineItemRecord[];
 };
 
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -336,6 +391,7 @@ export function calculateQuotePreview(input: {
   complexity?: QuoteComplexity;
   labour_margin_percent: number;
   material_margin_percent: number;
+  line_items?: QuoteLineItemFormInput[];
   rooms: Array<{
     name: string;
     room_type: QuoteRoomType;
@@ -372,15 +428,15 @@ export function calculateQuotePreview(input: {
   const material_margin_cents = Math.round(
     base_subtotal_cents * (input.material_margin_percent / 100)
   );
-  const subtotal_cents = base_subtotal_cents + labour_margin_cents + material_margin_cents;
-  const gst_cents = Math.round(subtotal_cents * 0.1);
+  const totals = composeQuoteTotals({
+    base_subtotal_cents: base_subtotal_cents + labour_margin_cents + material_margin_cents,
+    line_items: input.line_items ?? [],
+  });
 
   return {
     rooms,
     base_subtotal_cents,
-    subtotal_cents,
-    gst_cents,
-    total_cents: subtotal_cents + gst_cents,
+    ...totals,
   };
 }
 
@@ -407,7 +463,10 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       manual_adjustment_cents: parsed.data.manual_adjustment_cents ?? 0,
       notes: parsed.data.notes?.trim() || null,
       internal_notes: parsed.data.internal_notes?.trim() || null,
+      pricing_method: parsed.data.pricing_method,
+      pricing_method_inputs: parsed.data.pricing_method_inputs ?? null,
       interior_estimate: normalizeInteriorEstimate(parsed.data.interior_estimate),
+      line_items: parsed.data.line_items ?? [],
       rooms: parsed.data.rooms.map((room) => ({
         name: room.name.trim(),
         room_type: room.room_type,
@@ -500,6 +559,8 @@ export function mapQuoteDetail(row: {
   estimate_mode?: string | null;
   estimate_context?: Record<string, unknown> | null;
   pricing_snapshot?: Record<string, unknown> | null;
+  pricing_method?: string | null;
+  pricing_method_inputs?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   customer: QuoteCustomerSummary | null;
@@ -525,6 +586,7 @@ export function mapQuoteDetail(row: {
     }>;
   }>;
   estimate_items?: QuoteEstimateItemDraft[];
+  line_items?: QuoteLineItemRecord[];
 }): QuoteDetail {
   return {
     id: row.id,
@@ -547,6 +609,8 @@ export function mapQuoteDetail(row: {
     estimate_mode: (row.estimate_mode as QuoteDetail['estimate_mode']) ?? null,
     estimate_context: row.estimate_context ?? {},
     pricing_snapshot: row.pricing_snapshot ?? {},
+    pricing_method: (row.pricing_method as PricingMethod | null) ?? 'hybrid',
+    pricing_method_inputs: (row.pricing_method_inputs as PricingMethodInputs | null) ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
     customer: {
@@ -585,5 +649,6 @@ export function mapQuoteDetail(row: {
       };
     }),
     estimate_items: row.estimate_items ?? [],
+    line_items: row.line_items ?? [],
   };
 }

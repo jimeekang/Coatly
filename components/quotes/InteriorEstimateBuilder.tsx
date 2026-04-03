@@ -30,6 +30,7 @@ import {
   type InteriorWindowScope,
   type InteriorWindowType,
 } from '@/lib/interior-estimates';
+import type { UserRateSettings } from '@/lib/rate-settings';
 
 const FIELD = 'h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-base text-pm-body';
 const LABEL = 'mb-1.5 block text-sm font-medium text-pm-body';
@@ -133,9 +134,11 @@ export function createEmptyInteriorEstimateState(): InteriorEstimateFormState {
 export function InteriorEstimateBuilder({
   value,
   onChange,
+  rateSettings,
 }: {
   value: InteriorEstimateFormState;
   onChange: (next: InteriorEstimateFormState) => void;
+  rateSettings?: UserRateSettings | null;
 }) {
   function setValue<K extends keyof InteriorEstimateFormState>(key: K, nextValue: InteriorEstimateFormState[K]) {
     onChange({ ...value, [key]: nextValue });
@@ -149,6 +152,24 @@ export function InteriorEstimateBuilder({
     const next = value.scope.includes(scope) ? value.scope.filter((item) => item !== scope) : [...value.scope, scope];
     setValue('scope', next.length > 0 ? next : [scope]);
   }
+
+  const availableDoorTypes = (
+    rateSettings?.enabled_door_types?.length
+      ? INTERIOR_DOOR_TYPES.filter((type) => rateSettings.enabled_door_types.includes(type))
+      : [...INTERIOR_DOOR_TYPES]
+  ) as InteriorDoorType[];
+
+  const availableDoorScopes = (
+    rateSettings?.enabled_door_scopes?.length
+      ? INTERIOR_DOOR_SCOPES.filter((scope) => rateSettings.enabled_door_scopes.includes(scope))
+      : [...INTERIOR_DOOR_SCOPES]
+  ) as InteriorDoorScope[];
+
+  const availableWindowTypes = (
+    rateSettings?.enabled_window_types?.length
+      ? INTERIOR_WINDOW_TYPES.filter((type) => rateSettings.enabled_window_types.includes(type))
+      : [...INTERIOR_WINDOW_TYPES]
+  ) as InteriorWindowType[];
 
   return (
     <section className="space-y-4 rounded-2xl border border-pm-border bg-white p-4">
@@ -228,12 +249,19 @@ export function InteriorEstimateBuilder({
 
           <div className="space-y-3 rounded-xl border border-pm-border bg-pm-surface/45 p-4">
             <div className="flex items-center justify-between"><p className="text-sm font-semibold text-pm-body">Doors</p><button type="button" onClick={() => setValue('doors', [...value.doors, createEmptyInteriorDoor()])} className="min-h-11 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body">Add Door</button></div>
-            {value.doors.map((door, index) => <div key={`door-${index}`} className="grid gap-3 md:grid-cols-4"><select value={door.door_type} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, door_type: event.target.value as InteriorDoorType } : item))} className={FIELD}>{INTERIOR_DOOR_TYPES.map((type) => <option key={type} value={type}>{INTERIOR_DOOR_TYPE_LABELS[type]}</option>)}</select><select value={door.scope} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorDoorScope } : item))} className={FIELD}>{INTERIOR_DOOR_SCOPES.map((scope) => <option key={scope} value={scope}>{INTERIOR_DOOR_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={door.quantity} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('doors', value.doors.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-secondary">Remove</button></div>)}
+            {value.doors.map((door, index) => {
+              const activeDoorType = availableDoorTypes.includes(door.door_type) ? door.door_type : availableDoorTypes[0];
+              const activeDoorScope = availableDoorScopes.includes(door.scope) ? door.scope : availableDoorScopes[0];
+              return <div key={`door-${index}`} className="grid gap-3 md:grid-cols-4"><select value={activeDoorType} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, door_type: event.target.value as InteriorDoorType } : item))} className={FIELD}>{availableDoorTypes.map((type) => <option key={type} value={type}>{INTERIOR_DOOR_TYPE_LABELS[type]}</option>)}</select><select value={activeDoorScope} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorDoorScope } : item))} className={FIELD}>{availableDoorScopes.map((scope) => <option key={scope} value={scope}>{INTERIOR_DOOR_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={door.quantity} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('doors', value.doors.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-secondary">Remove</button></div>;
+            })}
           </div>
 
           <div className="space-y-3 rounded-xl border border-pm-border bg-pm-surface/45 p-4">
             <div className="flex items-center justify-between"><p className="text-sm font-semibold text-pm-body">Windows</p><button type="button" onClick={() => setValue('windows', [...value.windows, createEmptyInteriorWindow()])} className="min-h-11 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body">Add Window</button></div>
-            {value.windows.map((windowItem, index) => <div key={`window-${index}`} className="grid gap-3 md:grid-cols-4"><select value={windowItem.window_type} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, window_type: event.target.value as InteriorWindowType } : item))} className={FIELD}>{INTERIOR_WINDOW_TYPES.map((type) => <option key={type} value={type}>{INTERIOR_WINDOW_TYPE_LABELS[type]}</option>)}</select><select value={windowItem.scope} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorWindowScope } : item))} className={FIELD}>{INTERIOR_WINDOW_SCOPES.map((scope) => <option key={scope} value={scope}>{INTERIOR_WINDOW_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={windowItem.quantity} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('windows', value.windows.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-secondary">Remove</button></div>)}
+            {value.windows.map((windowItem, index) => {
+              const activeWindowType = availableWindowTypes.includes(windowItem.window_type) ? windowItem.window_type : availableWindowTypes[0];
+              return <div key={`window-${index}`} className="grid gap-3 md:grid-cols-4"><select value={activeWindowType} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, window_type: event.target.value as InteriorWindowType } : item))} className={FIELD}>{availableWindowTypes.map((type) => <option key={type} value={type}>{INTERIOR_WINDOW_TYPE_LABELS[type]}</option>)}</select><select value={windowItem.scope} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorWindowScope } : item))} className={FIELD}>{INTERIOR_WINDOW_SCOPES.map((scope) => <option key={scope} value={scope}>{INTERIOR_WINDOW_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={windowItem.quantity} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('windows', value.windows.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-secondary">Remove</button></div>;
+            })}
           </div>
 
           <div><label htmlFor="skirting-lm" className={LABEL}>Skirting Linear Metres</label><input id="skirting-lm" type="number" min="0" step="0.1" value={value.trim_items[0]?.quantity ?? ''} onChange={(event) => setValue('trim_items', event.target.value ? [{ quantity: event.target.value, paint_system: 'oil_2coat', room_index: '' }] : [])} className={FIELD} /></div>

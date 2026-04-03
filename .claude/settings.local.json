@@ -13,7 +13,10 @@
       "Bash(npx supabase:*)",
       "Bash(curl -L \"https://github.com/stripe/stripe-cli/releases/download/v1.21.11/stripe_1.21.11_windows_x86_64.zip\" -o \"C:/Users/kjm12/Downloads/stripe-cli.zip\")",
       "Bash(unzip -o \"C:/Users/kjm12/Downloads/stripe-cli.zip\" -d \"C:/Users/kjm12/stripe-cli\")",
-      "Bash(wc -l \"c:/Users/kjm12/OneDrive/바탕 화면/Project/Coatly/.claude/worktrees/clever-hoover/supabase/migrations\"/*.sql)"
+      "Bash(wc -l \"c:/Users/kjm12/OneDrive/바탕 화면/Project/Coatly/.claude/worktrees/clever-hoover/supabase/migrations\"/*.sql)",
+      "Bash(npx vitest:*)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "Bash(npx eslint:*)"
     ]
   }
 }

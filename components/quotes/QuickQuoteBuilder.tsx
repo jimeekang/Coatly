@@ -420,13 +420,16 @@ export type QuickQuotePreview = {
   per_room_cents: number[];
 };
 
-export function calculateQuickQuotePreview(state: QuickQuoteBuilderState): QuickQuotePreview {
+export function calculateQuickQuotePreview(
+  state: QuickQuoteBuilderState,
+  rateSettings?: UserRateSettings | null
+): QuickQuotePreview {
   if (state.rooms.length === 0) {
     return { subtotal_cents: 0, gst_cents: 0, adjustment_cents: state.manual_adjustment_cents, total_cents: 0, per_room_cents: [] };
   }
 
   const mapped = mapQuickQuoteToInteriorEstimate({ wall_paint_system: state.wall_paint_system, rooms: state.rooms });
-  const raw = calculateInteriorEstimate(mapped);
+  const raw = calculateInteriorEstimate(mapped, rateSettings);
   const adjusted = applyRoomSizeMultipliers(raw.pricing_items, mapped._size_multipliers);
   const totals = recalculateTotals(adjusted, state.manual_adjustment_cents);
 
@@ -457,7 +460,7 @@ export function QuickQuoteBuilder({
   onChange: (next: QuickQuoteBuilderState) => void;
   rateSettings?: UserRateSettings | null;
 }) {
-  const preview = useMemo(() => calculateQuickQuotePreview(value), [value]);
+  const preview = useMemo(() => calculateQuickQuotePreview(value, rateSettings), [value, rateSettings]);
 
   function setField<K extends keyof QuickQuoteBuilderState>(
     key: K,

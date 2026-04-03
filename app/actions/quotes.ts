@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import {
   buildQuoteCustomerAddress,
   calculateQuotePreview,
+  composeQuoteTotals,
   mapQuoteDetail,
   mapQuoteListItem,
   parseQuoteCreateInput,
@@ -13,12 +14,19 @@ import {
   type QuoteDetail,
   type QuoteEstimateItemCategory,
   type QuoteListItem,
+  type QuoteLineItemRecord,
   type QuoteSurfaceType,
 } from '@/lib/quotes';
 import { calculateInteriorEstimate } from '@/lib/interior-estimates';
 import { getBusinessRateSettings } from '@/lib/businesses';
 import { DEFAULT_RATE_SETTINGS } from '@/lib/rate-settings';
 import type { UserRateSettings } from '@/lib/rate-settings';
+import {
+  calculateDayRateQuote,
+  calculateRoomRateQuote,
+  calculateManualQuote,
+} from '@/utils/calculations';
+import type { DayRateInputs, RoomRateInputs, ManualInputs, PricingMethodInputs } from '@/types/quote';
 import {
   getActiveSubscriptionRequiredMessage,
   getMonthlyActiveQuoteUsageForUser,
@@ -88,12 +96,16 @@ function jsonObjectOrEmpty(value: unknown) {
 }
 
 export async function getQuoteFormOptions(): Promise<{
-  data: { customers: QuoteCustomerOption[]; userRates: UserRateSettings };
+  data: {
+    customers: QuoteCustomerOption[];
+    userRates: UserRateSettings;
+    nextQuoteNumber: string | null;
+  };
   error: string | null;
 }> {
   const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
-  const [customersResult, ratesResult] = await Promise.all([
+  const [customersResult, ratesResult, nextQuoteNumberResult] = await Promise.all([
     supabase
       .from('customers')
       .select('id, name, company_name, email, phone, address_line1, city, state, postcode')
@@ -101,6 +113,7 @@ export async function getQuoteFormOptions(): Promise<{
       .eq('is_archived', false)
       .order('name', { ascending: true }),
     getBusinessRateSettings(supabase, user.id),
+    supabase.rpc('generate_quote_number', { user_uuid: user.id }),
   ]);
 
   return {
@@ -115,6 +128,7 @@ export async function getQuoteFormOptions(): Promise<{
           address: buildQuoteCustomerAddress(customer),
         })) ?? [],
       userRates: ratesResult.data ?? DEFAULT_RATE_SETTINGS,
+      nextQuoteNumber: nextQuoteNumberResult.error ? null : nextQuoteNumberResult.data ?? null,
     },
     error: customersResult.error?.message ?? null,
   };
@@ -162,7 +176,7 @@ export async function getQuote(id: string): Promise<{
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
     .select(
-      'id, user_id, customer_id, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, created_at, updated_at, customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, city, state, postcode)'
+      'id, user_id, customer_id, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, city, state, postcode)'
     )
     .eq('id', id)
     .eq('user_id', user.id)
@@ -207,6 +221,16 @@ export async function getQuote(id: string): Promise<{
 
   if (estimateItemsError) {
     return { data: null, error: estimateItemsError.message };
+  }
+
+  const { data: lineItems, error: lineItemsError } = await supabase
+    .from('quote_line_items')
+    .select('id, quote_id, material_item_id, name, category, unit, quantity, unit_price_cents, total_cents, notes, sort_order, created_at, updated_at')
+    .eq('quote_id', id)
+    .order('sort_order', { ascending: true });
+
+  if (lineItemsError) {
+    return { data: null, error: lineItemsError.message };
   }
 
   return {
@@ -262,6 +286,10 @@ export async function getQuote(id: string): Promise<{
         sort_order: item.sort_order,
         metadata: item.metadata ?? {},
       })),
+      line_items: ((lineItems as QuoteLineItemRecord[] | null) ?? []).map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+      })),
     }),
     error: null,
   };
@@ -314,27 +342,85 @@ export async function createQuote(
     return { error: 'Selected customer was not found.' };
   }
 
+  const { data: userRates } = await getBusinessRateSettings(supabase, user.id);
+  const effectiveRates = userRates ?? DEFAULT_RATE_SETTINGS;
   const interiorEstimate = parsed.data.interior_estimate
-    ? calculateInteriorEstimate(parsed.data.interior_estimate)
+    ? calculateInteriorEstimate(parsed.data.interior_estimate, effectiveRates)
     : null;
   const adjustmentCents = parsed.data.manual_adjustment_cents ?? 0;
-  const preview = interiorEstimate
-    ? (() => {
-        const base = interiorEstimate.subtotal_cents;
-        const labourMarkup = Math.round(base * (parsed.data.labour_margin_percent / 100));
-        const materialMarkup = Math.round(base * (parsed.data.material_margin_percent / 100));
-        const subtotal = base + labourMarkup + materialMarkup;
-        const gst = Math.round(subtotal * 0.1);
-        return {
-          rooms: [],
-          base_subtotal_cents: base,
-          subtotal_cents: subtotal,
-          gst_cents: gst,
-          // Apply manual adjustment to the final total only
-          total_cents: subtotal + gst + adjustmentCents,
-        };
-      })()
-    : calculateQuotePreview(parsed.data);
+  const lineItems = parsed.data.line_items ?? [];
+  const pricingMethod = parsed.data.pricing_method ?? 'hybrid';
+  const rawMethodInputs = parsed.data.pricing_method_inputs;
+
+  // ── Resolve preview by pricing method ─────────────────────────────────────
+  let resolvedPricingInputs: PricingMethodInputs | null = null;
+  // Use the full return type of calculateQuotePreview; simple methods return rooms: []
+  let preview: ReturnType<typeof calculateQuotePreview>;
+
+  if (pricingMethod === 'day_rate' && rawMethodInputs?.method === 'day_rate') {
+    const inputs: DayRateInputs = rawMethodInputs.inputs;
+    const result = calculateDayRateQuote(inputs);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'day_rate', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (pricingMethod === 'room_rate' && rawMethodInputs?.method === 'room_rate') {
+    const inputs: RoomRateInputs = rawMethodInputs.inputs;
+    const result = calculateRoomRateQuote(inputs);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'room_rate', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (pricingMethod === 'manual' && rawMethodInputs?.method === 'manual') {
+    const inputs: ManualInputs = rawMethodInputs.inputs;
+    const result = calculateManualQuote(inputs);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'manual', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (interiorEstimate) {
+    // hybrid / sqm_rate with interior estimate
+    const base = interiorEstimate.subtotal_cents;
+    const labourMarkup = Math.round(base * (parsed.data.labour_margin_percent / 100));
+    const materialMarkup = Math.round(base * (parsed.data.material_margin_percent / 100));
+    const subtotal = base + labourMarkup + materialMarkup;
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: subtotal,
+      adjustment_cents: adjustmentCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'hybrid', inputs: null };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: base,
+      ...totals,
+    };
+  } else {
+    // sqm_rate / hybrid with manual rooms
+    resolvedPricingInputs = { method: pricingMethod as 'sqm_rate' | 'hybrid', inputs: null };
+    preview = calculateQuotePreview(parsed.data);
+  }
 
   const { data: quoteNumber, error: quoteNumberError } = await supabase.rpc(
     'generate_quote_number',
@@ -370,6 +456,8 @@ export async function createQuote(
       estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
       estimate_context: parsed.data.interior_estimate ?? {},
       pricing_snapshot: interiorEstimate?.snapshot ?? {},
+      pricing_method: pricingMethod,
+      pricing_method_inputs: resolvedPricingInputs,
     })
     .select('id')
     .single();
@@ -445,8 +533,27 @@ export async function createQuote(
     }
   }
 
-  if (!interiorEstimate) {
-    await supabase.rpc('calculate_quote_totals', { quote_uuid: quote.id });
+  // ── Save quote line items (materials & services section) ─────────────────
+  if (lineItems.length > 0) {
+    const { error: lineItemsError } = await supabase.from('quote_line_items').insert(
+      lineItems.map((item, index) => ({
+        quote_id: quote.id,
+        material_item_id: item.material_item_id ?? null,
+        name: item.name,
+        category: item.category,
+        unit: item.unit,
+        quantity: item.quantity,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: Math.round(item.quantity * item.unit_price_cents),
+        notes: item.notes ?? null,
+        sort_order: index,
+      }))
+    );
+
+    if (lineItemsError) {
+      await supabase.from('quotes').delete().eq('id', quote.id).eq('user_id', user.id);
+      return { error: lineItemsError.message };
+    }
   }
 
   revalidatePath('/quotes');

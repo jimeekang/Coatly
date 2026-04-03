@@ -2,6 +2,7 @@ import {
   PAINT_RATES,
 } from '@/config/paint-rates';
 import { z } from 'zod';
+import type { PricingMethod } from '@/types/quote';
 
 // ─── Surface / coating types ──────────────────────────────────────────────────
 
@@ -124,19 +125,55 @@ export const DEFAULT_WINDOW_UNIT_RATES: WindowUnitRates = {
   },
 };
 
-// ─── UserRateSettings ─────────────────────────────────────────────────────────
+// ─── Room Rate Presets ────────────────────────────────────────────────────────
 
-/**
- * User-defined rate overrides stored in businesses.default_rates (JSONB).
- *
- * - walls/ceiling/trim: per-m² rates for area surfaces
- * - doors/windows: per-m² legacy rates (kept for old quote surface system)
- * - door_unit_rates: per-door rates by paint system × door type × scope
- * - window_unit_rates: per-window rates by paint system × window type × scope
- * - enabled_door_types: which door types the painter offers
- * - enabled_door_scopes: which door scopes the painter offers
- * - enabled_window_types: which window types the painter offers
- */
+/** A named room preset used when pricing by room rate */
+export type RoomRatePreset = {
+  id: string;
+  title: string;
+  /** Room size in sqm (informational) */
+  sqm: number;
+  /** Flat rate for this room in AUD cents (pre-GST) */
+  rate_cents: number;
+};
+
+// ─── Pricing Method Settings ──────────────────────────────────────────────────
+
+export const PRICING_METHODS = ['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid'] as const;
+
+export const PRICING_METHOD_LABELS: Record<PricingMethod, string> = {
+  day_rate: 'Day Rate',
+  sqm_rate: 'Sqm Rate',
+  room_rate: 'Room Rate',
+  manual: 'Manual',
+  hybrid: 'Detailed Estimate',
+};
+
+export const MATERIAL_COST_METHODS = ['percentage', 'flat'] as const;
+export type MaterialCostMethod = (typeof MATERIAL_COST_METHODS)[number];
+
+/** Pricing behaviour settings stored alongside rate table in businesses.default_rates JSONB */
+export type PricingMethodSettings = {
+  /** Default pricing method for new quotes */
+  preferred_pricing_method: PricingMethod;
+  /** Labour cost per day in AUD cents (used by day_rate method) */
+  daily_rate_cents: number;
+  /** How materials are calculated in day_rate method */
+  material_cost_method: MaterialCostMethod;
+  /** Material cost as % of labour (used when material_cost_method = 'percentage'). Integer 0–100. */
+  material_cost_percent: number;
+  /** Target daily earnings in AUD cents — used for profitability warnings. null = disabled. */
+  target_daily_earnings_cents: number | null;
+};
+
+export const DEFAULT_PRICING_METHOD_SETTINGS: PricingMethodSettings = {
+  preferred_pricing_method: 'hybrid',
+  daily_rate_cents: 80000, // $800/day
+  material_cost_method: 'percentage',
+  material_cost_percent: 30,
+  target_daily_earnings_cents: null,
+};
+
 export type UserRateSettings = {
   [S in RatePresetSurfaceType]: {
     [C in RatePresetCoatingType]: number; // AUD cents per sqm
@@ -147,6 +184,8 @@ export type UserRateSettings = {
   enabled_door_types: RateDoorType[];
   enabled_door_scopes: DoorScope[];
   enabled_window_types: WindowType[];
+  room_rate_presets: RoomRatePreset[];
+  pricing: PricingMethodSettings;
 };
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
@@ -199,6 +238,21 @@ const windowUnitRatesSchema = z.object({
   water_3coat_white_finish: windowTypeRatesSchema,
 });
 
+const pricingMethodSettingsSchema = z.object({
+  preferred_pricing_method: z.enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid']).optional(),
+  daily_rate_cents: z.number().int().min(0).optional(),
+  material_cost_method: z.enum(['percentage', 'flat']).optional(),
+  material_cost_percent: z.number().int().min(0).max(100).optional(),
+  target_daily_earnings_cents: z.number().int().min(0).nullable().optional(),
+});
+
+const roomRatePresetSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().min(1),
+  sqm: z.number().positive(),
+  rate_cents: z.number().int().min(0),
+});
+
 export const ratePresetSchema = z.object({
   walls: ratePresetSurfaceSchema,
   ceiling: ratePresetSurfaceSchema,
@@ -210,6 +264,8 @@ export const ratePresetSchema = z.object({
   enabled_door_types: z.array(z.enum(RATE_DOOR_TYPES)).optional(),
   enabled_door_scopes: z.array(z.enum(DOOR_SCOPES)).optional(),
   enabled_window_types: z.array(z.enum(WINDOW_TYPES)).optional(),
+  room_rate_presets: z.array(roomRatePresetSchema).optional(),
+  pricing: pricingMethodSettingsSchema.optional(),
 });
 
 const partialRatePresetSchema = z
@@ -224,6 +280,8 @@ const partialRatePresetSchema = z
     enabled_door_types: z.array(z.enum(RATE_DOOR_TYPES)).optional(),
     enabled_door_scopes: z.array(z.enum(DOOR_SCOPES)).optional(),
     enabled_window_types: z.array(z.enum(WINDOW_TYPES)).optional(),
+    room_rate_presets: z.array(roomRatePresetSchema).optional(),
+    pricing: pricingMethodSettingsSchema.optional(),
   })
   .partial();
 
@@ -259,6 +317,8 @@ export function buildDefaultRateSettings(): UserRateSettings {
   settings.enabled_door_types = [...RATE_DOOR_TYPES];
   settings.enabled_door_scopes = [...DOOR_SCOPES];
   settings.enabled_window_types = [...WINDOW_TYPES];
+  settings.room_rate_presets = [];
+  settings.pricing = { ...DEFAULT_PRICING_METHOD_SETTINGS };
   return settings;
 }
 
@@ -316,6 +376,23 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
   }
   if (parsed.data.enabled_window_types) {
     result.enabled_window_types = parsed.data.enabled_window_types as WindowType[];
+  }
+
+  // Room rate presets
+  if (parsed.data.room_rate_presets) {
+    result.room_rate_presets = parsed.data.room_rate_presets;
+  }
+
+  // Pricing method settings
+  if (parsed.data.pricing) {
+    const p = parsed.data.pricing;
+    if (p.preferred_pricing_method) result.pricing.preferred_pricing_method = p.preferred_pricing_method;
+    if (p.daily_rate_cents != null) result.pricing.daily_rate_cents = p.daily_rate_cents;
+    if (p.material_cost_method) result.pricing.material_cost_method = p.material_cost_method;
+    if (p.material_cost_percent != null) result.pricing.material_cost_percent = p.material_cost_percent;
+    if ('target_daily_earnings_cents' in p) {
+      result.pricing.target_daily_earnings_cents = p.target_daily_earnings_cents ?? null;
+    }
   }
 
   return result;

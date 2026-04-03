@@ -505,6 +505,56 @@ export const quoteCreateSchema = z.object({
     .default(0),
   rooms: z.array(quoteRoomSchema).default([]),
   interior_estimate: interiorEstimateSchema.optional(),
+  line_items: z.array(z.object({
+    material_item_id: z.string().uuid().nullable().optional(),
+    name: z.string().trim().min(1, 'Item name is required').max(200),
+    category: z.enum(['paint', 'primer', 'supply', 'service', 'other'] as const).default('other'),
+    unit: z.string().trim().min(1, 'Unit is required').max(50).default('item'),
+    quantity: z.number().positive('Quantity must be greater than zero').multipleOf(0.01),
+    unit_price_cents: z.number().int('Price must be a whole number of cents').min(0, 'Price must be zero or greater'),
+    notes: z.string().trim().max(500).optional().transform((v) => v ?? null),
+  })).default([]),
+  pricing_method: z
+    .enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid'])
+    .default('hybrid'),
+  pricing_method_inputs: z.discriminatedUnion('method', [
+    z.object({
+      method: z.literal('day_rate'),
+      inputs: z.object({
+        days: z.number().positive(),
+        daily_rate_cents: z.number().int().min(0),
+        material_method: z.enum(['percentage', 'flat']),
+        material_percent: z.number().int().min(0).max(100).optional(),
+        material_flat_cents: z.number().int().min(0).optional(),
+      }),
+    }),
+    z.object({
+      method: z.literal('room_rate'),
+      inputs: z.object({
+        rooms: z.array(z.object({
+          name: z.string(),
+          room_type: z.enum(['bedroom', 'bathroom', 'living', 'kitchen', 'hallway', 'other']),
+          size: z.enum(['small', 'medium', 'large']),
+          rate_cents: z.number().int().min(0),
+        })),
+      }),
+    }),
+    z.object({
+      method: z.literal('manual'),
+      inputs: z.object({
+        labor_cents: z.number().int().min(0),
+        material_cents: z.number().int().min(0),
+      }),
+    }),
+    z.object({
+      method: z.literal('sqm_rate'),
+      inputs: z.null(),
+    }),
+    z.object({
+      method: z.literal('hybrid'),
+      inputs: z.null(),
+    }),
+  ]).optional(),
 }).superRefine((value, ctx) => {
   if (value.interior_estimate && value.rooms.length > 0) {
     ctx.addIssue({
@@ -514,7 +564,9 @@ export const quoteCreateSchema = z.object({
     });
   }
 
-  if (!value.interior_estimate && value.rooms.length === 0) {
+  // day_rate / room_rate / manual methods don't need rooms or interior_estimate
+  const methodNeedsRooms = ['sqm_rate', 'hybrid'].includes(value.pricing_method);
+  if (methodNeedsRooms && !value.interior_estimate && value.rooms.length === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Add at least one room',
@@ -553,3 +605,94 @@ export type RatePresetInput = z.input<typeof ratePresetSchema>;
 export type RatePreset = z.output<typeof ratePresetSchema>;
 
 export { ratePresetSchema };
+
+// ─── Material Items ───────────────────────────────────────────────────────────
+
+export const MATERIAL_ITEM_CATEGORIES = ['paint', 'primer', 'supply', 'service', 'other'] as const;
+export type MaterialItemCategory = (typeof MATERIAL_ITEM_CATEGORIES)[number];
+
+export const MATERIAL_ITEM_CATEGORY_LABELS: Record<MaterialItemCategory, string> = {
+  paint: 'Paint',
+  primer: 'Primer',
+  supply: 'Supply',
+  service: 'Service',
+  other: 'Other',
+};
+
+export const materialItemUpsertSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or less'),
+  category: z.enum(MATERIAL_ITEM_CATEGORIES).default('other'),
+  unit: z.string().trim().min(1, 'Unit is required').max(50, 'Unit must be 50 characters or less').default('item'),
+  unit_price_cents: z
+    .number()
+    .int('Price must be a whole number of cents')
+    .min(0, 'Price must be zero or greater'),
+  notes: z
+    .string()
+    .trim()
+    .max(500, 'Notes must be 500 characters or less')
+    .optional()
+    .transform((v) => v ?? null),
+  is_active: z.boolean().default(true),
+});
+
+export type MaterialItemUpsertInput = z.input<typeof materialItemUpsertSchema>;
+export type MaterialItemUpsert = z.output<typeof materialItemUpsertSchema>;
+
+export type MaterialItem = {
+  id: string;
+  user_id: string;
+  name: string;
+  category: MaterialItemCategory;
+  unit: string;
+  unit_price_cents: number;
+  notes: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+// ─── Quote Line Items ─────────────────────────────────────────────────────────
+
+export const quoteLineItemFormSchema = z.object({
+  material_item_id: z.string().uuid().nullable().optional(),
+  name: z.string().trim().min(1, 'Item name is required').max(200),
+  category: z.enum(MATERIAL_ITEM_CATEGORIES).default('other'),
+  unit: z.string().trim().min(1, 'Unit is required').max(50).default('item'),
+  quantity: z
+    .number()
+    .positive('Quantity must be greater than zero')
+    .multipleOf(0.01),
+  unit_price_cents: z
+    .number()
+    .int('Price must be a whole number of cents')
+    .min(0, 'Price must be zero or greater'),
+  notes: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .transform((v) => v ?? null),
+});
+
+export type QuoteLineItemFormInput = z.input<typeof quoteLineItemFormSchema>;
+export type QuoteLineItemFormDraft = z.output<typeof quoteLineItemFormSchema> & {
+  total_cents: number;
+};
+
+export type QuoteLineItemRecord = {
+  id: string;
+  quote_id: string;
+  material_item_id: string | null;
+  name: string;
+  category: MaterialItemCategory;
+  unit: string;
+  quantity: number;
+  unit_price_cents: number;
+  total_cents: number;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};

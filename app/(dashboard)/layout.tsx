@@ -30,8 +30,8 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen bg-surface">
       <DashboardSidebar businessName={businessName} subscription={subscription} />
       {/* pt-14 offsets fixed mobile top bar; pb-20 for bottom tab bar */}
-      <main className="flex-1 pt-14 pb-20 md:pt-0 md:pb-0 overflow-x-hidden">
-        <div className="p-4 md:p-6 max-w-5xl mx-auto">{children}</div>
+      <main className="flex-1 pt-14 pb-20 md:pt-0 md:pb-0 overflow-x-clip">
+        <div className="mx-auto max-w-7xl p-4 md:p-6">{children}</div>
       </main>
     </div>
   );

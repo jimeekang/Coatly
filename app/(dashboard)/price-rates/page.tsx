@@ -22,8 +22,8 @@ export default async function PriceRatesPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-pm-body">Price Rates</h1>
         <p className="mt-1 text-sm text-pm-secondary">
-          Set your default rates for surfaces, doors and windows. These pre-fill new quotes and
-          control which options appear in the estimator.
+          Set your default pricing inputs for new quotes and control which options appear in the
+          estimator.
         </p>
       </div>
 

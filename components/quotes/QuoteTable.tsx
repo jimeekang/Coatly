@@ -207,11 +207,14 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+                          {quote.quote_number}
+                        </p>
                         <h3 className="font-bold text-on-surface text-base leading-tight">
                           {quote.customer.company_name || quote.customer.name}
                         </h3>
                         <p className="text-on-surface-variant text-sm font-medium mt-0.5">
-                          {quote.title || quote.quote_number}
+                          {quote.title || 'Untitled quote'}
                         </p>
                       </div>
                       <QuoteStatusBadge status={quote.status} />

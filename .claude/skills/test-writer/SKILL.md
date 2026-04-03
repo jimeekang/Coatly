@@ -69,3 +69,5 @@ it('shows total price formatted in AUD', () => {
 - Supabase 실제 호출 절대 금지 — 모두 mock
 - 테스트당 하나의 assertion 원칙
 - `any` 타입 금지
+- 사용자 노출 UI를 테스트할 때는 기본 카피가 영어인지 확인
+- 면적 관련 UI를 테스트할 때는 `sqm` 표기를 기대값으로 사용하고 `m²`/`㎡` 표기는 허용하지 않음

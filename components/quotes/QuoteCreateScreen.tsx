@@ -9,15 +9,20 @@ import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import type { AIQuoteDraft } from '@/lib/ai/draft-types';
 import type { QuoteCustomerOption } from '@/lib/quotes';
 import type { UserRateSettings } from '@/lib/rate-settings';
+import type { MaterialItem } from '@/lib/supabase/validators';
 
 export function QuoteCreateScreen({
   customers,
   canUseAI,
+  quoteNumberPreview,
   rateSettings,
+  libraryItems = [],
 }: {
   customers: QuoteCustomerOption[];
   canUseAI: boolean;
+  quoteNumberPreview?: string;
   rateSettings?: UserRateSettings | null;
+  libraryItems?: MaterialItem[];
 }) {
   const [prompt, setPrompt] = useState('');
   const [draft, setDraft] = useState<AIQuoteDraft | null>(null);
@@ -87,7 +92,9 @@ export function QuoteCreateScreen({
       <QuoteForm
         key={resetKey}
         customers={customers}
+        quoteNumberPreview={quoteNumberPreview}
         rateSettings={rateSettings}
+        libraryItems={libraryItems}
         defaultValues={
           draft
             ? {

@@ -81,6 +81,8 @@ describe('lib/quotes', () => {
         manual_adjustment_cents: 0,
         notes: 'Client-facing note',
         internal_notes: 'Internal note',
+        pricing_method: 'hybrid',
+        pricing_method_inputs: null,
         interior_estimate: null,
         rooms: [
           {
@@ -166,6 +168,8 @@ describe('lib/quotes', () => {
         manual_adjustment_cents: 0,
         notes: 'Client-facing note',
         internal_notes: 'Internal note',
+        pricing_method: 'hybrid',
+        pricing_method_inputs: null,
         interior_estimate: {
           property_type: 'apartment',
           estimate_mode: 'specific_areas',
