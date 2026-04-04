@@ -13,6 +13,7 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   if (templates.length === 0) return null;
 
@@ -21,12 +22,21 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
     setOpen(false);
   }
 
-  function handleDelete(templateId: string) {
+  function handleDeleteRequest(templateId: string) {
+    setConfirmDeleteId(templateId);
+  }
+
+  function handleDeleteConfirm(templateId: string) {
     setDeleteError(null);
+    setConfirmDeleteId(null);
     startTransition(async () => {
       const result = await deleteQuoteTemplate(templateId);
       if (result.error) setDeleteError(result.error);
     });
+  }
+
+  function handleDeleteCancel() {
+    setConfirmDeleteId(null);
   }
 
   return (
@@ -71,30 +81,50 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
                 >
                   {template.name}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(template.id)}
-                  disabled={isPending}
-                  aria-label={`Delete template ${template.name}`}
-                  className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container hover:text-error disabled:opacity-50"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                {confirmDeleteId === template.id ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteConfirm(template.id)}
+                      disabled={isPending}
+                      className="h-8 rounded-lg bg-error px-3 text-xs font-medium text-on-primary transition-colors disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteCancel}
+                      className="h-8 rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRequest(template.id)}
+                    disabled={isPending}
+                    aria-label={`Delete template ${template.name}`}
+                    className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container hover:text-error disabled:opacity-50"
                   >
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                    <path d="M10 11v6M14 11v6" />
-                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                    </svg>
+                  </button>
+                )}
               </li>
             ))}
           </ul>
