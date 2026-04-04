@@ -236,6 +236,7 @@ export async function getQuote(id: string): Promise<{
   return {
     data: mapQuoteDetail({
       ...quote,
+      pricing_method_inputs: quote.pricing_method_inputs as Record<string, unknown> | null,
       customer: quote.customer
         ? {
             ...(Array.isArray(quote.customer) ? quote.customer[0] : quote.customer),
@@ -457,7 +458,8 @@ export async function createQuote(
       estimate_context: parsed.data.interior_estimate ?? {},
       pricing_snapshot: interiorEstimate?.snapshot ?? {},
       pricing_method: pricingMethod,
-      pricing_method_inputs: resolvedPricingInputs,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pricing_method_inputs: resolvedPricingInputs as any,
     })
     .select('id')
     .single();

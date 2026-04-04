@@ -499,8 +499,11 @@ export type Database = {
           id: string
           internal_notes: string | null
           labour_margin_percent: number
+          manual_adjustment_cents: number | null
           material_margin_percent: number
           notes: string | null
+          pricing_method: string | null
+          pricing_method_inputs: Json | null
           pricing_snapshot: Json
           property_type: string | null
           quote_number: string
@@ -523,8 +526,11 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           labour_margin_percent?: number
+          manual_adjustment_cents?: number | null
           material_margin_percent?: number
           notes?: string | null
+          pricing_method?: string | null
+          pricing_method_inputs?: Json | null
           pricing_snapshot?: Json
           property_type?: string | null
           quote_number: string
@@ -547,8 +553,11 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           labour_margin_percent?: number
+          manual_adjustment_cents?: number | null
           material_margin_percent?: number
           notes?: string | null
+          pricing_method?: string | null
+          pricing_method_inputs?: Json | null
           pricing_snapshot?: Json
           property_type?: string | null
           quote_number?: string

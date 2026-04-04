@@ -28,7 +28,8 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
     const result = await createMaterialItem(data);
     if (!result.error && result.data) {
       // Keep local state aligned with the row returned by the server.
-      setItems((prev) => [...prev, result.data]);
+      const newItem = result.data;
+      setItems((prev) => [...prev, newItem]);
       setMode('list');
     }
     return result;

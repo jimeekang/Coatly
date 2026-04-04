@@ -512,7 +512,7 @@ export const quoteCreateSchema = z.object({
     unit: z.string().trim().min(1, 'Unit is required').max(50).default('item'),
     quantity: z.number().positive('Quantity must be greater than zero').multipleOf(0.01),
     unit_price_cents: z.number().int('Price must be a whole number of cents').min(0, 'Price must be zero or greater'),
-    notes: z.string().trim().max(500).optional().transform((v) => v ?? null),
+    notes: z.string().trim().max(500).optional(),
   })).default([]),
   pricing_method: z
     .enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid'])
