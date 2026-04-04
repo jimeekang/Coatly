@@ -1,15 +1,18 @@
-﻿'use client';
+'use client';
 
 import { useState, useTransition } from 'react';
 import { generateAIDraft } from '@/app/actions/ai-drafts';
 import { createQuote } from '@/app/actions/quotes';
+import { saveQuoteTemplate } from '@/app/actions/quote-templates';
 import { AIDraftPanel } from '@/components/ai/AIDraftPanel';
 import { QuoteForm } from '@/components/quotes/QuoteForm';
+import { TemplatePicker } from '@/components/quotes/TemplatePicker';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import type { AIQuoteDraft } from '@/lib/ai/draft-types';
 import type { QuoteCustomerOption } from '@/lib/quotes';
 import type { UserRateSettings } from '@/lib/rate-settings';
-import type { MaterialItem } from '@/lib/supabase/validators';
+import type { MaterialItem, QuoteCreateInput } from '@/lib/supabase/validators';
+import type { QuoteTemplate, QuoteTemplatePayload } from '@/app/actions/quote-templates';
 
 export function QuoteCreateScreen({
   customers,
@@ -17,12 +20,14 @@ export function QuoteCreateScreen({
   quoteNumberPreview,
   rateSettings,
   libraryItems = [],
+  templates = [],
 }: {
   customers: QuoteCustomerOption[];
   canUseAI: boolean;
   quoteNumberPreview?: string;
   rateSettings?: UserRateSettings | null;
   libraryItems?: MaterialItem[];
+  templates?: QuoteTemplate[];
 }) {
   const [prompt, setPrompt] = useState('');
   const [draft, setDraft] = useState<AIQuoteDraft | null>(null);
@@ -31,6 +36,13 @@ export function QuoteCreateScreen({
   const [error, setError] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
+
+  // Template state
+  const [templateDefault, setTemplateDefault] = useState<QuoteTemplatePayload | null>(null);
+  const [pendingSavePayload, setPendingSavePayload] = useState<QuoteCreateInput | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [saveTemplateError, setSaveTemplateError] = useState<string | null>(null);
+  const [isSavingTemplate, startSaveTransition] = useTransition();
 
   function handleGenerate() {
     startTransition(async () => {
@@ -59,6 +71,76 @@ export function QuoteCreateScreen({
     if (!draft) return;
     setResetKey((current) => current + 1);
   }
+
+  function handleApplyTemplate(payload: QuoteTemplatePayload) {
+    setTemplateDefault(payload);
+    setDraft(null);
+    setResetKey((current) => current + 1);
+  }
+
+  async function handleSubmit(data: QuoteCreateInput) {
+    const result = await createQuote(data);
+    if (!result?.error) {
+      // Offer to save as template after successful submission
+      setPendingSavePayload(data);
+    }
+    return result;
+  }
+
+  function handleSaveTemplate() {
+    if (!pendingSavePayload) return;
+    setSaveTemplateError(null);
+
+    const payload: QuoteTemplatePayload = {
+      title: pendingSavePayload.title,
+      complexity: pendingSavePayload.complexity,
+      labour_margin_percent: pendingSavePayload.labour_margin_percent,
+      material_margin_percent: pendingSavePayload.material_margin_percent,
+      notes: pendingSavePayload.notes,
+      internal_notes: pendingSavePayload.internal_notes,
+      rooms: pendingSavePayload.rooms,
+      line_items: pendingSavePayload.line_items,
+    };
+
+    startSaveTransition(async () => {
+      const result = await saveQuoteTemplate(templateName, payload);
+      if (result.error) {
+        setSaveTemplateError(result.error);
+      } else {
+        setPendingSavePayload(null);
+        setTemplateName('');
+      }
+    });
+  }
+
+  const formDefaultValues =
+    draft
+      ? {
+          customer_id: draft.customer_id ?? '',
+          title: draft.title,
+          status: draft.status,
+          valid_until: draft.valid_until,
+          complexity: draft.complexity,
+          labour_margin_percent: draft.labour_margin_percent,
+          material_margin_percent: draft.material_margin_percent,
+          notes: draft.notes,
+          internal_notes: draft.internal_notes,
+          rooms: draft.rooms,
+        }
+      : templateDefault
+        ? {
+            customer_id: '',
+            title: templateDefault.title ?? '',
+            status: 'draft' as const,
+            valid_until: '',
+            complexity: templateDefault.complexity,
+            labour_margin_percent: templateDefault.labour_margin_percent,
+            material_margin_percent: templateDefault.material_margin_percent,
+            notes: templateDefault.notes ?? '',
+            internal_notes: templateDefault.internal_notes ?? '',
+            rooms: [],
+          }
+        : undefined;
 
   return (
     <>
@@ -89,31 +171,54 @@ export function QuoteCreateScreen({
         </div>
       )}
 
+      <TemplatePicker templates={templates} onApply={handleApplyTemplate} />
+
       <QuoteForm
         key={resetKey}
         customers={customers}
         quoteNumberPreview={quoteNumberPreview}
         rateSettings={rateSettings}
         libraryItems={libraryItems}
-        defaultValues={
-          draft
-            ? {
-                customer_id: draft.customer_id ?? '',
-                title: draft.title,
-                status: draft.status,
-                valid_until: draft.valid_until,
-                complexity: draft.complexity,
-                labour_margin_percent: draft.labour_margin_percent,
-                material_margin_percent: draft.material_margin_percent,
-                notes: draft.notes,
-                internal_notes: draft.internal_notes,
-                rooms: draft.rooms,
-              }
-            : undefined
-        }
-        onSubmit={createQuote}
+        defaultValues={formDefaultValues}
+        onSubmit={handleSubmit}
       />
+
+      {/* Save as Template prompt — shown after a successful quote submission */}
+      {pendingSavePayload && (
+        <div className="mt-6 rounded-xl border border-pm-border bg-white p-5 shadow-sm">
+          <p className="text-sm font-semibold text-pm-body">Save this quote as a template?</p>
+          <p className="mt-1 text-xs text-pm-secondary">
+            Reuse the rooms, margins, and line items next time.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="Template name (e.g. 2-bed interior standard)"
+              className="h-12 flex-1 rounded-lg border border-pm-border px-3 text-sm text-pm-body placeholder:text-pm-secondary focus:outline-none focus:ring-2 focus:ring-pm-teal"
+            />
+            <button
+              type="button"
+              onClick={handleSaveTemplate}
+              disabled={isSavingTemplate || !templateName.trim()}
+              className="h-12 rounded-lg bg-pm-teal px-4 text-sm font-medium text-white transition-colors hover:bg-pm-teal-hover disabled:opacity-50"
+            >
+              {isSavingTemplate ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingSavePayload(null)}
+              className="h-12 rounded-lg border border-pm-border px-4 text-sm font-medium text-pm-secondary transition-colors hover:bg-pm-surface"
+            >
+              Skip
+            </button>
+          </div>
+          {saveTemplateError && (
+            <p className="mt-2 text-xs text-destructive">{saveTemplateError}</p>
+          )}
+        </div>
+      )}
     </>
   );
 }
-

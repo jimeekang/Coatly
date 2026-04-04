@@ -95,6 +95,47 @@ export default async function DashboardPage() {
       return sum + (invoice.amount_paid_cents ?? invoice.total_cents ?? 0);
     }, 0) ?? 0;
 
+  // KPI: Quote approval rate this month
+  const quotesThisMonth =
+    quotes?.filter((q) => getSydneyYearMonth(q.created_at) === currentSydneyMonth) ?? [];
+  const approvedThisMonth = quotesThisMonth.filter((q) => q.status === 'approved').length;
+  const quoteApprovalRate =
+    quotesThisMonth.length > 0
+      ? Math.round((approvedThisMonth / quotesThisMonth.length) * 100)
+      : null;
+
+  // KPI: Outstanding (unpaid) invoice amount
+  const outstandingCents =
+    invoices?.reduce((sum, invoice) => {
+      if (!['sent', 'overdue'].includes(invoice.status)) return sum;
+      const remaining = (invoice.total_cents ?? 0) - (invoice.amount_paid_cents ?? 0);
+      return sum + Math.max(remaining, 0);
+    }, 0) ?? 0;
+
+  const kpiStats = [
+    {
+      label: 'Revenue this month',
+      value: formatAUD(revenueThisMonthCents),
+      hint: 'Paid invoices in Sydney time',
+      highlight: revenueThisMonthCents > 0,
+    },
+    {
+      label: 'Quote approval rate',
+      value: quoteApprovalRate !== null ? `${quoteApprovalRate}%` : '—',
+      hint:
+        quotesThisMonth.length > 0
+          ? `${approvedThisMonth} of ${quotesThisMonth.length} quotes this month`
+          : 'No quotes created this month yet',
+      highlight: quoteApprovalRate !== null && quoteApprovalRate >= 50,
+    },
+    {
+      label: 'Outstanding',
+      value: formatAUD(outstandingCents),
+      hint: 'Sent & overdue invoices awaiting payment',
+      highlight: false,
+    },
+  ];
+
   const overviewStats = [
     {
       label: 'Active Quotes',
@@ -113,11 +154,6 @@ export default async function DashboardPage() {
       label: 'Customers',
       value: String(customerCount),
       hint: 'Active customer records',
-    },
-    {
-      label: 'Revenue this month',
-      value: formatAUD(revenueThisMonthCents),
-      hint: 'Paid invoices this month',
     },
   ] as const;
 
@@ -150,6 +186,40 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* KPI cards */}
+      <section aria-labelledby="kpi-heading">
+        <h2
+          id="kpi-heading"
+          className="mb-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant"
+        >
+          This Month
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {kpiStats.map((stat) => (
+            <div
+              key={stat.label}
+              className={`rounded-2xl p-6 transition-colors ${
+                stat.highlight
+                  ? 'bg-primary/10 border border-primary/20'
+                  : 'bg-surface-container-low hover:bg-surface-container'
+              }`}
+            >
+              <p className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
+                {stat.label}
+              </p>
+              <div
+                className={`text-3xl font-extrabold tracking-tighter ${
+                  stat.highlight ? 'text-primary' : 'text-on-surface'
+                }`}
+              >
+                {stat.value}
+              </div>
+              <p className="mt-1.5 text-[11px] text-on-surface-variant">{stat.hint}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Overview stats */}
       <section aria-labelledby="overview-heading">
         <h2
@@ -158,7 +228,7 @@ export default async function DashboardPage() {
         >
           Overview
         </h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {overviewStats.map((stat) => (
             <div
               key={stat.label}

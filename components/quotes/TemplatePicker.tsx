@@ -1,0 +1,105 @@
+'use client';
+
+import { useState, useTransition } from 'react';
+import { deleteQuoteTemplate } from '@/app/actions/quote-templates';
+import type { QuoteTemplate, QuoteTemplatePayload } from '@/app/actions/quote-templates';
+
+interface TemplatePickerProps {
+  templates: QuoteTemplate[];
+  onApply: (payload: QuoteTemplatePayload) => void;
+}
+
+export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  if (templates.length === 0) return null;
+
+  function handleApply(template: QuoteTemplate) {
+    onApply(template.payload);
+    setOpen(false);
+  }
+
+  function handleDelete(templateId: string) {
+    setDeleteError(null);
+    startTransition(async () => {
+      const result = await deleteQuoteTemplate(templateId);
+      if (result.error) setDeleteError(result.error);
+    });
+  }
+
+  return (
+    <div className="mb-6">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-12 w-full items-center justify-between rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body transition-colors active:bg-pm-surface"
+      >
+        <span>Start from a saved template</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`transition-transform ${open ? 'rotate-180' : ''}`}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="mt-2 rounded-xl border border-pm-border bg-white shadow-sm">
+          {deleteError && (
+            <p className="px-4 pt-3 text-sm text-destructive">{deleteError}</p>
+          )}
+          <ul className="divide-y divide-pm-border">
+            {templates.map((template) => (
+              <li
+                key={template.id}
+                className="flex items-center justify-between gap-3 px-4 py-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleApply(template)}
+                  className="flex-1 text-left text-sm font-medium text-pm-body hover:text-pm-teal"
+                >
+                  {template.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(template.id)}
+                  disabled={isPending}
+                  aria-label={`Delete template ${template.name}`}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-pm-secondary transition-colors hover:bg-pm-surface hover:text-destructive disabled:opacity-50"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                    <path d="M10 11v6M14 11v6" />
+                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

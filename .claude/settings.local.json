@@ -16,7 +16,8 @@
       "Bash(wc -l \"c:/Users/kjm12/OneDrive/바탕 화면/Project/Coatly/.claude/worktrees/clever-hoover/supabase/migrations\"/*.sql)",
       "Bash(npx vitest:*)",
       "mcp__claude_ai_Supabase__list_projects",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Read(//tmp/**)"
     ]
   }
 }

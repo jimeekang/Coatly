@@ -197,6 +197,8 @@ export type Database = {
           created_at: string
           customer_id: string
           due_date: string | null
+          due_reminder_sent_at: string | null
+          overdue_reminder_sent_at: string | null
           gst_cents: number
           id: string
           invoice_number: string
@@ -215,6 +217,8 @@ export type Database = {
           created_at?: string
           customer_id: string
           due_date?: string | null
+          due_reminder_sent_at?: string | null
+          overdue_reminder_sent_at?: string | null
           gst_cents?: number
           id?: string
           invoice_number: string
@@ -233,6 +237,8 @@ export type Database = {
           created_at?: string
           customer_id?: string
           due_date?: string | null
+          due_reminder_sent_at?: string | null
+          overdue_reminder_sent_at?: string | null
           gst_cents?: number
           id?: string
           invoice_number?: string

@@ -43,12 +43,35 @@ const { data } = await supabase.from('quotes').select('*');
 
 ## Skills (작업 유형별 자동 트리거)
 
+### 개발 스킬
+
 | 요청 유형 | Skill |
 |-----------|-------|
 | DB 타입/RLS/schema 관련 | `.claude/skills/db-schema/SKILL.md` |
 | 테스트 작성/실행/수정 | `.claude/skills/test-writer/SKILL.md` |
 | UI/컴포넌트 구현 | `.claude/skills/ui-spec/SKILL.md` |
 | PRD/Notion 문서 업데이트 | `.claude/skills/doc-sync/SKILL.md` |
+| UI QA / 브라우저 테스트 / 스크린샷 | `gstack` skill |
+
+### 계획 · 검토 · 릴리즈
+
+| 요청 유형 | Command |
+|-----------|---------|
+| 새 기능 기획/분해 | `.claude/commands/plan.md` |
+| 코드 품질 검증 + 보안 체크 | `.claude/commands/quality.md` |
+| 배포 후 화면 검증 / 버그 증거 캡처 | `gstack` skill |
+| 구현 (UI + backend + DB 통합) | `.claude/commands/build.md` |
+| 배포 + Notion 동기화 | `.claude/commands/release.md` |
+| CEO/전략 관점 리뷰 (스코프·야망·제품 방향) | `.claude/skills/plan-ceo-review/SKILL.md` |
+
+### 마케팅 · 제품 감각
+
+| 요청 유형 | 참조 문서 |
+|-----------|-----------|
+| 페르소나 / 페인포인트 분석 | [`docs/PRODUCT_SENSE.md`](./docs/PRODUCT_SENSE.md) |
+| 사용자 플로우 / UX 개선 제안 | [`docs/DESIGN.md`](./docs/DESIGN.md) |
+| 로드맵 우선순위 결정 | [`docs/PLANS.md`](./docs/PLANS.md) |
+| 품질 기준 / 론칭 체크리스트 | [`docs/QUALITY_SCORE.md`](./docs/QUALITY_SCORE.md) |
 
 ## Agents
 

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getQuoteFormOptions } from '@/app/actions/quotes';
 import { getMaterialItemsForPicker } from '@/app/actions/materials';
+import { listQuoteTemplates } from '@/app/actions/quote-templates';
 import { QuoteCreateScreen } from '@/components/quotes/QuoteCreateScreen';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server';
@@ -9,9 +10,10 @@ import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server
 export const metadata: Metadata = { title: 'New Quote' };
 
 export default async function NewQuotePage() {
-  const [{ data, error }, { data: libraryItems }] = await Promise.all([
+  const [{ data, error }, { data: libraryItems }, { data: templates }] = await Promise.all([
     getQuoteFormOptions(),
     getMaterialItemsForPicker(),
+    listQuoteTemplates(),
   ]);
   const customers = data.customers;
   const supabase = await createServerClient();
@@ -93,6 +95,7 @@ export default async function NewQuotePage() {
           quoteNumberPreview={data.nextQuoteNumber ?? undefined}
           rateSettings={data.userRates}
           libraryItems={libraryItems}
+          templates={templates}
         />
       )}
     </div>

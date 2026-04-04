@@ -54,3 +54,4 @@ next-env.d.ts
 
 # generated design assets (Stitch AI output — re-run stitch skill to regenerate)
 /docs/stitch/
+.gstack/
