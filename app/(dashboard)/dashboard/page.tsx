@@ -117,7 +117,7 @@ export default async function DashboardPage() {
       label: 'Revenue this month',
       value: formatAUD(revenueThisMonthCents),
       hint: 'Paid invoices in Sydney time',
-      highlight: revenueThisMonthCents > 0,
+      variant: revenueThisMonthCents > 0 ? ('positive' as const) : ('neutral' as const),
     },
     {
       label: 'Quote approval rate',
@@ -126,13 +126,16 @@ export default async function DashboardPage() {
         quotesThisMonth.length > 0
           ? `${approvedThisMonth} of ${quotesThisMonth.length} quotes this month`
           : 'No quotes created this month yet',
-      highlight: quoteApprovalRate !== null && quoteApprovalRate >= 50,
+      variant:
+        quoteApprovalRate !== null && quoteApprovalRate >= 50
+          ? ('positive' as const)
+          : ('neutral' as const),
     },
     {
       label: 'Outstanding',
       value: formatAUD(outstandingCents),
       hint: 'Sent & overdue invoices awaiting payment',
-      highlight: false,
+      variant: outstandingCents > 0 ? ('warning' as const) : ('neutral' as const),
     },
   ];
 
@@ -199,9 +202,11 @@ export default async function DashboardPage() {
             <div
               key={stat.label}
               className={`rounded-2xl p-6 transition-colors ${
-                stat.highlight
+                stat.variant === 'positive'
                   ? 'bg-primary/10 border border-primary/20'
-                  : 'bg-surface-container-low hover:bg-surface-container'
+                  : stat.variant === 'warning'
+                    ? 'bg-error/8 border border-error/20'
+                    : 'bg-surface-container-low hover:bg-surface-container'
               }`}
             >
               <p className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
@@ -209,7 +214,11 @@ export default async function DashboardPage() {
               </p>
               <div
                 className={`text-3xl font-extrabold tracking-tighter ${
-                  stat.highlight ? 'text-primary' : 'text-on-surface'
+                  stat.variant === 'positive'
+                    ? 'text-primary'
+                    : stat.variant === 'warning'
+                      ? 'text-error'
+                      : 'text-on-surface'
                 }`}
               >
                 {stat.value}
