@@ -15,7 +15,15 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  if (templates.length === 0) return null;
+  if (templates.length === 0) {
+    return (
+      <div className="mb-6 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3">
+        <p className="text-sm text-on-surface-variant">
+          No saved templates yet. After submitting a quote, you can save it as a template to reuse next time.
+        </p>
+      </div>
+    );
+  }
 
   function handleApply(template: QuoteTemplate) {
     onApply(template.payload);
