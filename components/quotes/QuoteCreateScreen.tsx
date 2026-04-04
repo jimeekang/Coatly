@@ -185,9 +185,9 @@ export function QuoteCreateScreen({
 
       {/* Save as Template prompt — shown after a successful quote submission */}
       {pendingSavePayload && (
-        <div className="mt-6 rounded-xl border border-pm-border bg-white p-5 shadow-sm">
-          <p className="text-sm font-semibold text-pm-body">Save this quote as a template?</p>
-          <p className="mt-1 text-xs text-pm-secondary">
+        <div className="mt-6 rounded-xl border border-outline-variant bg-surface-container-lowest p-5">
+          <p className="text-sm font-semibold text-on-surface">Save this quote as a template?</p>
+          <p className="mt-1 text-xs text-on-surface-variant">
             Reuse the rooms, margins, and line items next time.
           </p>
           <div className="mt-3 flex gap-2">
@@ -196,26 +196,26 @@ export function QuoteCreateScreen({
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder="Template name (e.g. 2-bed interior standard)"
-              className="h-12 flex-1 rounded-lg border border-pm-border px-3 text-sm text-pm-body placeholder:text-pm-secondary focus:outline-none focus:ring-2 focus:ring-pm-teal"
+              className="h-12 flex-1 rounded-lg border border-outline-variant px-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
             <button
               type="button"
               onClick={handleSaveTemplate}
               disabled={isSavingTemplate || !templateName.trim()}
-              className="h-12 rounded-lg bg-pm-teal px-4 text-sm font-medium text-white transition-colors hover:bg-pm-teal-hover disabled:opacity-50"
+              className="h-12 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
             >
-              {isSavingTemplate ? 'Saving…' : 'Save'}
+              {isSavingTemplate ? 'Saving…' : 'Save Template'}
             </button>
             <button
               type="button"
               onClick={() => setPendingSavePayload(null)}
-              className="h-12 rounded-lg border border-pm-border px-4 text-sm font-medium text-pm-secondary transition-colors hover:bg-pm-surface"
+              className="h-12 rounded-lg border border-outline-variant px-4 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container"
             >
               Skip
             </button>
           </div>
           {saveTemplateError && (
-            <p className="mt-2 text-xs text-destructive">{saveTemplateError}</p>
+            <p className="mt-2 text-xs text-error">{saveTemplateError}</p>
           )}
         </div>
       )}
