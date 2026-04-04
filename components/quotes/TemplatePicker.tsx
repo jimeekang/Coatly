@@ -34,7 +34,7 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-12 w-full items-center justify-between rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body transition-colors active:bg-pm-surface"
+        className="flex h-12 w-full items-center justify-between rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-sm font-medium text-on-surface transition-colors active:bg-surface-container"
       >
         <span>Start from a saved template</span>
         <svg
@@ -54,11 +54,11 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
       </button>
 
       {open && (
-        <div className="mt-2 rounded-xl border border-pm-border bg-white shadow-sm">
+        <div className="mt-2 rounded-xl border border-outline-variant bg-surface-container-lowest shadow-sm">
           {deleteError && (
-            <p className="px-4 pt-3 text-sm text-destructive">{deleteError}</p>
+            <p className="px-4 pt-3 text-sm text-error">{deleteError}</p>
           )}
-          <ul className="divide-y divide-pm-border">
+          <ul className="divide-y divide-outline-variant">
             {templates.map((template) => (
               <li
                 key={template.id}
@@ -67,7 +67,7 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
                 <button
                   type="button"
                   onClick={() => handleApply(template)}
-                  className="flex-1 text-left text-sm font-medium text-pm-body hover:text-pm-teal"
+                  className="flex-1 text-left text-sm font-medium text-on-surface hover:text-primary"
                 >
                   {template.name}
                 </button>
@@ -76,7 +76,7 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
                   onClick={() => handleDelete(template.id)}
                   disabled={isPending}
                   aria-label={`Delete template ${template.name}`}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-pm-secondary transition-colors hover:bg-pm-surface hover:text-destructive disabled:opacity-50"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container hover:text-error disabled:opacity-50"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
