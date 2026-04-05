@@ -21,7 +21,8 @@ import {
   type QuoteSurfaceType,
 } from '@/lib/quotes';
 import { calculateInteriorEstimate } from '@/lib/interior-estimates';
-import { getBusinessRateSettings } from '@/lib/businesses';
+import { getBusinessDocumentBranding, getBusinessRateSettings } from '@/lib/businesses';
+import { sendQuoteApprovalNotification } from '@/lib/email/resend';
 import { DEFAULT_RATE_SETTINGS } from '@/lib/rate-settings';
 import type { UserRateSettings } from '@/lib/rate-settings';
 import {
@@ -35,9 +36,11 @@ import {
   getMonthlyActiveQuoteUsageForUser,
   getSubscriptionSnapshotForUser,
 } from '@/lib/subscription/access';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import type { QuoteCreateInput } from '@/lib/supabase/validators';
+import { formatAUD, formatDate } from '@/utils/format';
 
 type QuoteListRow = {
   id: string;
@@ -100,6 +103,11 @@ type QuoteDetailRow = {
   id: string;
   user_id: string;
   customer_id: string;
+  public_share_token?: string | null;
+  approved_at?: string | null;
+  approved_by_name?: string | null;
+  approved_by_email?: string | null;
+  approval_signature?: string | null;
   manual_adjustment_cents?: number | null;
   customer_email?: string | null;
   customer_address?: string | null;
@@ -140,12 +148,180 @@ const QUOTE_LIST_SELECT =
 const QUOTE_LIST_SELECT_LEGACY =
   `id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT =
-  `id, user_id, customer_id, manual_adjustment_cents, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT_LEGACY =
   `id, user_id, customer_id, manual_adjustment_cents, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
+const PUBLIC_QUOTE_SELECT =
+  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+
+const PUBLIC_QUOTE_SELECT_LEGACY =
+  `id, user_id, customer_id, public_share_token, manual_adjustment_cents, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+
+type QuoteDataClient =
+  | Awaited<ReturnType<typeof createServerClient>>
+  | ReturnType<typeof createAdminClient>;
+
+type QuoteHydratedRelations = {
+  rooms: Array<{
+    id: string;
+    quote_id: string;
+    name: string;
+    room_type: string;
+    length_m: number | null;
+    width_m: number | null;
+    height_m: number | null;
+    surfaces: Array<{
+      id: string;
+      room_id: string;
+      surface_type: QuoteSurfaceType;
+      area_m2: number;
+      coating_type: QuoteCoatingType | null;
+      rate_per_m2_cents: number;
+      material_cost_cents: number;
+      labour_cost_cents: number;
+      paint_litres_needed: number | null;
+      notes: string | null;
+    }>;
+  }>;
+  estimate_items: QuoteDetail['estimate_items'];
+  line_items: QuoteDetail['line_items'];
+};
+
 function parseBooleanFormValue(value: FormDataEntryValue | null) {
   return typeof value === 'string' && value === 'true';
+}
+
+function parseTrimmedFormValue(value: FormDataEntryValue | null) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function loadQuoteRelations(
+  supabase: QuoteDataClient,
+  quoteId: string
+): Promise<{ data: QuoteHydratedRelations | null; error: string | null }> {
+  const { data: rooms, error: roomsError } = await supabase
+    .from('quote_rooms')
+    .select('id, quote_id, name, room_type, length_m, width_m, height_m, sort_order')
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (roomsError) {
+    return { data: null, error: roomsError.message };
+  }
+
+  const roomIds = rooms?.map((room) => room.id) ?? [];
+
+  const { data: surfaces, error: surfacesError } = roomIds.length
+    ? await supabase
+        .from('quote_room_surfaces')
+        .select(
+          'id, room_id, surface_type, area_m2, coating_type, rate_per_m2_cents, material_cost_cents, labour_cost_cents, paint_litres_needed, notes'
+        )
+        .in('room_id', roomIds)
+    : { data: [], error: null };
+
+  if (surfacesError) {
+    return { data: null, error: surfacesError.message };
+  }
+
+  const { data: estimateItems, error: estimateItemsError } = await supabase
+    .from('quote_estimate_items')
+    .select(
+      'id, quote_id, category, label, quantity, unit, unit_price_cents, total_cents, metadata, sort_order'
+    )
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (estimateItemsError) {
+    return { data: null, error: estimateItemsError.message };
+  }
+
+  const { data: lineItems, error: lineItemsError } = await supabase
+    .from('quote_line_items')
+    .select(
+      'id, quote_id, material_item_id, name, category, unit, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected, sort_order, created_at, updated_at'
+    )
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (lineItemsError) {
+    return { data: null, error: lineItemsError.message };
+  }
+
+  return {
+    data: {
+      rooms:
+        rooms?.map((room) => ({
+          id: room.id,
+          quote_id: room.quote_id,
+          name: room.name,
+          room_type: room.room_type,
+          length_m: room.length_m,
+          width_m: room.width_m,
+          height_m: room.height_m,
+          surfaces:
+            surfaces
+              ?.filter((surface) => surface.room_id === room.id)
+              .map((surface) => ({
+                id: surface.id,
+                room_id: surface.room_id,
+                surface_type: surface.surface_type as QuoteSurfaceType,
+                area_m2: Number(surface.area_m2),
+                coating_type: surface.coating_type as QuoteCoatingType | null,
+                rate_per_m2_cents: surface.rate_per_m2_cents,
+                material_cost_cents: surface.material_cost_cents,
+                labour_cost_cents: surface.labour_cost_cents,
+                paint_litres_needed:
+                  surface.paint_litres_needed == null
+                    ? null
+                    : Number(surface.paint_litres_needed),
+                notes: surface.notes,
+              })) ?? [],
+        })) ?? [],
+      estimate_items: ((estimateItems as QuoteEstimateItemRow[] | null) ?? []).map((item) => ({
+        id: item.id,
+        quote_id: item.quote_id,
+        category: item.category as QuoteEstimateItemCategory,
+        label: item.label,
+        quantity: typeof item.quantity === 'string' ? Number(item.quantity) : item.quantity,
+        unit: item.unit,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: item.total_cents,
+        sort_order: item.sort_order,
+        metadata: item.metadata ?? {},
+      })),
+      line_items: ((lineItems as QuoteLineItemRecord[] | null) ?? []).map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        is_optional: item.is_optional ?? false,
+        is_selected: item.is_optional ? item.is_selected ?? false : true,
+      })),
+    },
+    error: null,
+  };
+}
+
+function mapHydratedQuoteDetail(
+  quote: QuoteDetailRow,
+  relations: QuoteHydratedRelations
+): QuoteDetail {
+  return mapQuoteDetail({
+    ...quote,
+    pricing_method_inputs: quote.pricing_method_inputs as Record<string, unknown> | null,
+    customer: resolveQuoteCustomerSummary({
+      customer: quote.customer,
+      customer_email: quote.customer_email,
+      customer_address: quote.customer_address,
+    }),
+    estimate_context: jsonObjectOrEmpty(quote.estimate_context),
+    pricing_snapshot: jsonObjectOrEmpty(quote.pricing_snapshot),
+    ...relations,
+  });
 }
 
 export async function getQuoteFormOptions(): Promise<{
@@ -240,7 +416,7 @@ export async function getQuote(id: string): Promise<{
   let quote = quoteResult.data as QuoteDetailRow | null;
   let quoteError = quoteResult.error;
 
-  if (quoteError && isMissingQuoteCustomerSnapshotColumnError(quoteError.message)) {
+  if (quoteError && isMissingQuoteSelectColumnError(quoteError.message)) {
     const legacyResult = await supabase
       .from('quotes')
       .select(QUOTE_DETAIL_SELECT_LEGACY)
@@ -256,113 +432,102 @@ export async function getQuote(id: string): Promise<{
     return { data: null, error: quoteError?.message ?? 'Quote not found.' };
   }
 
-  const { data: rooms, error: roomsError } = await supabase
-    .from('quote_rooms')
-    .select('id, quote_id, name, room_type, length_m, width_m, height_m, sort_order')
-    .eq('quote_id', id)
-    .order('sort_order', { ascending: true });
+  const relationsResult = await loadQuoteRelations(supabase, id);
 
-  if (roomsError) {
-    return { data: null, error: roomsError.message };
-  }
-
-  const roomIds = rooms?.map((room) => room.id) ?? [];
-
-  const { data: surfaces, error: surfacesError } = roomIds.length
-    ? await supabase
-        .from('quote_room_surfaces')
-        .select(
-          'id, room_id, surface_type, area_m2, coating_type, rate_per_m2_cents, material_cost_cents, labour_cost_cents, paint_litres_needed, notes'
-        )
-        .in('room_id', roomIds)
-    : { data: [], error: null };
-
-  if (surfacesError) {
-    return { data: null, error: surfacesError.message };
-  }
-
-  const { data: estimateItems, error: estimateItemsError } = await supabase
-    .from('quote_estimate_items')
-    .select(
-      'id, quote_id, category, label, quantity, unit, unit_price_cents, total_cents, metadata, sort_order'
-    )
-    .eq('quote_id', id)
-    .order('sort_order', { ascending: true });
-
-  if (estimateItemsError) {
-    return { data: null, error: estimateItemsError.message };
-  }
-
-  const { data: lineItems, error: lineItemsError } = await supabase
-    .from('quote_line_items')
-    .select(
-      'id, quote_id, material_item_id, name, category, unit, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected, sort_order, created_at, updated_at'
-    )
-    .eq('quote_id', id)
-    .order('sort_order', { ascending: true });
-
-  if (lineItemsError) {
-    return { data: null, error: lineItemsError.message };
+  if (relationsResult.error || !relationsResult.data) {
+    return { data: null, error: relationsResult.error ?? 'Quote details could not be loaded.' };
   }
 
   return {
-    data: mapQuoteDetail({
-      ...quote,
-      pricing_method_inputs: quote.pricing_method_inputs as Record<string, unknown> | null,
-      customer: resolveQuoteCustomerSummary({
-        customer: quote.customer,
-        customer_email: quote.customer_email,
-        customer_address: quote.customer_address,
-      }),
-      estimate_context: jsonObjectOrEmpty(quote.estimate_context),
-      pricing_snapshot: jsonObjectOrEmpty(quote.pricing_snapshot),
-      rooms:
-        rooms?.map((room) => ({
-          id: room.id,
-          quote_id: room.quote_id,
-          name: room.name,
-          room_type: room.room_type,
-          length_m: room.length_m,
-          width_m: room.width_m,
-          height_m: room.height_m,
-          surfaces:
-            surfaces
-              ?.filter((surface) => surface.room_id === room.id)
-              .map((surface) => ({
-                id: surface.id,
-                room_id: surface.room_id,
-                surface_type: surface.surface_type as QuoteSurfaceType,
-                area_m2: Number(surface.area_m2),
-                coating_type: surface.coating_type as QuoteCoatingType | null,
-                rate_per_m2_cents: surface.rate_per_m2_cents,
-                material_cost_cents: surface.material_cost_cents,
-                labour_cost_cents: surface.labour_cost_cents,
-                paint_litres_needed:
-                  surface.paint_litres_needed == null
-                    ? null
-                    : Number(surface.paint_litres_needed),
-                notes: surface.notes,
-              })) ?? [],
-        })) ?? [],
-      estimate_items: ((estimateItems as QuoteEstimateItemRow[] | null) ?? []).map((item) => ({
-        id: item.id,
-        quote_id: item.quote_id,
-        category: item.category as QuoteEstimateItemCategory,
-        label: item.label,
-        quantity: typeof item.quantity === 'string' ? Number(item.quantity) : item.quantity,
-        unit: item.unit,
-        unit_price_cents: item.unit_price_cents,
-        total_cents: item.total_cents,
-        sort_order: item.sort_order,
-        metadata: item.metadata ?? {},
-      })),
-      line_items: ((lineItems as QuoteLineItemRecord[] | null) ?? []).map((item) => ({
-        ...item,
-        quantity: Number(item.quantity),
-        is_optional: item.is_optional ?? false,
-        is_selected: item.is_optional ? item.is_selected ?? false : true,
-      })),
-    }),
+    data: mapHydratedQuoteDetail(quote, relationsResult.data),
+    error: null,
+  };
+}
+
+function isMissingQuoteSelectColumnError(message: string | null | undefined) {
+  if (!message) return false;
+
+  return (
+    isMissingQuoteCustomerSnapshotColumnError(message) ||
+    (message.includes('quotes.public_share_token') && message.includes('does not exist'))
+  );
+}
+
+export async function getPublicQuoteByToken(token: string): Promise<{
+  data:
+    | {
+        quote: QuoteDetail;
+        business: {
+          name: string;
+          abn: string | null;
+          phone: string | null;
+          email: string | null;
+        } | null;
+      }
+    | null;
+  error: string | null;
+}> {
+  const trimmedToken = token.trim();
+
+  if (!trimmedToken) {
+    return { data: null, error: 'Public quote link is invalid.' };
+  }
+
+  const supabase = createAdminClient();
+  const quoteResult = await supabase
+    .from('quotes')
+    .select(PUBLIC_QUOTE_SELECT)
+    .eq('public_share_token', trimmedToken)
+    .single();
+  let quote = quoteResult.data as QuoteDetailRow | null;
+  let quoteError = quoteResult.error;
+
+  if (quoteError && isMissingQuoteCustomerSnapshotColumnError(quoteError.message)) {
+    const legacyResult = await supabase
+      .from('quotes')
+      .select(PUBLIC_QUOTE_SELECT_LEGACY)
+      .eq('public_share_token', trimmedToken)
+      .single();
+
+    quote = legacyResult.data as QuoteDetailRow | null;
+    quoteError = legacyResult.error;
+  }
+
+  if (quoteError && quoteError.message.includes('public_share_token')) {
+    return {
+      data: null,
+      error: 'Public quote sharing is not available until the latest database migration is applied.',
+    };
+  }
+
+  if (quoteError || !quote) {
+    return { data: null, error: quoteError?.message ?? 'Quote not found.' };
+  }
+
+  const [relationsResult, businessResult] = await Promise.all([
+    loadQuoteRelations(supabase, quote.id),
+    getBusinessDocumentBranding(supabase, quote.user_id, null),
+  ]);
+
+  if (relationsResult.error || !relationsResult.data) {
+    return {
+      data: null,
+      error: relationsResult.error ?? 'Quote details could not be loaded.',
+    };
+  }
+
+  return {
+    data: {
+      quote: mapHydratedQuoteDetail(quote, relationsResult.data),
+      business: businessResult.data
+        ? {
+            name: businessResult.data.name,
+            abn: businessResult.data.abn,
+            phone: businessResult.data.phone,
+            email: businessResult.data.email,
+          }
+        : null,
+    },
     error: null,
   };
 }
@@ -753,4 +918,179 @@ export async function setQuoteOptionalLineItemSelection(
 
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quoteId}`);
+}
+
+export async function setPublicQuoteOptionalLineItemSelection(
+  formData: FormData
+): Promise<void> {
+  const quoteToken = formData.get('quoteToken');
+  const lineItemId = formData.get('lineItemId');
+
+  if (typeof quoteToken !== 'string' || typeof lineItemId !== 'string') {
+    return;
+  }
+
+  const isSelected = parseBooleanFormValue(formData.get('isSelected'));
+  const supabase = createAdminClient();
+
+  const { data: quote, error: quoteError } = await supabase
+    .from('quotes')
+    .select('id, status, subtotal_cents, manual_adjustment_cents')
+    .eq('public_share_token', quoteToken)
+    .single();
+
+  if (quoteError || !quote || quote.status !== 'sent') {
+    return;
+  }
+
+  const { data: lineItems, error: lineItemsError } = await supabase
+    .from('quote_line_items')
+    .select('id, total_cents, is_optional, is_selected')
+    .eq('quote_id', quote.id)
+    .order('sort_order', { ascending: true });
+
+  if (lineItemsError) {
+    return;
+  }
+
+  const target = lineItems?.find((item) => item.id === lineItemId) ?? null;
+
+  if (!target || !target.is_optional) {
+    return;
+  }
+
+  const { error: updateLineItemError } = await supabase
+    .from('quote_line_items')
+    .update({ is_selected: isSelected })
+    .eq('id', lineItemId)
+    .eq('quote_id', quote.id);
+
+  if (updateLineItemError) {
+    return;
+  }
+
+  const currentIncludedLineItemsSubtotal = calculateQuoteLineItemsSubtotal(
+    (lineItems ?? []).map((item) => ({
+      quantity: 1,
+      unit_price_cents: item.total_cents,
+      total_cents: item.total_cents,
+      is_optional: item.is_optional,
+      is_selected: item.is_selected,
+    }))
+  );
+
+  const baseSubtotalWithoutLineItems = Math.max(
+    0,
+    quote.subtotal_cents - currentIncludedLineItemsSubtotal
+  );
+
+  const nextIncludedLineItemsSubtotal = calculateQuoteLineItemsSubtotal(
+    (lineItems ?? []).map((item) => ({
+      quantity: 1,
+      unit_price_cents: item.total_cents,
+      total_cents: item.total_cents,
+      is_optional: item.is_optional,
+      is_selected: item.id === lineItemId ? isSelected : item.is_selected,
+    }))
+  );
+
+  const nextSubtotalCents = baseSubtotalWithoutLineItems + nextIncludedLineItemsSubtotal;
+  const nextGstCents = Math.round(nextSubtotalCents * 0.1);
+  const nextTotalCents =
+    nextSubtotalCents + nextGstCents + (quote.manual_adjustment_cents ?? 0);
+
+  const { error: updateQuoteError } = await supabase
+    .from('quotes')
+    .update({
+      subtotal_cents: nextSubtotalCents,
+      gst_cents: nextGstCents,
+      total_cents: nextTotalCents,
+    })
+    .eq('id', quote.id);
+
+  if (updateQuoteError) {
+    return;
+  }
+
+  revalidatePath(`/q/${quoteToken}`);
+  revalidatePath('/quotes');
+  revalidatePath(`/quotes/${quote.id}`);
+}
+
+export async function approvePublicQuote(formData: FormData): Promise<void> {
+  const quoteToken = parseTrimmedFormValue(formData.get('quoteToken'));
+  const approvedByName = parseTrimmedFormValue(formData.get('approvedByName'));
+  const approvedByEmail = parseTrimmedFormValue(formData.get('approvedByEmail')).toLowerCase();
+  const approvalSignature = parseTrimmedFormValue(formData.get('approvalSignature'));
+
+  if (!quoteToken || !approvedByName || !approvedByEmail || !approvalSignature) {
+    return;
+  }
+
+  if (!isValidEmail(approvedByEmail)) {
+    return;
+  }
+
+  const supabase = createAdminClient();
+  const quoteResult = await supabase
+    .from('quotes')
+    .select(PUBLIC_QUOTE_SELECT)
+    .eq('public_share_token', quoteToken)
+    .single();
+  const quote = quoteResult.data as QuoteDetailRow | null;
+
+  if (quoteResult.error || !quote || quote.status !== 'sent') {
+    return;
+  }
+
+  const approvedAt = new Date().toISOString();
+  const approvalLog = `Client approved via public page on ${approvedAt} by ${approvedByName} <${approvedByEmail}>. Signature: ${approvalSignature}.`;
+  const nextInternalNotes = quote.internal_notes?.trim()
+    ? `${quote.internal_notes.trim()}\n\n${approvalLog}`
+    : approvalLog;
+
+  const { error: updateQuoteError } = await supabase
+    .from('quotes')
+    .update({
+      status: 'approved',
+      approved_at: approvedAt,
+      approved_by_name: approvedByName,
+      approved_by_email: approvedByEmail,
+      approval_signature: approvalSignature,
+      internal_notes: nextInternalNotes,
+    })
+    .eq('id', quote.id)
+    .eq('public_share_token', quoteToken);
+
+  if (updateQuoteError) {
+    return;
+  }
+
+  const customer = resolveQuoteCustomerSummary({
+    customer: quote.customer,
+    customer_email: quote.customer_email,
+    customer_address: quote.customer_address,
+  });
+  const businessResult = await getBusinessDocumentBranding(supabase, quote.user_id, null);
+  const ownerEmail = businessResult.data?.email?.trim() ?? null;
+
+  if (ownerEmail) {
+    await sendQuoteApprovalNotification({
+      to: ownerEmail,
+      businessName: businessResult.data?.name || 'Coatly',
+      quoteNumber: quote.quote_number,
+      quoteTitle: quote.title,
+      customerName: customer.company_name || customer.name,
+      customerEmail: customer.email,
+      approvedByName,
+      approvedByEmail,
+      approvedAt: formatDate(approvedAt),
+      totalFormatted: formatAUD(quote.total_cents),
+      signature: approvalSignature,
+    });
+  }
+
+  revalidatePath(`/q/${quoteToken}`);
+  revalidatePath('/quotes');
+  revalidatePath(`/quotes/${quote.id}`);
 }

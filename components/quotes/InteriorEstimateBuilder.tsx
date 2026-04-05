@@ -1,5 +1,6 @@
 'use client';
 
+import { NumericInput, sanitizeDecimalInput, sanitizeIntegerInput } from '@/components/shared/NumericInput';
 import {
   INTERIOR_APARTMENT_TYPE_LABELS,
   INTERIOR_APARTMENT_TYPES,
@@ -219,14 +220,14 @@ export function InteriorEstimateBuilder({
         {value.property_type === 'apartment' ? (
           <>
             <div><label htmlFor="apartment-type" className={LABEL}>Apartment Type</label><select id="apartment-type" value={value.apartment_type} onChange={(event) => setValue('apartment_type', event.target.value as InteriorApartmentType)} className={FIELD}>{INTERIOR_APARTMENT_TYPES.map((apartmentType) => <option key={apartmentType} value={apartmentType}>{INTERIOR_APARTMENT_TYPE_LABELS[apartmentType]}</option>)}</select></div>
-            <div><label htmlFor="apartment-sqm" className={LABEL}>Apartment Size (sqm)</label><input id="apartment-sqm" type="number" min="0" step="1" inputMode="numeric" value={value.apartment_sqm} onChange={(event) => setValue('apartment_sqm', event.target.value)} className={FIELD} /></div>
+            <div><label htmlFor="apartment-sqm" className={LABEL}>Apartment Size (sqm)</label><NumericInput id="apartment-sqm" inputMode="decimal" value={value.apartment_sqm} sanitize={sanitizeDecimalInput} onValueChange={(nextValue) => setValue('apartment_sqm', nextValue)} className={FIELD} /></div>
           </>
         ) : (
           <>
-            <div><label htmlFor="house-bedrooms" className={LABEL}>Bedrooms</label><input id="house-bedrooms" type="number" min="1" step="1" inputMode="numeric" value={value.house_bedrooms} onChange={(event) => setValue('house_bedrooms', event.target.value)} className={FIELD} /></div>
-            <div><label htmlFor="house-bathrooms" className={LABEL}>Bathrooms</label><input id="house-bathrooms" type="number" min="1" step="1" inputMode="numeric" value={value.house_bathrooms} onChange={(event) => setValue('house_bathrooms', event.target.value)} className={FIELD} /></div>
+            <div><label htmlFor="house-bedrooms" className={LABEL}>Bedrooms</label><NumericInput id="house-bedrooms" inputMode="numeric" value={value.house_bedrooms} sanitize={sanitizeIntegerInput} onValueChange={(nextValue) => setValue('house_bedrooms', nextValue)} className={FIELD} /></div>
+            <div><label htmlFor="house-bathrooms" className={LABEL}>Bathrooms</label><NumericInput id="house-bathrooms" inputMode="numeric" value={value.house_bathrooms} sanitize={sanitizeIntegerInput} onValueChange={(nextValue) => setValue('house_bathrooms', nextValue)} className={FIELD} /></div>
             <div><label htmlFor="house-storeys" className={LABEL}>Storeys</label><select id="house-storeys" value={value.house_storeys} onChange={(event) => setValue('house_storeys', event.target.value as InteriorStoreys)} className={FIELD}>{INTERIOR_STOREYS.map((storeys) => <option key={storeys} value={storeys}>{INTERIOR_STOREY_LABELS[storeys]}</option>)}</select></div>
-            <div><label htmlFor="house-sqm" className={LABEL}>House Size (sqm)</label><input id="house-sqm" type="number" min="0" step="1" inputMode="numeric" value={value.house_sqm} onChange={(event) => setValue('house_sqm', event.target.value)} className={FIELD} /></div>
+            <div><label htmlFor="house-sqm" className={LABEL}>House Size (sqm)</label><NumericInput id="house-sqm" inputMode="decimal" value={value.house_sqm} sanitize={sanitizeDecimalInput} onValueChange={(nextValue) => setValue('house_sqm', nextValue)} className={FIELD} /></div>
           </>
         )}
       </div>

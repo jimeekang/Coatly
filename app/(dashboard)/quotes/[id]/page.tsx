@@ -5,6 +5,7 @@ import {
   setQuoteOptionalLineItemSelection,
 } from '@/app/actions/quotes';
 import { createJobFromQuoteAndRedirect } from '@/app/actions/jobs';
+import { APP_URL } from '@/config/constants';
 import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
 import { ProfitabilityCard } from '@/components/quotes/ProfitabilityCard';
@@ -72,6 +73,9 @@ export default async function QuoteDetailPage({
   const optionalAvailableTotal = optionalLineItems
     .filter((item) => !item.is_selected)
     .reduce((sum, item) => sum + item.total_cents, 0);
+  const publicQuoteUrl = quote?.public_share_token
+    ? `${APP_URL}/q/${quote.public_share_token}`
+    : null;
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-4">
@@ -131,6 +135,14 @@ export default async function QuoteDetailPage({
               <p>Status: {QUOTE_STATUS_LABELS[quote.status]}</p>
               <p>Valid until: {quote.valid_until ? formatDate(quote.valid_until) : '—'}</p>
               <p>Total: {formatAUD(quote.total_cents)}</p>
+              {publicQuoteUrl && (
+                <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                    Client Link
+                  </p>
+                  <p className="mt-2 break-all text-sm text-pm-body">{publicQuoteUrl}</p>
+                </div>
+              )}
             </div>
           </section>
 
@@ -149,6 +161,22 @@ export default async function QuoteDetailPage({
               {quote.customer.address && <p>{quote.customer.address}</p>}
             </div>
           </section>
+
+          {quote.approved_at && (
+            <section className="rounded-xl border border-pm-border bg-white">
+              <div className="rounded-t-xl bg-pm-surface px-5 py-3">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  Approval
+                </h2>
+              </div>
+              <div className="grid gap-2 px-5 py-4 text-sm text-pm-body">
+                <p>Approved at: {formatDate(quote.approved_at)}</p>
+                {quote.approved_by_name && <p>Approved by: {quote.approved_by_name}</p>}
+                {quote.approved_by_email && <p>Email: {quote.approved_by_email}</p>}
+                {quote.approval_signature && <p>Signature: {quote.approval_signature}</p>}
+              </div>
+            </section>
+          )}
 
           <section className="rounded-xl border border-pm-border bg-white">
             <div className="rounded-t-xl bg-pm-surface px-5 py-3">
@@ -444,7 +472,7 @@ export default async function QuoteDetailPage({
             </div>
           </section>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <form action={createJobFromQuoteAndRedirect}>
               <input type="hidden" name="quoteId" value={quote.id} />
               <button
@@ -461,6 +489,15 @@ export default async function QuoteDetailPage({
             >
               Open PDF
             </Link>
+            {publicQuoteUrl && (
+              <Link
+                href={publicQuoteUrl}
+                target="_blank"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-medium text-pm-body transition-colors active:bg-pm-surface"
+              >
+                Open Client Page
+              </Link>
+            )}
           </div>
         </div>
       )}

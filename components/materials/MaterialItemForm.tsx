@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { NumericInput, sanitizeDecimalInput } from '@/components/shared/NumericInput';
 import {
   MATERIAL_ITEM_CATEGORIES,
   MATERIAL_ITEM_CATEGORY_LABELS,
@@ -52,8 +53,11 @@ export function MaterialItemForm({
     setError(null);
   }
 
-  function handlePriceChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const dollars = parseFloat(e.target.value) || 0;
+  function handlePriceChange(value: string) {
+    const dollars = value.trim() === '' ? 0 : parseFloat(value);
+    if (!Number.isFinite(dollars)) {
+      return;
+    }
     setForm((prev) => ({ ...prev, unit_price_cents: Math.round(dollars * 100) }));
     setError(null);
   }
@@ -151,16 +155,13 @@ export function MaterialItemForm({
         <label htmlFor="unit_price" className={LABEL}>Unit Price (AUD)</label>
         <div className="relative">
           <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-base font-medium text-pm-secondary">$</span>
-          <input
+          <NumericInput
             id="unit_price"
             name="unit_price"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
             required
             value={(form.unit_price_cents / 100).toFixed(2)}
-            onChange={handlePriceChange}
+            sanitize={sanitizeDecimalInput}
+            onValueChange={handlePriceChange}
             className={`${FIELD} pl-8`}
           />
         </div>

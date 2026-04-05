@@ -3,6 +3,10 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  NumericInput,
+  sanitizeIntegerInput,
+} from '@/components/shared/NumericInput';
+import {
   INTERIOR_ROOM_TYPES,
   calculateInteriorEstimate,
   type InteriorEstimateInput,
@@ -825,12 +829,21 @@ export function QuoteForm({
             </div>
             <div>
               <label className={LABEL}>Daily labour rate ($)</label>
-              <input
-                type="number"
-                min="0"
-                step="1"
+              <NumericInput
+                inputMode="numeric"
                 value={(dayRateState.daily_rate_cents / 100).toFixed(0)}
-                onChange={(e) => setDayRateState((prev) => ({ ...prev, daily_rate_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
+                sanitize={sanitizeIntegerInput}
+                onValueChange={(value) => {
+                  const nextValue = value.trim() === '' ? 0 : parseFloat(value);
+                  if (!Number.isFinite(nextValue)) {
+                    return;
+                  }
+
+                  setDayRateState((prev) => ({
+                    ...prev,
+                    daily_rate_cents: Math.round(nextValue * 100),
+                  }));
+                }}
                 className={FIELD}
               />
             </div>
@@ -865,12 +878,21 @@ export function QuoteForm({
             ) : (
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-sm text-pm-secondary">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
+                <NumericInput
+                  inputMode="numeric"
                   value={((dayRateState.material_flat_cents ?? 0) / 100).toFixed(0)}
-                  onChange={(e) => setDayRateState((prev) => ({ ...prev, material_flat_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
+                  sanitize={sanitizeIntegerInput}
+                  onValueChange={(value) => {
+                    const nextValue = value.trim() === '' ? 0 : parseFloat(value);
+                    if (!Number.isFinite(nextValue)) {
+                      return;
+                    }
+
+                    setDayRateState((prev) => ({
+                      ...prev,
+                      material_flat_cents: Math.round(nextValue * 100),
+                    }));
+                  }}
                   className="w-32 rounded-xl border border-pm-border bg-white px-3 py-2.5 text-base"
                 />
               </div>
@@ -942,12 +964,24 @@ export function QuoteForm({
                   </select>
                   <div className="flex items-center gap-1">
                     <span className="text-sm text-pm-secondary">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
+                    <NumericInput
+                      inputMode="numeric"
                       value={(item.rate_cents / 100).toFixed(0)}
-                      onChange={(e) => setRoomRateItems((prev) => prev.map((r, i) => i === idx ? { ...r, rate_cents: Math.round((parseFloat(e.target.value) || 0) * 100) } : r))}
+                      sanitize={sanitizeIntegerInput}
+                      onValueChange={(value) => {
+                        const nextValue = value.trim() === '' ? 0 : parseFloat(value);
+                        if (!Number.isFinite(nextValue)) {
+                          return;
+                        }
+
+                        setRoomRateItems((prev) =>
+                          prev.map((r, i) =>
+                            i === idx
+                              ? { ...r, rate_cents: Math.round(nextValue * 100) }
+                              : r
+                          )
+                        );
+                      }}
                       className="w-24 rounded-lg border border-pm-border bg-white px-2 py-1.5 text-sm"
                     />
                   </div>
@@ -979,23 +1013,41 @@ export function QuoteForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className={LABEL}>Labour cost ($, ex-GST)</label>
-              <input
-                type="number"
-                min="0"
-                step="1"
+              <NumericInput
+                inputMode="numeric"
                 value={(manualInputs.labor_cents / 100).toFixed(0)}
-                onChange={(e) => setManualInputs((prev) => ({ ...prev, labor_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
+                sanitize={sanitizeIntegerInput}
+                onValueChange={(value) => {
+                  const nextValue = value.trim() === '' ? 0 : parseFloat(value);
+                  if (!Number.isFinite(nextValue)) {
+                    return;
+                  }
+
+                  setManualInputs((prev) => ({
+                    ...prev,
+                    labor_cents: Math.round(nextValue * 100),
+                  }));
+                }}
                 className={FIELD}
               />
             </div>
             <div>
               <label className={LABEL}>Material cost ($, ex-GST)</label>
-              <input
-                type="number"
-                min="0"
-                step="1"
+              <NumericInput
+                inputMode="numeric"
                 value={(manualInputs.material_cents / 100).toFixed(0)}
-                onChange={(e) => setManualInputs((prev) => ({ ...prev, material_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
+                sanitize={sanitizeIntegerInput}
+                onValueChange={(value) => {
+                  const nextValue = value.trim() === '' ? 0 : parseFloat(value);
+                  if (!Number.isFinite(nextValue)) {
+                    return;
+                  }
+
+                  setManualInputs((prev) => ({
+                    ...prev,
+                    material_cents: Math.round(nextValue * 100),
+                  }));
+                }}
                 className={FIELD}
               />
             </div>
@@ -1061,6 +1113,7 @@ export function QuoteForm({
 
       {/* Custom line items with optional toggle */}
       <QuoteExtraLineItems
+        libraryItems={libraryItems}
         value={extraLineItems}
         onChange={setExtraLineItems}
       />

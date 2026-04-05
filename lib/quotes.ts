@@ -206,6 +206,11 @@ export type QuoteDetail = {
   id: string;
   user_id: string;
   customer_id: string;
+  public_share_token: string;
+  approved_at: string | null;
+  approved_by_name: string | null;
+  approved_by_email: string | null;
+  approval_signature: string | null;
   quote_number: string;
   title: string | null;
   status: QuoteStatus;
@@ -628,6 +633,11 @@ export function mapQuoteDetail(row: {
   id: string;
   user_id: string;
   customer_id: string;
+  public_share_token?: string | null;
+  approved_at?: string | null;
+  approved_by_name?: string | null;
+  approved_by_email?: string | null;
+  approval_signature?: string | null;
   customer_email?: string | null;
   customer_address?: string | null;
   quote_number: string;
@@ -680,6 +690,11 @@ export function mapQuoteDetail(row: {
     id: row.id,
     user_id: row.user_id,
     customer_id: row.customer_id,
+    public_share_token: row.public_share_token ?? '',
+    approved_at: row.approved_at ?? null,
+    approved_by_name: row.approved_by_name ?? null,
+    approved_by_email: row.approved_by_email ?? null,
+    approval_signature: row.approval_signature ?? null,
     quote_number: row.quote_number,
     title: row.title,
     status: row.status as QuoteStatus,

@@ -36,6 +36,20 @@ const LIBRARY_ITEM = {
   updated_at: '2026-04-01T00:00:00.000Z',
 };
 
+const SERVICE_ITEM = {
+  id: 'service-1',
+  user_id: 'user-1',
+  name: 'Ceiling repaint',
+  category: 'service' as const,
+  unit: 'room',
+  unit_price_cents: 22500,
+  notes: 'Two-coat ceiling repaint service',
+  is_active: true,
+  sort_order: 1,
+  created_at: '2026-04-01T00:00:00.000Z',
+  updated_at: '2026-04-01T00:00:00.000Z',
+};
+
 function parseAudTextToCents(value: string) {
   return Math.round(Number(value.replace(/[$,]/g, '')) * 100);
 }
@@ -270,6 +284,39 @@ describe('QuoteForm', () => {
     // Unmark optional → included again
     await user.click(screen.getByLabelText(/Ceiling repaint optional/i));
     expect(getEstimateTotalsCents()).toEqual([withItemTotal]);
+  });
+
+  it('suggests saved service items for custom line items and autofills them', async () => {
+    const user = userEvent.setup();
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        libraryItems={[LIBRARY_ITEM, SERVICE_ITEM]}
+        defaultValues={{
+          customer_id: CUSTOMER.id,
+          title: 'Quote with suggested service',
+          status: 'draft',
+          valid_until: '2026-04-18',
+          notes: '',
+          internal_notes: '',
+          rooms: [],
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+
+    await user.click(screen.getByRole('button', { name: 'Add Line Item' }));
+    await user.type(screen.getByLabelText('Line item name'), 'ceiling');
+
+    await user.click(screen.getByRole('button', { name: /Ceiling repaint/i }));
+
+    expect(screen.getByLabelText('Line item name')).toHaveValue('Ceiling repaint');
+    expect(screen.getByLabelText('Line item description')).toHaveValue(
+      'Two-coat ceiling repaint service'
+    );
+    expect(screen.getByLabelText('Line item price')).toHaveValue('225.00');
+    expect(getEstimateTotalsCents()).toEqual([376090]);
   });
 
   it('applies custom rate settings to the quick quote preview engine', () => {

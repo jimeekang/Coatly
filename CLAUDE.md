@@ -11,7 +11,9 @@ Next.js 15 (App Router) · TypeScript · Tailwind · Supabase (Postgres + Auth +
 - Serverless on Vercel → React-PDF만 사용 (Puppeteer 금지)
 - RLS 필수: 모든 쿼리 `auth.uid()` 기준
 - 금액은 항상 cents 정수로 저장, `any` 타입 금지
-- 원격 Supabase CLI 작업 전에는 항상 `npx supabase login` 실행 후 브라우저에서 verification code 승인까지 완료, Git/GitHub 로그인 상태만으로 진행 금지
+- 로컬 Supabase CLI/Docker 기반 제어는 사용하지 않음
+- Supabase 스키마 변경은 `.claude/skills/db-schema/SKILL.md` 기준으로 MCP 원격 도구만 사용
+- schema 적용은 `apply_migration`, 확인은 `execute_sql`/`list_migrations`, 타입 갱신은 `generate_typescript_types`로 처리
 
 ## Critical Pattern
 

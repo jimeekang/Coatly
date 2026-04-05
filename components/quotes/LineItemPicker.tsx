@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, X, Plus, Package } from 'lucide-react';
+import { NumericInput, sanitizeDecimalInput } from '@/components/shared/NumericInput';
 import {
   MATERIAL_ITEM_CATEGORIES,
   MATERIAL_ITEM_CATEGORY_LABELS,
@@ -333,13 +334,20 @@ function CustomItemForm({
             <label className="block text-sm font-medium text-pm-body mb-1.5">Unit Price</label>
             <div className="relative">
               <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-pm-secondary">$</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
+              <NumericInput
                 value={(form.unit_price_cents / 100).toFixed(2)}
-                onChange={(e) => setForm((prev) => ({ ...prev, unit_price_cents: Math.round((parseFloat(e.target.value) || 0) * 100) }))}
+                sanitize={sanitizeDecimalInput}
+                onValueChange={(value) => {
+                  const parsed = value.trim() === '' ? 0 : parseFloat(value);
+                  if (!Number.isFinite(parsed)) {
+                    return;
+                  }
+
+                  setForm((prev) => ({
+                    ...prev,
+                    unit_price_cents: Math.round(parsed * 100),
+                  }));
+                }}
                 className={`${FIELD} pl-8`}
               />
             </div>
