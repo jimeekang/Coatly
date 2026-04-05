@@ -41,7 +41,12 @@ vi.mock('@/lib/subscription/access', () => ({
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
-import { createQuote, getQuote } from '@/app/actions/quotes';
+import {
+  createQuote,
+  getQuote,
+  getQuotes,
+  setQuoteOptionalLineItemSelection,
+} from '@/app/actions/quotes';
 
 function createFilterQuery<Result>(result: Result) {
   return {
@@ -116,7 +121,15 @@ describe('createQuote', () => {
     } = {};
 
     const customerQuery = createFilterQuery({
-      data: { id: 'customer-1' },
+      data: {
+        id: 'customer-1',
+        email: 'site@harborcafe.com.au',
+        address_line1: '128 Beach Street',
+        address_line2: 'Suite 4',
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+      },
       error: null,
     });
 
@@ -253,6 +266,8 @@ describe('createQuote', () => {
     expect(captured.quoteInsert).toMatchObject({
       user_id: 'user-1',
       customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      customer_email: 'site@harborcafe.com.au',
+      customer_address: '128 Beach Street, Suite 4, Manly, NSW, 2095',
       quote_number: 'QUO-0008',
       title: 'Harbor Cafe repaint',
       subtotal_cents: 75450,
@@ -284,6 +299,8 @@ describe('createQuote', () => {
         unit_price_cents: 1500,
         total_cents: 3000,
         notes: null,
+        is_optional: false,
+        is_selected: true,
         sort_order: 0,
       },
     ]);
@@ -298,7 +315,15 @@ describe('createQuote', () => {
     } = {};
 
     const customerQuery = createFilterQuery({
-      data: { id: 'customer-1' },
+      data: {
+        id: 'customer-1',
+        email: 'accounts@example.com',
+        address_line1: '9 Harbour Parade',
+        address_line2: null,
+        city: 'Sydney',
+        state: 'NSW',
+        postcode: '2000',
+      },
       error: null,
     });
 
@@ -423,6 +448,8 @@ describe('createQuote', () => {
     expect(captured.quoteInsert).toMatchObject({
       user_id: 'user-1',
       customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      customer_email: 'accounts@example.com',
+      customer_address: '9 Harbour Parade, Sydney, NSW, 2000',
       quote_number: 'QUO-0009',
       title: 'Apartment anchor repaint',
       subtotal_cents: 666250,
@@ -463,6 +490,8 @@ describe('createQuote', () => {
         quantity: 1,
         unit_price_cents: 5000,
         total_cents: 5000,
+        is_optional: false,
+        is_selected: true,
       }),
     ]);
     expect(rpcMock).toHaveBeenCalledWith('generate_quote_number', { user_uuid: 'user-1' });
@@ -479,7 +508,15 @@ describe('createQuote', () => {
     } = {};
 
     const customerQuery = createFilterQuery({
-      data: { id: 'customer-1' },
+      data: {
+        id: 'customer-1',
+        email: 'dayrate@example.com',
+        address_line1: '55 Pitt Street',
+        address_line2: null,
+        city: 'Sydney',
+        state: 'NSW',
+        postcode: '2000',
+      },
       error: null,
     });
 
@@ -591,6 +628,8 @@ describe('createQuote', () => {
 
     expect(result).toBeUndefined();
     expect(captured.quoteInsert).toMatchObject({
+      customer_email: 'dayrate@example.com',
+      customer_address: '55 Pitt Street, Sydney, NSW, 2000',
       quote_number: 'QUO-0010',
       pricing_method: 'day_rate',
       subtotal_cents: 260000,
@@ -602,6 +641,8 @@ describe('createQuote', () => {
         quote_id: 'quote-2',
         name: 'Masking materials',
         total_cents: 10000,
+        is_optional: false,
+        is_selected: true,
       }),
     ]);
     expect(rpcMock).not.toHaveBeenCalledWith('calculate_quote_totals', {
@@ -739,6 +780,97 @@ describe('createQuote', () => {
   });
 });
 
+describe('setQuoteOptionalLineItemSelection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requireCurrentUserMock.mockResolvedValue({
+      id: 'user-1',
+      email: 'owner@example.com',
+    });
+  });
+
+  it('updates optional selections and recalculates quote totals', async () => {
+    const captured: {
+      lineItemUpdate?: Record<string, unknown>;
+      quoteUpdate?: Record<string, unknown>;
+    } = {};
+
+    createServerClientMock.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-1',
+                  subtotal_cents: 68000,
+                  manual_adjustment_cents: 0,
+                },
+                error: null,
+              }),
+            }),
+            update: vi.fn((payload) => {
+              captured.quoteUpdate = payload;
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'line-1',
+                    total_cents: 15000,
+                    is_optional: true,
+                    is_selected: false,
+                  },
+                  {
+                    id: 'line-2',
+                    total_cents: 5000,
+                    is_optional: false,
+                    is_selected: true,
+                  },
+                ],
+                error: null,
+              }),
+            }),
+            update: vi.fn((payload) => {
+              captured.lineItemUpdate = payload;
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('quoteId', 'quote-1');
+    formData.set('lineItemId', 'line-1');
+    formData.set('isSelected', 'true');
+
+    const result = await setQuoteOptionalLineItemSelection(formData);
+
+    expect(result).toBeUndefined();
+    expect(captured.lineItemUpdate).toEqual({ is_selected: true });
+    expect(captured.quoteUpdate).toEqual({
+      subtotal_cents: 83000,
+      gst_cents: 8300,
+      total_cents: 91300,
+    });
+  });
+});
+
 describe('getQuote', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -755,6 +887,8 @@ describe('getQuote', () => {
           id: 'quote-1',
           user_id: 'user-1',
           customer_id: 'customer-1',
+          customer_email: 'quotes@harborcafe.com.au',
+          customer_address: 'Quote Snapshot Address, Manly, NSW, 2095',
           quote_number: 'QUO-0011',
           title: 'Stored method quote',
           status: 'draft',
@@ -791,6 +925,7 @@ describe('getQuote', () => {
             email: 'owner@example.com',
             phone: '0412 555 012',
             address_line1: '128 Beach Street',
+            address_line2: 'Suite 4',
             city: 'Manly',
             state: 'NSW',
             postcode: '2095',
@@ -817,11 +952,41 @@ describe('getQuote', () => {
           };
         }
 
-        if (table === 'quote_estimate_items' || table === 'quote_line_items') {
+        if (table === 'quote_estimate_items') {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
               order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'line-item-1',
+                    quote_id: 'quote-1',
+                    material_item_id: null,
+                    name: 'Feature wall upgrade',
+                    category: 'service',
+                    unit: 'job',
+                    quantity: 1,
+                    unit_price_cents: 15000,
+                    total_cents: 15000,
+                    notes: 'Optional extra',
+                    is_optional: true,
+                    is_selected: false,
+                    sort_order: 0,
+                    created_at: '2026-04-01T00:00:00.000Z',
+                    updated_at: '2026-04-01T00:00:00.000Z',
+                  },
+                ],
+                error: null,
+              }),
             }),
           };
         }
@@ -837,6 +1002,8 @@ describe('getQuote', () => {
     );
     expect(result.error).toBeNull();
     expect(result.data?.pricing_method).toBe('day_rate');
+    expect(result.data?.customer.email).toBe('quotes@harborcafe.com.au');
+    expect(result.data?.customer.address).toBe('Quote Snapshot Address, Manly, NSW, 2095');
     expect(result.data?.pricing_method_inputs).toEqual({
       method: 'day_rate',
       inputs: {
@@ -846,5 +1013,78 @@ describe('getQuote', () => {
         material_percent: 25,
       },
     });
+    expect(result.data?.line_items).toEqual([
+      expect.objectContaining({
+        id: 'line-item-1',
+        is_optional: true,
+        is_selected: false,
+      }),
+    ]);
+  });
+
+  it('falls back to legacy quote selects when snapshot columns are missing', async () => {
+    const quotesSelectMock = vi
+      .fn()
+      .mockReturnValueOnce({
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'column quotes.customer_email does not exist' },
+        }),
+      })
+      .mockReturnValueOnce({
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'quote-legacy-1',
+              user_id: 'user-1',
+              customer_id: 'customer-1',
+              quote_number: 'DEMO-Q001',
+              title: 'Legacy quote',
+              status: 'draft',
+              valid_until: '2026-04-10',
+              tier: 'standard',
+              subtotal_cents: 100000,
+              gst_cents: 10000,
+              total_cents: 110000,
+              created_at: '2026-04-01T00:00:00.000Z',
+              updated_at: '2026-04-01T00:00:00.000Z',
+              customer: {
+                id: 'customer-1',
+                name: 'Legacy Customer',
+                company_name: null,
+                email: 'legacy@example.com',
+                phone: '0400 000 000',
+                address_line1: '12 Legacy Street',
+                address_line2: null,
+                city: 'Sydney',
+                state: 'NSW',
+                postcode: '2000',
+              },
+            },
+          ],
+          error: null,
+        }),
+      });
+
+    createServerClientMock.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return { select: quotesSelectMock };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await getQuotes();
+
+    expect(quotesSelectMock).toHaveBeenCalledTimes(2);
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.quote_number).toBe('DEMO-Q001');
+    expect(result.data[0]?.customer.email).toBe('legacy@example.com');
+    expect(result.data[0]?.customer.address).toBe('12 Legacy Street, Sydney, NSW, 2000');
   });
 });

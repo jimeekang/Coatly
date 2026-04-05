@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { LineItemPicker } from './LineItemPicker';
 import type { MaterialItem, QuoteLineItemFormInput } from '@/lib/supabase/validators';
+import { calculateQuoteLineItemsSubtotal } from '@/lib/quotes';
 
 function formatAUD(cents: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100);
@@ -29,11 +30,18 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
     total_cents: Math.round(item.quantity * item.unit_price_cents),
   }));
 
-  const subtotal = entries.reduce((sum, e) => sum + e.total_cents, 0);
+  const subtotal = calculateQuoteLineItemsSubtotal(entries);
   const gst = Math.round(subtotal * 0.1);
 
   function handleAdd(item: QuoteLineItemFormInput) {
-    onChange([...value, item]);
+    onChange([
+      ...value,
+      {
+        ...item,
+        is_optional: false,
+        is_selected: true,
+      },
+    ]);
   }
 
   function handleRemove(index: number) {
@@ -78,32 +86,18 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
             {entries.map((entry, index) => (
               <div
                 key={entry._key}
-                className="flex items-center gap-3 rounded-xl border border-pm-border bg-pm-surface/40 px-3 py-2.5"
+                className="rounded-xl border border-pm-border bg-pm-surface/40 px-3 py-3"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-pm-body">{entry.name}</p>
-                  <p className="mt-0.5 text-xs text-pm-secondary">
-                    {formatAUD(entry.unit_price_cents)} / {entry.unit}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <label className="sr-only">Quantity</label>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min="0.01"
-                      step="0.01"
-                      value={entry.quantity}
-                      onChange={(e) => handleQtyChange(index, parseFloat(e.target.value) || 0)}
-                      className="h-9 w-20 rounded-lg border border-pm-border bg-white px-2 text-center text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none"
-                      aria-label={`${entry.name} quantity`}
-                    />
-                    <span className="text-xs text-pm-secondary">{entry.unit}</span>
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-pm-body">{entry.name}</p>
+                    <p className="mt-0.5 text-xs text-pm-secondary">
+                      {formatAUD(entry.unit_price_cents)} / {entry.unit}
+                    </p>
+                    {entry.notes && (
+                      <p className="mt-1 text-xs text-pm-secondary">{entry.notes}</p>
+                    )}
                   </div>
-                  <span className="w-16 text-right text-sm font-semibold text-pm-body">
-                    {formatAUD(entry.total_cents)}
-                  </span>
                   <button
                     type="button"
                     onClick={() => handleRemove(index)}
@@ -112,6 +106,24 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 border-t border-pm-border/70 pt-3">
+                  <label className="sr-only">Quantity</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0.01"
+                    step="0.01"
+                    value={entry.quantity}
+                    onChange={(e) => handleQtyChange(index, parseFloat(e.target.value) || 0)}
+                    className="h-9 w-20 rounded-lg border border-pm-border bg-white px-2 text-center text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none"
+                    aria-label={`${entry.name} quantity`}
+                  />
+                  <span className="text-xs text-pm-secondary">{entry.unit}</span>
+                  <span className="ml-2 text-sm font-semibold text-pm-body">
+                    {formatAUD(entry.total_cents)}
+                  </span>
                 </div>
               </div>
             ))}

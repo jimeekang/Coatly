@@ -11,6 +11,12 @@
 | `/build [기능]` | UI + backend + DB 통합 구현 | `.claude/commands/build.md` |
 | `/quality [파일]` | 테스트 + 리뷰 + 타입 검증 | `.claude/commands/quality.md` |
 | `/release [msg]` | git + vercel + 문서 동기화 | `.claude/commands/release.md` |
+| `/gstack [skill] [args]` | 외부 gstack skill 라우터 | `.claude/commands/gstack.md` |
+| `/qa [대상]` | gstack 기반 QA 테스트 + 버그 수정 | `.claude/commands/qa.md` |
+| `/qa-only [대상]` | gstack 기반 리포트 전용 QA | `.claude/commands/qa-only.md` |
+| `/browse [URL/흐름]` | gstack 브라우저 테스트/스크린샷 | `.claude/commands/browse.md` |
+| `/design-review [대상]` | gstack 디자인/시각 QA | `.claude/commands/design-review.md` |
+| `/canary [URL]` | gstack 배포 후 모니터링 | `.claude/commands/canary.md` |
 
 ### 워크플로우
 
@@ -39,7 +45,8 @@
 1. 요구사항이 모호하면 → data_analyst로 scope 확인
 2. UI 구현 → frontend_uiux, 데이터 → backend_supabase (범위 한정)
 3. 완료 후 → app_tester_reviewer로 검증
-4. 배포 → vercel_deploy
+4. UI QA / 브라우저 테스트 / 스크린샷 / 배포 후 화면 검증 → `gstack` skill
+5. 배포 → vercel_deploy
 ```
 
 ## Skills
@@ -52,3 +59,12 @@
 | test-writer | 테스트 작성/실행/수정 | `.claude/skills/test-writer/SKILL.md` |
 | ui-spec | UI/컴포넌트 구현 | `.claude/skills/ui-spec/SKILL.md` |
 | doc-sync | PRD/Notion 문서 업데이트 | `.claude/skills/doc-sync/SKILL.md` |
+| gstack | UI QA, 브라우저 테스트, 스크린샷, 배포 후 검증 | `gstack` skill |
+
+## External Skills
+
+`gstack`은 로컬 `.claude/skills/` 하위 파일이 아니라 Codex 환경의 외부 skill로 호출한다.
+
+- 사용 시점: 브라우저에서 실제 화면 확인이 필요할 때, QA가 필요할 때, 스크린샷/버그 증거가 필요할 때
+- 대표 호출: `gstack`, `qa`, `qa-only`, `design-review`, `browse`, `canary`
+- 상세 동작 규칙은 [`CLAUDE.md`](./CLAUDE.md)의 Skills 섹션을 우선 참조

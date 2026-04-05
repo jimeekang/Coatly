@@ -168,6 +168,8 @@ export const quoteRecordSchema = z.object({
   id: uuidSchema,
   user_id: uuidSchema,
   customer_id: uuidSchema,
+  customer_email: z.string().nullable(),
+  customer_address: z.string().nullable(),
   quote_number: z.string().trim().min(1, 'Quote number is required'),
   title: z.string().nullable(),
   status: quoteStatusSchema,
@@ -194,6 +196,8 @@ export const quoteInsertSchema = z.object({
   id: uuidSchema.optional(),
   user_id: uuidSchema,
   customer_id: uuidSchema,
+  customer_email: z.string().trim().email().nullable().optional(),
+  customer_address: z.string().trim().nullable().optional(),
   quote_number: z.string().trim().min(1, 'Quote number is required'),
   title: z.string().trim().min(1).nullable().optional(),
   status: quoteStatusSchema.optional(),
@@ -512,6 +516,8 @@ export const quoteCreateSchema = z.object({
     unit: z.string().trim().min(1, 'Unit is required').max(50).default('item'),
     quantity: z.number().positive('Quantity must be greater than zero').multipleOf(0.01),
     unit_price_cents: z.number().int('Price must be a whole number of cents').min(0, 'Price must be zero or greater'),
+    is_optional: z.boolean().default(false),
+    is_selected: z.boolean().default(true),
     notes: z.string().trim().max(500).optional(),
   })).default([]),
   pricing_method: z
@@ -606,6 +612,70 @@ export type RatePreset = z.output<typeof ratePresetSchema>;
 
 export { ratePresetSchema };
 
+export const jobStatusSchema = z.enum([
+  'scheduled',
+  'in_progress',
+  'completed',
+  'cancelled',
+]);
+
+const jobDateSchema = z
+  .string()
+  .trim()
+  .min(1, 'Schedule date is required')
+  .refine((value) => /^\d{4}-\d{2}-\d{2}$/.test(value), {
+    message: 'Schedule date must use YYYY-MM-DD',
+  })
+  .refine((value) => !Number.isNaN(Date.parse(value)), {
+    message: 'Schedule date must be a valid date',
+  });
+
+export const jobRecordSchema = z.object({
+  id: uuidSchema,
+  user_id: uuidSchema,
+  customer_id: uuidSchema,
+  quote_id: uuidSchema.nullable(),
+  title: z.string().trim().min(1, 'Job title is required'),
+  status: jobStatusSchema,
+  scheduled_date: jobDateSchema,
+  notes: z.string().nullable(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+
+export const jobInsertSchema = z.object({
+  id: uuidSchema.optional(),
+  user_id: uuidSchema,
+  customer_id: uuidSchema,
+  quote_id: optionalUuidString,
+  title: z.string().trim().min(1, 'Job title is required').max(200),
+  status: jobStatusSchema.optional(),
+  scheduled_date: jobDateSchema,
+  notes: z.string().trim().max(2000).nullable().optional(),
+  created_at: nullableIsoDateSchema.optional(),
+  updated_at: nullableIsoDateSchema.optional(),
+});
+
+export const jobUpdateSchema = jobInsertSchema.partial();
+
+export const jobUpsertSchema = z.object({
+  customer_id: uuidSchema,
+  quote_id: optionalUuidString,
+  title: z.string().trim().min(1, 'Job title is required').max(200),
+  status: jobStatusSchema.default('scheduled'),
+  scheduled_date: jobDateSchema,
+  notes: z.string().trim().max(2000, 'Notes must be 2000 characters or less').optional(),
+});
+
+export type JobRecordInput = z.input<typeof jobRecordSchema>;
+export type JobRecord = z.output<typeof jobRecordSchema>;
+export type JobInsertInput = z.input<typeof jobInsertSchema>;
+export type JobInsert = z.output<typeof jobInsertSchema>;
+export type JobUpdateInput = z.input<typeof jobUpdateSchema>;
+export type JobUpdate = z.output<typeof jobUpdateSchema>;
+export type JobUpsertInput = z.input<typeof jobUpsertSchema>;
+export type JobUpsert = z.output<typeof jobUpsertSchema>;
+
 // ─── Material Items ───────────────────────────────────────────────────────────
 
 export const MATERIAL_ITEM_CATEGORIES = ['paint', 'primer', 'supply', 'service', 'other'] as const;
@@ -668,6 +738,8 @@ export const quoteLineItemFormSchema = z.object({
     .number()
     .int('Price must be a whole number of cents')
     .min(0, 'Price must be zero or greater'),
+  is_optional: z.boolean().default(false),
+  is_selected: z.boolean().default(true),
   notes: z
     .string()
     .trim()
@@ -692,6 +764,8 @@ export type QuoteLineItemRecord = {
   unit_price_cents: number;
   total_cents: number;
   notes: string | null;
+  is_optional: boolean;
+  is_selected: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;

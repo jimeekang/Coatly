@@ -1,7 +1,7 @@
 # Generated: DB Schema Summary
 
 > ⚠️ 이 파일은 참조용 스냅샷입니다. 정확한 스키마는 `supabase/migrations/`와 `types/database.ts`를 확인하세요.
-> 마지막 업데이트: 2026-03-30 (migration 016 기준)
+> 마지막 업데이트: 2026-04-04 (migration 023 기준)
 
 ## Tables
 
@@ -15,7 +15,7 @@
 `id(PK) | user_id(FK) | name | email | phone | company_name | address | notes | is_archived`
 
 ### quotes
-`id(PK) | user_id(FK) | customer_id(FK) | quote_number | title | status | tier(complexity: standard|moderate|complex) | margins | totals_cents | valid_until | notes`
+`id(PK) | user_id(FK) | customer_id(FK) | customer_email(snapshot) | customer_address(snapshot) | quote_number | title | status | tier(complexity: standard|moderate|complex) | margins | totals_cents | valid_until | notes`
 
 ### quote_rooms
 `id(PK) | quote_id(FK) | name | room_type | dimensions(m) | sort_order`
@@ -39,6 +39,6 @@
 | logos | Private (per user) | 비즈니스 로고 |
 | photos | Private (per user) | 현장 사진 |
 
-## Migrations (001–013)
+## Migrations (001–023)
 
-총 13개 마이그레이션. 상세 내용은 `supabase/migrations/` 디렉토리 참조.
+총 23개 마이그레이션. 상세 내용은 `supabase/migrations/` 디렉토리 참조.

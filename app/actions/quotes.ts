@@ -4,11 +4,14 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import {
   buildQuoteCustomerAddress,
+  calculateQuoteLineItemsSubtotal,
   calculateQuotePreview,
   composeQuoteTotals,
+  isMissingQuoteCustomerSnapshotColumnError,
   mapQuoteDetail,
   mapQuoteListItem,
   parseQuoteCreateInput,
+  resolveQuoteCustomerSummary,
   type QuoteCustomerOption,
   type QuoteCoatingType,
   type QuoteDetail,
@@ -40,6 +43,8 @@ type QuoteListRow = {
   id: string;
   user_id: string;
   customer_id: string;
+  customer_email?: string | null;
+  customer_address?: string | null;
   quote_number: string;
   title: string | null;
   status: string;
@@ -58,6 +63,7 @@ type QuoteListRow = {
         email: string | null;
         phone: string | null;
         address_line1: string | null;
+        address_line2: string | null;
         city: string | null;
         state: string | null;
         postcode: string | null;
@@ -69,6 +75,7 @@ type QuoteListRow = {
         email: string | null;
         phone: string | null;
         address_line1: string | null;
+        address_line2: string | null;
         city: string | null;
         state: string | null;
         postcode: string | null;
@@ -89,10 +96,56 @@ type QuoteEstimateItemRow = {
   sort_order: number;
 };
 
+type QuoteDetailRow = {
+  id: string;
+  user_id: string;
+  customer_id: string;
+  manual_adjustment_cents?: number | null;
+  customer_email?: string | null;
+  customer_address?: string | null;
+  quote_number: string;
+  title: string | null;
+  status: string;
+  valid_until: string | null;
+  tier: string | null;
+  notes: string | null;
+  internal_notes: string | null;
+  labour_margin_percent: number;
+  material_margin_percent: number;
+  subtotal_cents: number;
+  gst_cents: number;
+  total_cents: number;
+  estimate_category?: string | null;
+  property_type?: string | null;
+  estimate_mode?: string | null;
+  estimate_context?: Record<string, unknown> | null;
+  pricing_snapshot?: Record<string, unknown> | null;
+  pricing_method?: string | null;
+  pricing_method_inputs?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  customer: QuoteListRow['customer'];
+};
+
 function jsonObjectOrEmpty(value: unknown) {
   return value != null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+const QUOTE_CUSTOMER_SELECT =
+  'customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, address_line2, city, state, postcode)';
+const QUOTE_LIST_SELECT =
+  `id, user_id, customer_id, customer_email, customer_address, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_LIST_SELECT_LEGACY =
+  `id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_DETAIL_SELECT =
+  `id, user_id, customer_id, manual_adjustment_cents, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_DETAIL_SELECT_LEGACY =
+  `id, user_id, customer_id, manual_adjustment_cents, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+
+function parseBooleanFormValue(value: FormDataEntryValue | null) {
+  return typeof value === 'string' && value === 'true';
 }
 
 export async function getQuoteFormOptions(): Promise<{
@@ -108,7 +161,7 @@ export async function getQuoteFormOptions(): Promise<{
   const [customersResult, ratesResult, nextQuoteNumberResult] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, name, company_name, email, phone, address_line1, city, state, postcode')
+      .select('id, name, company_name, email, phone, address_line1, address_line2, city, state, postcode')
       .eq('user_id', user.id)
       .eq('is_archived', false)
       .order('name', { ascending: true }),
@@ -137,30 +190,35 @@ export async function getQuoteFormOptions(): Promise<{
 export async function getQuotes(): Promise<{ data: QuoteListItem[]; error: string | null }> {
   const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
-  const { data, error } = await supabase
+  const quoteListResult = await supabase
     .from('quotes')
-    .select(
-      'id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, city, state, postcode)'
-    )
+    .select(QUOTE_LIST_SELECT)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
+  let data = quoteListResult.data as QuoteListRow[] | null;
+  let error = quoteListResult.error;
+
+  if (error && isMissingQuoteCustomerSnapshotColumnError(error.message)) {
+    const legacyResult = await supabase
+      .from('quotes')
+      .select(QUOTE_LIST_SELECT_LEGACY)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    data = legacyResult.data as QuoteListRow[] | null;
+    error = legacyResult.error;
+  }
 
   return {
     data:
       ((data as QuoteListRow[] | null) ?? []).map((quote) =>
         mapQuoteListItem({
           ...quote,
-          customer: Array.isArray(quote.customer)
-            ? quote.customer.map((customer) => ({
-                ...customer,
-                address: buildQuoteCustomerAddress(customer),
-              }))
-            : quote.customer
-              ? {
-                  ...quote.customer,
-                  address: buildQuoteCustomerAddress(quote.customer),
-                }
-              : null,
+          customer: resolveQuoteCustomerSummary({
+            customer: quote.customer,
+            customer_email: quote.customer_email,
+            customer_address: quote.customer_address,
+          }),
         })
       ) ?? [],
     error: error?.message ?? null,
@@ -173,14 +231,26 @@ export async function getQuote(id: string): Promise<{
 }> {
   const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
 
-  const { data: quote, error: quoteError } = await supabase
+  const quoteResult = await supabase
     .from('quotes')
-    .select(
-      'id, user_id, customer_id, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, city, state, postcode)'
-    )
+    .select(QUOTE_DETAIL_SELECT)
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
+  let quote = quoteResult.data as QuoteDetailRow | null;
+  let quoteError = quoteResult.error;
+
+  if (quoteError && isMissingQuoteCustomerSnapshotColumnError(quoteError.message)) {
+    const legacyResult = await supabase
+      .from('quotes')
+      .select(QUOTE_DETAIL_SELECT_LEGACY)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    quote = legacyResult.data as QuoteDetailRow | null;
+    quoteError = legacyResult.error;
+  }
 
   if (quoteError || !quote) {
     return { data: null, error: quoteError?.message ?? 'Quote not found.' };
@@ -225,7 +295,9 @@ export async function getQuote(id: string): Promise<{
 
   const { data: lineItems, error: lineItemsError } = await supabase
     .from('quote_line_items')
-    .select('id, quote_id, material_item_id, name, category, unit, quantity, unit_price_cents, total_cents, notes, sort_order, created_at, updated_at')
+    .select(
+      'id, quote_id, material_item_id, name, category, unit, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected, sort_order, created_at, updated_at'
+    )
     .eq('quote_id', id)
     .order('sort_order', { ascending: true });
 
@@ -237,14 +309,11 @@ export async function getQuote(id: string): Promise<{
     data: mapQuoteDetail({
       ...quote,
       pricing_method_inputs: quote.pricing_method_inputs as Record<string, unknown> | null,
-      customer: quote.customer
-        ? {
-            ...(Array.isArray(quote.customer) ? quote.customer[0] : quote.customer),
-            address: buildQuoteCustomerAddress(
-              Array.isArray(quote.customer) ? quote.customer[0] : quote.customer
-            ),
-          }
-        : null,
+      customer: resolveQuoteCustomerSummary({
+        customer: quote.customer,
+        customer_email: quote.customer_email,
+        customer_address: quote.customer_address,
+      }),
       estimate_context: jsonObjectOrEmpty(quote.estimate_context),
       pricing_snapshot: jsonObjectOrEmpty(quote.pricing_snapshot),
       rooms:
@@ -290,6 +359,8 @@ export async function getQuote(id: string): Promise<{
       line_items: ((lineItems as QuoteLineItemRecord[] | null) ?? []).map((item) => ({
         ...item,
         quantity: Number(item.quantity),
+        is_optional: item.is_optional ?? false,
+        is_selected: item.is_optional ? item.is_selected ?? false : true,
       })),
     }),
     error: null,
@@ -329,7 +400,7 @@ export async function createQuote(
 
   const { data: customer, error: customerError } = await supabase
     .from('customers')
-    .select('id')
+    .select('id, email, address_line1, address_line2, city, state, postcode')
     .eq('id', parsed.data.customer_id)
     .eq('user_id', user.id)
     .eq('is_archived', false)
@@ -434,35 +505,56 @@ export async function createQuote(
     };
   }
 
-  const { data: quote, error: quoteError } = await supabase
-    .from('quotes')
-    .insert({
-      user_id: user.id,
-      customer_id: parsed.data.customer_id,
-      quote_number: quoteNumber,
-      title: parsed.data.title,
-      status: parsed.data.status,
-      valid_until: parsed.data.valid_until,
-      tier: parsed.data.complexity,
-      notes: parsed.data.notes,
-      internal_notes: parsed.data.internal_notes,
-      labour_margin_percent: parsed.data.labour_margin_percent,
-      material_margin_percent: parsed.data.material_margin_percent,
-      subtotal_cents: preview.subtotal_cents,
-      gst_cents: preview.gst_cents,
-      total_cents: preview.total_cents,
-      manual_adjustment_cents: adjustmentCents,
-      estimate_category: interiorEstimate ? 'interior' : 'manual',
-      property_type: parsed.data.interior_estimate?.property_type ?? null,
-      estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
-      estimate_context: parsed.data.interior_estimate ?? {},
-      pricing_snapshot: interiorEstimate?.snapshot ?? {},
-      pricing_method: pricingMethod,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pricing_method_inputs: resolvedPricingInputs as any,
-    })
+  const quoteInsertPayload = {
+    user_id: user.id,
+    customer_id: parsed.data.customer_id,
+    customer_email: customer.email,
+    customer_address: buildQuoteCustomerAddress(customer),
+    quote_number: quoteNumber,
+    title: parsed.data.title,
+    status: parsed.data.status,
+    valid_until: parsed.data.valid_until,
+    tier: parsed.data.complexity,
+    notes: parsed.data.notes,
+    internal_notes: parsed.data.internal_notes,
+    labour_margin_percent: parsed.data.labour_margin_percent,
+    material_margin_percent: parsed.data.material_margin_percent,
+    subtotal_cents: preview.subtotal_cents,
+    gst_cents: preview.gst_cents,
+    total_cents: preview.total_cents,
+    manual_adjustment_cents: adjustmentCents,
+    estimate_category: interiorEstimate ? 'interior' : 'manual',
+    property_type: parsed.data.interior_estimate?.property_type ?? null,
+    estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
+    estimate_context: parsed.data.interior_estimate ?? {},
+    pricing_snapshot: interiorEstimate?.snapshot ?? {},
+    pricing_method: pricingMethod,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pricing_method_inputs: resolvedPricingInputs as any,
+  };
+
+  let { data: quote, error: quoteError } = await supabase.from('quotes').insert(quoteInsertPayload)
     .select('id')
     .single();
+
+  if (quoteError && isMissingQuoteCustomerSnapshotColumnError(quoteError.message)) {
+    const {
+      customer_email: _customerEmail,
+      customer_address: _customerAddress,
+      ...legacyQuoteInsertPayload
+    } = quoteInsertPayload;
+    void _customerEmail;
+    void _customerAddress;
+
+    const legacyResult = await supabase
+      .from('quotes')
+      .insert(legacyQuoteInsertPayload)
+      .select('id')
+      .single();
+
+    quote = legacyResult.data;
+    quoteError = legacyResult.error;
+  }
 
   if (quoteError || !quote) {
     return { error: quoteError?.message ?? 'Quote could not be created.' };
@@ -548,6 +640,8 @@ export async function createQuote(
         unit_price_cents: item.unit_price_cents,
         total_cents: Math.round(item.quantity * item.unit_price_cents),
         notes: item.notes ?? null,
+        is_optional: item.is_optional ?? false,
+        is_selected: item.is_optional ? item.is_selected ?? false : true,
         sort_order: index,
       }))
     );
@@ -560,4 +654,103 @@ export async function createQuote(
 
   revalidatePath('/quotes');
   redirect(`/quotes/${quote.id}`);
+}
+
+export async function setQuoteOptionalLineItemSelection(
+  formData: FormData
+): Promise<void> {
+  const quoteId = formData.get('quoteId');
+  const lineItemId = formData.get('lineItemId');
+
+  if (typeof quoteId !== 'string' || typeof lineItemId !== 'string') {
+    return;
+  }
+
+  const isSelected = parseBooleanFormValue(formData.get('isSelected'));
+  const supabase = await createServerClient();
+  const user = await requireCurrentUser();
+
+  const { data: quote, error: quoteError } = await supabase
+    .from('quotes')
+    .select('id, subtotal_cents, manual_adjustment_cents')
+    .eq('id', quoteId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (quoteError || !quote) {
+    return;
+  }
+
+  const { data: lineItems, error: lineItemsError } = await supabase
+    .from('quote_line_items')
+    .select('id, total_cents, is_optional, is_selected')
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (lineItemsError) {
+    return;
+  }
+
+  const target = lineItems?.find((item) => item.id === lineItemId) ?? null;
+
+  if (!target || !target.is_optional) {
+    return;
+  }
+
+  const { error: updateLineItemError } = await supabase
+    .from('quote_line_items')
+    .update({ is_selected: isSelected })
+    .eq('id', lineItemId)
+    .eq('quote_id', quoteId);
+
+  if (updateLineItemError) {
+    return;
+  }
+
+  const currentIncludedLineItemsSubtotal = calculateQuoteLineItemsSubtotal(
+    (lineItems ?? []).map((item) => ({
+      quantity: 1,
+      unit_price_cents: item.total_cents,
+      total_cents: item.total_cents,
+      is_optional: item.is_optional,
+      is_selected: item.is_selected,
+    }))
+  );
+
+  const baseSubtotalWithoutLineItems = Math.max(
+    0,
+    quote.subtotal_cents - currentIncludedLineItemsSubtotal
+  );
+
+  const nextIncludedLineItemsSubtotal = calculateQuoteLineItemsSubtotal(
+    (lineItems ?? []).map((item) => ({
+      quantity: 1,
+      unit_price_cents: item.total_cents,
+      total_cents: item.total_cents,
+      is_optional: item.is_optional,
+      is_selected: item.id === lineItemId ? isSelected : item.is_selected,
+    }))
+  );
+
+  const nextSubtotalCents = baseSubtotalWithoutLineItems + nextIncludedLineItemsSubtotal;
+  const nextGstCents = Math.round(nextSubtotalCents * 0.1);
+  const nextTotalCents =
+    nextSubtotalCents + nextGstCents + (quote.manual_adjustment_cents ?? 0);
+
+  const { error: updateQuoteError } = await supabase
+    .from('quotes')
+    .update({
+      subtotal_cents: nextSubtotalCents,
+      gst_cents: nextGstCents,
+      total_cents: nextTotalCents,
+    })
+    .eq('id', quoteId)
+    .eq('user_id', user.id);
+
+  if (updateQuoteError) {
+    return;
+  }
+
+  revalidatePath('/quotes');
+  revalidatePath(`/quotes/${quoteId}`);
 }

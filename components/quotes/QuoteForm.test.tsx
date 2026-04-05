@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { calculateQuickQuotePreview } from '@/components/quotes/QuickQuoteBuilder';
@@ -240,6 +240,36 @@ describe('QuoteForm', () => {
 
     expect(getEstimateTotalsCents()).toEqual([before + 11000]);
     expect(screen.getAllByText('Materials & Services').length).toBeGreaterThan(0);
+  });
+
+  it('keeps optional line items out of totals until optional is unchecked', async () => {
+    const user = userEvent.setup();
+
+    render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
+
+    // Establish a base total with a room
+    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    const before = getEstimateTotalsCents()[0];
+
+    // Add a new line item via "Add Line Item"
+    await user.click(screen.getByRole('button', { name: 'Add Line Item' }));
+    const priceInput = screen.getByLabelText('Line item price');
+    // Set price to $100 (= 10000 cents); with 10% GST → +$11000 cents to total
+    fireEvent.change(priceInput, { target: { value: '100' } });
+    await user.type(screen.getByLabelText('Line item name'), 'Ceiling repaint');
+
+    // Without optional: item is included in total
+    const withItemTotal = getEstimateTotalsCents()[0];
+    expect(withItemTotal).toBe(before + 11000);
+
+    // Mark as optional → excluded from total
+    await user.click(screen.getByLabelText(/Ceiling repaint optional/i));
+    expect(getEstimateTotalsCents()).toEqual([before]);
+    expect(screen.getByText(/Optional \(not included in total\)/i)).toBeInTheDocument();
+
+    // Unmark optional → included again
+    await user.click(screen.getByLabelText(/Ceiling repaint optional/i));
+    expect(getEstimateTotalsCents()).toEqual([withItemTotal]);
   });
 
   it('applies custom rate settings to the quick quote preview engine', () => {

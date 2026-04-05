@@ -8,6 +8,42 @@
 - `data_analyst` -> SQL, reporting logic, metric definitions, and business analysis
 - `vercel_deploy` -> Vercel login checks, preview/production deployments, alias updates, and release verification
 
+## Gstack Routing
+
+Codex should treat the following slash-style inputs as explicit gstack skill invocations for this repo.
+
+- `/gstack qa [target]` -> use the `qa` gstack skill
+- `/gstack qa-only [target]` -> use the `qa-only` gstack skill
+- `/gstack browse [url-or-flow]` -> use the `browse` gstack skill
+- `/gstack design-review [target]` -> use the `design-review` gstack skill
+- `/gstack canary [url]` -> use the `canary` gstack skill
+- `/gstack investigate [target]` -> use the `investigate` gstack skill
+- `/gstack review [target]` -> use the `review` gstack skill
+- `/gstack ship [target]` -> use the `ship` gstack skill
+
+Codex should also accept these short aliases as equivalent explicit invocations:
+
+- `/qa [target]`
+- `/qa-only [target]`
+- `/browse [url-or-flow]`
+- `/design-review [target]`
+- `/canary [url]`
+
+When one of the commands above appears, prefer the mapped gstack skill workflow over an ad-hoc inline answer.
+
+## Gstack Trigger Map
+
+Use gstack skill routing when the request matches one of these patterns:
+
+- test the site, QA, find bugs, verify a flow -> `qa`
+- report-only testing, bug list only -> `qa-only`
+- open a page, click through a flow, take screenshots -> `browse`
+- visual polish, UI audit, live design review -> `design-review`
+- post-deploy verification, monitor production health -> `canary`
+- broken behavior, regression, unknown root cause -> `investigate`
+- review a diff or pre-merge risk -> `review`
+- ship, push, create PR, land changes -> `ship`
+
 ## Shared Handoff Template
 
 Use this structure when delegating to any custom subagent:
@@ -90,4 +126,5 @@ Out of scope: Unrelated application feature work
 1. Clarify scope with `data_analyst` when requirements or metrics are vague.
 2. Assign implementation to `frontend_uiux` or `backend_supabase` with a bounded file or feature scope.
 3. Hand the result to `app_tester_reviewer` for findings, tests, and final verification.
+4. When browser QA, screenshots, visual audit, or deploy verification is needed, route to the matching gstack skill first.
 ```

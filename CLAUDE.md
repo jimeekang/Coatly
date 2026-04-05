@@ -11,6 +11,7 @@ Next.js 15 (App Router) · TypeScript · Tailwind · Supabase (Postgres + Auth +
 - Serverless on Vercel → React-PDF만 사용 (Puppeteer 금지)
 - RLS 필수: 모든 쿼리 `auth.uid()` 기준
 - 금액은 항상 cents 정수로 저장, `any` 타입 금지
+- 원격 Supabase CLI 작업 전에는 항상 `npx supabase login` 실행 후 브라우저에서 verification code 승인까지 완료, Git/GitHub 로그인 상태만으로 진행 금지
 
 ## Critical Pattern
 
@@ -59,6 +60,12 @@ const { data } = await supabase.from('quotes').select('*');
 |-----------|---------|
 | 새 기능 기획/분해 | `.claude/commands/plan.md` |
 | 코드 품질 검증 + 보안 체크 | `.claude/commands/quality.md` |
+| gstack skill 라우팅 | `.claude/commands/gstack.md` |
+| QA 테스트 + 버그 수정 | `.claude/commands/qa.md` |
+| 리포트 전용 QA | `.claude/commands/qa-only.md` |
+| 브라우저 테스트 / 스크린샷 | `.claude/commands/browse.md` |
+| 라이브 디자인 리뷰 | `.claude/commands/design-review.md` |
+| 배포 후 모니터링 | `.claude/commands/canary.md` |
 | 배포 후 화면 검증 / 버그 증거 캡처 | `gstack` skill |
 | 구현 (UI + backend + DB 통합) | `.claude/commands/build.md` |
 | 배포 + Notion 동기화 | `.claude/commands/release.md` |

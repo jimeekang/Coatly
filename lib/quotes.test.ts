@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  calculateQuoteLineItemsSubtotal,
   calculateQuotePreview,
   getSuggestedRatePerSqmCents,
   parseQuoteCreateInput,
@@ -84,6 +85,7 @@ describe('lib/quotes', () => {
         pricing_method: 'hybrid',
         pricing_method_inputs: null,
         interior_estimate: null,
+        line_items: [],
         rooms: [
           {
             name: 'Living Room',
@@ -104,6 +106,112 @@ describe('lib/quotes', () => {
         ],
       },
     });
+  });
+
+  it('excludes unselected optional items from quote line item subtotals', () => {
+    expect(
+      calculateQuoteLineItemsSubtotal([
+        {
+          quantity: 1,
+          unit_price_cents: 10000,
+          is_optional: false,
+          is_selected: true,
+        },
+        {
+          quantity: 1,
+          unit_price_cents: 25000,
+          is_optional: true,
+          is_selected: false,
+        },
+      ])
+    ).toBe(10000);
+  });
+
+  it('normalizes optional quote line items so only selected add-ons affect totals', () => {
+    const parsed = parseQuoteCreateInput({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Optional extras quote',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [
+        {
+          name: 'Living Room',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              area_m2: 35,
+              coating_type: 'repaint_2coat',
+              rate_per_m2_cents: 1800,
+              notes: '',
+            },
+          ],
+        },
+      ],
+      line_items: [
+        {
+          material_item_id: null,
+          name: 'Feature wall upgrade',
+          category: 'service',
+          unit: 'job',
+          quantity: 1,
+          unit_price_cents: 15000,
+          is_optional: true,
+          is_selected: false,
+        },
+        {
+          material_item_id: null,
+          name: 'Premium paint',
+          category: 'paint',
+          unit: 'tin',
+          quantity: 1,
+          unit_price_cents: 10000,
+          is_optional: true,
+          is_selected: true,
+        },
+      ],
+    });
+
+    expect(parsed).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        line_items: [
+          expect.objectContaining({
+            name: 'Feature wall upgrade',
+            is_optional: true,
+            is_selected: false,
+          }),
+          expect.objectContaining({
+            name: 'Premium paint',
+            is_optional: true,
+            is_selected: true,
+          }),
+        ],
+      }),
+    });
+
+    if (!parsed.success) {
+      throw new Error('Expected the payload to parse successfully.');
+    }
+
+    const preview = calculateQuotePreview({
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      rooms: parsed.data.rooms,
+      line_items: parsed.data.line_items,
+    });
+
+    expect(preview.subtotal_cents).toBe(73000);
+    expect(preview.total_cents).toBe(80300);
   });
 
   it('normalizes an interior estimate payload for anchor pricing', () => {
@@ -170,6 +278,7 @@ describe('lib/quotes', () => {
         internal_notes: 'Internal note',
         pricing_method: 'hybrid',
         pricing_method_inputs: null,
+        line_items: [],
         interior_estimate: {
           property_type: 'apartment',
           estimate_mode: 'specific_areas',

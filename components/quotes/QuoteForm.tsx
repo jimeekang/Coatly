@@ -20,7 +20,8 @@ import {
 import type { QuoteCreateInput, MaterialItem, QuoteLineItemFormInput } from '@/lib/supabase/validators';
 import type { UserRateSettings } from '@/lib/rate-settings';
 import { LineItemsSection } from '@/components/quotes/LineItemsSection';
-import { PRICING_METHOD_LABELS, type PricingMethodSettings } from '@/lib/rate-settings';
+import { QuoteExtraLineItems, toQuoteLineItemFormInput, type ExtraLineItemInput } from '@/components/quotes/QuoteExtraLineItems';
+import { PRICING_METHOD_LABELS } from '@/lib/rate-settings';
 import { formatAUD } from '@/utils/format';
 import type { PricingMethod, DayRateInputs, RoomRateInputs, ManualInputs } from '@/types/quote';
 import {
@@ -374,8 +375,10 @@ export function QuoteForm({
   // Manual method state
   const [manualInputs, setManualInputs] = useState<ManualInputs>({ labor_cents: 0, material_cents: 0 });
 
-  // Materials & Services line items (separate section)
+  // Materials & Services line items (library picker)
   const [lineItems, setLineItems] = useState<QuoteLineItemFormInput[]>([]);
+  // Simple custom line items with optional toggle
+  const [extraLineItems, setExtraLineItems] = useState<ExtraLineItemInput[]>([]);
 
   const [form, setForm] = useState({
     customer_id: defaultValues?.customer_id ?? '',
@@ -387,6 +390,10 @@ export function QuoteForm({
     labour_markup: String(defaultValues?.labour_margin_percent ?? 0),
     material_markup: String(defaultValues?.material_margin_percent ?? 0),
   });
+  const selectedCustomer = useMemo(
+    () => customers.find((customer) => customer.id === form.customer_id) ?? null,
+    [customers, form.customer_id]
+  );
 
   // Quick mode state
   const [quickState, setQuickState] = useState<QuickQuoteBuilderState>(
@@ -427,16 +434,26 @@ export function QuoteForm({
   const adjustmentCents = pricingStrategy === 'hybrid' && estimateMode === 'quick'
     ? quickPreview.adjustment_cents
     : 0;
+  // Merge M&S library items with extra line items (excluding items with empty names)
+  const allLineItems = useMemo(
+    () => [
+      ...lineItems,
+      ...extraLineItems
+        .filter((item) => item.name.trim().length > 0)
+        .map(toQuoteLineItemFormInput),
+    ],
+    [lineItems, extraLineItems]
+  );
   const lineItemSubtotal = useMemo(
-    () => calculateQuoteLineItemsSubtotal(lineItems),
-    [lineItems]
+    () => calculateQuoteLineItemsSubtotal(allLineItems),
+    [allLineItems]
   );
   const hybridTotals =
     pricingStrategy === 'hybrid'
       ? composeQuoteTotals({
           base_subtotal_cents: subtotalWithMarkup,
           adjustment_cents: adjustmentCents,
-          line_items: lineItems,
+          line_items: allLineItems,
         })
       : null;
 
@@ -451,9 +468,9 @@ export function QuoteForm({
     if (!methodPreview) return null;
     return composeQuoteTotals({
       base_subtotal_cents: methodPreview.subtotal_cents,
-      line_items: lineItems,
+      line_items: allLineItems,
     });
-  }, [methodPreview, lineItems]);
+  }, [methodPreview, allLineItems]);
 
   const displayTotal = composedMethodPreview?.total_cents ?? hybridTotals?.total_cents ?? 0;
   const activeMethodLabel =
@@ -555,7 +572,7 @@ export function QuoteForm({
         notes: form.notes,
         internal_notes: form.internal_notes,
         rooms: [],
-        line_items: lineItems,
+        line_items: allLineItems,
         pricing_method: 'day_rate',
         pricing_method_inputs: { method: 'day_rate' as const, inputs: dayRateState },
       };
@@ -571,7 +588,7 @@ export function QuoteForm({
         notes: form.notes,
         internal_notes: form.internal_notes,
         rooms: [],
-        line_items: lineItems,
+        line_items: allLineItems,
         pricing_method: 'room_rate',
         pricing_method_inputs: { method: 'room_rate' as const, inputs: { rooms: roomRateItems } },
       };
@@ -587,7 +604,7 @@ export function QuoteForm({
         notes: form.notes,
         internal_notes: form.internal_notes,
         rooms: [],
-        line_items: lineItems,
+        line_items: allLineItems,
         pricing_method: 'manual',
         pricing_method_inputs: { method: 'manual' as const, inputs: manualInputs },
       };
@@ -614,7 +631,7 @@ export function QuoteForm({
         notes: form.notes,
         internal_notes: form.internal_notes,
         rooms: [],
-        line_items: lineItems,
+        line_items: allLineItems,
         interior_estimate,
         pricing_method: 'hybrid',
       };
@@ -694,6 +711,19 @@ export function QuoteForm({
                 </option>
               ))}
             </select>
+            {selectedCustomer && (selectedCustomer.email || selectedCustomer.address) && (
+              <div className="mt-3 rounded-xl border border-pm-border bg-pm-surface px-4 py-3 text-sm text-pm-body">
+                <p className="font-medium text-pm-body">
+                  {selectedCustomer.company_name || selectedCustomer.name}
+                </p>
+                {selectedCustomer.email && (
+                  <p className="mt-1 text-pm-secondary">{selectedCustomer.email}</p>
+                )}
+                {selectedCustomer.address && (
+                  <p className="mt-1 text-pm-secondary">{selectedCustomer.address}</p>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <label htmlFor="title" className={LABEL}>
@@ -1027,6 +1057,12 @@ export function QuoteForm({
         libraryItems={libraryItems}
         value={lineItems}
         onChange={setLineItems}
+      />
+
+      {/* Custom line items with optional toggle */}
+      <QuoteExtraLineItems
+        value={extraLineItems}
+        onChange={setExtraLineItems}
       />
 
       {/* Notes */}

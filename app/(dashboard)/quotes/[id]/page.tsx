@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getQuote } from '@/app/actions/quotes';
+import {
+  getQuote,
+  setQuoteOptionalLineItemSelection,
+} from '@/app/actions/quotes';
+import { createJobFromQuoteAndRedirect } from '@/app/actions/jobs';
 import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
 import { ProfitabilityCard } from '@/components/quotes/ProfitabilityCard';
@@ -11,16 +15,21 @@ export const metadata: Metadata = { title: 'Quote Detail' };
 
 export default async function QuoteDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ jobError?: string }>;
 }) {
   const { id } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const [{ data: quote, error }, { data: rateSettings }] = await Promise.all([
     getQuote(id),
     user ? getBusinessRateSettings(supabase, user.id) : Promise.resolve({ data: null, error: null }),
   ]);
+  const jobError =
+    typeof resolvedSearchParams.jobError === 'string' ? resolvedSearchParams.jobError : null;
 
   // ── Internal cost breakdown (not shown in PDF) ──────────────────────────
   const hasManualRooms = (quote?.rooms?.length ?? 0) > 0;
@@ -55,6 +64,14 @@ export default async function QuoteDetailPage({
     : 0;
   const showBreakdown =
     quote && (quote.labour_margin_percent > 0 || quote.material_margin_percent > 0 || hasManualRooms);
+  const includedLineItems = quote?.line_items.filter((item) => !item.is_optional) ?? [];
+  const optionalLineItems = quote?.line_items.filter((item) => item.is_optional) ?? [];
+  const optionalSelectedTotal = optionalLineItems
+    .filter((item) => item.is_selected)
+    .reduce((sum, item) => sum + item.total_cents, 0);
+  const optionalAvailableTotal = optionalLineItems
+    .filter((item) => !item.is_selected)
+    .reduce((sum, item) => sum + item.total_cents, 0);
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-4">
@@ -94,6 +111,12 @@ export default async function QuoteDetailPage({
         </div>
       ) : (
         <div className="flex flex-col gap-6 pb-10">
+          {jobError && (
+            <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
+              <p className="text-sm text-pm-coral-dark">{jobError}</p>
+            </div>
+          )}
+
           <section className="rounded-xl border border-pm-border bg-white">
             <div className="rounded-t-xl bg-pm-surface px-5 py-3">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
@@ -177,6 +200,123 @@ export default async function QuoteDetailPage({
               ))}
             </div>
           </section>
+
+          {(includedLineItems.length > 0 || optionalLineItems.length > 0) && (
+            <section className="rounded-xl border border-pm-border bg-white">
+              <div className="rounded-t-xl bg-pm-surface px-5 py-3">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  Materials &amp; Services
+                </h2>
+              </div>
+              <div className="space-y-4 px-5 py-4">
+                {includedLineItems.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-pm-secondary">
+                      Included
+                    </p>
+                    {includedLineItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="font-medium text-pm-body">{item.name}</p>
+                            <p className="mt-1 text-xs text-pm-secondary">
+                              {item.quantity} {item.unit} at {formatAUD(item.unit_price_cents)}
+                            </p>
+                            {item.notes && (
+                              <p className="mt-2 text-sm text-pm-secondary">{item.notes}</p>
+                            )}
+                          </div>
+                          <p className="text-sm font-semibold text-pm-body">
+                            {formatAUD(item.total_cents)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {optionalLineItems.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-pm-secondary">
+                          Optional Items
+                        </p>
+                        <p className="mt-1 text-sm text-pm-secondary">
+                          Toggle customer choices to update the saved quote total.
+                        </p>
+                      </div>
+                      <div className="text-right text-xs text-pm-secondary">
+                        <p>Selected: {formatAUD(optionalSelectedTotal)}</p>
+                        {optionalAvailableTotal > 0 && (
+                          <p>Available: {formatAUD(optionalAvailableTotal)}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {optionalLineItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-pm-border bg-white px-4 py-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium text-pm-body">{item.name}</p>
+                              <span
+                                className={[
+                                  'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                  item.is_selected
+                                    ? 'bg-pm-teal-pale/30 text-pm-teal'
+                                    : 'bg-amber-100 text-amber-700',
+                                ].join(' ')}
+                              >
+                                {item.is_selected ? 'Selected' : 'Optional'}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-pm-secondary">
+                              {item.quantity} {item.unit} at {formatAUD(item.unit_price_cents)}
+                            </p>
+                            {item.notes && (
+                              <p className="mt-2 text-sm text-pm-secondary">{item.notes}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
+                            <p className="text-sm font-semibold text-pm-body">
+                              {formatAUD(item.total_cents)}
+                            </p>
+                            <form action={setQuoteOptionalLineItemSelection}>
+                              <input type="hidden" name="quoteId" value={quote.id} />
+                              <input type="hidden" name="lineItemId" value={item.id} />
+                              <input
+                                type="hidden"
+                                name="isSelected"
+                                value={item.is_selected ? 'false' : 'true'}
+                              />
+                              <button
+                                type="submit"
+                                className={[
+                                  'inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
+                                  item.is_selected
+                                    ? 'border border-pm-border bg-white text-pm-body hover:bg-pm-surface'
+                                    : 'bg-pm-teal text-white hover:bg-pm-teal-hover',
+                                ].join(' ')}
+                              >
+                                {item.is_selected ? 'Remove from Total' : 'Add to Total'}
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           {(quote.notes || quote.internal_notes) && (
             <section className="rounded-xl border border-pm-border bg-white">
@@ -304,13 +444,24 @@ export default async function QuoteDetailPage({
             </div>
           </section>
 
-          <Link
-            href={`/api/pdf/quote?id=${quote.id}`}
-            target="_blank"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-medium text-pm-body transition-colors active:bg-pm-surface"
-          >
-            Open PDF
-          </Link>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <form action={createJobFromQuoteAndRedirect}>
+              <input type="hidden" name="quoteId" value={quote.id} />
+              <button
+                type="submit"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-pm-teal px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
+              >
+                Create Job
+              </button>
+            </form>
+            <Link
+              href={`/api/pdf/quote?id=${quote.id}`}
+              target="_blank"
+              className="inline-flex min-h-12 items-center justify-center rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-medium text-pm-body transition-colors active:bg-pm-surface"
+            >
+              Open PDF
+            </Link>
+          </div>
         </div>
       )}
     </div>

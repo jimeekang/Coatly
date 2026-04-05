@@ -118,6 +118,9 @@ export function QuoteTemplate({
   email: string | null;
   logoUrl: string | null;
 }) {
+  const includedLineItems = quote.line_items.filter((item) => !item.is_optional);
+  const optionalLineItems = quote.line_items.filter((item) => item.is_optional);
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -195,6 +198,56 @@ export function QuoteTemplate({
             </View>
           ))}
         </View>
+
+        {includedLineItems.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Materials &amp; Services</Text>
+            <View style={styles.tableHeader}>
+              <Text style={styles.col1}>Description</Text>
+              <Text style={styles.col2}>Qty</Text>
+              <Text style={styles.col3}>Rate</Text>
+              <Text style={styles.col4}>Amount</Text>
+            </View>
+            {includedLineItems.map((item) => (
+              <View key={item.id} style={styles.tableRow}>
+                <Text style={styles.col1}>
+                  {item.name}
+                  {item.notes ? `\n${item.notes}` : ''}
+                </Text>
+                <Text style={styles.col2}>
+                  {item.quantity} {item.unit}
+                </Text>
+                <Text style={styles.col3}>{formatAUD(item.unit_price_cents)}</Text>
+                <Text style={styles.col4}>{formatAUD(item.total_cents)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {optionalLineItems.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Optional Add-ons</Text>
+            <View style={styles.tableHeader}>
+              <Text style={styles.col1}>Description</Text>
+              <Text style={styles.col2}>Status</Text>
+              <Text style={styles.col3}>Rate</Text>
+              <Text style={styles.col4}>Amount</Text>
+            </View>
+            {optionalLineItems.map((item) => (
+              <View key={item.id} style={styles.tableRow}>
+                <Text style={styles.col1}>
+                  {item.name}
+                  {item.notes ? `\n${item.notes}` : ''}
+                </Text>
+                <Text style={styles.col2}>{item.is_selected ? 'Selected' : 'Optional'}</Text>
+                <Text style={styles.col3}>
+                  {formatAUD(item.unit_price_cents)} / {item.unit}
+                </Text>
+                <Text style={styles.col4}>{formatAUD(item.total_cents)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.totalsSection}>
           <View style={styles.totalRow}>

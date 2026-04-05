@@ -87,6 +87,50 @@ describe('quoteCreateSchema', () => {
 
     expect(parsed.success).toBe(true);
   });
+
+  it('accepts optional customer-selectable quote line items', () => {
+    const parsed = quoteCreateSchema.safeParse({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Optional extras quote',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [
+        {
+          name: 'Living Room',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              area_m2: 35,
+              coating_type: 'repaint_2coat',
+              rate_per_m2_cents: 1800,
+            },
+          ],
+        },
+      ],
+      line_items: [
+        {
+          material_item_id: null,
+          name: 'Feature wall upgrade',
+          category: 'service',
+          unit: 'job',
+          quantity: 1,
+          unit_price_cents: 15000,
+          is_optional: true,
+          is_selected: false,
+        },
+      ],
+    });
+
+    expect(parsed.success).toBe(true);
+  });
 });
 
 describe('quoteLineItemInsertSchema', () => {

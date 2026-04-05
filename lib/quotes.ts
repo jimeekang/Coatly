@@ -81,6 +81,20 @@ export type QuoteCustomerSummary = {
   address: string | null;
 };
 
+type QuoteCustomerSource = {
+  id: string;
+  name: string;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+};
+
 export type QuoteEstimateItemDraft = {
   id: string;
   quote_id: string;
@@ -105,21 +119,45 @@ export type QuoteLineItemRecord = {
   unit_price_cents: number;
   total_cents: number;
   notes: string | null;
+  is_optional: boolean;
+  is_selected: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
 };
 
-type QuotePricedLineItem = Pick<QuoteLineItemRecord, 'quantity' | 'unit_price_cents' | 'total_cents'> |
-  Pick<QuoteLineItemFormInput, 'quantity' | 'unit_price_cents'>;
+type QuotePricedLineItem =
+  | Pick<
+      QuoteLineItemRecord,
+      'quantity' | 'unit_price_cents' | 'total_cents' | 'is_optional' | 'is_selected'
+    >
+  | Pick<
+      QuoteLineItemFormInput,
+      'quantity' | 'unit_price_cents' | 'is_optional' | 'is_selected'
+    >;
+
+export function isQuoteLineItemIncluded(item: {
+  is_optional?: boolean | null;
+  is_selected?: boolean | null;
+}) {
+  return !item.is_optional || item.is_selected !== false;
+}
+
+export function calculateQuoteLineItemTotalCents(item: QuotePricedLineItem) {
+  if ('total_cents' in item && typeof item.total_cents === 'number') {
+    return item.total_cents;
+  }
+
+  return Math.round(item.quantity * item.unit_price_cents);
+}
 
 export function calculateQuoteLineItemsSubtotal(items: QuotePricedLineItem[] = []) {
   return items.reduce((sum, item) => {
-    const total =
-      'total_cents' in item && typeof item.total_cents === 'number'
-        ? item.total_cents
-        : Math.round(item.quantity * item.unit_price_cents);
-    return sum + total;
+    if (!isQuoteLineItemIncluded(item)) {
+      return sum;
+    }
+
+    return sum + calculateQuoteLineItemTotalCents(item);
   }, 0);
 }
 
@@ -316,6 +354,7 @@ function roundToOneDecimal(value: number) {
 
 export function buildQuoteCustomerAddress(customer: {
   address_line1?: string | null;
+  address_line2?: string | null;
   city?: string | null;
   state?: string | null;
   postcode?: string | null;
@@ -324,12 +363,50 @@ export function buildQuoteCustomerAddress(customer: {
   if (!customer) return null;
   if ('address' in customer && customer.address) return customer.address;
 
-  const address = [customer.address_line1, customer.city, customer.state, customer.postcode]
+  const address = [
+    customer.address_line1,
+    customer.address_line2,
+    customer.city,
+    customer.state,
+    customer.postcode,
+  ]
     .map((value) => value?.trim() ?? '')
     .filter(Boolean)
     .join(', ');
 
   return address || null;
+}
+
+export function isMissingQuoteCustomerSnapshotColumnError(message: string | null | undefined) {
+  if (!message) return false;
+
+  return (
+    message.includes('quotes.customer_email') ||
+    message.includes('quotes.customer_address') ||
+    ((message.includes('customer_email') || message.includes('customer_address')) &&
+      message.includes('quotes'))
+  );
+}
+
+export function resolveQuoteCustomerSummary(row: {
+  customer: QuoteCustomerSource | QuoteCustomerSource[] | null;
+  customer_email?: string | null;
+  customer_address?: string | null;
+}): QuoteCustomerSummary {
+  const customer = Array.isArray(row.customer) ? row.customer[0] : row.customer;
+
+  return {
+    id: customer?.id ?? '',
+    name: customer?.name ?? 'Unknown customer',
+    company_name: customer?.company_name ?? null,
+    email: row.customer_email ?? customer?.email ?? null,
+    phone: customer?.phone ?? null,
+    address:
+      row.customer_address ??
+      customer?.address ??
+      buildQuoteCustomerAddress(customer) ??
+      null,
+  };
 }
 
 export function getSuggestedRatePerSqmCents(
@@ -466,7 +543,21 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       pricing_method: parsed.data.pricing_method,
       pricing_method_inputs: parsed.data.pricing_method_inputs ?? null,
       interior_estimate: normalizeInteriorEstimate(parsed.data.interior_estimate),
-      line_items: parsed.data.line_items ?? [],
+      line_items: (parsed.data.line_items ?? []).map((item) => {
+        const is_optional = item.is_optional ?? false;
+
+        return {
+          material_item_id: item.material_item_id ?? null,
+          name: item.name.trim(),
+          category: item.category,
+          unit: item.unit.trim(),
+          quantity: item.quantity,
+          unit_price_cents: item.unit_price_cents,
+          is_optional,
+          is_selected: is_optional ? item.is_selected ?? false : true,
+          notes: item.notes?.trim() || undefined,
+        };
+      }),
       rooms: parsed.data.rooms.map((room) => ({
         name: room.name.trim(),
         room_type: room.room_type,
@@ -489,6 +580,8 @@ export function mapQuoteListItem(row: {
   id: string;
   user_id: string;
   customer_id: string;
+  customer_email?: string | null;
+  customer_address?: string | null;
   quote_number: string;
   title: string | null;
   status: string;
@@ -500,10 +593,10 @@ export function mapQuoteListItem(row: {
   estimate_category?: string | null;
   created_at: string;
   updated_at: string;
-  customer: QuoteCustomerSummary | QuoteCustomerSummary[] | null;
+  customer: QuoteCustomerSource | QuoteCustomerSource[] | null;
   rooms?: Array<{ id: string; surfaces?: Array<{ id: string }> | null }> | null;
 }): QuoteListItem {
-  const customer = Array.isArray(row.customer) ? row.customer[0] : row.customer;
+  const customer = resolveQuoteCustomerSummary(row);
   const rooms = row.rooms ?? [];
   const surface_count = rooms.reduce(
     (sum, room) => sum + (room.surfaces?.length ?? 0),
@@ -525,14 +618,7 @@ export function mapQuoteListItem(row: {
     estimate_category: (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
     created_at: row.created_at,
     updated_at: row.updated_at,
-    customer: {
-      id: customer?.id ?? '',
-      name: customer?.name ?? 'Unknown customer',
-      company_name: customer?.company_name ?? null,
-      email: customer?.email ?? null,
-      phone: customer?.phone ?? null,
-      address: customer?.address ?? null,
-    },
+    customer,
     room_count: rooms.length,
     surface_count,
   };
@@ -542,6 +628,8 @@ export function mapQuoteDetail(row: {
   id: string;
   user_id: string;
   customer_id: string;
+  customer_email?: string | null;
+  customer_address?: string | null;
   quote_number: string;
   title: string | null;
   status: string;
@@ -563,7 +651,7 @@ export function mapQuoteDetail(row: {
   pricing_method_inputs?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
-  customer: QuoteCustomerSummary | null;
+  customer: QuoteCustomerSource | null;
   rooms: Array<{
     id: string;
     quote_id: string;
@@ -613,14 +701,7 @@ export function mapQuoteDetail(row: {
     pricing_method_inputs: (row.pricing_method_inputs as PricingMethodInputs | null) ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    customer: {
-      id: row.customer?.id ?? '',
-      name: row.customer?.name ?? 'Unknown customer',
-      company_name: row.customer?.company_name ?? null,
-      email: row.customer?.email ?? null,
-      phone: row.customer?.phone ?? null,
-      address: row.customer?.address ?? null,
-    },
+    customer: resolveQuoteCustomerSummary(row),
     rooms: row.rooms.map((room) => {
       const surfaces = room.surfaces.map((surface) => ({
         id: surface.id,
@@ -649,6 +730,10 @@ export function mapQuoteDetail(row: {
       };
     }),
     estimate_items: row.estimate_items ?? [],
-    line_items: row.line_items ?? [],
+    line_items: (row.line_items ?? []).map((item) => ({
+      ...item,
+      is_optional: item.is_optional ?? false,
+      is_selected: item.is_optional ? item.is_selected ?? false : true,
+    })),
   };
 }

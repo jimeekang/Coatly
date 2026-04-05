@@ -1,4 +1,4 @@
-import type { Database as BaseDatabase } from '@/types/database';
+import type { Database as BaseDatabase, Json as GeneratedJson } from '@/types/database';
 import type { MaterialItemCategory } from '@/lib/supabase/validators';
 
 type BaseSubscriptionsTable = BaseDatabase['public']['Tables']['subscriptions'];
@@ -68,6 +68,8 @@ type QuoteLineItemRow = {
   unit_price_cents: number;
   total_cents: number;
   notes: string | null;
+  is_optional: boolean;
+  is_selected: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -84,12 +86,64 @@ type QuoteLineItemInsert = {
   unit_price_cents?: number;
   total_cents?: number;
   notes?: string | null;
+  is_optional?: boolean;
+  is_selected?: boolean;
   sort_order?: number;
   created_at?: string;
   updated_at?: string;
 };
 
 type QuoteLineItemUpdate = Partial<Omit<QuoteLineItemInsert, 'quote_id'>>;
+
+type QuoteTemplateRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  payload: GeneratedJson;
+  created_at: string;
+  updated_at: string;
+};
+
+type QuoteTemplateInsert = {
+  id?: string;
+  user_id: string;
+  name: string;
+  payload?: GeneratedJson;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type QuoteTemplateUpdate = Partial<Omit<QuoteTemplateInsert, 'user_id'>>;
+
+type JobStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+
+type JobRow = {
+  id: string;
+  user_id: string;
+  customer_id: string;
+  quote_id: string | null;
+  title: string;
+  status: JobStatus;
+  scheduled_date: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type JobInsert = {
+  id?: string;
+  user_id: string;
+  customer_id: string;
+  quote_id?: string | null;
+  title: string;
+  status?: JobStatus;
+  scheduled_date: string;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type JobUpdate = Partial<Omit<JobInsert, 'user_id'>>;
 
 export type AppDatabase = Omit<BaseDatabase, 'public'> & {
   public: Omit<BaseDatabase['public'], 'Tables'> & {
@@ -110,6 +164,33 @@ export type AppDatabase = Omit<BaseDatabase, 'public'> & {
         Insert: QuoteLineItemInsert;
         Update: QuoteLineItemUpdate;
         Relationships: [];
+      };
+      quote_templates: {
+        Row: QuoteTemplateRow;
+        Insert: QuoteTemplateInsert;
+        Update: QuoteTemplateUpdate;
+        Relationships: [];
+      };
+      jobs: {
+        Row: JobRow;
+        Insert: JobInsert;
+        Update: JobUpdate;
+        Relationships: [
+          {
+            foreignKeyName: 'jobs_customer_user_fk';
+            columns: ['customer_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'customers';
+            referencedColumns: ['id', 'user_id'];
+          },
+          {
+            foreignKeyName: 'jobs_quote_id_fkey';
+            columns: ['quote_id'];
+            isOneToOne: false;
+            referencedRelation: 'quotes';
+            referencedColumns: ['id'];
+          },
+        ];
       };
     };
   };

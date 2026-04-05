@@ -52,6 +52,8 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
               unit: mode.configure.unit,
               quantity: qty,
               unit_price_cents: mode.configure.unit_price_cents,
+              is_optional: false,
+              is_selected: true,
             });
             onClose();
           }}
@@ -276,6 +278,8 @@ function CustomItemForm({
       unit: form.unit.trim(),
       quantity: form.quantity,
       unit_price_cents: form.unit_price_cents,
+      is_optional: false,
+      is_selected: true,
       notes: form.notes.trim() || undefined,
     });
   }
