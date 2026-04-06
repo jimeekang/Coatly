@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { createServerClient } from '@/lib/supabase/server';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import {
@@ -76,6 +77,37 @@ export async function createMaterialItem(
 
   revalidatePath('/materials-service');
   return { data: data as MaterialItem };
+}
+
+export async function importMaterialItems(
+  inputs: MaterialItemUpsertInput[]
+): Promise<{ data?: MaterialItem[]; error?: string }> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+
+  const parsed = z.array(materialItemUpsertSchema).min(1, 'At least one item is required').safeParse(inputs);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Invalid CSV items.' };
+  }
+
+  const { data, error } = await supabase
+    .from('material_items')
+    .insert(
+      parsed.data.map((item) => ({
+        user_id: user.id,
+        name: item.name,
+        category: item.category,
+        unit: item.unit,
+        unit_price_cents: item.unit_price_cents,
+        notes: item.notes ?? null,
+        is_active: item.is_active,
+      }))
+    )
+    .select('id, user_id, name, category, unit, unit_price_cents, notes, is_active, sort_order, created_at, updated_at');
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/materials-service');
+  return { data: (data as MaterialItem[] | null) ?? [] };
 }
 
 export async function updateMaterialItem(

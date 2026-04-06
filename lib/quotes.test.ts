@@ -3,7 +3,9 @@ import {
   calculateQuoteLineItemsSubtotal,
   calculateQuotePreview,
   getSuggestedRatePerSqmCents,
+  isQuoteExpired,
   parseQuoteCreateInput,
+  resolveQuoteStatus,
 } from '@/lib/quotes';
 
 describe('lib/quotes', () => {
@@ -354,6 +356,35 @@ describe('lib/quotes', () => {
     expect(getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'standard')).toBe(1800);
     expect(getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'complex')).toBeGreaterThan(
       1800
+    );
+  });
+
+  it('marks draft and sent quotes as expired after the valid-until date in Sydney time', () => {
+    expect(isQuoteExpired('2026-04-10', new Date('2026-04-10T23:30:00+10:00'))).toBe(false);
+    expect(isQuoteExpired('2026-04-10', new Date('2026-04-11T00:30:00+10:00'))).toBe(true);
+
+    expect(
+      resolveQuoteStatus(
+        { status: 'draft', valid_until: '2026-04-10' },
+        new Date('2026-04-11T00:30:00+10:00')
+      )
+    ).toBe('expired');
+    expect(
+      resolveQuoteStatus(
+        { status: 'sent', valid_until: '2026-04-10' },
+        new Date('2026-04-11T00:30:00+10:00')
+      )
+    ).toBe('expired');
+  });
+
+  it('keeps approved and rejected quotes terminal even after the valid-until date', () => {
+    const now = new Date('2026-04-20T09:00:00+10:00');
+
+    expect(resolveQuoteStatus({ status: 'approved', valid_until: '2026-04-10' }, now)).toBe(
+      'approved'
+    );
+    expect(resolveQuoteStatus({ status: 'rejected', valid_until: '2026-04-10' }, now)).toBe(
+      'rejected'
     );
   });
 });

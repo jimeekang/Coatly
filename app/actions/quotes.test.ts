@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   redirectMock,
   createServerClientMock,
+  createAdminClientMock,
+  sendQuoteApprovalNotificationMock,
   getActiveSubscriptionRequiredMessageMock,
   getMonthlyActiveQuoteUsageForUserMock,
   getSubscriptionSnapshotForUserMock,
@@ -10,6 +12,8 @@ const {
 } = vi.hoisted(() => ({
   redirectMock: vi.fn(),
   createServerClientMock: vi.fn(),
+  createAdminClientMock: vi.fn(),
+  sendQuoteApprovalNotificationMock: vi.fn(),
   getActiveSubscriptionRequiredMessageMock: vi.fn(
     (actionName: string) =>
       `Choose a paid plan to unlock ${actionName}. Finish checkout before using Coatly tools.`
@@ -31,6 +35,10 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerClient: createServerClientMock,
 }));
 
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: createAdminClientMock,
+}));
+
 vi.mock('@/lib/supabase/request-context', () => ({
   requireCurrentUser: requireCurrentUserMock,
 }));
@@ -41,10 +49,17 @@ vi.mock('@/lib/subscription/access', () => ({
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
+vi.mock('@/lib/email/resend', () => ({
+  sendQuoteApprovalNotification: sendQuoteApprovalNotificationMock,
+}));
+
 import {
+  approvePublicQuote,
   createQuote,
   getQuote,
+  getPublicQuoteByToken,
   getQuotes,
+  setPublicQuoteOptionalLineItemSelection,
   setQuoteOptionalLineItemSelection,
 } from '@/app/actions/quotes';
 
@@ -305,6 +320,211 @@ describe('createQuote', () => {
       },
     ]);
     expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-1');
+  });
+
+  it('marks the quote as sent and redirects with a demo email flag when send_email is used', async () => {
+    const captured: {
+      quoteInsert?: Record<string, unknown>;
+    } = {};
+
+    const customerQuery = createFilterQuery({
+      data: {
+        id: 'customer-1',
+        email: 'site@harborcafe.com.au',
+        address_line1: '128 Beach Street',
+        address_line2: 'Suite 4',
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+      },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customerQuery),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            insert: vi.fn((payload) => {
+              captured.quoteInsert = payload;
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'quote-send-1' },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            insert: vi.fn(async () => ({ error: null })),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            insert: vi.fn(async () => ({ error: null })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'generate_quote_number') {
+          return { data: 'QUO-0010', error: null };
+        }
+
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    const result = await createQuote(
+      {
+        customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        title: 'Harbor Cafe repaint',
+        status: 'draft',
+        valid_until: '2026-04-10',
+        complexity: 'standard',
+        labour_margin_percent: 10,
+        material_margin_percent: 5,
+        notes: 'Client note',
+        internal_notes: 'Internal note',
+        rooms: [],
+        line_items: [],
+        interior_estimate: {
+          property_type: 'apartment',
+          estimate_mode: 'specific_areas',
+          condition: 'fair',
+          scope: ['walls'],
+          property_details: {
+            apartment_type: '2_bedroom_standard',
+          },
+          rooms: [
+            {
+              name: 'Living Room',
+              anchor_room_type: 'Living Room',
+              room_type: 'interior',
+              include_walls: true,
+              include_ceiling: false,
+              include_trim: false,
+            },
+          ],
+          opening_items: [],
+          trim_items: [],
+        },
+      },
+      { submitIntent: 'send_email' }
+    );
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteInsert).toMatchObject({
+      status: 'sent',
+      customer_email: 'site@harborcafe.com.au',
+    });
+    expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-send-1?emailDemo=1');
+  });
+
+  it('returns an error when send_email is used without a customer email', async () => {
+    const customerQuery = createFilterQuery({
+      data: {
+        id: 'customer-1',
+        email: null,
+        address_line1: '128 Beach Street',
+        address_line2: null,
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+      },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customerQuery),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await createQuote(
+      {
+        customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        title: 'Harbor Cafe repaint',
+        status: 'draft',
+        valid_until: '2026-04-10',
+        complexity: 'standard',
+        labour_margin_percent: 10,
+        material_margin_percent: 5,
+        notes: 'Client note',
+        internal_notes: 'Internal note',
+        rooms: [
+          {
+            name: 'Living Room',
+            room_type: 'interior',
+            length_m: 5,
+            width_m: 4,
+            height_m: 2.7,
+            surfaces: [
+              {
+                surface_type: 'walls',
+                area_m2: 35,
+                coating_type: 'repaint_2coat',
+                rate_per_m2_cents: 1800,
+                notes: '',
+              },
+            ],
+          },
+        ],
+      },
+      { submitIntent: 'send_email' }
+    );
+
+    expect(result).toEqual({ error: 'Add a customer email before sending this quote.' });
   });
 
   it('creates an interior anchor quote and stores estimate items instead of room surfaces', async () => {
@@ -868,6 +1088,392 @@ describe('setQuoteOptionalLineItemSelection', () => {
       gst_cents: 8300,
       total_cents: 91300,
     });
+  });
+});
+
+describe('public quote access', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sendQuoteApprovalNotificationMock.mockResolvedValue({ error: null });
+  });
+
+  it('loads a public quote by share token', async () => {
+    const quoteSelectMock = vi.fn().mockReturnValue(
+      createFilterQuery({
+        data: {
+          id: 'quote-public-1',
+          user_id: 'user-1',
+          customer_id: 'customer-1',
+          public_share_token: 'public-token-1',
+          approved_at: null,
+          approved_by_name: null,
+          approved_by_email: null,
+          approval_signature: null,
+          customer_email: 'client@example.com',
+          customer_address: '128 Beach Street, Manly, NSW, 2095',
+          quote_number: 'QUO-2026-001',
+          title: 'Public quote',
+          status: 'sent',
+          valid_until: '2026-04-10',
+          tier: 'standard',
+          notes: 'Client-facing note',
+          internal_notes: 'Internal only',
+          labour_margin_percent: 0,
+          material_margin_percent: 0,
+          subtotal_cents: 95000,
+          gst_cents: 9500,
+          total_cents: 104500,
+          estimate_category: 'manual',
+          property_type: null,
+          estimate_mode: null,
+          estimate_context: {},
+          pricing_snapshot: {},
+          pricing_method: 'hybrid',
+          pricing_method_inputs: null,
+          created_at: '2026-04-01T00:00:00.000Z',
+          updated_at: '2026-04-01T00:00:00.000Z',
+          customer: {
+            id: 'customer-1',
+            name: 'Harbor Cafe',
+            company_name: null,
+            email: 'client@example.com',
+            phone: '0412 555 012',
+            address_line1: '128 Beach Street',
+            address_line2: null,
+            city: 'Manly',
+            state: 'NSW',
+            postcode: '2095',
+          },
+        },
+        error: null,
+      })
+    );
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return { select: quoteSelectMock };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: [],
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'line-item-1',
+                    quote_id: 'quote-public-1',
+                    material_item_id: null,
+                    name: 'Feature wall upgrade',
+                    category: 'service',
+                    unit: 'job',
+                    quantity: 1,
+                    unit_price_cents: 15000,
+                    total_cents: 15000,
+                    notes: 'Optional extra',
+                    is_optional: true,
+                    is_selected: false,
+                    sort_order: 0,
+                    created_at: '2026-04-01T00:00:00.000Z',
+                    updated_at: '2026-04-01T00:00:00.000Z',
+                  },
+                ],
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          };
+        }
+
+        if (table === 'profiles') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: {
+                  business_name: 'Harbor Painting',
+                  abn: '12345678901',
+                  phone: '0412 000 999',
+                  email: 'hello@harborpainting.com.au',
+                  logo_url: null,
+                  address_line1: null,
+                  city: null,
+                  state: null,
+                  postcode: null,
+                },
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await getPublicQuoteByToken('public-token-1');
+
+    expect(quoteSelectMock).toHaveBeenCalledWith(
+      expect.stringContaining('public_share_token')
+    );
+    expect(result.error).toBeNull();
+    expect(result.data?.quote.public_share_token).toBe('public-token-1');
+    expect(result.data?.quote.customer.address).toBe('128 Beach Street, Manly, NSW, 2095');
+    expect(result.data?.quote.line_items).toEqual([
+      expect.objectContaining({
+        id: 'line-item-1',
+        is_optional: true,
+        is_selected: false,
+      }),
+    ]);
+    expect(result.data?.business).toEqual({
+      name: 'Harbor Painting',
+      abn: '12345678901',
+      phone: '0412 000 999',
+      email: 'hello@harborpainting.com.au',
+    });
+  });
+
+  it('updates public optional selections only for sent quotes', async () => {
+    const captured: {
+      lineItemUpdate?: Record<string, unknown>;
+      quoteUpdate?: Record<string, unknown>;
+    } = {};
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-public-1',
+                  status: 'sent',
+                  subtotal_cents: 68000,
+                  manual_adjustment_cents: 0,
+                },
+                error: null,
+              }),
+            }),
+            update: vi.fn((payload) => {
+              captured.quoteUpdate = payload;
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'line-1',
+                    total_cents: 15000,
+                    is_optional: true,
+                    is_selected: false,
+                  },
+                  {
+                    id: 'line-2',
+                    total_cents: 5000,
+                    is_optional: false,
+                    is_selected: true,
+                  },
+                ],
+                error: null,
+              }),
+            }),
+            update: vi.fn((payload) => {
+              captured.lineItemUpdate = payload;
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('quoteToken', 'public-token-1');
+    formData.set('lineItemId', 'line-1');
+    formData.set('isSelected', 'true');
+
+    const result = await setPublicQuoteOptionalLineItemSelection(formData);
+
+    expect(result).toBeUndefined();
+    expect(captured.lineItemUpdate).toEqual({ is_selected: true });
+    expect(captured.quoteUpdate).toEqual({
+      subtotal_cents: 83000,
+      gst_cents: 8300,
+      total_cents: 91300,
+    });
+  });
+
+  it('approves a public quote, stores signer details, and notifies the business owner', async () => {
+    const captured: {
+      quoteUpdate?: Record<string, unknown>;
+    } = {};
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-public-1',
+                  user_id: 'user-1',
+                  customer_id: 'customer-1',
+                  public_share_token: 'public-token-1',
+                  approved_at: null,
+                  approved_by_name: null,
+                  approved_by_email: null,
+                  approval_signature: null,
+                  customer_email: 'client@example.com',
+                  customer_address: '128 Beach Street, Manly, NSW, 2095',
+                  quote_number: 'QUO-2026-001',
+                  title: 'Public quote',
+                  status: 'sent',
+                  valid_until: '2026-04-10',
+                  tier: 'standard',
+                  notes: 'Client-facing note',
+                  internal_notes: 'Existing internal note',
+                  labour_margin_percent: 0,
+                  material_margin_percent: 0,
+                  subtotal_cents: 95000,
+                  gst_cents: 9500,
+                  total_cents: 104500,
+                  estimate_category: 'manual',
+                  property_type: null,
+                  estimate_mode: null,
+                  estimate_context: {},
+                  pricing_snapshot: {},
+                  pricing_method: 'hybrid',
+                  pricing_method_inputs: null,
+                  created_at: '2026-04-01T00:00:00.000Z',
+                  updated_at: '2026-04-01T00:00:00.000Z',
+                  customer: {
+                    id: 'customer-1',
+                    name: 'Harbor Cafe',
+                    company_name: null,
+                    email: 'client@example.com',
+                    phone: '0412 555 012',
+                    address_line1: '128 Beach Street',
+                    address_line2: null,
+                    city: 'Manly',
+                    state: 'NSW',
+                    postcode: '2095',
+                  },
+                },
+                error: null,
+              }),
+            }),
+            update: vi.fn((payload) => {
+              captured.quoteUpdate = payload;
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          };
+        }
+
+        if (table === 'profiles') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: {
+                  business_name: 'Harbor Painting',
+                  abn: '12345678901',
+                  phone: '0412 000 999',
+                  email: 'hello@harborpainting.com.au',
+                  logo_url: null,
+                  address_line1: null,
+                  city: null,
+                  state: null,
+                  postcode: null,
+                },
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('quoteToken', 'public-token-1');
+    formData.set('approvedByName', 'Alex Harper');
+    formData.set('approvedByEmail', 'alex@example.com');
+    formData.set('approvalSignature', 'Alex Harper');
+
+    const result = await approvePublicQuote(formData);
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteUpdate).toMatchObject({
+      status: 'approved',
+      approved_by_name: 'Alex Harper',
+      approved_by_email: 'alex@example.com',
+      approval_signature: 'Alex Harper',
+    });
+    expect(sendQuoteApprovalNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'hello@harborpainting.com.au',
+        quoteNumber: 'QUO-2026-001',
+        approvedByName: 'Alex Harper',
+        approvedByEmail: 'alex@example.com',
+        signature: 'Alex Harper',
+        totalFormatted: '$1,045.00',
+      })
+    );
   });
 });
 

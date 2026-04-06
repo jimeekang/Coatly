@@ -1,6 +1,11 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import {
+  NumericInput,
+  sanitizeDecimalInput,
+  sanitizeIntegerInput,
+} from '@/components/shared/NumericInput';
 import { updateRateSettingsAction } from '@/app/actions/settings';
 import {
   COATING_LABELS,
@@ -38,6 +43,7 @@ function centsToDisplay(cents: number): string {
 }
 
 function displayToCents(value: string): number | null {
+  if (value.trim() === '') return 0;
   const parsed = parseFloat(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   return Math.round(parsed * 100);
@@ -63,12 +69,10 @@ function PriceInput({
   return (
     <div className="relative inline-flex items-center">
       <span className="absolute left-3 text-sm text-pm-secondary">$</span>
-      <input
-        type="number"
-        step="0.01"
-        min="0"
-        defaultValue={centsToDisplay(value)}
-        onChange={(e) => onChange(e.target.value)}
+      <NumericInput
+        value={centsToDisplay(value)}
+        sanitize={sanitizeDecimalInput}
+        onValueChange={onChange}
         className={`${width} rounded-lg border border-pm-border bg-white py-2 pl-6 pr-2 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30`}
       />
       <span className="ml-1.5 text-xs text-pm-secondary">{unit}</span>
@@ -369,14 +373,15 @@ function DayRateTab({
             <label className="mb-1.5 block text-sm font-medium text-pm-body">Daily labour rate</label>
             <div className="relative inline-flex items-center">
               <span className="absolute left-3 text-sm text-pm-secondary">$</span>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                defaultValue={(pricing.daily_rate_cents / 100).toFixed(0)}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  if (Number.isFinite(v) && v >= 0) onChange({ daily_rate_cents: Math.round(v * 100) });
+              <NumericInput
+                inputMode="numeric"
+                value={(pricing.daily_rate_cents / 100).toFixed(0)}
+                sanitize={sanitizeIntegerInput}
+                onValueChange={(value) => {
+                  const nextValue = value.trim() === '' ? 0 : parseFloat(value);
+                  if (Number.isFinite(nextValue) && nextValue >= 0) {
+                    onChange({ daily_rate_cents: Math.round(nextValue * 100) });
+                  }
                 }}
                 className="w-32 rounded-lg border border-pm-border bg-white py-2 pl-6 pr-2 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
               />
@@ -389,21 +394,22 @@ function DayRateTab({
             <label className="mb-1.5 block text-sm font-medium text-pm-body">Target daily earnings</label>
             <div className="relative inline-flex items-center">
               <span className="absolute left-3 text-sm text-pm-secondary">$</span>
-              <input
-                type="number"
-                step="1"
-                min="0"
-                defaultValue={
+              <NumericInput
+                inputMode="numeric"
+                value={
                   pricing.target_daily_earnings_cents != null
                     ? (pricing.target_daily_earnings_cents / 100).toFixed(0)
                     : ''
                 }
+                sanitize={sanitizeIntegerInput}
                 placeholder="Optional"
-                onChange={(e) => {
-                  const raw = e.target.value.trim();
+                onValueChange={(value) => {
+                  const raw = value.trim();
                   if (raw === '') { onChange({ target_daily_earnings_cents: null }); return; }
-                  const v = parseFloat(raw);
-                  if (Number.isFinite(v) && v >= 0) onChange({ target_daily_earnings_cents: Math.round(v * 100) });
+                  const nextValue = parseFloat(raw);
+                  if (Number.isFinite(nextValue) && nextValue >= 0) {
+                    onChange({ target_daily_earnings_cents: Math.round(nextValue * 100) });
+                  }
                 }}
                 className="w-32 rounded-lg border border-pm-border bg-white py-2 pl-6 pr-2 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
               />
@@ -435,15 +441,15 @@ function DayRateTab({
           </div>
           {pricing.material_cost_method === 'percentage' && (
             <div className="mt-3 flex items-center gap-2">
-              <input
-                type="number"
-                step="1"
-                min="0"
-                max="100"
-                defaultValue={pricing.material_cost_percent}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10);
-                  if (Number.isFinite(v) && v >= 0 && v <= 100) onChange({ material_cost_percent: v });
+              <NumericInput
+                inputMode="numeric"
+                value={String(pricing.material_cost_percent)}
+                sanitize={sanitizeIntegerInput}
+                onValueChange={(value) => {
+                  const nextValue = value.trim() === '' ? 0 : parseInt(value, 10);
+                  if (Number.isFinite(nextValue) && nextValue >= 0 && nextValue <= 100) {
+                    onChange({ material_cost_percent: nextValue });
+                  }
                 }}
                 className="w-20 rounded-lg border border-pm-border bg-white py-2 px-3 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
               />
@@ -495,12 +501,11 @@ function RoomPresetForm({
       <div>
         <label className="mb-1 block text-xs font-medium text-pm-secondary">Size (sqm)</label>
         <div className="relative inline-flex items-center">
-          <input
-            type="number"
-            step="0.5"
-            min="0"
+          <NumericInput
+            inputMode="decimal"
             value={sqm}
-            onChange={(e) => setSqm(e.target.value)}
+            sanitize={sanitizeDecimalInput}
+            onValueChange={setSqm}
             placeholder="20"
             className="w-24 rounded-lg border border-pm-border bg-white py-2 px-3 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
           />
@@ -511,12 +516,10 @@ function RoomPresetForm({
         <label className="mb-1 block text-xs font-medium text-pm-secondary">Flat rate</label>
         <div className="relative inline-flex items-center">
           <span className="absolute left-3 text-sm text-pm-secondary">$</span>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
+          <NumericInput
             value={rate}
-            onChange={(e) => setRate(e.target.value)}
+            sanitize={sanitizeDecimalInput}
+            onValueChange={setRate}
             placeholder="450"
             className="w-28 rounded-lg border border-pm-border bg-white py-2 pl-6 pr-2 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
           />

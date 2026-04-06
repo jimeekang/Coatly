@@ -206,6 +206,11 @@ export type QuoteDetail = {
   id: string;
   user_id: string;
   customer_id: string;
+  public_share_token: string;
+  approved_at: string | null;
+  approved_by_name: string | null;
+  approved_by_email: string | null;
+  approval_signature: string | null;
   quote_number: string;
   title: string | null;
   status: QuoteStatus;
@@ -240,6 +245,60 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   rejected: 'Rejected',
   expired: 'Expired',
 };
+
+const SYDNEY_TIME_ZONE = 'Australia/Sydney';
+
+function getSydneyIsoDate(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SYDNEY_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '0000';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '01';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '01';
+
+  return `${year}-${month}-${day}`;
+}
+
+export function isQuoteExpired(validUntil: string | null | undefined, now = new Date()) {
+  if (!validUntil) return false;
+
+  const normalizedValidUntil = validUntil.slice(0, 10);
+  return normalizedValidUntil < getSydneyIsoDate(now);
+}
+
+function normalizeQuoteStatus(status: QuoteStatus | string): QuoteStatus {
+  switch (status) {
+    case 'draft':
+    case 'sent':
+    case 'approved':
+    case 'rejected':
+    case 'expired':
+      return status;
+    case 'accepted':
+      return 'approved';
+    case 'declined':
+      return 'rejected';
+    default:
+      return 'draft';
+  }
+}
+
+export function resolveQuoteStatus(
+  quote: Pick<{ status: QuoteStatus | string; valid_until: string | null }, 'status' | 'valid_until'>,
+  now = new Date()
+): QuoteStatus {
+  const status = normalizeQuoteStatus(quote.status);
+
+  if (status === 'approved' || status === 'rejected' || status === 'expired') {
+    return status;
+  }
+
+  return isQuoteExpired(quote.valid_until, now) ? 'expired' : status;
+}
 
 export const COMPLEXITY_LABELS: Record<QuoteComplexity, string> = {
   standard: 'Standard',
@@ -609,7 +668,10 @@ export function mapQuoteListItem(row: {
     customer_id: row.customer_id,
     quote_number: row.quote_number,
     title: row.title,
-    status: row.status as QuoteStatus,
+    status: resolveQuoteStatus({
+      status: row.status as QuoteStatus,
+      valid_until: row.valid_until,
+    }),
     valid_until: row.valid_until,
     complexity: (row.tier as QuoteComplexity | null) ?? null,
     subtotal_cents: row.subtotal_cents,
@@ -628,6 +690,11 @@ export function mapQuoteDetail(row: {
   id: string;
   user_id: string;
   customer_id: string;
+  public_share_token?: string | null;
+  approved_at?: string | null;
+  approved_by_name?: string | null;
+  approved_by_email?: string | null;
+  approval_signature?: string | null;
   customer_email?: string | null;
   customer_address?: string | null;
   quote_number: string;
@@ -680,9 +747,17 @@ export function mapQuoteDetail(row: {
     id: row.id,
     user_id: row.user_id,
     customer_id: row.customer_id,
+    public_share_token: row.public_share_token ?? '',
+    approved_at: row.approved_at ?? null,
+    approved_by_name: row.approved_by_name ?? null,
+    approved_by_email: row.approved_by_email ?? null,
+    approval_signature: row.approval_signature ?? null,
     quote_number: row.quote_number,
     title: row.title,
-    status: row.status as QuoteStatus,
+    status: resolveQuoteStatus({
+      status: row.status as QuoteStatus,
+      valid_until: row.valid_until,
+    }),
     valid_until: row.valid_until,
     complexity: (row.tier as QuoteComplexity | null) ?? null,
     notes: row.notes,

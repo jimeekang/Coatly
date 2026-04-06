@@ -490,6 +490,10 @@ export type Database = {
       }
       quotes: {
         Row: {
+          approval_signature: string | null
+          approved_at: string | null
+          approved_by_email: string | null
+          approved_by_name: string | null
           created_at: string
           customer_address: string | null
           customer_email: string | null
@@ -504,6 +508,7 @@ export type Database = {
           manual_adjustment_cents: number | null
           material_margin_percent: number
           notes: string | null
+          public_share_token: string
           pricing_method: string | null
           pricing_method_inputs: Json | null
           pricing_snapshot: Json
@@ -519,6 +524,10 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          approval_signature?: string | null
+          approved_at?: string | null
+          approved_by_email?: string | null
+          approved_by_name?: string | null
           created_at?: string
           customer_address?: string | null
           customer_email?: string | null
@@ -533,6 +542,7 @@ export type Database = {
           manual_adjustment_cents?: number | null
           material_margin_percent?: number
           notes?: string | null
+          public_share_token?: string
           pricing_method?: string | null
           pricing_method_inputs?: Json | null
           pricing_snapshot?: Json
@@ -548,6 +558,10 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          approval_signature?: string | null
+          approved_at?: string | null
+          approved_by_email?: string | null
+          approved_by_name?: string | null
           created_at?: string
           customer_address?: string | null
           customer_email?: string | null
@@ -562,6 +576,7 @@ export type Database = {
           manual_adjustment_cents?: number | null
           material_margin_percent?: number
           notes?: string | null
+          public_share_token?: string
           pricing_method?: string | null
           pricing_method_inputs?: Json | null
           pricing_snapshot?: Json
