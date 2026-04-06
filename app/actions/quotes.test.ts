@@ -322,6 +322,211 @@ describe('createQuote', () => {
     expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-1');
   });
 
+  it('marks the quote as sent and redirects with a demo email flag when send_email is used', async () => {
+    const captured: {
+      quoteInsert?: Record<string, unknown>;
+    } = {};
+
+    const customerQuery = createFilterQuery({
+      data: {
+        id: 'customer-1',
+        email: 'site@harborcafe.com.au',
+        address_line1: '128 Beach Street',
+        address_line2: 'Suite 4',
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+      },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customerQuery),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            insert: vi.fn((payload) => {
+              captured.quoteInsert = payload;
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'quote-send-1' },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            insert: vi.fn(async () => ({ error: null })),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            insert: vi.fn(async () => ({ error: null })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'generate_quote_number') {
+          return { data: 'QUO-0010', error: null };
+        }
+
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    const result = await createQuote(
+      {
+        customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        title: 'Harbor Cafe repaint',
+        status: 'draft',
+        valid_until: '2026-04-10',
+        complexity: 'standard',
+        labour_margin_percent: 10,
+        material_margin_percent: 5,
+        notes: 'Client note',
+        internal_notes: 'Internal note',
+        rooms: [],
+        line_items: [],
+        interior_estimate: {
+          property_type: 'apartment',
+          estimate_mode: 'specific_areas',
+          condition: 'fair',
+          scope: ['walls'],
+          property_details: {
+            apartment_type: '2_bedroom_standard',
+          },
+          rooms: [
+            {
+              name: 'Living Room',
+              anchor_room_type: 'Living Room',
+              room_type: 'interior',
+              include_walls: true,
+              include_ceiling: false,
+              include_trim: false,
+            },
+          ],
+          opening_items: [],
+          trim_items: [],
+        },
+      },
+      { submitIntent: 'send_email' }
+    );
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteInsert).toMatchObject({
+      status: 'sent',
+      customer_email: 'site@harborcafe.com.au',
+    });
+    expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-send-1?emailDemo=1');
+  });
+
+  it('returns an error when send_email is used without a customer email', async () => {
+    const customerQuery = createFilterQuery({
+      data: {
+        id: 'customer-1',
+        email: null,
+        address_line1: '128 Beach Street',
+        address_line2: null,
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+      },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customerQuery),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await createQuote(
+      {
+        customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        title: 'Harbor Cafe repaint',
+        status: 'draft',
+        valid_until: '2026-04-10',
+        complexity: 'standard',
+        labour_margin_percent: 10,
+        material_margin_percent: 5,
+        notes: 'Client note',
+        internal_notes: 'Internal note',
+        rooms: [
+          {
+            name: 'Living Room',
+            room_type: 'interior',
+            length_m: 5,
+            width_m: 4,
+            height_m: 2.7,
+            surfaces: [
+              {
+                surface_type: 'walls',
+                area_m2: 35,
+                coating_type: 'repaint_2coat',
+                rate_per_m2_cents: 1800,
+                notes: '',
+              },
+            ],
+          },
+        ],
+      },
+      { submitIntent: 'send_email' }
+    );
+
+    expect(result).toEqual({ error: 'Add a customer email before sending this quote.' });
+  });
+
   it('creates an interior anchor quote and stores estimate items instead of room surfaces', async () => {
     const captured: {
       quoteInsert?: Record<string, unknown>;

@@ -24,6 +24,14 @@ export default async function PublicQuotePage({
   const business = data?.business ?? null;
   const canEditOptionalItems = quote?.status === 'sent';
   const canApproveQuote = quote?.status === 'sent';
+  const approvalHelperText =
+    quote?.status === 'expired'
+      ? 'This quote has expired and can no longer be approved.'
+      : quote?.status === 'rejected'
+      ? 'This quote has already been declined.'
+      : canApproveQuote
+      ? 'Review the final total, enter your details, and approve the quote.'
+      : 'This quote has already been processed. Approval inputs are now locked.';
   const includedLineItems = quote?.line_items.filter((item) => !item.is_optional) ?? [];
   const optionalLineItems = quote?.line_items.filter((item) => item.is_optional) ?? [];
   const optionalSelectedTotal = optionalLineItems
@@ -326,11 +334,7 @@ export default async function PublicQuotePage({
 
             <section className="rounded-[28px] border border-pm-border bg-white px-6 py-6 shadow-sm">
               <h2 className="text-lg font-semibold text-pm-body">Approval</h2>
-              <p className="mt-1 text-sm text-pm-secondary">
-                {canApproveQuote
-                  ? 'Review the final total, enter your details, and approve the quote.'
-                  : 'This quote has already been processed. Approval inputs are now locked.'}
-              </p>
+              <p className="mt-1 text-sm text-pm-secondary">{approvalHelperText}</p>
 
               {quote.approved_at ? (
                 <div className="mt-5 rounded-2xl border border-pm-border bg-pm-surface px-4 py-4 text-sm text-pm-body">

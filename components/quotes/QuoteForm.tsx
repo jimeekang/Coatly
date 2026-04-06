@@ -17,6 +17,7 @@ import {
   calculateQuoteLineItemsSubtotal,
   composeQuoteTotals,
   parseQuoteCreateInput,
+  resolveQuoteStatus,
   type QuoteCustomerOption,
   type QuoteStatus,
   type QuoteComplexity,
@@ -25,6 +26,7 @@ import type { QuoteCreateInput, MaterialItem, QuoteLineItemFormInput } from '@/l
 import type { UserRateSettings } from '@/lib/rate-settings';
 import { LineItemsSection } from '@/components/quotes/LineItemsSection';
 import { QuoteExtraLineItems, toQuoteLineItemFormInput, type ExtraLineItemInput } from '@/components/quotes/QuoteExtraLineItems';
+import { QuoteStatusCard } from '@/components/quotes/QuoteStatusCard';
 import { PRICING_METHOD_LABELS } from '@/lib/rate-settings';
 import { formatAUD } from '@/utils/format';
 import type { PricingMethod, DayRateInputs, RoomRateInputs, ManualInputs } from '@/types/quote';
@@ -94,6 +96,8 @@ type QuoteFormDefaultValues = {
   internal_notes: string;
   rooms: LegacyRoomDefault[];
 };
+
+type QuoteSubmitIntent = 'save' | 'send_email';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -242,16 +246,25 @@ function buildAdvancedEstimatePayload(
 function PricingSummaryPanel({
   quoteNumberPreview,
   activeMethodLabel,
+  status,
+  validUntil,
   total,
   roomLines,
   summaryLines,
 }: {
   quoteNumberPreview: string;
   activeMethodLabel: string;
+  status: QuoteStatus;
+  validUntil: string;
   total: number;
   roomLines: Array<{ label: string; value: number }>;
   summaryLines: SummaryLine[];
 }) {
+  const resolvedStatus = resolveQuoteStatus({
+    status,
+    valid_until: validUntil,
+  });
+
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-pm-border bg-white p-4 shadow-sm">
@@ -271,11 +284,14 @@ function PricingSummaryPanel({
             </p>
           </div>
         </div>
-        <div className="mt-4 rounded-xl border border-pm-border bg-pm-surface px-3 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-            Active Method
-          </p>
-          <p className="mt-1 text-sm font-medium text-pm-body">{activeMethodLabel}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-pm-border bg-pm-surface px-3 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              Active Method
+            </p>
+            <p className="mt-1 text-sm font-medium text-pm-body">{activeMethodLabel}</p>
+          </div>
+          <QuoteStatusCard status={resolvedStatus} validUntil={validUntil} />
         </div>
       </section>
 
@@ -337,22 +353,28 @@ export function QuoteForm({
   defaultValues,
   quoteNumberPreview = 'Assigned on save',
   submitLabel = 'Save Quote',
+  showSendQuoteButton = false,
   rateSettings,
   libraryItems = [],
 }: {
   customers: QuoteCustomerOption[];
-  onSubmit?: (data: QuoteCreateInput) => Promise<{ error?: string } | void>;
+  onSubmit?: (
+    data: QuoteCreateInput,
+    intent?: QuoteSubmitIntent
+  ) => Promise<{ error?: string } | void>;
   onCancel?: () => void;
   cancelLabel?: string;
   defaultValues?: QuoteFormDefaultValues;
   quoteNumberPreview?: string;
   submitLabel?: string;
+  showSendQuoteButton?: boolean;
   rateSettings?: UserRateSettings | null;
   libraryItems?: MaterialItem[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [activeSubmitIntent, setActiveSubmitIntent] = useState<QuoteSubmitIntent>('save');
   // If pre-filled rooms exist (e.g., AI draft), start in advanced mode
   const [estimateMode, setEstimateMode] = useState<EstimateMode>(
     defaultValues?.rooms?.length ? 'advanced' : 'quick'
@@ -398,6 +420,7 @@ export function QuoteForm({
     () => customers.find((customer) => customer.id === form.customer_id) ?? null,
     [customers, form.customer_id]
   );
+  const canSendQuote = Boolean(selectedCustomer?.email?.trim());
 
   // Quick mode state
   const [quickState, setQuickState] = useState<QuickQuoteBuilderState>(
@@ -561,6 +584,9 @@ export function QuoteForm({
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!onSubmit) return;
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const submitIntent =
+      submitter?.dataset.submitIntent === 'send_email' ? 'send_email' : 'save';
 
     let payload: QuoteCreateInput;
 
@@ -648,7 +674,8 @@ export function QuoteForm({
     }
 
     startTransition(async () => {
-      const result = await onSubmit(payload);
+      setActiveSubmitIntent(submitIntent);
+      const result = await onSubmit(payload, submitIntent);
       if (result?.error) setError(result.error);
     });
   }
@@ -685,6 +712,8 @@ export function QuoteForm({
             <PricingSummaryPanel
               quoteNumberPreview={quoteNumberPreview}
               activeMethodLabel={activeMethodLabel}
+              status={form.status}
+              validUntil={form.valid_until}
               total={displayTotal}
               roomLines={roomSummaryLines}
               summaryLines={summaryLines}
@@ -1230,6 +1259,8 @@ export function QuoteForm({
             <PricingSummaryPanel
               quoteNumberPreview={quoteNumberPreview}
               activeMethodLabel={activeMethodLabel}
+              status={form.status}
+              validUntil={form.valid_until}
               total={displayTotal}
               roomLines={roomSummaryLines}
               summaryLines={summaryLines}
@@ -1241,23 +1272,67 @@ export function QuoteForm({
       {/* Sticky footer CTA */}
       <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-pm-border bg-white px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:left-64">
         <div className="mx-auto flex w-full max-w-lg justify-center">
-          <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-3">
-            <button
-              type="button"
-              onClick={() => (onCancel ? onCancel() : router.back())}
-              disabled={isPending}
-              className="h-14 rounded-xl border border-pm-border bg-white px-4 text-base font-medium text-pm-body disabled:opacity-50"
-            >
-              {cancelLabel}
-            </button>
-            <button
-              type="submit"
-              disabled={isPending || !canSubmit}
-              className="h-14 rounded-xl bg-pm-teal px-4 text-base font-semibold text-white disabled:opacity-50"
-            >
-              {isPending ? 'Saving...' : submitLabel}
-            </button>
-          </div>
+          {showSendQuoteButton ? (
+            <div className="w-full space-y-3">
+              <button
+                type="button"
+                onClick={() => (onCancel ? onCancel() : router.back())}
+                disabled={isPending}
+                className="h-14 w-full rounded-xl border border-pm-border bg-white px-4 text-base font-medium text-pm-body disabled:opacity-50"
+              >
+                {cancelLabel}
+              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="submit"
+                  data-submit-intent="save"
+                  onClick={() => setActiveSubmitIntent('save')}
+                  disabled={isPending || !canSubmit}
+                  className="h-14 rounded-xl border border-pm-teal bg-white px-4 text-sm font-semibold text-pm-teal disabled:opacity-50"
+                >
+                  {isPending && activeSubmitIntent === 'save' ? 'Saving...' : submitLabel}
+                </button>
+                <button
+                  type="submit"
+                  data-submit-intent="send_email"
+                  onClick={() => setActiveSubmitIntent('send_email')}
+                  disabled={isPending || !canSubmit || !canSendQuote}
+                  className="h-14 rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {isPending && activeSubmitIntent === 'send_email'
+                    ? 'Sending...'
+                    : 'Send Quote to Email'}
+                </button>
+              </div>
+              <p className="text-center text-xs text-pm-secondary">
+                Demo only for now. This will mark the quote as sent to the customer email.
+              </p>
+              {selectedCustomer && !canSendQuote && (
+                <p className="text-center text-xs text-pm-coral-dark">
+                  Add an email to this customer before using send.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-3">
+              <button
+                type="button"
+                onClick={() => (onCancel ? onCancel() : router.back())}
+                disabled={isPending}
+                className="h-14 rounded-xl border border-pm-border bg-white px-4 text-base font-medium text-pm-body disabled:opacity-50"
+              >
+                {cancelLabel}
+              </button>
+              <button
+                type="submit"
+                data-submit-intent="save"
+                disabled={isPending || !canSubmit}
+                className="h-14 rounded-xl bg-pm-teal px-4 text-base font-semibold text-white disabled:opacity-50"
+              >
+                {isPending ? 'Saving...' : submitLabel}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </form>

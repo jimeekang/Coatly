@@ -358,7 +358,7 @@ export function WorkspaceAssistant({
                         }
                       : undefined
                   }
-                  onSubmit={createQuote}
+                  onSubmit={(data) => createQuote(data)}
                   onCancel={clearAssistant}
                   cancelLabel="Clear Draft"
                 />

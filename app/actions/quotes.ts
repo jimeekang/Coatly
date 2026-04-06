@@ -11,6 +11,7 @@ import {
   mapQuoteDetail,
   mapQuoteListItem,
   parseQuoteCreateInput,
+  resolveQuoteStatus,
   resolveQuoteCustomerSummary,
   type QuoteCustomerOption,
   type QuoteCoatingType,
@@ -186,6 +187,10 @@ type QuoteHydratedRelations = {
   }>;
   estimate_items: QuoteDetail['estimate_items'];
   line_items: QuoteDetail['line_items'];
+};
+
+type CreateQuoteOptions = {
+  submitIntent?: 'save' | 'send_email';
 };
 
 function parseBooleanFormValue(value: FormDataEntryValue | null) {
@@ -533,7 +538,8 @@ export async function getPublicQuoteByToken(token: string): Promise<{
 }
 
 export async function createQuote(
-  input: QuoteCreateInput
+  input: QuoteCreateInput,
+  options: CreateQuoteOptions = {}
 ): Promise<{ error: string } | void> {
   const supabase = await createServerClient();
   const {
@@ -577,6 +583,12 @@ export async function createQuote(
 
   if (!customer) {
     return { error: 'Selected customer was not found.' };
+  }
+
+  const shouldSendEmail = options.submitIntent === 'send_email';
+
+  if (shouldSendEmail && !customer.email?.trim()) {
+    return { error: 'Add a customer email before sending this quote.' };
   }
 
   const { data: userRates } = await getBusinessRateSettings(supabase, user.id);
@@ -677,7 +689,7 @@ export async function createQuote(
     customer_address: buildQuoteCustomerAddress(customer),
     quote_number: quoteNumber,
     title: parsed.data.title,
-    status: parsed.data.status,
+    status: shouldSendEmail ? 'sent' : parsed.data.status,
     valid_until: parsed.data.valid_until,
     tier: parsed.data.complexity,
     notes: parsed.data.notes,
@@ -818,7 +830,7 @@ export async function createQuote(
   }
 
   revalidatePath('/quotes');
-  redirect(`/quotes/${quote.id}`);
+  redirect(shouldSendEmail ? `/quotes/${quote.id}?emailDemo=1` : `/quotes/${quote.id}`);
 }
 
 export async function setQuoteOptionalLineItemSelection(
@@ -935,11 +947,18 @@ export async function setPublicQuoteOptionalLineItemSelection(
 
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
-    .select('id, status, subtotal_cents, manual_adjustment_cents')
+    .select('id, status, valid_until, subtotal_cents, manual_adjustment_cents')
     .eq('public_share_token', quoteToken)
     .single();
 
-  if (quoteError || !quote || quote.status !== 'sent') {
+  if (
+    quoteError ||
+    !quote ||
+    resolveQuoteStatus({
+      status: quote.status,
+      valid_until: quote.valid_until,
+    }) !== 'sent'
+  ) {
     return;
   }
 
@@ -1039,7 +1058,14 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
     .single();
   const quote = quoteResult.data as QuoteDetailRow | null;
 
-  if (quoteResult.error || !quote || quote.status !== 'sent') {
+  if (
+    quoteResult.error ||
+    !quote ||
+    resolveQuoteStatus({
+      status: quote.status,
+      valid_until: quote.valid_until,
+    }) !== 'sent'
+  ) {
     return;
   }
 

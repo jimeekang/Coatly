@@ -4,6 +4,7 @@ import { useDeferredValue, useState } from 'react';
 import Link from 'next/link';
 import {
   QUOTE_STATUS_LABELS,
+  isQuoteExpired,
   type QuoteListItem,
   type QuoteStatus,
 } from '@/lib/quotes';
@@ -199,6 +200,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
           <ul className="flex flex-col gap-3">
             {filtered.map((quote) => {
               const borderClass = QUOTE_LEFT_BORDER[quote.status] ?? 'border-l-outline';
+              const expired = isQuoteExpired(quote.valid_until);
               return (
                 <li key={quote.id}>
                   <Link
@@ -232,16 +234,15 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                         </div>
                         {quote.valid_until && (
                           <div className={`flex items-center gap-1.5 text-xs font-medium ${
-                            new Date(quote.valid_until) < new Date() && quote.status !== 'expired'
-                              ? 'text-error'
-                              : 'text-outline'
+                            quote.status === 'expired' ? 'text-error' : 'text-outline'
                           }`}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <circle cx="12" cy="12" r="10"/>
                               <polyline points="12 6 12 12 16 14"/>
                             </svg>
-                            Valid until {formatDate(quote.valid_until)}
-                            {new Date(quote.valid_until) < new Date() && quote.status !== 'expired' && (
+                            {quote.status === 'expired' ? 'Expired on' : 'Valid until'}{' '}
+                            {formatDate(quote.valid_until)}
+                            {expired && quote.status !== 'expired' && (
                               <span className="text-[10px] font-bold uppercase tracking-widest text-error">Overdue</span>
                             )}
                           </div>

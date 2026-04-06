@@ -7,10 +7,16 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/*.test.ts', '**/*.test.tsx'],
+    server: {
+      deps: {
+        inline: ['server-only'],
+      },
+    },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      'server-only': path.resolve(__dirname, './vitest.server-only-mock.ts'),
     },
   },
 });

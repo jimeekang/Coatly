@@ -9,6 +9,7 @@ import { APP_URL } from '@/config/constants';
 import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
 import { ProfitabilityCard } from '@/components/quotes/ProfitabilityCard';
+import { QuoteStatusCard } from '@/components/quotes/QuoteStatusCard';
 import { getBusinessRateSettings } from '@/lib/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -19,7 +20,7 @@ export default async function QuoteDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ jobError?: string }>;
+  searchParams?: Promise<{ jobError?: string; emailDemo?: string }>;
 }) {
   const { id } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
@@ -31,6 +32,7 @@ export default async function QuoteDetailPage({
   ]);
   const jobError =
     typeof resolvedSearchParams.jobError === 'string' ? resolvedSearchParams.jobError : null;
+  const emailDemo = resolvedSearchParams.emailDemo === '1';
 
   // ── Internal cost breakdown (not shown in PDF) ──────────────────────────
   const hasManualRooms = (quote?.rooms?.length ?? 0) > 0;
@@ -115,6 +117,14 @@ export default async function QuoteDetailPage({
         </div>
       ) : (
         <div className="flex flex-col gap-6 pb-10">
+          {emailDemo && (
+            <div className="rounded-lg border border-pm-teal-mid bg-pm-teal-pale/20 px-4 py-3">
+              <p className="text-sm text-pm-teal">
+                Demo only. This quote was marked as sent to {quote.customer.email ?? 'the customer'}.
+                Resend delivery will be connected later.
+              </p>
+            </div>
+          )}
           {jobError && (
             <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
               <p className="text-sm text-pm-coral-dark">{jobError}</p>
@@ -131,8 +141,8 @@ export default async function QuoteDetailPage({
               <p className="text-lg font-semibold text-pm-body">
                 {quote.title || 'Untitled quote'}
               </p>
+              <QuoteStatusCard status={quote.status} validUntil={quote.valid_until} />
               <p>Quote number: {quote.quote_number}</p>
-              <p>Status: {QUOTE_STATUS_LABELS[quote.status]}</p>
               <p>Valid until: {quote.valid_until ? formatDate(quote.valid_until) : '—'}</p>
               <p>Total: {formatAUD(quote.total_cents)}</p>
               {publicQuoteUrl && (

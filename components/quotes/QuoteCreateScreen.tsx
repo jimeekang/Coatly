@@ -14,6 +14,8 @@ import type { UserRateSettings } from '@/lib/rate-settings';
 import type { MaterialItem, QuoteCreateInput } from '@/lib/supabase/validators';
 import type { QuoteTemplate, QuoteTemplatePayload } from '@/app/actions/quote-templates';
 
+type QuoteSubmitIntent = 'save' | 'send_email';
+
 export function QuoteCreateScreen({
   customers,
   canUseAI,
@@ -78,8 +80,8 @@ export function QuoteCreateScreen({
     setResetKey((current) => current + 1);
   }
 
-  async function handleSubmit(data: QuoteCreateInput) {
-    const result = await createQuote(data);
+  async function handleSubmit(data: QuoteCreateInput, intent: QuoteSubmitIntent = 'save') {
+    const result = await createQuote(data, { submitIntent: intent });
     if (!result?.error) {
       // Offer to save as template after successful submission
       setPendingSavePayload(data);
@@ -181,6 +183,7 @@ export function QuoteCreateScreen({
         libraryItems={libraryItems}
         defaultValues={formDefaultValues}
         onSubmit={handleSubmit}
+        showSendQuoteButton
       />
 
       {/* Save as Template prompt — shown after a successful quote submission */}
