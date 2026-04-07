@@ -19,6 +19,7 @@ import {
   parseQuoteCreateInput,
   resolveQuoteStatus,
   type QuoteCustomerOption,
+  type QuoteCustomerPropertyOption,
   type QuoteStatus,
   type QuoteComplexity,
 } from '@/lib/quotes';
@@ -98,6 +99,10 @@ type QuoteFormDefaultValues = {
 };
 
 type QuoteSubmitIntent = 'save' | 'send_email';
+type SendDialogState = {
+  payload: QuoteCreateInput;
+  email: string;
+} | null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -156,6 +161,8 @@ function buildInitialAdvancedEstimate(
       include_walls: room.surfaces?.some((s) => s.surface_type === 'walls') ?? true,
       include_ceiling: room.surfaces?.some((s) => s.surface_type === 'ceiling') ?? true,
       include_trim: room.surfaces?.some((s) => s.surface_type === 'trim') ?? false,
+      include_doors: room.surfaces?.some((s) => s.surface_type === 'doors') ?? false,
+      include_windows: room.surfaces?.some((s) => s.surface_type === 'windows') ?? false,
     })),
   };
 }
@@ -241,6 +248,38 @@ function buildAdvancedEstimatePayload(
         room_index: t.room_index === '' ? null : intVal(t.room_index, 0),
       })),
   };
+}
+
+function getCustomerEmails(customer: QuoteCustomerOption | null) {
+  if (!customer) return [];
+  const emails = [
+    customer.email,
+    ...(customer.emails ?? []),
+  ]
+    .filter((email): email is string => typeof email === 'string')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  return Array.from(new Set(emails));
+}
+
+function getCustomerProperties(customer: QuoteCustomerOption | null) {
+  if (!customer) return [];
+  if (customer.properties?.length) return customer.properties;
+  if (!customer.address) return [];
+
+  return [
+    {
+      label: 'Primary property',
+      address_line1: '',
+      address_line2: '',
+      city: '',
+      state: '',
+      postcode: '',
+      notes: '',
+      address: customer.address,
+    },
+  ] satisfies QuoteCustomerPropertyOption[];
 }
 
 function PricingSummaryPanel({
@@ -375,6 +414,8 @@ export function QuoteForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [activeSubmitIntent, setActiveSubmitIntent] = useState<QuoteSubmitIntent>('save');
+  const [selectedPropertyIndex, setSelectedPropertyIndex] = useState('0');
+  const [sendDialog, setSendDialog] = useState<SendDialogState>(null);
   // If pre-filled rooms exist (e.g., AI draft), start in advanced mode
   const [estimateMode, setEstimateMode] = useState<EstimateMode>(
     defaultValues?.rooms?.length ? 'advanced' : 'quick'
@@ -420,7 +461,17 @@ export function QuoteForm({
     () => customers.find((customer) => customer.id === form.customer_id) ?? null,
     [customers, form.customer_id]
   );
-  const canSendQuote = Boolean(selectedCustomer?.email?.trim());
+  const customerEmailOptions = useMemo(
+    () => getCustomerEmails(selectedCustomer),
+    [selectedCustomer]
+  );
+  const customerPropertyOptions = useMemo(
+    () => getCustomerProperties(selectedCustomer),
+    [selectedCustomer]
+  );
+  const selectedProperty =
+    customerPropertyOptions[Number(selectedPropertyIndex)] ?? customerPropertyOptions[0] ?? null;
+  const canSendQuote = customerEmailOptions.length > 0;
 
   // Quick mode state
   const [quickState, setQuickState] = useState<QuickQuoteBuilderState>(
@@ -577,22 +628,22 @@ export function QuoteForm({
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     const { name, value } = event.target;
+    if (name === 'customer_id') {
+      setSelectedPropertyIndex('0');
+      setSendDialog(null);
+    }
     setForm((current) => ({ ...current, [name]: value }));
     setError(null);
   }
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!onSubmit) return;
-    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-    const submitIntent =
-      submitter?.dataset.submitIntent === 'send_email' ? 'send_email' : 'save';
-
+  function buildPayload(): QuoteCreateInput {
     let payload: QuoteCreateInput;
+    const customer_address = selectedProperty?.address ?? undefined;
 
     if (pricingStrategy === 'day_rate') {
       payload = {
         customer_id: form.customer_id,
+        customer_address,
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
@@ -609,6 +660,7 @@ export function QuoteForm({
     } else if (pricingStrategy === 'room_rate') {
       payload = {
         customer_id: form.customer_id,
+        customer_address,
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
@@ -625,6 +677,7 @@ export function QuoteForm({
     } else if (pricingStrategy === 'manual') {
       payload = {
         customer_id: form.customer_id,
+        customer_address,
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
@@ -651,6 +704,7 @@ export function QuoteForm({
       }
       payload = {
         customer_id: form.customer_id,
+        customer_address,
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
@@ -667,6 +721,12 @@ export function QuoteForm({
       };
     }
 
+    return payload;
+  }
+
+  function submitQuote(payload: QuoteCreateInput, submitIntent: QuoteSubmitIntent) {
+    if (!onSubmit) return;
+
     const parsed = parseQuoteCreateInput(payload);
     if (!parsed.success) {
       setError(parsed.error);
@@ -678,6 +738,57 @@ export function QuoteForm({
       const result = await onSubmit(payload, submitIntent);
       if (result?.error) setError(result.error);
     });
+  }
+
+  function handleOpenSendDialog() {
+    if (!onSubmit) return;
+    const email = customerEmailOptions[0] ?? '';
+    if (!email) {
+      setError('Add a customer email before sending this quote.');
+      return;
+    }
+
+    const payload = {
+      ...buildPayload(),
+      customer_email: email,
+    };
+
+    const parsed = parseQuoteCreateInput(payload);
+    if (!parsed.success) {
+      setError(parsed.error);
+      return;
+    }
+
+    setActiveSubmitIntent('send_email');
+    setSendDialog({ payload, email });
+    setError(null);
+  }
+
+  function handleConfirmSendQuote() {
+    if (!sendDialog) return;
+    submitQuote(
+      {
+        ...sendDialog.payload,
+        customer_email: sendDialog.email,
+        customer_address: selectedProperty?.address ?? sendDialog.payload.customer_address,
+      },
+      'send_email'
+    );
+  }
+
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!onSubmit) return;
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const submitIntent =
+      submitter?.dataset.submitIntent === 'send_email' ? 'send_email' : 'save';
+
+    if (submitIntent === 'send_email') {
+      handleOpenSendDialog();
+      return;
+    }
+
+    submitQuote(buildPayload(), 'save');
   }
 
   function addManualRoomRateItem() {
@@ -705,7 +816,10 @@ export function QuoteForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="lg:pb-8">
+    <form
+      onSubmit={handleSubmit}
+      className={showSendQuoteButton ? 'pb-80 md:pb-40 lg:pb-36' : 'pb-52 md:pb-28 lg:pb-24'}
+    >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
         <div className="space-y-4">
           <div className="lg:hidden">
@@ -744,18 +858,56 @@ export function QuoteForm({
                 </option>
               ))}
             </select>
-            {selectedCustomer && (selectedCustomer.email || selectedCustomer.address) && (
+            {selectedCustomer && (
               <div className="mt-3 rounded-xl border border-pm-border bg-pm-surface px-4 py-3 text-sm text-pm-body">
                 <p className="font-medium text-pm-body">
                   {selectedCustomer.company_name || selectedCustomer.name}
                 </p>
-                {selectedCustomer.email && (
-                  <p className="mt-1 text-pm-secondary">{selectedCustomer.email}</p>
+                {customerEmailOptions.length > 0 && (
+                  <p className="mt-1 break-all text-pm-secondary">
+                    {customerEmailOptions[0]}
+                    {customerEmailOptions.length > 1 && (
+                      <span className="ml-1 whitespace-nowrap text-xs">
+                        +{customerEmailOptions.length - 1} more
+                      </span>
+                    )}
+                  </p>
                 )}
-                {selectedCustomer.address && (
-                  <p className="mt-1 text-pm-secondary">{selectedCustomer.address}</p>
+                {customerPropertyOptions.length > 0 ? (
+                  <div className="mt-3">
+                    <label htmlFor="customer_property" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                      Property
+                    </label>
+                    <select
+                      id="customer_property"
+                      value={selectedPropertyIndex}
+                      onChange={(event) => {
+                        setSelectedPropertyIndex(event.target.value);
+                        setError(null);
+                      }}
+                      className="h-11 w-full rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                    >
+                      {customerPropertyOptions.map((property, index) => (
+                        <option key={`${property.address}-${index}`} value={String(index)}>
+                          {property.label} — {property.address}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedProperty?.notes && (
+                      <p className="mt-1 text-xs text-pm-secondary">{selectedProperty.notes}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-pm-secondary">
+                    No saved property for this customer.
+                  </p>
                 )}
               </div>
+            )}
+            {showSendQuoteButton && selectedCustomer && !canSendQuote && (
+              <p className="mt-2 text-xs text-pm-coral-dark">
+                No email on file — add one to this customer to enable Send Quote.
+              </p>
             )}
           </div>
           <div>
@@ -772,38 +924,18 @@ export function QuoteForm({
               className={FIELD}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="status" className={LABEL}>
-                Status
-              </label>
-              <select
-                id="status"
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className={FIELD}
-              >
-                <option value="draft">Draft</option>
-                <option value="sent">Sent</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="expired">Expired</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="valid_until" className={LABEL}>
-                Valid Until
-              </label>
-              <input
-                id="valid_until"
-                name="valid_until"
-                type="date"
-                value={form.valid_until}
-                onChange={handleChange}
-                className={FIELD}
-              />
-            </div>
+          <div>
+            <label htmlFor="valid_until" className={LABEL}>
+              Valid Until
+            </label>
+            <input
+              id="valid_until"
+              name="valid_until"
+              type="date"
+              value={form.valid_until}
+              onChange={handleChange}
+              className={FIELD}
+            />
           </div>
         </div>
       </section>
@@ -1249,8 +1381,6 @@ export function QuoteForm({
         </div>
       )}
 
-      {/* Spacer so last field isn't hidden behind sticky footer on mobile */}
-      <div className="h-[calc(5rem+env(safe-area-inset-bottom))] lg:hidden" aria-hidden="true" />
 
         </div>
 
@@ -1269,49 +1399,142 @@ export function QuoteForm({
         </aside>
       </div>
 
-      {/* Sticky footer CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-pm-border bg-white px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:left-64">
-        <div className="mx-auto flex w-full max-w-lg justify-center">
-          {showSendQuoteButton ? (
-            <div className="w-full space-y-3">
+      {sendDialog && selectedCustomer && (
+        <div className="fixed inset-0 z-30 flex items-end bg-black/40 px-4 py-4 md:items-center md:justify-center">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  Send Quote
+                </p>
+                <h3 className="mt-1 text-xl font-semibold text-pm-body">
+                  Review before sending
+                </h3>
+              </div>
               <button
                 type="button"
-                onClick={() => (onCancel ? onCancel() : router.back())}
+                onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="h-14 w-full rounded-xl border border-pm-border bg-white px-4 text-base font-medium text-pm-body disabled:opacity-50"
+                className="h-10 rounded-lg border border-pm-border px-3 text-sm font-medium text-pm-secondary disabled:opacity-50"
               >
-                {cancelLabel}
+                Close
               </button>
-              <div className="grid grid-cols-2 gap-3">
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label htmlFor="send_quote_email" className={LABEL}>
+                  Send to
+                </label>
+                <select
+                  id="send_quote_email"
+                  value={sendDialog.email}
+                  onChange={(event) =>
+                    setSendDialog((current) =>
+                      current ? { ...current, email: event.target.value } : current
+                    )
+                  }
+                  className={FIELD}
+                >
+                  {customerEmailOptions.map((email) => (
+                    <option key={email} value={email}>
+                      {email}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-pm-secondary">
+                  Choose from emails saved on this customer.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  Customer
+                </p>
+                <p className="mt-1 font-medium text-pm-body">
+                  {selectedCustomer.company_name || selectedCustomer.name}
+                </p>
+                {selectedProperty?.address && (
+                  <p className="mt-1 text-sm text-pm-secondary">{selectedProperty.address}</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-pm-border bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  Quote Content
+                </p>
+                <p className="mt-1 font-medium text-pm-body">{sendDialog.payload.title}</p>
+                <p className="mt-1 text-sm text-pm-secondary">
+                  Valid until {sendDialog.payload.valid_until}
+                </p>
+                {sendDialog.payload.notes && (
+                  <p className="mt-3 whitespace-pre-wrap rounded-lg bg-pm-surface px-3 py-2 text-sm text-pm-body">
+                    {sendDialog.payload.notes}
+                  </p>
+                )}
+                <div className="mt-3 flex items-center justify-between rounded-lg bg-pm-teal-light px-3 py-2">
+                  <span className="text-sm font-medium text-pm-teal">Estimated total</span>
+                  <span className="text-base font-semibold text-pm-teal">
+                    {formatAUD(displayTotal)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSendDialog(null)}
+                disabled={isPending}
+                className="h-12 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSendQuote}
+                disabled={isPending || !sendDialog.email}
+                className="h-12 rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {isPending && activeSubmitIntent === 'send_email' ? 'Sending...' : 'Send Quote'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky footer CTA — sits above the dashboard bottom tab bar (h-20) on mobile */}
+      <div className="fixed bottom-20 left-0 right-0 z-10 border-t border-pm-border bg-white px-4 pt-4 pb-4 md:bottom-0 md:left-64 md:pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex w-full max-w-lg justify-center">
+          {showSendQuoteButton ? (
+            <div className="w-full space-y-2">
+              <button
+                type="button"
+                onClick={handleOpenSendDialog}
+                disabled={isPending || !canSubmit || !canSendQuote}
+                className="h-12 w-full rounded-xl bg-pm-teal px-4 text-base font-semibold text-white disabled:opacity-50"
+              >
+                {isPending && activeSubmitIntent === 'send_email' ? 'Sending...' : 'Send Quote to Client'}
+              </button>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="submit"
                   data-submit-intent="save"
                   onClick={() => setActiveSubmitIntent('save')}
                   disabled={isPending || !canSubmit}
-                  className="h-14 rounded-xl border border-pm-teal bg-white px-4 text-sm font-semibold text-pm-teal disabled:opacity-50"
+                  className="h-11 rounded-xl border border-pm-teal bg-white px-4 text-sm font-semibold text-pm-teal disabled:opacity-50"
                 >
-                  {isPending && activeSubmitIntent === 'save' ? 'Saving...' : submitLabel}
+                  {isPending && activeSubmitIntent === 'save' ? 'Saving...' : 'Save Draft'}
                 </button>
                 <button
-                  type="submit"
-                  data-submit-intent="send_email"
-                  onClick={() => setActiveSubmitIntent('send_email')}
-                  disabled={isPending || !canSubmit || !canSendQuote}
-                  className="h-14 rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white disabled:opacity-50"
+                  type="button"
+                  onClick={() => (onCancel ? onCancel() : router.back())}
+                  disabled={isPending}
+                  className="h-11 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body disabled:opacity-50"
                 >
-                  {isPending && activeSubmitIntent === 'send_email'
-                    ? 'Sending...'
-                    : 'Send Quote to Email'}
+                  {cancelLabel}
                 </button>
               </div>
-              <p className="text-center text-xs text-pm-secondary">
-                Demo only for now. This will mark the quote as sent to the customer email.
-              </p>
-              {selectedCustomer && !canSendQuote && (
-                <p className="text-center text-xs text-pm-coral-dark">
-                  Add an email to this customer before using send.
-                </p>
-              )}
             </div>
           ) : (
             <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-3">

@@ -18,14 +18,38 @@ const CUSTOMER = {
   name: 'Sarah Johnson',
   company_name: 'Harbor Cafe',
   email: 'sarah@example.com',
+  emails: ['sarah@example.com', 'accounts@example.com'],
   phone: '0412 555 012',
   address: '128 Beach Street, Manly, NSW 2095',
+  properties: [
+    {
+      label: 'Cafe',
+      address_line1: '128 Beach Street',
+      address_line2: '',
+      city: 'Manly',
+      state: 'NSW',
+      postcode: '2095',
+      notes: '',
+      address: '128 Beach Street, Manly, NSW, 2095',
+    },
+    {
+      label: 'Warehouse',
+      address_line1: '9 Storage Lane',
+      address_line2: 'Unit 4',
+      city: 'Brookvale',
+      state: 'NSW',
+      postcode: '2100',
+      notes: 'Use rear entry',
+      address: '9 Storage Lane, Unit 4, Brookvale, NSW, 2100',
+    },
+  ],
 };
 
 const CUSTOMER_WITHOUT_EMAIL = {
   ...CUSTOMER,
   id: '550e8400-e29b-41d4-a716-446655440099',
   email: null,
+  emails: [],
 };
 
 const LIBRARY_ITEM = {
@@ -117,7 +141,7 @@ describe('QuoteForm', () => {
     expect(typeof payload.manual_adjustment_cents).toBe('number');
   });
 
-  it('passes send_email intent when the send button is used on new quote', async () => {
+  it('opens a send confirmation dialog and passes the selected email', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
 
@@ -130,10 +154,19 @@ describe('QuoteForm', () => {
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
     await user.click(screen.getByRole('button', { name: /Living Room/i }));
-    await user.click(screen.getByRole('button', { name: 'Send Quote to Email' }));
+    await user.click(screen.getByRole('button', { name: 'Send Quote to Client' }));
+
+    expect(screen.getByRole('heading', { name: 'Review before sending' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Send to'), 'accounts@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send Quote' }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit.mock.calls[0][1]).toBe('send_email');
+    expect(onSubmit.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        customer_email: 'accounts@example.com',
+      })
+    );
   });
 
   it('disables send quote button when the selected customer has no email', async () => {
@@ -144,7 +177,29 @@ describe('QuoteForm', () => {
     );
 
     await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER_WITHOUT_EMAIL.id);
-    expect(screen.getByRole('button', { name: 'Send Quote to Email' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send Quote to Client' })).toBeDisabled();
+  });
+
+  it('lets users pick a customer property for the quote snapshot', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(<QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} />);
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.selectOptions(screen.getByLabelText('Property'), '1');
+    await user.type(screen.getByLabelText('Title'), 'Warehouse repaint');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
+    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        customer_address: '9 Storage Lane, Unit 4, Brookvale, NSW, 2100',
+      })
+    );
   });
 
   it('switches to advanced mode and shows InteriorEstimateBuilder', async () => {

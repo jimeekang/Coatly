@@ -1,5 +1,6 @@
 'use client';
 
+import { Trash2, Plus } from 'lucide-react';
 import { NumericInput, sanitizeDecimalInput, sanitizeIntegerInput } from '@/components/shared/NumericInput';
 import {
   INTERIOR_APARTMENT_TYPE_LABELS,
@@ -37,6 +38,14 @@ const FIELD = 'h-12 w-full rounded-xl border border-pm-border bg-white px-4 text
 const LABEL = 'mb-1.5 block text-sm font-medium text-pm-body';
 type RoomRef = '' | `${number}`;
 
+function inferAnchorRoomType(name: string): InteriorRoomType {
+  const normalized = name.trim().toLowerCase();
+  const matched = INTERIOR_ROOM_TYPES.find(
+    (roomType) => roomType.toLowerCase() === normalized
+  );
+  return matched ?? 'Other';
+}
+
 export type InteriorEstimateRoomFormState = {
   name: string;
   anchor_room_type: InteriorRoomType;
@@ -46,6 +55,8 @@ export type InteriorEstimateRoomFormState = {
   include_walls: boolean;
   include_ceiling: boolean;
   include_trim: boolean;
+  include_doors: boolean;
+  include_windows: boolean;
 };
 export type InteriorDoorFormState = {
   door_type: InteriorDoorType;
@@ -92,6 +103,8 @@ export const createEmptyInteriorRoom = (): InteriorEstimateRoomFormState => ({
   include_walls: true,
   include_ceiling: true,
   include_trim: false,
+  include_doors: false,
+  include_windows: false,
 });
 export const createEmptyInteriorDoor = (): InteriorDoorFormState => ({
   door_type: 'standard',
@@ -235,17 +248,107 @@ export function InteriorEstimateBuilder({
       {value.estimate_mode === 'specific_areas' ? (
         <>
           <div className="space-y-3 rounded-xl border border-pm-border bg-pm-surface/45 p-4">
-            <div className="flex items-center justify-between"><p className="text-sm font-semibold text-pm-body">Rooms</p><button type="button" onClick={() => setValue('rooms', [...value.rooms, createEmptyInteriorRoom()])} className="min-h-11 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body">Add Room</button></div>
+            <p className="text-sm font-semibold text-pm-body">Rooms</p>
             {value.rooms.map((room, index) => (
-              <div key={`room-${index}`} className="grid gap-3 rounded-xl border border-pm-border bg-white p-3 md:grid-cols-2">
-                <input aria-label="Room Name" value={room.name} onChange={(event) => setRoom(index, { name: event.target.value })} className={FIELD} placeholder="Room Name" />
-                <select aria-label="Room Anchor" value={room.anchor_room_type} onChange={(event) => setRoom(index, { anchor_room_type: event.target.value as InteriorRoomType })} className={FIELD}>{INTERIOR_ROOM_TYPES.map((roomType) => <option key={roomType} value={roomType}>{roomType}</option>)}</select>
-                <input aria-label="Length (m)" type="number" min="0" step="0.1" value={room.length_m} onChange={(event) => setRoom(index, { length_m: event.target.value })} className={FIELD} placeholder="Length (m)" />
-                <input aria-label="Width (m)" type="number" min="0" step="0.1" value={room.width_m} onChange={(event) => setRoom(index, { width_m: event.target.value })} className={FIELD} placeholder="Width (m)" />
-                <input aria-label="Height (m)" type="number" min="0" step="0.1" value={room.height_m} onChange={(event) => setRoom(index, { height_m: event.target.value })} className={FIELD} placeholder="Height (m)" />
-                <button type="button" onClick={() => setValue('rooms', value.rooms.length === 1 ? [createEmptyInteriorRoom()] : value.rooms.filter((_, roomIndex) => roomIndex !== index))} className="min-h-11 rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-secondary">Remove Room</button>
+              <div key={`room-${index}`} className="space-y-3 rounded-xl border border-pm-border bg-white p-3">
+                {/* Row 1: Room name + delete */}
+                <div className="flex items-center gap-2">
+                  <input
+                    aria-label="Room Name"
+                    value={room.name}
+                    onChange={(event) => {
+                      const name = event.target.value;
+                      setRoom(index, { name, anchor_room_type: inferAnchorRoomType(name) });
+                    }}
+                    className={`${FIELD} flex-1`}
+                    placeholder="e.g. Master Bedroom"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Remove room"
+                    onClick={() => setValue('rooms', value.rooms.length === 1 ? [createEmptyInteriorRoom()] : value.rooms.filter((_, roomIndex) => roomIndex !== index))}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-pm-border text-pm-secondary"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+
+                {/* Row 2: L × W × H compact 3-col */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="mb-1 block text-xs text-pm-secondary">Length (m)</label>
+                    <NumericInput
+                      aria-label="Length (m)"
+                      inputMode="decimal"
+                      value={room.length_m}
+                      sanitize={sanitizeDecimalInput}
+                      onValueChange={(v) => setRoom(index, { length_m: v })}
+                      className={FIELD}
+                      placeholder="0.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-pm-secondary">Width (m)</label>
+                    <NumericInput
+                      aria-label="Width (m)"
+                      inputMode="decimal"
+                      value={room.width_m}
+                      sanitize={sanitizeDecimalInput}
+                      onValueChange={(v) => setRoom(index, { width_m: v })}
+                      className={FIELD}
+                      placeholder="0.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-pm-secondary">Height (m)</label>
+                    <NumericInput
+                      aria-label="Height (m)"
+                      inputMode="decimal"
+                      value={room.height_m}
+                      sanitize={sanitizeDecimalInput}
+                      onValueChange={(v) => setRoom(index, { height_m: v })}
+                      className={FIELD}
+                      placeholder="2.7"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 4: Surface type toggles */}
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-pm-secondary">Surfaces</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        { key: 'include_walls', label: 'Walls' },
+                        { key: 'include_ceiling', label: 'Ceiling' },
+                        { key: 'include_trim', label: 'Trim' },
+                        { key: 'include_doors', label: 'Doors' },
+                        { key: 'include_windows', label: 'Windows' },
+                      ] as const
+                    ).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setRoom(index, { [key]: !room[key] })}
+                        className={`h-11 rounded-full border px-4 text-sm font-medium ${room[key] ? 'border-pm-teal bg-pm-teal text-white' : 'border-pm-border bg-white text-pm-body'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             ))}
+
+            {/* Add Room — full-width, bottom */}
+            <button
+              type="button"
+              onClick={() => setValue('rooms', [...value.rooms, createEmptyInteriorRoom()])}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-pm-border bg-white text-sm font-medium text-pm-body"
+            >
+              <Plus size={16} />
+              Add Room
+            </button>
           </div>
 
           <div className="space-y-3 rounded-xl border border-pm-border bg-pm-surface/45 p-4">

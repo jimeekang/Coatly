@@ -4,6 +4,8 @@ export interface Customer {
   name: string;
   email: string | null;
   phone: string | null;
+  emails?: string[];
+  phones?: string[];
   /** Full street address */
   address: string | null;
   /** City/suburb */
@@ -11,6 +13,15 @@ export interface Customer {
   /** State e.g. VIC, NSW, QLD */
   state: string | null;
   postcode: string | null;
+  properties?: Array<{
+    label: string;
+    address_line1: string;
+    address_line2: string;
+    city: string;
+    state: string;
+    postcode: string;
+    notes: string;
+  }>;
   notes: string | null;
   created_at: string;
   updated_at: string;

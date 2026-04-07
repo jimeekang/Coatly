@@ -59,6 +59,7 @@ import {
   getQuote,
   getPublicQuoteByToken,
   getQuotes,
+  rejectPublicQuote,
   setPublicQuoteOptionalLineItemSelection,
   setQuoteOptionalLineItemSelection,
 } from '@/app/actions/quotes';
@@ -139,11 +140,32 @@ describe('createQuote', () => {
       data: {
         id: 'customer-1',
         email: 'site@harborcafe.com.au',
+        emails: ['site@harborcafe.com.au', 'accounts@harborcafe.com.au'],
         address_line1: '128 Beach Street',
         address_line2: 'Suite 4',
         city: 'Manly',
         state: 'NSW',
         postcode: '2095',
+        properties: [
+          {
+            label: 'Cafe',
+            address_line1: '128 Beach Street',
+            address_line2: 'Suite 4',
+            city: 'Manly',
+            state: 'NSW',
+            postcode: '2095',
+            notes: '',
+          },
+          {
+            label: 'Warehouse',
+            address_line1: '9 Storage Lane',
+            address_line2: 'Unit 4',
+            city: 'Brookvale',
+            state: 'NSW',
+            postcode: '2100',
+            notes: '',
+          },
+        ],
       },
       error: null,
     });
@@ -331,11 +353,32 @@ describe('createQuote', () => {
       data: {
         id: 'customer-1',
         email: 'site@harborcafe.com.au',
+        emails: ['site@harborcafe.com.au', 'accounts@harborcafe.com.au'],
         address_line1: '128 Beach Street',
         address_line2: 'Suite 4',
         city: 'Manly',
         state: 'NSW',
         postcode: '2095',
+        properties: [
+          {
+            label: 'Cafe',
+            address_line1: '128 Beach Street',
+            address_line2: 'Suite 4',
+            city: 'Manly',
+            state: 'NSW',
+            postcode: '2095',
+            notes: '',
+          },
+          {
+            label: 'Warehouse',
+            address_line1: '9 Storage Lane',
+            address_line2: 'Unit 4',
+            city: 'Brookvale',
+            state: 'NSW',
+            postcode: '2100',
+            notes: '',
+          },
+        ],
       },
       error: null,
     });
@@ -407,6 +450,8 @@ describe('createQuote', () => {
     const result = await createQuote(
       {
         customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        customer_email: 'accounts@harborcafe.com.au',
+        customer_address: '9 Storage Lane, Unit 4, Brookvale, NSW, 2100',
         title: 'Harbor Cafe repaint',
         status: 'draft',
         valid_until: '2026-04-10',
@@ -445,7 +490,8 @@ describe('createQuote', () => {
     expect(result).toBeUndefined();
     expect(captured.quoteInsert).toMatchObject({
       status: 'sent',
-      customer_email: 'site@harborcafe.com.au',
+      customer_email: 'accounts@harborcafe.com.au',
+      customer_address: '9 Storage Lane, Unit 4, Brookvale, NSW, 2100',
     });
     expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-send-1?emailDemo=1');
   });
@@ -1474,6 +1520,96 @@ describe('public quote access', () => {
         totalFormatted: '$1,045.00',
       })
     );
+  });
+
+  it('rejects a public quote when the customer declines it', async () => {
+    const captured: {
+      quoteUpdate?: Record<string, unknown>;
+    } = {};
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-public-1',
+                  user_id: 'user-1',
+                  customer_id: 'customer-1',
+                  public_share_token: 'public-token-1',
+                  approved_at: null,
+                  approved_by_name: null,
+                  approved_by_email: null,
+                  approval_signature: null,
+                  customer_email: 'client@example.com',
+                  customer_address: '128 Beach Street, Manly, NSW, 2095',
+                  quote_number: 'QUO-2026-001',
+                  title: 'Public quote',
+                  status: 'sent',
+                  valid_until: '2099-04-10',
+                  tier: 'standard',
+                  notes: 'Client-facing note',
+                  internal_notes: 'Existing internal note',
+                  labour_margin_percent: 0,
+                  material_margin_percent: 0,
+                  subtotal_cents: 95000,
+                  gst_cents: 9500,
+                  total_cents: 104500,
+                  estimate_category: 'manual',
+                  property_type: null,
+                  estimate_mode: null,
+                  estimate_context: {},
+                  pricing_snapshot: {},
+                  pricing_method: 'hybrid',
+                  pricing_method_inputs: null,
+                  created_at: '2026-04-01T00:00:00.000Z',
+                  updated_at: '2026-04-01T00:00:00.000Z',
+                  customer: {
+                    id: 'customer-1',
+                    name: 'Harbor Cafe',
+                    company_name: null,
+                    email: 'client@example.com',
+                    phone: '0412 555 012',
+                    address_line1: '128 Beach Street',
+                    address_line2: null,
+                    city: 'Manly',
+                    state: 'NSW',
+                    postcode: '2095',
+                  },
+                },
+                error: null,
+              }),
+            }),
+            update: vi.fn((payload) => {
+              captured.quoteUpdate = payload;
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('quoteToken', 'public-token-1');
+    formData.set('rejectedByName', 'Alex Harper');
+    formData.set('rejectedByEmail', 'alex@example.com');
+
+    const result = await rejectPublicQuote(formData);
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteUpdate).toMatchObject({
+      status: 'rejected',
+      internal_notes: expect.stringContaining(
+        'Client rejected via public page'
+      ),
+    });
+    expect(sendQuoteApprovalNotificationMock).not.toHaveBeenCalled();
   });
 });
 

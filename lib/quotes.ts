@@ -42,7 +42,20 @@ export type QuoteCustomerOption = {
   name: string;
   company_name: string | null;
   email: string | null;
+  emails?: string[];
   phone: string | null;
+  address: string | null;
+  properties?: QuoteCustomerPropertyOption[];
+};
+
+export type QuoteCustomerPropertyOption = {
+  label: string;
+  address_line1: string;
+  address_line2: string;
+  city: string;
+  state: string;
+  postcode: string;
+  notes: string;
   address: string | null;
 };
 
@@ -247,6 +260,22 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
 };
 
 const SYDNEY_TIME_ZONE = 'Australia/Sydney';
+
+export function formatQuoteCustomerPropertyAddress({
+  address_line1,
+  address_line2,
+  city,
+  state,
+  postcode,
+}: Pick<
+  QuoteCustomerPropertyOption,
+  'address_line1' | 'address_line2' | 'city' | 'state' | 'postcode'
+>) {
+  return [address_line1, address_line2, city, state, postcode]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(', ') || null;
+}
 
 function getSydneyIsoDate(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -590,6 +619,8 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
     success: true as const,
     data: {
       customer_id: parsed.data.customer_id,
+      customer_email: parsed.data.customer_email?.trim() || null,
+      customer_address: parsed.data.customer_address?.trim() || null,
       title: parsed.data.title.trim(),
       status: parsed.data.status,
       valid_until: parsed.data.valid_until,

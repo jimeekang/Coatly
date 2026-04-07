@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createCustomer, type CustomerFormData } from '@/app/actions/customers';
+import {
+  createCustomer,
+  type CustomerFormData,
+  type CustomerProperty,
+} from '@/app/actions/customers';
 
 const AU_STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
@@ -17,12 +21,9 @@ const LABEL_CLASS = 'block text-sm font-medium text-pm-body mb-1';
 const REQUIRED = <span className="ml-0.5 text-pm-coral">*</span>;
 const OPTIONAL = <span className="ml-1.5 text-xs font-normal text-pm-secondary">(optional)</span>;
 
-function createEmptyCustomerForm(): CustomerFormData {
+function createEmptyProperty(index = 0): CustomerProperty {
   return {
-    name: '',
-    email: '',
-    phone: '',
-    company_name: '',
+    label: index === 0 ? 'Primary property' : `Property ${index + 1}`,
     address_line1: '',
     address_line2: '',
     city: '',
@@ -32,24 +33,93 @@ function createEmptyCustomerForm(): CustomerFormData {
   };
 }
 
+function createEmptyCustomerForm(): CustomerFormData {
+  return {
+    name: '',
+    email: '',
+    phone: '',
+    emails: [''],
+    phones: [''],
+    company_name: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    postcode: '',
+    properties: [createEmptyProperty()],
+    notes: '',
+  };
+}
+
 function mergeCustomerFormDefaults(
   defaultValues?: Partial<CustomerFormData>
 ): CustomerFormData {
-  return {
+  const merged = {
     ...createEmptyCustomerForm(),
     ...defaultValues,
   };
+  const emails = defaultValues?.emails?.length
+    ? defaultValues.emails
+    : defaultValues?.email
+      ? [defaultValues.email]
+      : [''];
+  const phones = defaultValues?.phones?.length
+    ? defaultValues.phones
+    : defaultValues?.phone
+      ? [defaultValues.phone]
+      : [''];
+  const properties = defaultValues?.properties?.length
+    ? defaultValues.properties
+    : [
+        {
+          label: 'Primary property',
+          address_line1: defaultValues?.address_line1 ?? '',
+          address_line2: defaultValues?.address_line2 ?? '',
+          city: defaultValues?.city ?? '',
+          state: defaultValues?.state ?? '',
+          postcode: defaultValues?.postcode ?? '',
+          notes: '',
+        },
+      ];
+
+  return {
+    ...merged,
+    email: emails[0] ?? '',
+    phone: phones[0] ?? '',
+    emails,
+    phones,
+    address_line1: properties[0]?.address_line1 ?? '',
+    address_line2: properties[0]?.address_line2 ?? '',
+    city: properties[0]?.city ?? '',
+    state: properties[0]?.state ?? '',
+    postcode: properties[0]?.postcode ?? '',
+    properties,
+  };
+}
+
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
 }
 
 export function CustomerForm({
   defaultValues,
   onSubmit = createCustomer,
+  onSuccess,
   onCancel,
   cancelLabel = 'Cancel',
   submitLabel = 'Save Customer',
 }: {
   defaultValues?: Partial<CustomerFormData>;
   onSubmit?: (data: CustomerFormData) => Promise<{ error?: string } | void>;
+  onSuccess?: () => void;
   onCancel?: () => void;
   cancelLabel?: string;
   submitLabel?: string;
@@ -86,14 +156,113 @@ export function CustomerForm({
     }
   }
 
+  function updateEmail(index: number, value: string) {
+    setForm((prev) => {
+      const emails = [...prev.emails];
+      emails[index] = value;
+      return { ...prev, email: emails[0] ?? '', emails };
+    });
+    setError(null);
+  }
+
+  function addEmail() {
+    setForm((prev) => ({ ...prev, emails: [...prev.emails, ''] }));
+  }
+
+  function removeEmail(index: number) {
+    setForm((prev) => {
+      const emails = prev.emails.filter((_, i) => i !== index);
+      const nextEmails = emails.length ? emails : [''];
+      return { ...prev, email: nextEmails[0] ?? '', emails: nextEmails };
+    });
+  }
+
+  function updatePhone(index: number, value: string) {
+    setForm((prev) => {
+      const phones = [...prev.phones];
+      phones[index] = value;
+      return { ...prev, phone: phones[0] ?? '', phones };
+    });
+    setError(null);
+  }
+
+  function addPhone() {
+    setForm((prev) => ({ ...prev, phones: [...prev.phones, ''] }));
+  }
+
+  function removePhone(index: number) {
+    setForm((prev) => {
+      const phones = prev.phones.filter((_, i) => i !== index);
+      const nextPhones = phones.length ? phones : [''];
+      return { ...prev, phone: nextPhones[0] ?? '', phones: nextPhones };
+    });
+  }
+
+  function updateProperty(index: number, field: keyof CustomerProperty, value: string) {
+    setForm((prev) => {
+      const properties = [...prev.properties];
+      properties[index] = { ...(properties[index] ?? createEmptyProperty(index)), [field]: value };
+      return {
+        ...prev,
+        properties,
+        address_line1: properties[0]?.address_line1 ?? '',
+        address_line2: properties[0]?.address_line2 ?? '',
+        city: properties[0]?.city ?? '',
+        state: properties[0]?.state ?? '',
+        postcode: properties[0]?.postcode ?? '',
+      };
+    });
+    setError(null);
+  }
+
+  function addProperty() {
+    setForm((prev) => ({
+      ...prev,
+      properties: [...prev.properties, createEmptyProperty(prev.properties.length)],
+    }));
+  }
+
+  function removeProperty(index: number) {
+    setForm((prev) => {
+      const properties = prev.properties.filter((_, i) => i !== index);
+      const nextProperties = properties.length ? properties : [createEmptyProperty()];
+      return {
+        ...prev,
+        properties: nextProperties,
+        address_line1: nextProperties[0]?.address_line1 ?? '',
+        address_line2: nextProperties[0]?.address_line2 ?? '',
+        city: nextProperties[0]?.city ?? '',
+        state: nextProperties[0]?.state ?? '',
+        postcode: nextProperties[0]?.postcode ?? '',
+      };
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const result = await onSubmit(form);
-    if (result?.error) {
-      setError(result.error);
+    try {
+      const result = await onSubmit(form);
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(false);
+      onSuccess?.();
+    } catch (submitError) {
+      if (isNextNavigationSignal(submitError)) {
+        throw submitError;
+      }
+
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Customer could not be saved. Please try again.'
+      );
       setLoading(false);
     }
   }
@@ -163,138 +332,203 @@ export function CustomerForm({
             </label>
           </div>
 
-          {/* Email */}
           <div>
-            <label htmlFor="email" className={LABEL_CLASS}>
-              Email{OPTIONAL}
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              placeholder="e.g. john@example.com"
-              value={form.email}
-              onChange={handleChange}
-              className={FIELD_CLASS}
-            />
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label className={LABEL_CLASS}>
+                Emails{OPTIONAL}
+              </label>
+              <button
+                type="button"
+                onClick={addEmail}
+                className="min-h-11 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-body"
+              >
+                Add Email
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {form.emails.map((email, index) => (
+                <div key={index} className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="email"
+                    autoComplete={index === 0 ? 'email' : 'off'}
+                    inputMode="email"
+                    placeholder={index === 0 ? 'Primary email' : 'Additional email'}
+                    value={email}
+                    onChange={(event) => updateEmail(index, event.target.value)}
+                    className={`${FIELD_CLASS} min-w-0 flex-1`}
+                  />
+                  {form.emails.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeEmail(index)}
+                      className="min-h-12 shrink-0 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-secondary"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Phone */}
           <div>
-            <label htmlFor="phone" className={LABEL_CLASS}>
-              Phone{OPTIONAL}
-            </label>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              inputMode="tel"
-              placeholder="e.g. 0412 345 678"
-              value={form.phone}
-              onChange={handleChange}
-              className={FIELD_CLASS}
-            />
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label className={LABEL_CLASS}>
+                Phone Numbers{OPTIONAL}
+              </label>
+              <button
+                type="button"
+                onClick={addPhone}
+                className="min-h-11 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-body"
+              >
+                Add Phone
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {form.phones.map((phone, index) => (
+                <div key={index} className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="tel"
+                    autoComplete={index === 0 ? 'tel' : 'off'}
+                    inputMode="tel"
+                    placeholder={index === 0 ? 'Primary phone' : 'Additional phone'}
+                    value={phone}
+                    onChange={(event) => updatePhone(index, event.target.value)}
+                    className={`${FIELD_CLASS} min-w-0 flex-1`}
+                  />
+                  {form.phones.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePhone(index)}
+                      className="min-h-12 shrink-0 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-secondary"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Address ── */}
       <section>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary mb-3">
-          Address
-        </h3>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+            Properties
+          </h3>
+          <button
+            type="button"
+            onClick={addProperty}
+            className="min-h-11 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-body"
+          >
+            Add Property
+          </button>
+        </div>
         <div className="flex flex-col gap-4">
-          <div>
-            <label htmlFor="address_line1" className={LABEL_CLASS}>
-              Street Address{OPTIONAL}
-            </label>
-            <input
-              id="address_line1"
-              name="address_line1"
-              type="text"
-              autoComplete="address-line1"
-              placeholder="e.g. 12 Harbor St"
-              value={form.address_line1}
-              onChange={handleChange}
-              className={FIELD_CLASS}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="address_line2" className={LABEL_CLASS}>
-              Unit / Apt
-              {OPTIONAL}
-            </label>
-            <input
-              id="address_line2"
-              name="address_line2"
-              type="text"
-              autoComplete="address-line2"
-              placeholder="e.g. Unit 3"
-              value={form.address_line2}
-              onChange={handleChange}
-              className={FIELD_CLASS}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="city" className={LABEL_CLASS}>
-              Suburb{OPTIONAL}
-            </label>
-            <input
-              id="city"
-              name="city"
-              type="text"
-              autoComplete="address-level2"
-              placeholder="e.g. Manly"
-              value={form.city}
-              onChange={handleChange}
-              className={FIELD_CLASS}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="state" className={LABEL_CLASS}>
-                State{OPTIONAL}
-              </label>
-              <select
-                id="state"
-                name="state"
-                value={form.state}
-                onChange={handleChange}
-                className={FIELD_CLASS}
-              >
-                <option value="">Select</option>
-                {AU_STATES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+          {form.properties.map((property, index) => (
+            <div key={index} className="rounded-xl border border-pm-border bg-white p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  {index === 0 ? 'Primary Property' : `Property ${index + 1}`}
+                </p>
+                {form.properties.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeProperty(index)}
+                    className="min-h-10 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-secondary"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className={LABEL_CLASS}>Property Label{OPTIONAL}</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Home, Rental, Beach house"
+                    value={property.label}
+                    onChange={(event) => updateProperty(index, 'label', event.target.value)}
+                    className={FIELD_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Street Address{OPTIONAL}</label>
+                  <input
+                    type="text"
+                    autoComplete={index === 0 ? 'address-line1' : 'off'}
+                    placeholder="e.g. 12 Harbor St"
+                    value={property.address_line1}
+                    onChange={(event) => updateProperty(index, 'address_line1', event.target.value)}
+                    className={FIELD_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Unit / Apt{OPTIONAL}</label>
+                  <input
+                    type="text"
+                    autoComplete={index === 0 ? 'address-line2' : 'off'}
+                    placeholder="e.g. Unit 3"
+                    value={property.address_line2}
+                    onChange={(event) => updateProperty(index, 'address_line2', event.target.value)}
+                    className={FIELD_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Suburb{OPTIONAL}</label>
+                  <input
+                    type="text"
+                    autoComplete={index === 0 ? 'address-level2' : 'off'}
+                    placeholder="e.g. Manly"
+                    value={property.city}
+                    onChange={(event) => updateProperty(index, 'city', event.target.value)}
+                    className={FIELD_CLASS}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={LABEL_CLASS}>State{OPTIONAL}</label>
+                    <select
+                      value={property.state}
+                      onChange={(event) => updateProperty(index, 'state', event.target.value)}
+                      className={FIELD_CLASS}
+                    >
+                      <option value="">Select</option>
+                      {AU_STATES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={LABEL_CLASS}>Postcode{OPTIONAL}</label>
+                    <input
+                      type="text"
+                      autoComplete={index === 0 ? 'postal-code' : 'off'}
+                      inputMode="numeric"
+                      maxLength={4}
+                      placeholder="e.g. 2095"
+                      value={property.postcode}
+                      onChange={(event) => updateProperty(index, 'postcode', event.target.value)}
+                      className={FIELD_CLASS}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Property Notes{OPTIONAL}</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Gate code, parking notes"
+                    value={property.notes}
+                    onChange={(event) => updateProperty(index, 'notes', event.target.value)}
+                    className={FIELD_CLASS}
+                  />
+                </div>
+              </div>
             </div>
-
-            <div>
-              <label htmlFor="postcode" className={LABEL_CLASS}>
-                Postcode{OPTIONAL}
-              </label>
-              <input
-                id="postcode"
-                name="postcode"
-                type="text"
-                autoComplete="postal-code"
-                inputMode="numeric"
-                maxLength={4}
-                placeholder="e.g. 2095"
-                value={form.postcode}
-                onChange={handleChange}
-                className={FIELD_CLASS}
-              />
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 

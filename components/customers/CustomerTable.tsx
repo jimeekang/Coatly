@@ -9,7 +9,10 @@ interface CustomerTableProps {
 }
 
 function formatAddress(c: Customer): string {
-  const parts = [c.city, c.state].filter(Boolean);
+  const property = c.properties?.[0] ?? null;
+  const parts = property
+    ? [property.city, property.state].filter(Boolean)
+    : [c.city, c.state].filter(Boolean);
   return parts.join(', ') || '—';
 }
 
@@ -19,8 +22,24 @@ function matchesQuery(c: Customer, q: string): boolean {
     c.name.toLowerCase().includes(lower) ||
     (c.company_name?.toLowerCase().includes(lower) ?? false) ||
     (c.email?.toLowerCase().includes(lower) ?? false) ||
+    (c.emails?.some((email) => email.toLowerCase().includes(lower)) ?? false) ||
     (c.phone?.includes(lower) ?? false) ||
-    (c.city?.toLowerCase().includes(lower) ?? false)
+    (c.phones?.some((phone) => phone.includes(lower)) ?? false) ||
+    (c.city?.toLowerCase().includes(lower) ?? false) ||
+    (c.properties?.some((property) =>
+      [
+        property.label,
+        property.address_line1,
+        property.address_line2,
+        property.city,
+        property.state,
+        property.postcode,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(lower)
+    ) ?? false)
   );
 }
 
@@ -124,8 +143,22 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                   <tr key={c.id} className="hover:bg-pm-teal-light transition-colors">
                     <td className="px-5 py-4 font-medium text-pm-body">{c.name}</td>
                     <td className="px-5 py-4 text-pm-secondary">{c.company_name || '—'}</td>
-                    <td className="px-5 py-4 text-pm-secondary">{c.email || '—'}</td>
-                    <td className="px-5 py-4 text-pm-secondary">{c.phone || '—'}</td>
+                    <td className="max-w-48 break-all px-5 py-4 text-pm-secondary">
+                      <span>{c.emails?.[0] || c.email || '—'}</span>
+                      {(c.emails?.length ?? 0) > 1 && (
+                        <span className="ml-1 inline-block whitespace-nowrap text-xs">
+                          +{(c.emails?.length ?? 1) - 1}
+                        </span>
+                      )}
+                    </td>
+                    <td className="max-w-40 break-all px-5 py-4 text-pm-secondary">
+                      <span>{c.phones?.[0] || c.phone || '—'}</span>
+                      {(c.phones?.length ?? 0) > 1 && (
+                        <span className="ml-1 inline-block whitespace-nowrap text-xs">
+                          +{(c.phones?.length ?? 1) - 1}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-5 py-4 text-pm-secondary">{formatAddress(c)}</td>
                     <td className="px-5 py-4 text-right">
                       <Link

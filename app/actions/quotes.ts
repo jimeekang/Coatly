@@ -7,6 +7,7 @@ import {
   calculateQuoteLineItemsSubtotal,
   calculateQuotePreview,
   composeQuoteTotals,
+  formatQuoteCustomerPropertyAddress,
   isMissingQuoteCustomerSnapshotColumnError,
   mapQuoteDetail,
   mapQuoteListItem,
@@ -14,6 +15,7 @@ import {
   resolveQuoteStatus,
   resolveQuoteCustomerSummary,
   type QuoteCustomerOption,
+  type QuoteCustomerPropertyOption,
   type QuoteCoatingType,
   type QuoteDetail,
   type QuoteEstimateItemCategory,
@@ -329,6 +331,68 @@ function mapHydratedQuoteDetail(
   });
 }
 
+function normalizeCustomerEmails(customer: { email?: string | null; emails?: unknown }) {
+  const emails = [
+    customer.email,
+    ...(Array.isArray(customer.emails) ? customer.emails : []),
+  ]
+    .filter((email): email is string => typeof email === 'string')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  return Array.from(new Set(emails));
+}
+
+function normalizeCustomerPropertyOptions(customer: {
+  properties?: unknown;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+}) {
+  const rawProperties = Array.isArray(customer.properties) ? customer.properties : [];
+  const properties = rawProperties
+    .map((property, index): QuoteCustomerPropertyOption | null => {
+      if (!property || typeof property !== 'object') return null;
+      const record = property as Record<string, unknown>;
+      const option = {
+        label: typeof record.label === 'string' && record.label.trim()
+          ? record.label.trim()
+          : `Property ${index + 1}`,
+        address_line1: typeof record.address_line1 === 'string' ? record.address_line1.trim() : '',
+        address_line2: typeof record.address_line2 === 'string' ? record.address_line2.trim() : '',
+        city: typeof record.city === 'string' ? record.city.trim() : '',
+        state: typeof record.state === 'string' ? record.state.trim() : '',
+        postcode: typeof record.postcode === 'string' ? record.postcode.trim() : '',
+        notes: typeof record.notes === 'string' ? record.notes.trim() : '',
+        address: null,
+      };
+
+      return {
+        ...option,
+        address: formatQuoteCustomerPropertyAddress(option),
+      };
+    })
+    .filter((property): property is QuoteCustomerPropertyOption => Boolean(property?.address));
+
+  const fallbackAddress = buildQuoteCustomerAddress(customer);
+  if (properties.length === 0 && fallbackAddress) {
+    properties.push({
+      label: 'Primary property',
+      address_line1: customer.address_line1 ?? '',
+      address_line2: customer.address_line2 ?? '',
+      city: customer.city ?? '',
+      state: customer.state ?? '',
+      postcode: customer.postcode ?? '',
+      notes: '',
+      address: fallbackAddress,
+    });
+  }
+
+  return properties;
+}
+
 export async function getQuoteFormOptions(): Promise<{
   data: {
     customers: QuoteCustomerOption[];
@@ -342,7 +406,7 @@ export async function getQuoteFormOptions(): Promise<{
   const [customersResult, ratesResult, nextQuoteNumberResult] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, name, company_name, email, phone, address_line1, address_line2, city, state, postcode')
+      .select('id, name, company_name, email, emails, phone, address_line1, address_line2, city, state, postcode, properties')
       .eq('user_id', user.id)
       .eq('is_archived', false)
       .order('name', { ascending: true }),
@@ -358,8 +422,10 @@ export async function getQuoteFormOptions(): Promise<{
           name: customer.name,
           company_name: customer.company_name,
           email: customer.email,
+          emails: normalizeCustomerEmails(customer),
           phone: customer.phone,
           address: buildQuoteCustomerAddress(customer),
+          properties: normalizeCustomerPropertyOptions(customer),
         })) ?? [],
       userRates: ratesResult.data ?? DEFAULT_RATE_SETTINGS,
       nextQuoteNumber: nextQuoteNumberResult.error ? null : nextQuoteNumberResult.data ?? null,
@@ -571,7 +637,7 @@ export async function createQuote(
 
   const { data: customer, error: customerError } = await supabase
     .from('customers')
-    .select('id, email, address_line1, address_line2, city, state, postcode')
+    .select('id, email, emails, address_line1, address_line2, city, state, postcode, properties')
     .eq('id', parsed.data.customer_id)
     .eq('user_id', user.id)
     .eq('is_archived', false)
@@ -586,9 +652,25 @@ export async function createQuote(
   }
 
   const shouldSendEmail = options.submitIntent === 'send_email';
+  const customerEmails = normalizeCustomerEmails(customer);
+  const customerProperties = normalizeCustomerPropertyOptions(customer);
+  const selectedCustomerEmail = parsed.data.customer_email ?? customerEmails[0] ?? null;
+  const selectedCustomerAddress =
+    parsed.data.customer_address ?? customerProperties[0]?.address ?? buildQuoteCustomerAddress(customer);
 
-  if (shouldSendEmail && !customer.email?.trim()) {
+  if (shouldSendEmail && !selectedCustomerEmail?.trim()) {
     return { error: 'Add a customer email before sending this quote.' };
+  }
+
+  if (parsed.data.customer_email && !customerEmails.includes(parsed.data.customer_email)) {
+    return { error: 'Select a saved email for this customer before sending.' };
+  }
+
+  if (
+    parsed.data.customer_address &&
+    !customerProperties.some((property) => property.address === parsed.data.customer_address)
+  ) {
+    return { error: 'Select a saved property for this customer before saving the quote.' };
   }
 
   const { data: userRates } = await getBusinessRateSettings(supabase, user.id);
@@ -685,8 +767,8 @@ export async function createQuote(
   const quoteInsertPayload = {
     user_id: user.id,
     customer_id: parsed.data.customer_id,
-    customer_email: customer.email,
-    customer_address: buildQuoteCustomerAddress(customer),
+    customer_email: selectedCustomerEmail,
+    customer_address: selectedCustomerAddress,
     quote_number: quoteNumber,
     title: parsed.data.title,
     status: shouldSendEmail ? 'sent' : parsed.data.status,
@@ -1114,6 +1196,62 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
       totalFormatted: formatAUD(quote.total_cents),
       signature: approvalSignature,
     });
+  }
+
+  revalidatePath(`/q/${quoteToken}`);
+  revalidatePath('/quotes');
+  revalidatePath(`/quotes/${quote.id}`);
+}
+
+export async function rejectPublicQuote(formData: FormData): Promise<void> {
+  const quoteToken = parseTrimmedFormValue(formData.get('quoteToken'));
+  const rejectedByName = parseTrimmedFormValue(formData.get('rejectedByName'));
+  const rejectedByEmail = parseTrimmedFormValue(formData.get('rejectedByEmail')).toLowerCase();
+
+  if (!quoteToken || !rejectedByName || !rejectedByEmail) {
+    return;
+  }
+
+  if (!isValidEmail(rejectedByEmail)) {
+    return;
+  }
+
+  const supabase = createAdminClient();
+  const quoteResult = await supabase
+    .from('quotes')
+    .select(PUBLIC_QUOTE_SELECT)
+    .eq('public_share_token', quoteToken)
+    .single();
+  const quote = quoteResult.data as QuoteDetailRow | null;
+
+  if (
+    quoteResult.error ||
+    !quote ||
+    resolveQuoteStatus({
+      status: quote.status,
+      valid_until: quote.valid_until,
+    }) !== 'sent'
+  ) {
+    return;
+  }
+
+  const rejectedAt = new Date().toISOString();
+  const rejectionLog = `Client rejected via public page on ${rejectedAt} by ${rejectedByName} <${rejectedByEmail}>.`;
+  const nextInternalNotes = quote.internal_notes?.trim()
+    ? `${quote.internal_notes.trim()}\n\n${rejectionLog}`
+    : rejectionLog;
+
+  const { error: updateQuoteError } = await supabase
+    .from('quotes')
+    .update({
+      status: 'rejected',
+      internal_notes: nextInternalNotes,
+    })
+    .eq('id', quote.id)
+    .eq('public_share_token', quoteToken);
+
+  if (updateQuoteError) {
+    return;
   }
 
   revalidatePath(`/q/${quoteToken}`);

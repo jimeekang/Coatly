@@ -8,6 +8,14 @@
 - `data_analyst` -> SQL, reporting logic, metric definitions, and business analysis
 - `vercel_deploy` -> Vercel login checks, preview/production deployments, alias updates, and release verification
 
+## Supabase DB Operations
+
+For all Supabase database work, including login/auth setup, schema inspection, SQL execution, migrations, RLS changes, generated types, and migration verification, Codex and all subagents must follow the canonical db-schema skill instructions at `.claude/skills/db-schema/SKILL.md`.
+
+- Do not assume local Supabase, Docker, or CLI migrations are the source of truth for this repo.
+- Use the db-schema skill workflow before changing or applying schema: inspect remote state, apply the migration through the documented remote path, regenerate/update types, then run targeted verification.
+- If the required Supabase MCP tools from `.claude/skills/db-schema/SKILL.md` are unavailable in the current session, stop and report that blocker instead of inventing a local workaround.
+
 ## Gstack Routing
 
 Codex should treat the following slash-style inputs as explicit gstack skill invocations for this repo.
@@ -79,6 +87,7 @@ Objective: Implement or fix a backend or data flow.
 Scope: [table/query/server action/route/onboarding profile schema]
 Inputs: [schema, payload, failing behavior, target files]
 Constraints: auth.uid ownership, RLS-safe access, Vercel serverless limits, explicit user-scoped queries
+Supabase DB operations: Must follow `.claude/skills/db-schema/SKILL.md` for login/auth, schema inspection, SQL execution, migrations, RLS, generated types, and verification
 Deliverable: SQL, migration, server action, route handler, or query-layer change
 Validation: Check auth boundary, query correctness, and relevant lint/type/test commands
 Out of scope: Broad frontend redesign

@@ -487,6 +487,8 @@ export const interiorEstimateSchema = z
 
 export const quoteCreateSchema = z.object({
   customer_id: z.string().trim().uuid('Select a customer'),
+  customer_email: z.string().trim().email('Select a valid customer email').optional(),
+  customer_address: z.string().trim().max(500, 'Customer address must be 500 characters or less').optional(),
   title: z.string().trim().min(1, 'Quote title is required'),
   status: z.enum(['draft', 'sent', 'approved', 'rejected', 'expired']).default('draft'),
   valid_until: optionalIsoDateString,

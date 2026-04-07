@@ -98,12 +98,15 @@ export type Database = {
           company_name: string | null
           created_at: string
           email: string | null
+          emails: string[]
           id: string
           is_archived: boolean
           name: string
           notes: string | null
           phone: string | null
+          phones: string[]
           postcode: string | null
+          properties: Json
           state: string | null
           updated_at: string
           user_id: string
@@ -115,12 +118,15 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           email?: string | null
+          emails?: string[]
           id?: string
           is_archived?: boolean
           name: string
           notes?: string | null
           phone?: string | null
+          phones?: string[]
           postcode?: string | null
+          properties?: Json
           state?: string | null
           updated_at?: string
           user_id: string
@@ -132,12 +138,15 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           email?: string | null
+          emails?: string[]
           id?: string
           is_archived?: boolean
           name?: string
           notes?: string | null
           phone?: string | null
+          phones?: string[]
           postcode?: string | null
+          properties?: Json
           state?: string | null
           updated_at?: string
           user_id?: string
@@ -795,4 +804,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
