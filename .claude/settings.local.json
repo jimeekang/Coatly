@@ -17,7 +17,22 @@
       "mcp__claude_ai_Supabase__list_projects",
       "Bash(npx eslint:*)",
       "Read(//tmp/**)",
-      "mcp__claude_ai_Supabase__list_migrations"
+      "mcp__claude_ai_Supabase__list_migrations",
+      "Bash(curl -s https://qwjpqujdykojxsisjltd.supabase.co/rest/v1/ -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3anBxdWpkeWtvanhzaXNqbHRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk5MjEzNSwiZXhwIjoyMDg5NTY4MTM1fQ.KGry2x96lSIV3o88IFmyAVE4gp-58XNs4qk3_XLextA' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3anBxdWpkeWtvanhzaXNqbHRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk5MjEzNSwiZXhwIjoyMDg5NTY4MTM1fQ.KGry2x96lSIV3o88IFmyAVE4gp-58XNs4qk3_XLextA')",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k\\) for k in d.keys\\(\\)]\")",
+      "Bash(curl -s 'https://qwjpqujdykojxsisjltd.supabase.co/rest/v1/quotes?select=id,title,public_share_token,customers\\(name\\)&customers.name=ilike.*Richardson*' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3anBxdWpkeWtvanhzaXNqbHRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk5MjEzNSwiZXhwIjoyMDg5NTY4MTM1fQ.KGry2x96lSIV3o88IFmyAVE4gp-58XNs4qk3_XLextA' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3anBxdWpkeWtvanhzaXNqbHRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk5MjEzNSwiZXhwIjoyMDg5NTY4MTM1fQ.KGry2x96lSIV3o88IFmyAVE4gp-58XNs4qk3_XLextA')",
+      "Skill(plan)",
+      "Skill(plan:*)",
+      "Skill(build)",
+      "Skill(build:*)",
+      "Skill(release)",
+      "Skill(release:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(ssh -T git@github.com)",
+      "Read(//Users/jimee/**)"
     ]
   }
 }
