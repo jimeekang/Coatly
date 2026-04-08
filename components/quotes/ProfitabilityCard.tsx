@@ -2,7 +2,6 @@
 
 import { formatAUD } from '@/utils/format';
 import type { QuoteDetail } from '@/lib/quotes';
-import type { PricingMethodInputs } from '@/types/quote';
 import { PRICING_METHOD_LABELS } from '@/lib/rate-settings';
 
 /** Derive labour/material split from pricing_method_inputs or fallback to room surfaces */

@@ -406,7 +406,7 @@ export type QuickQuoteBuilderState = {
 
 export function createEmptyQuickQuoteState(): QuickQuoteBuilderState {
   return {
-    wall_paint_system: 'standard_2coat',
+    wall_paint_system: 'repaint_2coat',
     rooms: [],
     manual_adjustment_cents: 0,
   };
@@ -497,17 +497,18 @@ export function QuickQuoteBuilder({
 
   return (
     <div className="space-y-4">
-      {/* Wall / Ceiling Paint System — global for the whole job */}
+      {/* Wall / Ceiling Coating — global for the whole job */}
       <section className="rounded-2xl border border-pm-border bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-          Paint System
+          Wall &amp; Ceiling Coating
         </h3>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {INTERIOR_WALL_PAINT_SYSTEMS.map((sys) => (
             <button
               key={sys}
               type="button"
               onClick={() => setField('wall_paint_system', sys)}
+              aria-pressed={value.wall_paint_system === sys}
               className={[
                 'flex flex-col rounded-xl border p-3 text-left transition-colors',
                 value.wall_paint_system === sys
@@ -524,7 +525,11 @@ export function QuickQuoteBuilder({
                 {INTERIOR_WALL_PAINT_SYSTEM_LABELS[sys]}
               </span>
               <span className="mt-0.5 text-xs text-pm-secondary">
-                {sys === 'standard_2coat' ? 'Walls & Ceiling · Most common' : 'New Plaster · Extra coat'}
+                {sys === 'refresh_1coat'
+                  ? 'Refresh coat for existing painted surfaces'
+                  : sys === 'repaint_2coat'
+                    ? 'Standard repaint for most interior jobs'
+                    : 'Use when walls or ceilings are new plaster'}
               </span>
             </button>
           ))}

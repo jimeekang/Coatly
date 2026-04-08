@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   interiorEstimateSchema,
   quoteCreateSchema,
+  quoteLineItemFormSchema,
   quoteLineItemInsertSchema,
   ratePresetSchema,
 } from '@/lib/supabase/validators';
@@ -55,6 +56,25 @@ describe('interiorEstimateSchema', () => {
       'Select the door type',
       'Select the door scope',
     ]);
+  });
+
+  it('normalizes legacy wall paint system values', () => {
+    const parsed = interiorEstimateSchema.safeParse({
+      property_type: 'apartment',
+      estimate_mode: 'entire_property',
+      condition: 'fair',
+      scope: ['walls'],
+      wall_paint_system: 'touch_up_2coat',
+      property_details: {
+        apartment_type: 'studio',
+      },
+      rooms: [],
+      opening_items: [],
+      trim_items: [],
+    });
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.wall_paint_system).toBe('refresh_1coat');
   });
 });
 
@@ -131,6 +151,69 @@ describe('quoteCreateSchema', () => {
 
     expect(parsed.success).toBe(true);
   });
+
+  it('rejects decimal quantities for paint line items', () => {
+    const parsed = quoteCreateSchema.safeParse({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Paint quantity validation',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [
+        {
+          name: 'Living Room',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              area_m2: 35,
+              coating_type: 'repaint_2coat',
+              rate_per_m2_cents: 1800,
+            },
+          ],
+        },
+      ],
+      line_items: [
+        {
+          material_item_id: null,
+          name: 'Premium wash & wear',
+          category: 'paint',
+          unit: 'tin',
+          quantity: 1.5,
+          unit_price_cents: 10000,
+          is_optional: false,
+          is_selected: true,
+        },
+      ],
+    });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0]?.message).toBe('Paint quantity must be a whole number');
+  });
+});
+
+describe('quoteLineItemFormSchema', () => {
+  it('rejects decimal quantities for paint items', () => {
+    const parsed = quoteLineItemFormSchema.safeParse({
+      material_item_id: null,
+      name: 'Premium wash & wear',
+      category: 'paint',
+      unit: 'tin',
+      quantity: 1.5,
+      unit_price_cents: 10000,
+      is_optional: false,
+      is_selected: true,
+    });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0]?.message).toBe('Paint quantity must be a whole number');
+  });
 });
 
 describe('quoteLineItemInsertSchema', () => {
@@ -155,27 +238,27 @@ describe('ratePresetSchema', () => {
   it('requires non-negative integer rate values for every configured surface and coating', () => {
     const parsed = ratePresetSchema.safeParse({
       walls: {
-        touch_up_2coat: 1200,
+        refresh_1coat: 1200,
         repaint_2coat: 1800,
         new_plaster_3coat: 2800,
       },
       ceiling: {
-        touch_up_2coat: 1400,
+        refresh_1coat: 1400,
         repaint_2coat: 2000,
         new_plaster_3coat: 3000,
       },
       trim: {
-        touch_up_2coat: 2500,
+        refresh_1coat: 2500,
         repaint_2coat: 3500,
         new_plaster_3coat: 5000,
       },
       doors: {
-        touch_up_2coat: 3000,
+        refresh_1coat: 3000,
         repaint_2coat: 4500,
         new_plaster_3coat: 6000,
       },
       windows: {
-        touch_up_2coat: 3500,
+        refresh_1coat: 3500,
         repaint_2coat: 5000,
         new_plaster_3coat: 7000,
       },

@@ -18,22 +18,22 @@ import {
 describe('ratePresetSchema', () => {
   it('rejects negative per-m² rate values', () => {
     const parsed = ratePresetSchema.safeParse({
-      walls: { touch_up_2coat: -1, repaint_2coat: 1800, new_plaster_3coat: 2800 },
-      ceiling: { touch_up_2coat: 1400, repaint_2coat: 2000, new_plaster_3coat: 3000 },
-      trim:    { touch_up_2coat: 2500, repaint_2coat: 3500, new_plaster_3coat: 5000 },
-      doors:   { touch_up_2coat: 3000, repaint_2coat: 4500, new_plaster_3coat: 6000 },
-      windows: { touch_up_2coat: 3500, repaint_2coat: 5000, new_plaster_3coat: 7000 },
+      walls: { refresh_1coat: -1, repaint_2coat: 1800, new_plaster_3coat: 2800 },
+      ceiling: { refresh_1coat: 1400, repaint_2coat: 2000, new_plaster_3coat: 3000 },
+      trim:    { refresh_1coat: 2500, repaint_2coat: 3500, new_plaster_3coat: 5000 },
+      doors:   { refresh_1coat: 3000, repaint_2coat: 4500, new_plaster_3coat: 6000 },
+      windows: { refresh_1coat: 3500, repaint_2coat: 5000, new_plaster_3coat: 7000 },
     });
     expect(parsed.success).toBe(false);
   });
 
   it('accepts zero rates', () => {
     const parsed = ratePresetSchema.safeParse({
-      walls:   { touch_up_2coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
-      ceiling: { touch_up_2coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
-      trim:    { touch_up_2coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
-      doors:   { touch_up_2coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
-      windows: { touch_up_2coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
+      walls:   { refresh_1coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
+      ceiling: { refresh_1coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
+      trim:    { refresh_1coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
+      doors:   { refresh_1coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
+      windows: { refresh_1coat: 0, repaint_2coat: 0, new_plaster_3coat: 0 },
     });
     expect(parsed.success).toBe(true);
   });
@@ -85,6 +85,15 @@ describe('parseUserRateSettings', () => {
     const parsed = parseUserRateSettings({ walls: { repaint_2coat: 2100 } });
     expect(parsed.walls.repaint_2coat).toBe(2100);
     expect(parsed.ceiling.repaint_2coat).toBe(DEFAULT_RATE_SETTINGS.ceiling.repaint_2coat);
+  });
+
+  it('accepts legacy touch_up_2coat values from stored presets', () => {
+    const parsed = parseUserRateSettings({
+      walls: { touch_up_2coat: 1350 },
+    });
+
+    expect(parsed.walls.refresh_1coat).toBe(1350);
+    expect(parsed.walls.repaint_2coat).toBe(DEFAULT_RATE_SETTINGS.walls.repaint_2coat);
   });
 
   it('falls back to defaults when given an empty object', () => {

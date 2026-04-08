@@ -15,6 +15,8 @@ import {
   INTERIOR_SCOPE_OPTIONS,
   INTERIOR_STOREY_LABELS,
   INTERIOR_STOREYS,
+  INTERIOR_WALL_PAINT_SYSTEM_LABELS,
+  INTERIOR_WALL_PAINT_SYSTEMS,
   INTERIOR_WINDOW_SCOPE_LABELS,
   INTERIOR_WINDOW_SCOPES,
   INTERIOR_WINDOW_TYPE_LABELS,
@@ -29,6 +31,7 @@ import {
   type InteriorRoomType,
   type InteriorScope,
   type InteriorStoreys,
+  type InteriorWallPaintSystem,
   type InteriorWindowScope,
   type InteriorWindowType,
 } from '@/lib/interior-estimates';
@@ -88,6 +91,7 @@ export type InteriorEstimateFormState = {
   house_sqm: string;
   condition: InteriorCondition;
   scope: InteriorScope[];
+  wall_paint_system: InteriorWallPaintSystem;
   rooms: InteriorEstimateRoomFormState[];
   doors: InteriorDoorFormState[];
   windows: InteriorWindowFormState[];
@@ -138,6 +142,7 @@ export function createEmptyInteriorEstimateState(): InteriorEstimateFormState {
     house_sqm: '',
     condition: 'fair',
     scope: ['walls', 'ceiling', 'trim'],
+    wall_paint_system: 'repaint_2coat',
     rooms: [createEmptyInteriorRoom()],
     doors: [],
     windows: [],
@@ -226,6 +231,27 @@ export function InteriorEstimateBuilder({
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div>
+        <label className={LABEL}>Wall &amp; Ceiling Coating</label>
+        <div className="grid gap-2 md:grid-cols-3">
+          {INTERIOR_WALL_PAINT_SYSTEMS.map((paintSystem) => (
+            <button
+              key={paintSystem}
+              type="button"
+              onClick={() => setValue('wall_paint_system', paintSystem)}
+              aria-pressed={value.wall_paint_system === paintSystem}
+              className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
+                value.wall_paint_system === paintSystem
+                  ? 'border-pm-teal bg-pm-teal text-white'
+                  : 'border-pm-border bg-white text-pm-body'
+              }`}
+            >
+              {INTERIOR_WALL_PAINT_SYSTEM_LABELS[paintSystem]}
+            </button>
+          ))}
         </div>
       </div>
 

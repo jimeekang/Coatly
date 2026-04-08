@@ -241,6 +241,61 @@ describe('QuoteForm', () => {
     expect(screen.getByLabelText('Room Name')).toHaveValue('Living Room');
   });
 
+  it('pre-fills advanced estimate coating from interior estimate defaults', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        defaultValues={{
+          customer_id: CUSTOMER.id,
+          title: 'New plaster quote',
+          status: 'draft',
+          valid_until: '2026-04-24',
+          notes: '',
+          internal_notes: '',
+          rooms: [],
+          interior_estimate: {
+            property_type: 'apartment',
+            estimate_mode: 'specific_areas',
+            condition: 'fair',
+            scope: ['walls', 'ceiling'],
+            wall_paint_system: 'new_plaster_3coat',
+            property_details: {
+              apartment_type: '2_bedroom_standard',
+              sqm: null,
+              bedrooms: null,
+              bathrooms: null,
+              storeys: null,
+            },
+            rooms: [
+              {
+                name: 'Living Room',
+                anchor_room_type: 'Living Room',
+                room_type: 'interior',
+                length_m: null,
+                width_m: null,
+                height_m: null,
+                include_walls: true,
+                include_ceiling: true,
+                include_trim: false,
+              },
+            ],
+            opening_items: [],
+            trim_items: [],
+          },
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Advanced/i }));
+
+    expect(screen.getByRole('button', { name: 'New Plaster (3 coats)' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
   it('shows the estimate total', () => {
     render(<QuoteForm customers={[CUSTOMER]} />);
 
@@ -347,6 +402,30 @@ describe('QuoteForm', () => {
     expect(screen.getAllByText('Materials & Services').length).toBeGreaterThan(0);
   });
 
+  it('keeps paint quantities editable while enforcing whole numbers', async () => {
+    const user = userEvent.setup();
+
+    render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
+
+    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    await user.click(screen.getByRole('button', { name: 'Add Item' }));
+    await user.click(screen.getByRole('button', { name: /Premium wash & wear/i }));
+
+    const pickerQuantityInput = screen.getByLabelText('Premium wash & wear quantity');
+    await user.clear(pickerQuantityInput);
+    await user.type(pickerQuantityInput, '2');
+    expect(pickerQuantityInput).toHaveValue('2');
+
+    await user.click(screen.getByRole('button', { name: 'Add to Quote' }));
+
+    const quoteQuantityInput = screen.getByLabelText('Premium wash & wear quantity');
+    expect(quoteQuantityInput).toHaveValue('2');
+
+    await user.clear(quoteQuantityInput);
+    await user.type(quoteQuantityInput, '7');
+    expect(quoteQuantityInput).toHaveValue('7');
+  });
+
   it('keeps optional line items out of totals until optional is unchecked', async () => {
     const user = userEvent.setup();
 
@@ -412,7 +491,7 @@ describe('QuoteForm', () => {
 
   it('applies custom rate settings to the quick quote preview engine', () => {
     const state = {
-      wall_paint_system: 'standard_2coat' as const,
+      wall_paint_system: 'repaint_2coat' as const,
       manual_adjustment_cents: 0,
       rooms: [
         {

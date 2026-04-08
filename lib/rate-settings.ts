@@ -9,11 +9,16 @@ import type { PricingMethod } from '@/types/quote';
 export const SURFACE_TYPES = ['walls', 'ceiling', 'trim', 'doors', 'windows'] as const;
 /** Surfaces priced per m² in the rate table */
 export const SQM_SURFACE_TYPES = ['walls', 'ceiling', 'trim'] as const;
-export const COATING_TYPES = ['touch_up_2coat', 'repaint_2coat', 'new_plaster_3coat'] as const;
+export const COATING_TYPES = ['refresh_1coat', 'repaint_2coat', 'new_plaster_3coat'] as const;
+export const WALL_CEILING_COATING_TYPES = ['refresh_1coat', 'repaint_2coat', 'new_plaster_3coat'] as const;
+export const TRIM_COATING_TYPES = ['refresh_1coat', 'repaint_2coat'] as const;
+const LEGACY_REFRESH_RATE_KEY = 'touch_up_2coat';
 
 export type RatePresetSurfaceType = (typeof SURFACE_TYPES)[number];
 export type SqmSurfaceType = (typeof SQM_SURFACE_TYPES)[number];
 export type RatePresetCoatingType = (typeof COATING_TYPES)[number];
+export type WallCeilingCoatingType = (typeof WALL_CEILING_COATING_TYPES)[number];
+export type TrimCoatingType = (typeof TRIM_COATING_TYPES)[number];
 
 // ─── Per-unit door / window types ────────────────────────────────────────────
 
@@ -191,7 +196,7 @@ export type UserRateSettings = {
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
 const ratePresetSurfaceSchema = z.object({
-  touch_up_2coat: z.number().int().min(0),
+  refresh_1coat: z.number().int().min(0),
   repaint_2coat: z.number().int().min(0),
   new_plaster_3coat: z.number().int().min(0),
 });
@@ -291,9 +296,9 @@ export type RatePreset = z.output<typeof ratePresetSchema>;
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
 export const COATING_LABELS: Record<RatePresetCoatingType, string> = {
-  touch_up_2coat: '1 Coat Touch-up',
-  repaint_2coat: '2 Coat Repaint',
-  new_plaster_3coat: '3 Coat New Plaster',
+  refresh_1coat: 'Refresh (1 coat)',
+  repaint_2coat: 'Repaint (2 coats)',
+  new_plaster_3coat: 'New Plaster (3 coats)',
 };
 
 export const SQM_SURFACE_TYPE_LABELS: Record<SqmSurfaceType, string> = {
@@ -331,14 +336,30 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
   const result = buildDefaultRateSettings();
   const parsed = partialRatePresetSchema.safeParse(json);
   if (!parsed.success) return result;
+  const rawJson = (
+    json != null &&
+    typeof json === 'object' &&
+    !Array.isArray(json)
+  ) ? (json as Partial<Record<RatePresetSurfaceType, unknown>>) : null;
 
   // Per-m² surface rates
   for (const surface of SURFACE_TYPES) {
     const surfaceData = parsed.data[surface];
+    const rawSurfaceData = (
+      rawJson?.[surface] != null &&
+      typeof rawJson[surface] === 'object' &&
+      !Array.isArray(rawJson[surface])
+    ) ? (rawJson[surface] as Partial<Record<RatePresetCoatingType | typeof LEGACY_REFRESH_RATE_KEY, unknown>>) : null;
+
     if (!surfaceData) continue;
     for (const coating of COATING_TYPES) {
-      const rate = surfaceData[coating];
-      if (rate != null) result[surface][coating] = rate;
+      const legacyRefreshRate = coating === 'refresh_1coat'
+        ? rawSurfaceData?.[LEGACY_REFRESH_RATE_KEY]
+        : undefined;
+      const rate = surfaceData[coating] ?? legacyRefreshRate;
+      if (typeof rate === 'number' && Number.isInteger(rate) && rate >= 0) {
+        result[surface][coating] = rate;
+      }
     }
   }
 

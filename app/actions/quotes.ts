@@ -11,9 +11,12 @@ import {
   isMissingQuoteCustomerSnapshotColumnError,
   mapQuoteDetail,
   mapQuoteListItem,
+  normalizeQuoteCoatingType,
   parseQuoteCreateInput,
   resolveQuoteStatus,
   resolveQuoteCustomerSummary,
+  serializeLegacyQuoteCoatingType,
+  serializeQuoteCoatingType,
   type QuoteCustomerOption,
   type QuoteCustomerPropertyOption,
   type QuoteCoatingType,
@@ -112,6 +115,8 @@ type QuoteDetailRow = {
   approved_by_email?: string | null;
   approval_signature?: string | null;
   manual_adjustment_cents?: number | null;
+  discount_cents?: number | null;
+  deposit_percent?: number | null;
   customer_email?: string | null;
   customer_address?: string | null;
   quote_number: string;
@@ -151,15 +156,15 @@ const QUOTE_LIST_SELECT =
 const QUOTE_LIST_SELECT_LEGACY =
   `id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT =
-  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT_LEGACY =
-  `id, user_id, customer_id, manual_adjustment_cents, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
 const PUBLIC_QUOTE_SELECT =
-  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
 const PUBLIC_QUOTE_SELECT_LEGACY =
-  `id, user_id, customer_id, public_share_token, manual_adjustment_cents, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, customer_id, public_share_token, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
 type QuoteDataClient =
   | Awaited<ReturnType<typeof createServerClient>>
@@ -205,6 +210,70 @@ function parseTrimmedFormValue(value: FormDataEntryValue | null) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+type QuoteRoomSurfaceInsertSource = {
+  surface_type: QuoteSurfaceType;
+  area_m2: number;
+  coating_type: QuoteCoatingType | null;
+  rate_per_m2_cents: number;
+  material_cost_cents: number;
+  labour_cost_cents: number;
+  paint_litres_needed: number | null;
+  notes: string | null;
+};
+
+function isLegacyQuoteCoatingConstraintError(message: string | null | undefined) {
+  if (!message) return false;
+
+  return (
+    message.includes('quote_room_surfaces_coating_type_check') ||
+    (message.includes('coating_type') && message.includes('check constraint'))
+  );
+}
+
+function buildQuoteRoomSurfaceInsertRows(
+  roomId: string,
+  surfaces: QuoteRoomSurfaceInsertSource[],
+  complexity: QuoteCoatingType | QuoteDetail['complexity'] | string | null | undefined,
+  useLegacyCoatingType = false
+) {
+  return surfaces.map((surface) => ({
+    room_id: roomId,
+    surface_type: surface.surface_type,
+    area_m2: surface.area_m2,
+    coating_type: useLegacyCoatingType
+      ? serializeLegacyQuoteCoatingType(surface.coating_type)
+      : serializeQuoteCoatingType(surface.coating_type),
+    rate_per_m2_cents: surface.rate_per_m2_cents,
+    material_cost_cents: surface.material_cost_cents,
+    labour_cost_cents: surface.labour_cost_cents,
+    paint_litres_needed: surface.paint_litres_needed,
+    tier: complexity ?? undefined,
+    notes: surface.notes,
+  }));
+}
+
+async function insertQuoteRoomSurfaces(
+  supabase: QuoteDataClient,
+  roomId: string,
+  surfaces: QuoteRoomSurfaceInsertSource[],
+  complexity: QuoteDetail['complexity'] | string | null | undefined
+) {
+  const rows = buildQuoteRoomSurfaceInsertRows(roomId, surfaces, complexity, false);
+  let result = await supabase.from('quote_room_surfaces').insert(rows);
+
+  if (
+    result.error &&
+    surfaces.some((surface) => surface.coating_type === 'refresh_1coat') &&
+    isLegacyQuoteCoatingConstraintError(result.error.message)
+  ) {
+    result = await supabase
+      .from('quote_room_surfaces')
+      .insert(buildQuoteRoomSurfaceInsertRows(roomId, surfaces, complexity, true));
+  }
+
+  return result;
 }
 
 async function loadQuoteRelations(
@@ -279,7 +348,9 @@ async function loadQuoteRelations(
                 room_id: surface.room_id,
                 surface_type: surface.surface_type as QuoteSurfaceType,
                 area_m2: Number(surface.area_m2),
-                coating_type: surface.coating_type as QuoteCoatingType | null,
+                coating_type: normalizeQuoteCoatingType(
+                  surface.coating_type as QuoteCoatingType | 'touch_up_1coat' | null
+                ),
                 rate_per_m2_cents: surface.rate_per_m2_cents,
                 material_cost_cents: surface.material_cost_cents,
                 labour_cost_cents: surface.labour_cost_cents,
@@ -679,6 +750,8 @@ export async function createQuote(
     ? calculateInteriorEstimate(parsed.data.interior_estimate, effectiveRates)
     : null;
   const adjustmentCents = parsed.data.manual_adjustment_cents ?? 0;
+  const discountCents = parsed.data.discount_cents ?? 0;
+  const depositPercent = parsed.data.deposit_percent ?? 0;
   const lineItems = parsed.data.line_items ?? [];
   const pricingMethod = parsed.data.pricing_method ?? 'hybrid';
   const rawMethodInputs = parsed.data.pricing_method_inputs;
@@ -694,6 +767,7 @@ export async function createQuote(
     const totals = composeQuoteTotals({
       base_subtotal_cents: result.subtotal_cents,
       adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
       line_items: lineItems,
     });
     resolvedPricingInputs = { method: 'day_rate', inputs };
@@ -708,6 +782,7 @@ export async function createQuote(
     const totals = composeQuoteTotals({
       base_subtotal_cents: result.subtotal_cents,
       adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
       line_items: lineItems,
     });
     resolvedPricingInputs = { method: 'room_rate', inputs };
@@ -722,6 +797,7 @@ export async function createQuote(
     const totals = composeQuoteTotals({
       base_subtotal_cents: result.subtotal_cents,
       adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
       line_items: lineItems,
     });
     resolvedPricingInputs = { method: 'manual', inputs };
@@ -739,6 +815,7 @@ export async function createQuote(
     const totals = composeQuoteTotals({
       base_subtotal_cents: subtotal,
       adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
       line_items: lineItems,
     });
     resolvedPricingInputs = { method: 'hybrid', inputs: null };
@@ -782,6 +859,8 @@ export async function createQuote(
     gst_cents: preview.gst_cents,
     total_cents: preview.total_cents,
     manual_adjustment_cents: adjustmentCents,
+    discount_cents: discountCents,
+    deposit_percent: depositPercent,
     estimate_category: interiorEstimate ? 'interior' : 'manual',
     property_type: parsed.data.interior_estimate?.property_type ?? null,
     estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
@@ -864,19 +943,11 @@ export async function createQuote(
         return { error: roomError?.message ?? 'Quote room could not be created.' };
       }
 
-      const { error: surfacesError } = await supabase.from('quote_room_surfaces').insert(
-        room.surfaces.map((surface) => ({
-          room_id: insertedRoom.id,
-          surface_type: surface.surface_type,
-          area_m2: surface.area_m2,
-          coating_type: surface.coating_type,
-          rate_per_m2_cents: surface.rate_per_m2_cents,
-          material_cost_cents: surface.material_cost_cents,
-          labour_cost_cents: surface.labour_cost_cents,
-          paint_litres_needed: surface.paint_litres_needed,
-          tier: parsed.data.complexity,
-          notes: surface.notes,
-        }))
+      const { error: surfacesError } = await insertQuoteRoomSurfaces(
+        supabase,
+        insertedRoom.id,
+        room.surfaces,
+        parsed.data.complexity
       );
 
       if (surfacesError) {
@@ -1257,4 +1328,465 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quote.id}`);
+}
+
+export async function duplicateQuote(quoteId: string): Promise<{ error: string } | void> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+
+  const quoteResult = await supabase
+    .from('quotes')
+    .select(QUOTE_DETAIL_SELECT)
+    .eq('id', quoteId)
+    .eq('user_id', user.id)
+    .single();
+  let sourceQuote = quoteResult.data as QuoteDetailRow | null;
+  let sourceError = quoteResult.error;
+
+  if (sourceError && isMissingQuoteSelectColumnError(sourceError.message)) {
+    const legacyResult = await supabase
+      .from('quotes')
+      .select(QUOTE_DETAIL_SELECT_LEGACY)
+      .eq('id', quoteId)
+      .eq('user_id', user.id)
+      .single();
+    sourceQuote = legacyResult.data as QuoteDetailRow | null;
+    sourceError = legacyResult.error;
+  }
+
+  if (sourceError || !sourceQuote) {
+    return { error: sourceError?.message ?? 'Quote not found.' };
+  }
+
+  const relationsResult = await loadQuoteRelations(supabase, quoteId);
+  if (relationsResult.error || !relationsResult.data) {
+    return { error: relationsResult.error ?? 'Quote details could not be loaded.' };
+  }
+
+  const { rooms, estimate_items, line_items } = relationsResult.data;
+
+  const { data: newQuoteNumber, error: quoteNumberError } = await supabase.rpc(
+    'generate_quote_number',
+    { user_uuid: user.id }
+  );
+
+  if (quoteNumberError || !newQuoteNumber) {
+    return { error: quoteNumberError?.message ?? 'Quote number could not be generated.' };
+  }
+
+  const quoteInsert = {
+    user_id: user.id,
+    customer_id: sourceQuote.customer_id,
+    customer_email: sourceQuote.customer_email ?? null,
+    customer_address: sourceQuote.customer_address ?? null,
+    quote_number: newQuoteNumber,
+    title: sourceQuote.title ? `${sourceQuote.title} (Copy)` : 'Copy',
+    status: 'draft' as const,
+    valid_until: null,
+    tier: sourceQuote.tier,
+    notes: sourceQuote.notes,
+    internal_notes: sourceQuote.internal_notes,
+    labour_margin_percent: sourceQuote.labour_margin_percent,
+    material_margin_percent: sourceQuote.material_margin_percent,
+    subtotal_cents: sourceQuote.subtotal_cents,
+    gst_cents: sourceQuote.gst_cents,
+    total_cents: sourceQuote.total_cents,
+    manual_adjustment_cents: sourceQuote.manual_adjustment_cents ?? 0,
+    discount_cents: sourceQuote.discount_cents ?? 0,
+    deposit_percent: sourceQuote.deposit_percent ?? 0,
+    estimate_category: sourceQuote.estimate_category ?? undefined,
+    property_type: sourceQuote.property_type ?? undefined,
+    estimate_mode: sourceQuote.estimate_mode ?? undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    estimate_context: (sourceQuote.estimate_context ?? {}) as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pricing_snapshot: (sourceQuote.pricing_snapshot ?? {}) as any,
+    pricing_method: sourceQuote.pricing_method,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pricing_method_inputs: sourceQuote.pricing_method_inputs as any,
+  };
+
+  let { data: newQuote, error: insertError } = await supabase
+    .from('quotes')
+    .insert(quoteInsert)
+    .select('id')
+    .single();
+
+  if (insertError && isMissingQuoteCustomerSnapshotColumnError(insertError.message)) {
+    const { customer_email: _e, customer_address: _a, ...legacyInsert } = quoteInsert;
+    void _e; void _a;
+    const legacyResult = await supabase.from('quotes').insert(legacyInsert).select('id').single();
+    newQuote = legacyResult.data;
+    insertError = legacyResult.error;
+  }
+
+  if (insertError || !newQuote) {
+    return { error: insertError?.message ?? 'Quote could not be duplicated.' };
+  }
+
+  const newQuoteId = newQuote.id;
+
+  if (estimate_items.length > 0) {
+    const { error: estimateItemsError } = await supabase.from('quote_estimate_items').insert(
+      estimate_items.map((item, index) => ({
+        quote_id: newQuoteId,
+        category: item.category,
+        label: item.label,
+        quantity: item.quantity,
+        unit: item.unit,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: item.total_cents,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        metadata: (item.metadata ?? {}) as any,
+        sort_order: index,
+      }))
+    );
+    if (estimateItemsError) {
+      await supabase.from('quotes').delete().eq('id', newQuoteId).eq('user_id', user.id);
+      return { error: estimateItemsError.message };
+    }
+  }
+
+  for (const [roomIndex, room] of rooms.entries()) {
+    const { data: insertedRoom, error: roomError } = await supabase
+      .from('quote_rooms')
+      .insert({
+        quote_id: newQuoteId,
+        name: room.name,
+        room_type: room.room_type,
+        length_m: room.length_m,
+        width_m: room.width_m,
+        height_m: room.height_m,
+        sort_order: roomIndex,
+      })
+      .select('id')
+      .single();
+
+    if (roomError || !insertedRoom) {
+      await supabase.from('quotes').delete().eq('id', newQuoteId).eq('user_id', user.id);
+      return { error: roomError?.message ?? 'Room could not be copied.' };
+    }
+
+    if (room.surfaces.length > 0) {
+      const { error: surfacesError } = await insertQuoteRoomSurfaces(
+        supabase,
+        insertedRoom.id,
+        room.surfaces,
+        null
+      );
+      if (surfacesError) {
+        await supabase.from('quotes').delete().eq('id', newQuoteId).eq('user_id', user.id);
+        return { error: surfacesError.message };
+      }
+    }
+  }
+
+  if (line_items.length > 0) {
+    const { error: lineItemsError } = await supabase.from('quote_line_items').insert(
+      line_items.map((item, index) => ({
+        quote_id: newQuoteId,
+        material_item_id: item.material_item_id ?? null,
+        name: item.name,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        category: item.category as any,
+        unit: item.unit,
+        quantity: item.quantity,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: item.total_cents,
+        notes: item.notes ?? null,
+        is_optional: item.is_optional,
+        is_selected: item.is_selected,
+        sort_order: index,
+      }))
+    );
+    if (lineItemsError) {
+      await supabase.from('quotes').delete().eq('id', newQuoteId).eq('user_id', user.id);
+      return { error: lineItemsError.message };
+    }
+  }
+
+  revalidatePath('/quotes');
+  redirect(`/quotes/${newQuoteId}/edit`);
+}
+
+export async function updateQuote(
+  quoteId: string,
+  input: QuoteCreateInput,
+  options: CreateQuoteOptions = {}
+): Promise<{ error: string } | void> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const parsed = parseQuoteCreateInput(input);
+  if (!parsed.success) {
+    return { error: parsed.error };
+  }
+
+  // Verify ownership
+  const { data: existing, error: existingError } = await supabase
+    .from('quotes')
+    .select('id, quote_number, customer_id')
+    .eq('id', quoteId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (existingError || !existing) {
+    return { error: 'Quote not found.' };
+  }
+
+  const { data: customer, error: customerError } = await supabase
+    .from('customers')
+    .select('id, email, emails, address_line1, address_line2, city, state, postcode, properties')
+    .eq('id', parsed.data.customer_id)
+    .eq('user_id', user.id)
+    .eq('is_archived', false)
+    .maybeSingle();
+
+  if (customerError) return { error: customerError.message };
+  if (!customer) return { error: 'Selected customer was not found.' };
+
+  const shouldSendEmail = options.submitIntent === 'send_email';
+  const customerEmails = normalizeCustomerEmails(customer);
+  const customerProperties = normalizeCustomerPropertyOptions(customer);
+  const selectedCustomerEmail = parsed.data.customer_email ?? customerEmails[0] ?? null;
+  const selectedCustomerAddress =
+    parsed.data.customer_address ?? customerProperties[0]?.address ?? buildQuoteCustomerAddress(customer);
+
+  if (shouldSendEmail && !selectedCustomerEmail?.trim()) {
+    return { error: 'Add a customer email before sending this quote.' };
+  }
+
+  const { data: userRates } = await getBusinessRateSettings(supabase, user.id);
+  const effectiveRates = userRates ?? DEFAULT_RATE_SETTINGS;
+  const interiorEstimate = parsed.data.interior_estimate
+    ? calculateInteriorEstimate(parsed.data.interior_estimate, effectiveRates)
+    : null;
+  const adjustmentCents = parsed.data.manual_adjustment_cents ?? 0;
+  const discountCents = parsed.data.discount_cents ?? 0;
+  const depositPercent = parsed.data.deposit_percent ?? 0;
+  const lineItems = parsed.data.line_items ?? [];
+  const pricingMethod = parsed.data.pricing_method ?? 'hybrid';
+  const rawMethodInputs = parsed.data.pricing_method_inputs;
+
+  let resolvedPricingInputs: PricingMethodInputs | null = null;
+  let preview: ReturnType<typeof calculateQuotePreview>;
+
+  if (pricingMethod === 'day_rate' && rawMethodInputs?.method === 'day_rate') {
+    const inputs: DayRateInputs = rawMethodInputs.inputs;
+    const result = calculateDayRateQuote(inputs);
+    const totals = composeQuoteTotals({ base_subtotal_cents: result.subtotal_cents, adjustment_cents: adjustmentCents, discount_cents: discountCents, line_items: lineItems });
+    resolvedPricingInputs = { method: 'day_rate', inputs };
+    preview = { rooms: [], base_subtotal_cents: result.subtotal_cents, ...totals };
+  } else if (pricingMethod === 'room_rate' && rawMethodInputs?.method === 'room_rate') {
+    const inputs: RoomRateInputs = rawMethodInputs.inputs;
+    const result = calculateRoomRateQuote(inputs);
+    const totals = composeQuoteTotals({ base_subtotal_cents: result.subtotal_cents, adjustment_cents: adjustmentCents, discount_cents: discountCents, line_items: lineItems });
+    resolvedPricingInputs = { method: 'room_rate', inputs };
+    preview = { rooms: [], base_subtotal_cents: result.subtotal_cents, ...totals };
+  } else if (pricingMethod === 'manual' && rawMethodInputs?.method === 'manual') {
+    const inputs: ManualInputs = rawMethodInputs.inputs;
+    const result = calculateManualQuote(inputs);
+    const totals = composeQuoteTotals({ base_subtotal_cents: result.subtotal_cents, adjustment_cents: adjustmentCents, discount_cents: discountCents, line_items: lineItems });
+    resolvedPricingInputs = { method: 'manual', inputs };
+    preview = { rooms: [], base_subtotal_cents: result.subtotal_cents, ...totals };
+  } else if (interiorEstimate) {
+    const base = interiorEstimate.subtotal_cents;
+    const labourMarkup = Math.round(base * (parsed.data.labour_margin_percent / 100));
+    const materialMarkup = Math.round(base * (parsed.data.material_margin_percent / 100));
+    const subtotal = base + labourMarkup + materialMarkup;
+    const totals = composeQuoteTotals({ base_subtotal_cents: subtotal, adjustment_cents: adjustmentCents, discount_cents: discountCents, line_items: lineItems });
+    resolvedPricingInputs = { method: 'hybrid', inputs: null };
+    preview = { rooms: [], base_subtotal_cents: base, ...totals };
+  } else {
+    resolvedPricingInputs = { method: pricingMethod as 'sqm_rate' | 'hybrid', inputs: null };
+    preview = calculateQuotePreview(parsed.data);
+  }
+
+  // Delete old relations
+  const { data: oldRooms } = await supabase
+    .from('quote_rooms')
+    .select('id')
+    .eq('quote_id', quoteId);
+
+  const oldRoomIds = oldRooms?.map((r) => r.id) ?? [];
+  if (oldRoomIds.length > 0) {
+    await supabase.from('quote_room_surfaces').delete().in('room_id', oldRoomIds);
+    await supabase.from('quote_rooms').delete().eq('quote_id', quoteId);
+  }
+  await supabase.from('quote_estimate_items').delete().eq('quote_id', quoteId);
+  await supabase.from('quote_line_items').delete().eq('quote_id', quoteId);
+
+  // Resolve quote number — allow custom override if different from existing
+  let resolvedQuoteNumber = existing.quote_number;
+  if (parsed.data.quote_number && parsed.data.quote_number !== existing.quote_number) {
+    // Check uniqueness: no other quote owned by this user should have the same number
+    const { data: conflict } = await supabase
+      .from('quotes')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('quote_number', parsed.data.quote_number)
+      .neq('id', quoteId)
+      .maybeSingle();
+    if (conflict) {
+      return { error: `Quote number "${parsed.data.quote_number}" is already in use.` };
+    }
+    resolvedQuoteNumber = parsed.data.quote_number;
+  }
+
+  // Update the quote record
+  const quoteUpdatePayload = {
+    customer_id: parsed.data.customer_id,
+    customer_email: selectedCustomerEmail,
+    customer_address: selectedCustomerAddress,
+    quote_number: resolvedQuoteNumber,
+    title: parsed.data.title,
+    status: shouldSendEmail ? 'sent' : parsed.data.status,
+    valid_until: parsed.data.valid_until,
+    tier: parsed.data.complexity,
+    notes: parsed.data.notes,
+    internal_notes: parsed.data.internal_notes,
+    labour_margin_percent: parsed.data.labour_margin_percent,
+    material_margin_percent: parsed.data.material_margin_percent,
+    subtotal_cents: preview.subtotal_cents,
+    gst_cents: preview.gst_cents,
+    total_cents: preview.total_cents,
+    manual_adjustment_cents: adjustmentCents,
+    discount_cents: discountCents,
+    deposit_percent: depositPercent,
+    estimate_category: interiorEstimate ? 'interior' : 'manual',
+    property_type: parsed.data.interior_estimate?.property_type ?? null,
+    estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
+    estimate_context: parsed.data.interior_estimate ?? {},
+    pricing_snapshot: interiorEstimate?.snapshot ?? {},
+    pricing_method: pricingMethod,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pricing_method_inputs: resolvedPricingInputs as any,
+  };
+
+  const { error: updateError } = await supabase
+    .from('quotes')
+    .update(quoteUpdatePayload)
+    .eq('id', quoteId)
+    .eq('user_id', user.id);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  // Re-insert relations
+  if (interiorEstimate && interiorEstimate.pricing_items.length > 0) {
+    const { error: estimateItemsError } = await supabase.from('quote_estimate_items').insert(
+      interiorEstimate.pricing_items.map((item, index) => ({
+        quote_id: quoteId,
+        category: item.category,
+        label: item.label,
+        quantity: item.quantity,
+        unit: item.unit,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: item.total_cents,
+        metadata: { ...(item.metadata ?? {}), room_index: item.room_index ?? null },
+        sort_order: index,
+      }))
+    );
+    if (estimateItemsError) return { error: estimateItemsError.message };
+  } else {
+    for (const [roomIndex, room] of preview.rooms.entries()) {
+      const { data: insertedRoom, error: roomError } = await supabase
+        .from('quote_rooms')
+        .insert({
+          quote_id: quoteId,
+          name: room.name,
+          room_type: room.room_type,
+          length_m: room.length_m,
+          width_m: room.width_m,
+          height_m: room.height_m,
+          sort_order: roomIndex,
+        })
+        .select('id')
+        .single();
+
+      if (roomError || !insertedRoom) return { error: roomError?.message ?? 'Room could not be updated.' };
+
+      const { error: surfacesError } = await insertQuoteRoomSurfaces(
+        supabase,
+        insertedRoom.id,
+        room.surfaces,
+        parsed.data.complexity
+      );
+      if (surfacesError) return { error: surfacesError.message };
+    }
+  }
+
+  if (lineItems.length > 0) {
+    const { error: lineItemsError } = await supabase.from('quote_line_items').insert(
+      lineItems.map((item, index) => ({
+        quote_id: quoteId,
+        material_item_id: item.material_item_id ?? null,
+        name: item.name,
+        category: item.category,
+        unit: item.unit,
+        quantity: item.quantity,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: Math.round(item.quantity * item.unit_price_cents),
+        notes: item.notes ?? null,
+        is_optional: item.is_optional ?? false,
+        is_selected: item.is_optional ? item.is_selected ?? false : true,
+        sort_order: index,
+      }))
+    );
+    if (lineItemsError) return { error: lineItemsError.message };
+  }
+
+  revalidatePath('/quotes');
+  revalidatePath(`/quotes/${quoteId}`);
+  redirect(`/quotes/${quoteId}`);
+}
+
+export async function deleteQuote(quoteId: string): Promise<{ error: string } | void> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  // Verify ownership
+  const { data: quote, error: quoteError } = await supabase
+    .from('quotes')
+    .select('id')
+    .eq('id', quoteId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (quoteError || !quote) {
+    return { error: 'Quote not found.' };
+  }
+
+  // Delete relations first
+  const { data: rooms } = await supabase
+    .from('quote_rooms')
+    .select('id')
+    .eq('quote_id', quoteId);
+
+  const roomIds = rooms?.map((r) => r.id) ?? [];
+  if (roomIds.length > 0) {
+    await supabase.from('quote_room_surfaces').delete().in('room_id', roomIds);
+    await supabase.from('quote_rooms').delete().eq('quote_id', quoteId);
+  }
+  await supabase.from('quote_estimate_items').delete().eq('quote_id', quoteId);
+  await supabase.from('quote_line_items').delete().eq('quote_id', quoteId);
+
+  const { error: deleteError } = await supabase
+    .from('quotes')
+    .delete()
+    .eq('id', quoteId)
+    .eq('user_id', user.id);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  revalidatePath('/quotes');
+  redirect('/quotes');
 }

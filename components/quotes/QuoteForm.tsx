@@ -9,11 +9,13 @@ import {
 import {
   INTERIOR_ROOM_TYPES,
   calculateInteriorEstimate,
+  normalizeInteriorWallPaintSystem,
   type InteriorEstimateInput,
   type InteriorRoomType,
 } from '@/lib/interior-estimates';
 import { mapQuickQuoteToInteriorEstimate } from '@/lib/quick-quote-mapper';
 import {
+  calculateDepositCents,
   calculateQuoteLineItemsSubtotal,
   composeQuoteTotals,
   parseQuoteCreateInput,
@@ -85,7 +87,7 @@ type LegacyRoomDefault = {
   surfaces?: Array<{ surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows' }>;
 };
 
-type QuoteFormDefaultValues = {
+export type QuoteFormDefaultValues = {
   customer_id: string;
   title: string;
   status: QuoteStatus;
@@ -96,6 +98,16 @@ type QuoteFormDefaultValues = {
   notes: string;
   internal_notes: string;
   rooms: LegacyRoomDefault[];
+  // Pricing method pre-fill (for edit/duplicate)
+  pricing_method?: PricingMethod | null;
+  pricing_method_inputs?: Record<string, unknown> | null;
+  interior_estimate?: InteriorEstimateInput | null;
+  // Line items pre-fill
+  line_items?: QuoteLineItemFormInput[];
+  extra_line_items?: ExtraLineItemInput[];
+  // Discount & deposit pre-fill
+  discount_cents?: number;
+  deposit_percent?: number;
 };
 
 type QuoteSubmitIntent = 'save' | 'send_email';
@@ -106,7 +118,7 @@ type SendDialogState = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const str = (value: number | null | undefined) => (value == null ? '' : String(value));
+const str = (value: string | number | null | undefined) => (value == null ? '' : String(value));
 const num = (value: string) => (!value.trim() ? null : Number(value));
 const intVal = (value: string, fallback = 0) => {
   const parsed = Number.parseInt(value, 10);
@@ -148,6 +160,66 @@ function buildInitialAdvancedEstimate(
   defaultValues?: QuoteFormDefaultValues
 ): InteriorEstimateFormState {
   const base = createEmptyInteriorEstimateState();
+  const estimateContext = defaultValues?.interior_estimate;
+
+  if (estimateContext) {
+    const roomOptions = estimateContext.rooms.length > 0
+      ? estimateContext.rooms
+      : base.rooms;
+
+    return {
+      ...base,
+      property_type: estimateContext.property_type,
+      estimate_mode: estimateContext.estimate_mode,
+      condition: estimateContext.condition,
+      scope: estimateContext.scope,
+      wall_paint_system:
+        normalizeInteriorWallPaintSystem(estimateContext.wall_paint_system) ??
+        base.wall_paint_system,
+      apartment_type: estimateContext.property_details.apartment_type ?? base.apartment_type,
+      apartment_sqm: str(estimateContext.property_details.sqm),
+      house_bedrooms: str(estimateContext.property_details.bedrooms),
+      house_bathrooms: str(estimateContext.property_details.bathrooms),
+      house_storeys: estimateContext.property_details.storeys ?? base.house_storeys,
+      house_sqm: str(estimateContext.property_details.sqm),
+      rooms: roomOptions.map((room) => ({
+        name: room.name,
+        anchor_room_type: room.anchor_room_type,
+        length_m: str(room.length_m),
+        width_m: str(room.width_m),
+        height_m: str(room.height_m ?? 2.7),
+        include_walls: room.include_walls,
+        include_ceiling: room.include_ceiling,
+        include_trim: room.include_trim,
+        include_doors: false,
+        include_windows: false,
+      })),
+      doors: estimateContext.opening_items
+        .filter((item) => item.opening_type === 'door')
+        .map((item) => ({
+          door_type: item.door_type ?? 'standard',
+          scope: item.door_scope ?? 'door_and_frame',
+          quantity: String(item.quantity),
+          paint_system: item.paint_system,
+          room_index: item.room_index == null ? '' : String(item.room_index) as `${number}`,
+        })),
+      windows: estimateContext.opening_items
+        .filter((item) => item.opening_type === 'window')
+        .map((item) => ({
+          window_type: item.window_type ?? 'normal',
+          scope: item.window_scope ?? 'window_and_frame',
+          quantity: String(item.quantity),
+          paint_system: item.paint_system,
+          room_index: item.room_index == null ? '' : String(item.room_index) as `${number}`,
+        })),
+      trim_items: estimateContext.trim_items.map((item) => ({
+        quantity: String(item.quantity),
+        paint_system: item.paint_system,
+        room_index: item.room_index == null ? '' : String(item.room_index) as `${number}`,
+      })),
+    };
+  }
+
   if (!defaultValues?.rooms?.length) return base;
   return {
     ...base,
@@ -193,6 +265,7 @@ function buildAdvancedEstimatePayload(
       estimate_mode: estimate.estimate_mode,
       condition: estimate.condition,
       scope: estimate.scope,
+      wall_paint_system: estimate.wall_paint_system,
       property_details,
       rooms: [],
       opening_items: [],
@@ -205,6 +278,7 @@ function buildAdvancedEstimatePayload(
     estimate_mode: estimate.estimate_mode,
     condition: estimate.condition,
     scope: estimate.scope,
+    wall_paint_system: estimate.wall_paint_system,
     property_details,
     rooms: estimate.rooms.map((room) => ({
       name: room.name.trim() || room.anchor_room_type,
@@ -284,21 +358,57 @@ function getCustomerProperties(customer: QuoteCustomerOption | null) {
 
 function PricingSummaryPanel({
   quoteNumberPreview,
+  onQuoteNumberChange,
   activeMethodLabel,
   status,
   validUntil,
   total,
   roomLines,
   summaryLines,
+  discountCents,
+  discountInput,
+  showDiscountEditor,
+  onDiscountInputChange,
+  onDiscountToggle,
+  depositPercent,
+  depositInput,
+  showDepositEditor,
+  onDepositInputChange,
+  onDepositToggle,
 }: {
   quoteNumberPreview: string;
+  onQuoteNumberChange?: (value: string) => void;
   activeMethodLabel: string;
   status: QuoteStatus;
   validUntil: string;
   total: number;
   roomLines: Array<{ label: string; value: number }>;
   summaryLines: SummaryLine[];
+  discountCents: number;
+  discountInput: string;
+  showDiscountEditor: boolean;
+  onDiscountInputChange: (value: string) => void;
+  onDiscountToggle: () => void;
+  depositPercent: number;
+  depositInput: string;
+  showDepositEditor: boolean;
+  onDepositInputChange: (value: string) => void;
+  onDepositToggle: () => void;
 }) {
+  const [isEditingNumber, setIsEditingNumber] = useState(false);
+  const [draftNumber, setDraftNumber] = useState(quoteNumberPreview);
+  const isEditable = onQuoteNumberChange != null && quoteNumberPreview !== 'Assigned on save';
+
+  function commitEdit() {
+    const trimmed = draftNumber.trim();
+    if (trimmed && trimmed !== quoteNumberPreview) {
+      onQuoteNumberChange?.(trimmed);
+    } else {
+      setDraftNumber(quoteNumberPreview);
+    }
+    setIsEditingNumber(false);
+  }
+
   const resolvedStatus = resolveQuoteStatus({
     status,
     valid_until: validUntil,
@@ -308,11 +418,41 @@ function PricingSummaryPanel({
     <div className="space-y-4">
       <section className="rounded-2xl border border-pm-border bg-white p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
               Quote Number
             </p>
-            <p className="mt-1 text-lg font-semibold text-pm-body">{quoteNumberPreview}</p>
+            {isEditingNumber ? (
+              <input
+                autoFocus
+                value={draftNumber}
+                onChange={(e) => setDraftNumber(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitEdit();
+                  if (e.key === 'Escape') { setDraftNumber(quoteNumberPreview); setIsEditingNumber(false); }
+                }}
+                className="mt-1 w-full rounded-lg border border-pm-teal-mid bg-white px-2 py-1 text-lg font-semibold text-pm-body focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => isEditable && setIsEditingNumber(true)}
+                className={[
+                  'mt-1 flex items-center gap-1.5 text-lg font-semibold text-pm-body',
+                  isEditable ? 'cursor-pointer rounded-lg px-0 hover:text-pm-teal transition-colors' : 'cursor-default',
+                ].join(' ')}
+                title={isEditable ? 'Click to edit quote number' : undefined}
+              >
+                {quoteNumberPreview}
+                {isEditable && (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pm-secondary">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                )}
+              </button>
+            )}
           </div>
           <div className="rounded-xl bg-pm-teal-light px-3 py-2 text-right">
             <p className="text-xs font-medium uppercase tracking-wide text-pm-teal-mid">
@@ -372,10 +512,99 @@ function PricingSummaryPanel({
                 ].join(' ')}
               >
                 {line.value > 0 && (line.label.includes('markup') || line.label === 'GST (10%)' || line.label === 'Adjustment') ? '+' : ''}
+                {line.negative && line.value > 0 ? '-' : ''}
                 {formatAUD(line.value)}
               </span>
             </div>
           ))}
+        </div>
+
+        {/* Discount & Deposit editors */}
+        <div className="mt-4 space-y-2 border-t border-pm-border pt-4">
+          {/* Discount */}
+          {showDiscountEditor ? (
+            <div className="rounded-xl border border-pm-coral/30 bg-pm-coral-pale/10 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-pm-coral-mid">Discount</span>
+                <button
+                  type="button"
+                  onClick={onDiscountToggle}
+                  className="text-xs text-pm-secondary hover:text-pm-coral-mid transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-pm-secondary">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={discountInput}
+                  onChange={(e) => onDiscountInputChange(e.target.value)}
+                  placeholder="0.00"
+                  className="h-10 flex-1 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-coral focus:outline-none focus:ring-2 focus:ring-pm-coral/20"
+                />
+                {discountCents > 0 && (
+                  <span className="text-sm font-medium text-pm-coral-mid">
+                    -{formatAUD(discountCents)}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onDiscountToggle}
+              className="flex w-full items-center gap-2 rounded-xl border border-dashed border-pm-border px-3 py-2.5 text-sm text-pm-secondary hover:border-pm-coral/50 hover:text-pm-coral-mid transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              Add discount
+            </button>
+          )}
+
+          {/* Deposit */}
+          {showDepositEditor ? (
+            <div className="rounded-xl border border-pm-teal-mid/30 bg-pm-teal-pale/10 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-pm-teal-mid">Deposit Required</span>
+                <button
+                  type="button"
+                  onClick={onDepositToggle}
+                  className="text-xs text-pm-secondary hover:text-pm-coral-mid transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={depositInput}
+                  onChange={(e) => onDepositInputChange(e.target.value)}
+                  placeholder="50"
+                  className="h-10 w-20 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                />
+                <span className="text-sm text-pm-secondary">% of total</span>
+                {depositPercent > 0 && (
+                  <span className="ml-auto text-sm font-medium text-pm-teal">
+                    = {formatAUD(Math.round(total * depositPercent / 100))}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onDepositToggle}
+              className="flex w-full items-center gap-2 rounded-xl border border-dashed border-pm-border px-3 py-2.5 text-sm text-pm-secondary hover:border-pm-teal-mid/50 hover:text-pm-teal-mid transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              Set deposit requirement
+            </button>
+          )}
         </div>
       </section>
     </div>
@@ -414,38 +643,82 @@ export function QuoteForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [activeSubmitIntent, setActiveSubmitIntent] = useState<QuoteSubmitIntent>('save');
+  const [editableQuoteNumber, setEditableQuoteNumber] = useState(quoteNumberPreview);
   const [selectedPropertyIndex, setSelectedPropertyIndex] = useState('0');
   const [sendDialog, setSendDialog] = useState<SendDialogState>(null);
+
+  // Discount & deposit state
+  const [discountCents, setDiscountCents] = useState(defaultValues?.discount_cents ?? 0);
+  const [discountInput, setDiscountInput] = useState(
+    defaultValues?.discount_cents ? String((defaultValues.discount_cents / 100).toFixed(2)) : ''
+  );
+  const [showDiscountEditor, setShowDiscountEditor] = useState(
+    (defaultValues?.discount_cents ?? 0) > 0
+  );
+  const [depositPercent, setDepositPercent] = useState(defaultValues?.deposit_percent ?? 0);
+  const [depositInput, setDepositInput] = useState(
+    defaultValues?.deposit_percent ? String(defaultValues.deposit_percent) : ''
+  );
+  const [showDepositEditor, setShowDepositEditor] = useState(
+    (defaultValues?.deposit_percent ?? 0) > 0
+  );
+
   // If pre-filled rooms exist (e.g., AI draft), start in advanced mode
   const [estimateMode, setEstimateMode] = useState<EstimateMode>(
-    defaultValues?.rooms?.length ? 'advanced' : 'quick'
+    defaultValues?.interior_estimate || defaultValues?.rooms?.length ? 'advanced' : 'quick'
   );
 
   // Pricing strategy (which method to use for this quote)
-  const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>(
-    normalizePreferredPricingStrategy(rateSettings?.pricing?.preferred_pricing_method)
-  );
+  const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>(() => {
+    if (defaultValues?.pricing_method) {
+      return normalizePreferredPricingStrategy(defaultValues.pricing_method);
+    }
+    return normalizePreferredPricingStrategy(rateSettings?.pricing?.preferred_pricing_method);
+  });
 
   // Day rate method state
-  const [dayRateState, setDayRateState] = useState<DayRateInputs>({
-    days: 1,
-    daily_rate_cents: rateSettings?.pricing?.daily_rate_cents ?? 80000,
-    material_method: rateSettings?.pricing?.material_cost_method ?? 'percentage',
-    material_percent: rateSettings?.pricing?.material_cost_percent ?? 30,
-    material_flat_cents: 0,
+  const [dayRateState, setDayRateState] = useState<DayRateInputs>(() => {
+    const saved = defaultValues?.pricing_method_inputs;
+    if (saved && saved.method === 'day_rate' && saved.inputs && typeof saved.inputs === 'object') {
+      return saved.inputs as DayRateInputs;
+    }
+    return {
+      days: 1,
+      daily_rate_cents: rateSettings?.pricing?.daily_rate_cents ?? 80000,
+      material_method: rateSettings?.pricing?.material_cost_method ?? 'percentage',
+      material_percent: rateSettings?.pricing?.material_cost_percent ?? 30,
+      material_flat_cents: 0,
+    };
   });
 
   // Room rate method state
-  const [roomRateItems, setRoomRateItems] = useState<RoomRateInputs['rooms']>([]);
+  const [roomRateItems, setRoomRateItems] = useState<RoomRateInputs['rooms']>(() => {
+    const saved = defaultValues?.pricing_method_inputs;
+    if (saved && saved.method === 'room_rate' && saved.inputs && typeof saved.inputs === 'object') {
+      const inputs = saved.inputs as RoomRateInputs;
+      return Array.isArray(inputs.rooms) ? inputs.rooms : [];
+    }
+    return [];
+  });
   const roomRatePresets = rateSettings?.room_rate_presets ?? [];
 
   // Manual method state
-  const [manualInputs, setManualInputs] = useState<ManualInputs>({ labor_cents: 0, material_cents: 0 });
+  const [manualInputs, setManualInputs] = useState<ManualInputs>(() => {
+    const saved = defaultValues?.pricing_method_inputs;
+    if (saved && saved.method === 'manual' && saved.inputs && typeof saved.inputs === 'object') {
+      return saved.inputs as ManualInputs;
+    }
+    return { labor_cents: 0, material_cents: 0 };
+  });
 
   // Materials & Services line items (library picker)
-  const [lineItems, setLineItems] = useState<QuoteLineItemFormInput[]>([]);
+  const [lineItems, setLineItems] = useState<QuoteLineItemFormInput[]>(
+    defaultValues?.line_items ?? []
+  );
   // Simple custom line items with optional toggle
-  const [extraLineItems, setExtraLineItems] = useState<ExtraLineItemInput[]>([]);
+  const [extraLineItems, setExtraLineItems] = useState<ExtraLineItemInput[]>(
+    defaultValues?.extra_line_items ?? []
+  );
 
   const [form, setForm] = useState({
     customer_id: defaultValues?.customer_id ?? '',
@@ -531,6 +804,7 @@ export function QuoteForm({
       ? composeQuoteTotals({
           base_subtotal_cents: subtotalWithMarkup,
           adjustment_cents: adjustmentCents,
+          discount_cents: discountCents,
           line_items: allLineItems,
         })
       : null;
@@ -546,11 +820,13 @@ export function QuoteForm({
     if (!methodPreview) return null;
     return composeQuoteTotals({
       base_subtotal_cents: methodPreview.subtotal_cents,
+      discount_cents: discountCents,
       line_items: allLineItems,
     });
-  }, [methodPreview, allLineItems]);
+  }, [methodPreview, allLineItems, discountCents]);
 
   const displayTotal = composedMethodPreview?.total_cents ?? hybridTotals?.total_cents ?? 0;
+  const depositCents = calculateDepositCents(displayTotal, depositPercent);
   const activeMethodLabel =
     pricingStrategy === 'hybrid'
       ? `Detailed Estimate · ${estimateMode === 'quick' ? 'Quick' : 'Advanced'}`
@@ -563,6 +839,13 @@ export function QuoteForm({
         }))
       : [];
   const summaryLines: SummaryLine[] = (() => {
+    const discountLine = discountCents > 0
+      ? [{ label: 'Discount', value: discountCents, negative: true }]
+      : [];
+    const depositLine = depositCents > 0
+      ? [{ label: `Deposit required (${depositPercent}%)`, value: depositCents, emphasize: false }]
+      : [];
+
     if (pricingStrategy === 'day_rate' && methodPreview && composedMethodPreview) {
       return [
         { label: 'Labour', value: methodPreview.labor_cents },
@@ -570,9 +853,11 @@ export function QuoteForm({
         ...(lineItemSubtotal > 0
           ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
           : []),
+        ...discountLine,
         { label: 'Subtotal (ex GST)', value: composedMethodPreview.subtotal_cents },
         { label: 'GST (10%)', value: composedMethodPreview.gst_cents },
         { label: 'Total (inc GST)', value: composedMethodPreview.total_cents, emphasize: true },
+        ...depositLine,
       ];
     }
 
@@ -587,9 +872,11 @@ export function QuoteForm({
         ...(lineItemSubtotal > 0
           ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
           : []),
+        ...discountLine,
         { label: 'Subtotal (ex GST)', value: composedMethodPreview.subtotal_cents },
         { label: 'GST (10%)', value: composedMethodPreview.gst_cents },
         { label: 'Total (inc GST)', value: composedMethodPreview.total_cents, emphasize: true },
+        ...depositLine,
       ];
     }
 
@@ -604,12 +891,14 @@ export function QuoteForm({
       ...(lineItemSubtotal > 0
         ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
         : []),
+      ...discountLine,
       { label: 'Subtotal (ex GST)', value: hybridTotals?.subtotal_cents ?? subtotalWithMarkup },
       { label: 'GST (10%)', value: hybridTotals?.gst_cents ?? 0 },
       ...(adjustmentCents !== 0
         ? [{ label: 'Adjustment', value: adjustmentCents, negative: adjustmentCents < 0 }]
         : []),
       { label: 'Total (inc GST)', value: hybridTotals?.total_cents ?? 0, emphasize: true },
+      ...depositLine,
     ];
   })();
 
@@ -623,6 +912,38 @@ export function QuoteForm({
         (pricingStrategy === 'room_rate' && roomRateItems.length > 0) ||
         (pricingStrategy === 'hybrid' && (estimateMode === 'advanced' || quickState.rooms.length > 0)))
   );
+
+  function handleDiscountInputChange(value: string) {
+    setDiscountInput(value);
+    const parsed = parseFloat(value);
+    setDiscountCents(Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : 0);
+  }
+
+  function handleDiscountToggle() {
+    if (showDiscountEditor) {
+      setDiscountCents(0);
+      setDiscountInput('');
+      setShowDiscountEditor(false);
+    } else {
+      setShowDiscountEditor(true);
+    }
+  }
+
+  function handleDepositInputChange(value: string) {
+    setDepositInput(value);
+    const parsed = parseInt(value, 10);
+    setDepositPercent(Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : 0);
+  }
+
+  function handleDepositToggle() {
+    if (showDepositEditor) {
+      setDepositPercent(0);
+      setDepositInput('');
+      setShowDepositEditor(false);
+    } else {
+      setShowDepositEditor(true);
+    }
+  }
 
   function handleChange(
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -719,6 +1040,15 @@ export function QuoteForm({
         interior_estimate,
         pricing_method: 'hybrid',
       };
+    }
+
+    // Attach discount & deposit
+    payload.discount_cents = discountCents;
+    payload.deposit_percent = depositPercent;
+
+    // Attach editable quote number if it's a real number (not the placeholder)
+    if (editableQuoteNumber && editableQuoteNumber !== 'Assigned on save') {
+      payload.quote_number = editableQuoteNumber;
     }
 
     return payload;
@@ -824,13 +1154,24 @@ export function QuoteForm({
         <div className="space-y-4">
           <div className="lg:hidden">
             <PricingSummaryPanel
-              quoteNumberPreview={quoteNumberPreview}
+              quoteNumberPreview={editableQuoteNumber}
+              onQuoteNumberChange={setEditableQuoteNumber}
               activeMethodLabel={activeMethodLabel}
               status={form.status}
               validUntil={form.valid_until}
               total={displayTotal}
               roomLines={roomSummaryLines}
               summaryLines={summaryLines}
+              discountCents={discountCents}
+              discountInput={discountInput}
+              showDiscountEditor={showDiscountEditor}
+              onDiscountInputChange={handleDiscountInputChange}
+              onDiscountToggle={handleDiscountToggle}
+              depositPercent={depositPercent}
+              depositInput={depositInput}
+              showDepositEditor={showDepositEditor}
+              onDepositInputChange={handleDepositInputChange}
+              onDepositToggle={handleDepositToggle}
             />
           </div>
 
@@ -967,6 +1308,13 @@ export function QuoteForm({
               <span>{label}</span>
             </button>
           ))}
+        </div>
+        <div className="mt-3 rounded-xl border border-pm-border bg-pm-surface/45 px-4 py-3 text-sm text-pm-secondary">
+          Using default rates from Price Rates.
+          {' '}
+          <a href="/price-rates" className="font-medium text-pm-teal underline underline-offset-2">
+            Edit default rates
+          </a>
         </div>
       </section>
 
@@ -1387,13 +1735,24 @@ export function QuoteForm({
         <aside className="hidden lg:block lg:self-stretch">
           <div className="lg:sticky lg:top-6">
             <PricingSummaryPanel
-              quoteNumberPreview={quoteNumberPreview}
+              quoteNumberPreview={editableQuoteNumber}
+              onQuoteNumberChange={setEditableQuoteNumber}
               activeMethodLabel={activeMethodLabel}
               status={form.status}
               validUntil={form.valid_until}
               total={displayTotal}
               roomLines={roomSummaryLines}
               summaryLines={summaryLines}
+              discountCents={discountCents}
+              discountInput={discountInput}
+              showDiscountEditor={showDiscountEditor}
+              onDiscountInputChange={handleDiscountInputChange}
+              onDiscountToggle={handleDiscountToggle}
+              depositPercent={depositPercent}
+              depositInput={depositInput}
+              showDepositEditor={showDepositEditor}
+              onDepositInputChange={handleDepositInputChange}
+              onDepositToggle={handleDepositToggle}
             />
           </div>
         </aside>

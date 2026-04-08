@@ -20,7 +20,10 @@ Implementation rules:
 - Treat schema, SQL, generated types, and validation as one coherent surface.
 - Prefer small, auditable changes over broad abstractions.
 - Do not make cosmetic UI changes beyond what is required to connect the backend flow.
-- When a task clearly matches the local db-schema skill, follow .agents/skills/db-schema/SKILL.md before implementing.
+- When a task involves Supabase login, schema inspection, remote SQL, migrations, generated DB types, or validator updates, treat .claude/skills/db-schema/SKILL.md as the source of truth and follow it before implementing.
+- For Supabase remote control, login, migration execution, and schema verification, use the workflow defined in .claude/skills/db-schema/SKILL.md.
+- Prefer the db-schema skill's remote-control path over local Supabase or ad hoc CLI workflows.
+- Do not assume local Supabase, Docker, or manual dashboard edits unless the db-schema skill explicitly requires them.
 - If onboarding requirements change, update the Supabase schema or migration files together with the app code.
 - Never leave onboarding data as app-only assumptions when a real persisted field is required.
 

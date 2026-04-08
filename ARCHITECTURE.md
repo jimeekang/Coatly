@@ -204,7 +204,7 @@ Business profile. 1:1 with `auth.users`. `user_id` is the PK.
 | room_id | uuid FK → quote_rooms | Cascade delete |
 | surface_type | text | `walls` \| `ceiling` \| `trim` \| `doors` \| `windows` \| `exterior_walls` \| `exterior_trim` \| `fascia` \| `gutters` |
 | area_m2 | numeric(8,2) | Surface area |
-| coating_type | text | `touch_up_1coat` \| `repaint_2coat` \| `new_plaster_3coat` \| `stain` \| `specialty` |
+| coating_type | text | `refresh_1coat` \| `repaint_2coat` \| `new_plaster_3coat` \| `stain` \| `specialty` |
 | rate_per_m2_cents | integer | Rate per m² |
 | material_cost_cents | integer | Material cost |
 | labour_cost_cents | integer | Labour cost |
@@ -651,7 +651,7 @@ auth.users (Supabase 관리)
 | room_id | uuid FK → quote_rooms | CASCADE 삭제 |
 | surface_type | text | `walls` \| `ceiling` \| `trim` \| `doors` \| `windows` \| `exterior_walls` \| `exterior_trim` \| `fascia` \| `gutters` |
 | area_m2 | numeric(8,2) | 면적 |
-| coating_type | text | `touch_up_1coat` \| `repaint_2coat` \| `new_plaster_3coat` \| `stain` \| `specialty` |
+| coating_type | text | `refresh_1coat` \| `repaint_2coat` \| `new_plaster_3coat` \| `stain` \| `specialty` |
 | rate_per_m2_cents | integer | m² 당 단가 |
 | material_cost_cents | integer | 자재비 |
 | labour_cost_cents | integer | 인건비 |
