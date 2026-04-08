@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Search, X, Plus, Package } from 'lucide-react';
-import { NumericInput, sanitizeDecimalInput } from '@/components/shared/NumericInput';
+import {
+  NumericInput,
+  sanitizeDecimalInput,
+  sanitizeIntegerInput,
+} from '@/components/shared/NumericInput';
 import {
   MATERIAL_ITEM_CATEGORIES,
   MATERIAL_ITEM_CATEGORY_LABELS,
@@ -22,6 +26,31 @@ interface LineItemPickerProps {
 }
 
 type PickerMode = 'browse' | 'custom' | { configure: MaterialItem };
+
+function requiresWholeNumberQuantity(category: MaterialItemCategory) {
+  return category === 'paint';
+}
+
+function sanitizeWholeNumberQuantityInput(value: string) {
+  const [integerPortion] = value.split('.');
+  return sanitizeIntegerInput(integerPortion ?? '');
+}
+
+function parseQuantityDraft(category: MaterialItemCategory, draft: string) {
+  if (draft.trim() === '') {
+    return null;
+  }
+
+  const parsed = requiresWholeNumberQuantity(category)
+    ? Number.parseInt(draft, 10)
+    : Number.parseFloat(draft);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
 
 export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerProps) {
   const [mode, setMode] = useState<PickerMode>('browse');
@@ -189,7 +218,9 @@ function ConfigureItem({
   onAdd: (qty: number) => void;
   onBack: () => void;
 }) {
-  const [qty, setQty] = useState(1);
+  const [qtyDraft, setQtyDraft] = useState('1');
+  const qty = parseQuantityDraft(item.category, qtyDraft) ?? 0;
+  const canAdd = qty > 0;
 
   return (
     <>
@@ -211,14 +242,13 @@ function ConfigureItem({
         <label className="block text-sm font-medium text-pm-body mb-1.5">
           Quantity ({item.unit})
         </label>
-        <input
-          type="number"
-          inputMode="decimal"
-          min="0.01"
-          step="0.01"
-          value={qty}
-          onChange={(e) => setQty(Math.max(0.01, parseFloat(e.target.value) || 0))}
+        <NumericInput
+          value={qtyDraft}
+          inputMode={requiresWholeNumberQuantity(item.category) ? 'numeric' : 'decimal'}
+          sanitize={requiresWholeNumberQuantity(item.category) ? sanitizeWholeNumberQuantityInput : sanitizeDecimalInput}
+          onValueChange={setQtyDraft}
           className="h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+          aria-label={`${item.name} quantity`}
         />
       </div>
 
@@ -232,7 +262,8 @@ function ConfigureItem({
       <button
         type="button"
         onClick={() => onAdd(qty)}
-        className="mt-4 h-12 w-full rounded-xl bg-pm-teal text-base font-semibold text-white"
+        disabled={!canAdd}
+        className="mt-4 h-12 w-full rounded-xl bg-pm-teal text-base font-semibold text-white disabled:opacity-50"
       >
         Add to Quote
       </button>
@@ -251,14 +282,14 @@ function CustomItemForm({
     name: string;
     category: MaterialItemCategory;
     unit: string;
-    quantity: number;
+    quantity: string;
     unit_price_cents: number;
     notes: string;
   }>({
     name: '',
     category: 'other',
     unit: 'item',
-    quantity: 1,
+    quantity: '1',
     unit_price_cents: 0,
     notes: '',
   });
@@ -267,17 +298,39 @@ function CustomItemForm({
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      if (name === 'category') {
+        const nextCategory = value as MaterialItemCategory;
+
+        return {
+          ...prev,
+          category: nextCategory,
+          quantity: requiresWholeNumberQuantity(nextCategory)
+            ? sanitizeWholeNumberQuantityInput(prev.quantity)
+            : prev.quantity,
+        };
+      }
+
+      return {
+        ...prev,
+        [name]: name === 'quantity' && requiresWholeNumberQuantity(prev.category)
+          ? sanitizeWholeNumberQuantityInput(value)
+          : value,
+      };
+    });
   }
 
   function handleSubmit() {
     if (!form.name.trim() || !form.unit.trim()) return;
+    const quantity = parseQuantityDraft(form.category, form.quantity);
+    if (quantity == null) return;
+
     onAdd({
       material_item_id: null,
       name: form.name.trim(),
       category: form.category,
       unit: form.unit.trim(),
-      quantity: form.quantity,
+      quantity,
       unit_price_cents: form.unit_price_cents,
       is_optional: false,
       is_selected: true,
@@ -285,8 +338,9 @@ function CustomItemForm({
     });
   }
 
-  const total = Math.round(form.quantity * form.unit_price_cents);
-  const canSubmit = form.name.trim() && form.unit.trim() && form.quantity > 0;
+  const parsedQuantity = parseQuantityDraft(form.category, form.quantity) ?? 0;
+  const total = Math.round(parsedQuantity * form.unit_price_cents);
+  const canSubmit = form.name.trim() && form.unit.trim() && parsedQuantity > 0;
 
   return (
     <>
@@ -319,15 +373,14 @@ function CustomItemForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-pm-body mb-1.5">Quantity</label>
-            <input
+            <NumericInput
               name="quantity"
-              type="number"
-              inputMode="decimal"
-              min="0.01"
-              step="0.01"
               value={form.quantity}
-              onChange={(e) => setForm((prev) => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
+              inputMode={requiresWholeNumberQuantity(form.category) ? 'numeric' : 'decimal'}
+              sanitize={requiresWholeNumberQuantity(form.category) ? sanitizeWholeNumberQuantityInput : sanitizeDecimalInput}
+              onValueChange={(value) => setForm((prev) => ({ ...prev, quantity: value }))}
               className={FIELD}
+              aria-label="Custom item quantity"
             />
           </div>
           <div>

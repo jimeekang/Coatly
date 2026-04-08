@@ -9,17 +9,17 @@ import {
 import { updateRateSettingsAction } from '@/app/actions/settings';
 import {
   COATING_LABELS,
-  COATING_TYPES,
   DOOR_SCOPE_LABELS,
   DOOR_SCOPES,
   PRICING_METHOD_LABELS,
   PRICING_METHODS,
   RATE_DOOR_TYPE_LABELS,
   RATE_DOOR_TYPES,
+  TRIM_COATING_TYPES,
   SQM_SURFACE_TYPE_LABELS,
-  SQM_SURFACE_TYPES,
   TRIM_PAINT_SYSTEM_LABELS,
   TRIM_PAINT_SYSTEMS,
+  WALL_CEILING_COATING_TYPES,
   WINDOW_SCOPE_LABELS,
   WINDOW_SCOPES,
   WINDOW_TYPE_LABELS,
@@ -108,7 +108,7 @@ function SectionHeading({ title, subtitle }: { title: string; subtitle?: string 
 
 // ─── Section: Surface per-sqm rates ───────────────────────────────────────────
 
-function SurfaceRatesSection({
+function WallCeilingRatesSection({
   rates,
   onSurfaceChange,
 }: {
@@ -118,8 +118,8 @@ function SurfaceRatesSection({
   return (
     <section>
       <SectionHeading
-        title="Surface Rates"
-        subtitle="Your default rate per sqm for walls, ceiling and trim."
+        title="Wall & Ceiling Rates"
+        subtitle="Default rate per sqm for walls and ceiling by coating type."
       />
       <div className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
         <table className="w-full min-w-[520px] text-sm">
@@ -128,7 +128,7 @@ function SurfaceRatesSection({
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-pm-secondary">
                 Surface
               </th>
-              {COATING_TYPES.map((c) => (
+              {WALL_CEILING_COATING_TYPES.map((c) => (
                 <th key={c} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
                   {COATING_LABELS[c]}
                 </th>
@@ -136,12 +136,12 @@ function SurfaceRatesSection({
             </tr>
           </thead>
           <tbody>
-            {SQM_SURFACE_TYPES.map((surface, i) => (
+            {(['walls', 'ceiling'] as const).map((surface, i) => (
               <tr key={surface} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
                 <td className="px-4 py-3 font-medium text-pm-body">
                   {SQM_SURFACE_TYPE_LABELS[surface]}
                 </td>
-                {COATING_TYPES.map((coating) => (
+                {WALL_CEILING_COATING_TYPES.map((coating) => (
                   <td key={coating} className="px-4 py-2 text-center">
                     <PriceInput
                       value={rates[surface][coating]}
@@ -152,6 +152,55 @@ function SurfaceRatesSection({
                 ))}
               </tr>
             ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function TrimRatesSection({
+  rates,
+  onSurfaceChange,
+}: {
+  rates: UserRateSettings;
+  onSurfaceChange: (surface: keyof UserRateSettings, coating: string, v: string) => void;
+}) {
+  return (
+    <section>
+      <SectionHeading
+        title="Trim Rates"
+        subtitle="Trim, skirting, and similar metre-based work. New plaster is not available here."
+      />
+      <div className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
+        <table className="w-full min-w-[420px] text-sm">
+          <thead>
+            <tr className="border-b border-pm-border bg-pm-surface">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                Surface
+              </th>
+              {TRIM_COATING_TYPES.map((coating) => (
+                <th key={coating} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  {COATING_LABELS[coating]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="bg-white">
+              <td className="px-4 py-3 font-medium text-pm-body">
+                {SQM_SURFACE_TYPE_LABELS.trim}
+              </td>
+              {TRIM_COATING_TYPES.map((coating) => (
+                <td key={coating} className="px-4 py-2 text-center">
+                  <PriceInput
+                    value={rates.trim[coating]}
+                    unit="/sqm"
+                    onChange={(v) => onSurfaceChange('trim', coating, v)}
+                  />
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>
@@ -922,7 +971,8 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
       {/* Detailed Estimate: show surface, door, window rate tables */}
       {activeTab === 'hybrid' && (
         <div className="space-y-10">
-          <SurfaceRatesSection rates={rates} onSurfaceChange={handleSurfaceChange} />
+          <WallCeilingRatesSection rates={rates} onSurfaceChange={handleSurfaceChange} />
+          <TrimRatesSection rates={rates} onSurfaceChange={handleSurfaceChange} />
           <DoorRatesSection
             rates={rates}
             onDoorRateChange={handleDoorRateChange}

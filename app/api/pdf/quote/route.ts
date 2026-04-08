@@ -6,6 +6,7 @@ import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import {
   isMissingQuoteCustomerSnapshotColumnError,
   mapQuoteDetail,
+  normalizeQuoteCoatingType,
   resolveQuoteCustomerSummary,
   type QuoteCoatingType,
   type QuoteSurfaceType,
@@ -169,7 +170,9 @@ export async function GET(request: NextRequest) {
               room_id: surface.room_id,
               surface_type: surface.surface_type as QuoteSurfaceType,
               area_m2: Number(surface.area_m2),
-              coating_type: surface.coating_type as QuoteCoatingType | null,
+              coating_type: normalizeQuoteCoatingType(
+                surface.coating_type as QuoteCoatingType | 'touch_up_1coat' | null
+              ),
               rate_per_m2_cents: surface.rate_per_m2_cents,
               material_cost_cents: surface.material_cost_cents,
               labour_cost_cents: surface.labour_cost_cents,

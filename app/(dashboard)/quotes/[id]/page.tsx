@@ -10,6 +10,8 @@ import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from 
 import { formatAUD, formatDate } from '@/utils/format';
 import { ProfitabilityCard } from '@/components/quotes/ProfitabilityCard';
 import { QuoteStatusCard } from '@/components/quotes/QuoteStatusCard';
+import { DuplicateQuoteButton } from '@/components/quotes/DuplicateQuoteButton';
+import { DeleteQuoteButton } from '@/components/quotes/DeleteQuoteButton';
 import { getBusinessRateSettings } from '@/lib/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -84,7 +86,7 @@ export default async function QuoteDetailPage({
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/quotes"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors active:bg-pm-border"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors active:bg-pm-border"
           aria-label="Back to quotes"
         >
           <svg
@@ -101,7 +103,7 @@ export default async function QuoteDetailPage({
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </Link>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-pm-body">
             {quote?.quote_number ?? 'Quote'}
           </h1>
@@ -109,6 +111,28 @@ export default async function QuoteDetailPage({
             {quote ? QUOTE_STATUS_LABELS[quote.status] : 'Quote not found'}
           </p>
         </div>
+        {quote && (
+          <Link
+            href={`/quotes/${id}/edit`}
+            className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            Edit
+          </Link>
+        )}
       </div>
 
       {error || !quote ? (
@@ -145,6 +169,9 @@ export default async function QuoteDetailPage({
               <p>Quote number: {quote.quote_number}</p>
               <p>Valid until: {quote.valid_until ? formatDate(quote.valid_until) : '—'}</p>
               <p>Total: {formatAUD(quote.total_cents)}</p>
+              <p className="text-xs text-pm-secondary">
+                Last modified: {formatDate(quote.updated_at)}
+              </p>
               {publicQuoteUrl && (
                 <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
@@ -508,6 +535,8 @@ export default async function QuoteDetailPage({
                 Open Client Page
               </Link>
             )}
+            <DuplicateQuoteButton quoteId={quote.id} />
+            <DeleteQuoteButton quoteId={quote.id} quoteNumber={quote.quote_number} />
           </div>
         </div>
       )}

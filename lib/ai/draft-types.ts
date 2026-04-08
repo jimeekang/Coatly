@@ -57,7 +57,7 @@ export type AICustomerDraft = {
 export type AIQuoteSurfaceDraft = {
   surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
   coating_type:
-    | 'touch_up_1coat'
+    | 'refresh_1coat'
     | 'repaint_2coat'
     | 'new_plaster_3coat'
     | 'stain'

@@ -98,7 +98,7 @@ const customerDraftSchema = z.object({
 const quoteSurfaceDraftSchema = z.object({
   surface_type: z.enum(['walls', 'ceiling', 'trim', 'doors', 'windows']),
   coating_type: z.enum([
-    'touch_up_1coat',
+    'refresh_1coat',
     'repaint_2coat',
     'new_plaster_3coat',
     'stain',

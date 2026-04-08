@@ -8,8 +8,10 @@ import {
   INTERIOR_ROOM_TYPES,
   INTERIOR_SCOPE_OPTIONS,
   INTERIOR_STOREYS,
+  INTERIOR_WALL_PAINT_SYSTEMS,
   INTERIOR_WINDOW_SCOPES,
   INTERIOR_WINDOW_TYPES,
+  normalizeInteriorWallPaintSystem,
 } from '@/lib/interior-estimates';
 import { ratePresetSchema } from '@/lib/rate-settings';
 import { isValidStorageReference } from '@/lib/supabase/storage';
@@ -293,13 +295,16 @@ export const quoteLineItemUpdateSchema = quoteLineItemInsertSchema.partial();
 export const quoteSurfaceSchema = z.object({
   surface_type: z.enum(['walls', 'ceiling', 'trim', 'doors', 'windows']),
   area_m2: z.number().positive('Area must be greater than zero'),
-  coating_type: z.enum([
-    'touch_up_1coat',
-    'repaint_2coat',
-    'new_plaster_3coat',
-    'stain',
-    'specialty',
-  ]),
+  coating_type: z
+    .enum([
+      'refresh_1coat',
+      'touch_up_1coat',
+      'repaint_2coat',
+      'new_plaster_3coat',
+      'stain',
+      'specialty',
+    ])
+    .transform((value) => (value === 'touch_up_1coat' ? 'refresh_1coat' : value)),
   rate_per_m2_cents: z
     .number()
     .int('Rate must be a whole number of cents')
@@ -319,6 +324,10 @@ export const quoteRoomSchema = z.object({
 const interiorScopeSchema = z
   .array(z.enum(INTERIOR_SCOPE_OPTIONS))
   .min(1, 'Select at least one scope item');
+
+const interiorWallPaintSystemSchema = z
+  .enum([...INTERIOR_WALL_PAINT_SYSTEMS, 'touch_up_2coat'] as const)
+  .transform((value) => normalizeInteriorWallPaintSystem(value) ?? 'repaint_2coat');
 
 const interiorEstimateRoomSchema = z.object({
   name: z.string().trim().min(1, 'Room name is required'),
@@ -400,6 +409,7 @@ export const interiorEstimateSchema = z
     estimate_mode: z.enum(['entire_property', 'specific_areas']),
     condition: z.enum(INTERIOR_CONDITIONS),
     scope: interiorScopeSchema,
+    wall_paint_system: interiorWallPaintSystemSchema.default('repaint_2coat'),
     property_details: z.object({
       apartment_type: z.enum(INTERIOR_APARTMENT_TYPES).nullable().optional(),
       sqm: z.number().positive('Size must be greater than zero').nullable().optional(),
@@ -489,6 +499,7 @@ export const quoteCreateSchema = z.object({
   customer_id: z.string().trim().uuid('Select a customer'),
   customer_email: z.string().trim().email('Select a valid customer email').optional(),
   customer_address: z.string().trim().max(500, 'Customer address must be 500 characters or less').optional(),
+  quote_number: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1, 'Quote title is required'),
   status: z.enum(['draft', 'sent', 'approved', 'rejected', 'expired']).default('draft'),
   valid_until: optionalIsoDateString,
@@ -517,19 +528,41 @@ export const quoteCreateSchema = z.object({
     .min(-10_000_00, 'Adjustment cannot exceed -$10,000')
     .max(10_000_00, 'Adjustment cannot exceed $10,000')
     .default(0),
+  discount_cents: z
+    .number()
+    .int('Discount must be a whole number of cents')
+    .min(0, 'Discount must be zero or greater')
+    .max(1_000_000_00, 'Discount cannot exceed $1,000,000')
+    .default(0),
+  deposit_percent: z
+    .number()
+    .int('Deposit must be a whole number percent')
+    .min(0, 'Deposit must be zero or greater')
+    .max(100, 'Deposit cannot exceed 100%')
+    .default(0),
   rooms: z.array(quoteRoomSchema).default([]),
   interior_estimate: interiorEstimateSchema.optional(),
-  line_items: z.array(z.object({
-    material_item_id: z.string().uuid().nullable().optional(),
-    name: z.string().trim().min(1, 'Item name is required').max(200),
-    category: z.enum(['paint', 'primer', 'supply', 'service', 'other'] as const).default('other'),
-    unit: z.string().trim().min(1, 'Unit is required').max(50).default('item'),
-    quantity: z.number().positive('Quantity must be greater than zero').multipleOf(0.01),
-    unit_price_cents: z.number().int('Price must be a whole number of cents').min(0, 'Price must be zero or greater'),
-    is_optional: z.boolean().default(false),
-    is_selected: z.boolean().default(true),
-    notes: z.string().trim().max(500).optional(),
-  })).default([]),
+  line_items: z.array(
+    z.object({
+      material_item_id: z.string().uuid().nullable().optional(),
+      name: z.string().trim().min(1, 'Item name is required').max(200),
+      category: z.enum(['paint', 'primer', 'supply', 'service', 'other'] as const).default('other'),
+      unit: z.string().trim().min(1, 'Unit is required').max(50).default('item'),
+      quantity: z.number().positive('Quantity must be greater than zero').multipleOf(0.01),
+      unit_price_cents: z.number().int('Price must be a whole number of cents').min(0, 'Price must be zero or greater'),
+      is_optional: z.boolean().default(false),
+      is_selected: z.boolean().default(true),
+      notes: z.string().trim().max(500).optional(),
+    }).superRefine((item, ctx) => {
+      if (item.category === 'paint' && !Number.isInteger(item.quantity)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Paint quantity must be a whole number',
+          path: ['quantity'],
+        });
+      }
+    })
+  ).default([]),
   pricing_method: z
     .enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid'])
     .default('hybrid'),
@@ -756,6 +789,14 @@ export const quoteLineItemFormSchema = z.object({
     .max(500)
     .optional()
     .transform((v) => v ?? null),
+}).superRefine((value, ctx) => {
+  if (value.category === 'paint' && !Number.isInteger(value.quantity)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Paint quantity must be a whole number',
+      path: ['quantity'],
+    });
+  }
 });
 
 export type QuoteLineItemFormInput = z.input<typeof quoteLineItemFormSchema>;

@@ -8,7 +8,7 @@ export const INTERIOR_SCOPE_OPTIONS = ['walls', 'ceiling', 'trim'] as const;
 export const INTERIOR_STOREYS = ['1_storey', '2_storey', '3_storey'] as const;
 export const INTERIOR_PAINT_SYSTEMS = ['oil_2coat', 'water_3coat_white_finish'] as const;
 // Wall/ceiling paint systems (separate from trim)
-export const INTERIOR_WALL_PAINT_SYSTEMS = ['standard_2coat', 'new_plaster_3coat'] as const;
+export const INTERIOR_WALL_PAINT_SYSTEMS = ['refresh_1coat', 'repaint_2coat', 'new_plaster_3coat'] as const;
 export const INTERIOR_ROOM_TYPES = ['Master Bedroom', 'Bedroom 1', 'Bedroom 2', 'Bedroom 3', 'Bathroom', 'Living Room', 'Lounge', 'Dining', 'Kitchen', 'Study / Office', 'Laundry', 'Hallway', 'Foyer', 'Stairwell', 'Walk-in Robe', 'Other'] as const;
 export const INTERIOR_DOOR_TYPES = ['standard', 'flush', 'panelled', 'french', 'sliding', 'bi_fold'] as const;
 export const INTERIOR_DOOR_SCOPES = ['door_and_frame', 'door_only', 'frame_only'] as const;
@@ -49,7 +49,11 @@ export const INTERIOR_STOREY_LABELS: Record<InteriorStoreys, string> = { '1_stor
 // Trim-only paint system labels (oil vs water base)
 export const INTERIOR_PAINT_SYSTEM_LABELS: Record<InteriorPaintSystem, string> = { oil_2coat: 'Oil Base', water_3coat_white_finish: 'Water Base' };
 // Wall/ceiling paint system labels
-export const INTERIOR_WALL_PAINT_SYSTEM_LABELS: Record<InteriorWallPaintSystem, string> = { standard_2coat: 'Standard (2-coat)', new_plaster_3coat: 'New Plaster (3-coat)' };
+export const INTERIOR_WALL_PAINT_SYSTEM_LABELS: Record<InteriorWallPaintSystem, string> = {
+  refresh_1coat: 'Refresh (1 coat)',
+  repaint_2coat: 'Repaint (2 coats)',
+  new_plaster_3coat: 'New Plaster (3 coats)',
+};
 export const INTERIOR_DOOR_TYPE_LABELS: Record<InteriorDoorType, string> = {
   standard: 'Standard',
   flush: 'Flush',
@@ -67,6 +71,7 @@ export type InteriorEstimateInput = {
   estimate_mode: InteriorEstimateMode;
   condition: InteriorCondition;
   scope: InteriorScope[];
+  wall_paint_system?: InteriorWallPaintSystem;
   property_details: {
     apartment_type?: InteriorApartmentType | null;
     sqm?: number | null;
@@ -137,6 +142,19 @@ export type InteriorPricingSnapshot = {
 type RangeCents = { min: number; median: number; max: number };
 
 const MAX_TOTAL_CENTS = INTERIOR_ESTIMATE_ANCHORS.price_caps.max_total_price * 100;
+const LEGACY_REFRESH_WALL_PAINT_SYSTEM = 'touch_up_2coat';
+
+export function normalizeInteriorWallPaintSystem(
+  value: unknown
+): InteriorWallPaintSystem | null {
+  if (value === LEGACY_REFRESH_WALL_PAINT_SYSTEM) {
+    return 'refresh_1coat';
+  }
+
+  return INTERIOR_WALL_PAINT_SYSTEMS.includes(value as InteriorWallPaintSystem)
+    ? (value as InteriorWallPaintSystem)
+    : null;
+}
 
 function cap(value: number) {
   return Math.min(Math.max(Math.round(value), 0), MAX_TOTAL_CENTS);
@@ -255,7 +273,11 @@ function getQuantityScaleFactor(quantity: number) {
   return 1;
 }
 
-function getSurfaceRateMultiplier(scope: InteriorScope[], userRates?: UserRateSettings | null) {
+function getSurfaceRateMultiplier(
+  scope: InteriorScope[],
+  wallPaintSystem: InteriorWallPaintSystem = 'repaint_2coat',
+  userRates?: UserRateSettings | null
+) {
   const normalized = [...new Set(scope)];
   if (!userRates || normalized.length === 0) return 1;
 
@@ -266,8 +288,8 @@ function getSurfaceRateMultiplier(scope: InteriorScope[], userRates?: UserRateSe
   };
 
   const ratios: Record<InteriorScope, number> = {
-    walls: userRates.walls.repaint_2coat / PAINT_RATES.walls.repaint_2coat.ratePerSqm,
-    ceiling: userRates.ceiling.repaint_2coat / PAINT_RATES.ceiling.repaint_2coat.ratePerSqm,
+    walls: userRates.walls[wallPaintSystem] / PAINT_RATES.walls[wallPaintSystem].ratePerSqm,
+    ceiling: userRates.ceiling[wallPaintSystem] / PAINT_RATES.ceiling[wallPaintSystem].ratePerSqm,
     trim: userRates.trim.repaint_2coat / PAINT_RATES.trim.repaint_2coat.ratePerSqm,
   };
 
@@ -349,7 +371,11 @@ function calculateEntireApartmentEstimate(input: InteriorEstimateInput, userRate
   const apartmentType = input.property_details.apartment_type ?? '2_bedroom_standard';
   const condition = getCondition('apartment', input.condition);
   const scope_multiplier = getScopeMultiplier(input.scope);
-  const surface_rate_multiplier = getSurfaceRateMultiplier(input.scope, userRates);
+  const surface_rate_multiplier = getSurfaceRateMultiplier(
+    input.scope,
+    input.wall_paint_system ?? 'repaint_2coat',
+    userRates
+  );
   const baseRange = input.property_details.sqm != null
     ? { min: interpolateMedian(INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_sqm_curve, input.property_details.sqm) * 0.88 * 100, median: interpolateMedian(INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_sqm_curve, input.property_details.sqm) * 100, max: interpolateMedian(INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_sqm_curve, input.property_details.sqm) * 1.14 * 100 }
     : { min: INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_apt_type[apartmentType].min * 100, median: INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_apt_type[apartmentType].median * 100, max: INTERIOR_ESTIMATE_ANCHORS.apartment.entire_property.by_apt_type[apartmentType].max * 100 };
@@ -383,7 +409,11 @@ function calculateEntireHouseEstimate(input: InteriorEstimateInput, userRates?: 
   const condition = getCondition('house', input.condition);
   const scope_multiplier = getScopeMultiplier(input.scope);
   const storey_multiplier = getStoreyMultiplier(input.property_details.storeys);
-  const surface_rate_multiplier = getSurfaceRateMultiplier(input.scope, userRates);
+  const surface_rate_multiplier = getSurfaceRateMultiplier(
+    input.scope,
+    input.wall_paint_system ?? 'repaint_2coat',
+    userRates
+  );
   const range = clampRangeGap(
     {
       min: baseRange.min * 100 * scope_multiplier * storey_multiplier * condition.min_mult * surface_rate_multiplier,
@@ -413,7 +443,12 @@ function calculateSpecificAreasEstimate(input: InteriorEstimateInput, userRates?
   const storey_multiplier = input.property_type === 'house' ? getStoreyMultiplier(input.property_details.storeys) : 1;
   const conditionMedian = (condition.min_mult + condition.max_mult) / 2;
   const quantityScaleFactor = getQuantityScaleFactor(input.opening_items.reduce((sum, item) => sum + item.quantity, 0));
-  const defaultSurfaceRateMultiplier = getSurfaceRateMultiplier(input.scope, userRates);
+  const wallPaintSystem = input.wall_paint_system ?? 'repaint_2coat';
+  const defaultSurfaceRateMultiplier = getSurfaceRateMultiplier(
+    input.scope,
+    wallPaintSystem,
+    userRates
+  );
   const pricing_items: InteriorPricingItem[] = [];
   let min = 0;
   let median = 0;
@@ -426,7 +461,7 @@ function calculateSpecificAreasEstimate(input: InteriorEstimateInput, userRates?
     if (room.include_trim) roomScope.push('trim');
     const activeScope = roomScope.length > 0 ? roomScope : input.scope;
     const scopeMultiplier = getScopeMultiplier(activeScope);
-    const surfaceRateMultiplier = getSurfaceRateMultiplier(activeScope, userRates);
+    const surfaceRateMultiplier = getSurfaceRateMultiplier(activeScope, wallPaintSystem, userRates);
     const anchor = roomAnchors[room.anchor_room_type];
     const itemMedian = cap(anchor.median * 100 * scopeMultiplier * storey_multiplier * conditionMedian * surfaceRateMultiplier);
     min += cap(anchor.min * 100 * scopeMultiplier * storey_multiplier * condition.min_mult * surfaceRateMultiplier);

@@ -8,7 +8,10 @@ import {
   type RatePresetSurfaceType,
   type UserRateSettings,
 } from '@/lib/rate-settings';
-import type { InteriorEstimateInput as NormalizedInteriorEstimateInput } from '@/lib/interior-estimates';
+import {
+  normalizeInteriorWallPaintSystem,
+  type InteriorEstimateInput as NormalizedInteriorEstimateInput,
+} from '@/lib/interior-estimates';
 import {
   quoteCreateSchema,
   type InteriorEstimate,
@@ -31,11 +34,14 @@ export type QuoteEstimateItemCategory =
   | 'skirting'
   | 'modifier';
 export type QuoteCoatingType =
-  | 'touch_up_1coat'
+  | 'refresh_1coat'
   | 'repaint_2coat'
   | 'new_plaster_3coat'
   | 'stain'
   | 'specialty';
+export type QuoteCoatingTypeDb =
+  | 'touch_up_1coat'
+  | QuoteCoatingType;
 
 export type QuoteCustomerOption = {
   id: string;
@@ -177,22 +183,30 @@ export function calculateQuoteLineItemsSubtotal(items: QuotePricedLineItem[] = [
 export function composeQuoteTotals({
   base_subtotal_cents,
   adjustment_cents = 0,
+  discount_cents = 0,
   line_items = [],
 }: {
   base_subtotal_cents: number;
   adjustment_cents?: number;
+  discount_cents?: number;
   line_items?: QuotePricedLineItem[];
 }) {
   const line_items_subtotal_cents = calculateQuoteLineItemsSubtotal(line_items);
   const subtotal_cents = base_subtotal_cents + line_items_subtotal_cents;
-  const gst_cents = Math.round(subtotal_cents * 0.1);
+  const discounted_subtotal_cents = Math.max(0, subtotal_cents - discount_cents);
+  const gst_cents = Math.round(discounted_subtotal_cents * 0.1);
 
   return {
     line_items_subtotal_cents,
     subtotal_cents,
     gst_cents,
-    total_cents: subtotal_cents + gst_cents + adjustment_cents,
+    total_cents: discounted_subtotal_cents + gst_cents + adjustment_cents,
   };
+}
+
+export function calculateDepositCents(total_cents: number, deposit_percent: number) {
+  if (deposit_percent <= 0) return 0;
+  return Math.round(total_cents * deposit_percent / 100);
 }
 
 export type QuoteListItem = {
@@ -236,6 +250,8 @@ export type QuoteDetail = {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  discount_cents: number;
+  deposit_percent: number;
   estimate_category: QuoteEstimateCategory;
   property_type: 'apartment' | 'house' | null;
   estimate_mode: 'entire_property' | 'specific_areas' | null;
@@ -344,7 +360,7 @@ export const QUOTE_SURFACE_LABELS: Record<QuoteSurfaceType, string> = {
 };
 
 export const QUOTE_COATING_LABELS: Record<QuoteCoatingType, string> = {
-  touch_up_1coat: 'Touch-up (1 coat)',
+  refresh_1coat: 'Refresh (1 coat)',
   repaint_2coat: COATING_TYPE_LABELS.repaint_2coat,
   new_plaster_3coat: COATING_TYPE_LABELS.new_plaster_3coat,
   stain: 'Stain / Sealer',
@@ -374,6 +390,8 @@ function normalizeInteriorEstimate(
     estimate_mode: estimate.estimate_mode,
     condition: estimate.condition,
     scope: estimate.scope,
+    wall_paint_system:
+      normalizeInteriorWallPaintSystem(estimate.wall_paint_system) ?? 'repaint_2coat',
     property_details: {
       apartment_type: estimate.property_details.apartment_type ?? null,
       sqm: estimate.property_details.sqm ?? null,
@@ -424,8 +442,8 @@ function mapRateSurfaceType(surfaceType: QuoteSurfaceType): RatePresetSurfaceTyp
 
 function mapRateCoatingType(coatingType: QuoteCoatingType) {
   switch (coatingType) {
-    case 'touch_up_1coat':
-      return 'touch_up_2coat' as const;
+    case 'refresh_1coat':
+      return 'refresh_1coat' as const;
     case 'new_plaster_3coat':
       return 'new_plaster_3coat' as const;
     case 'repaint_2coat':
@@ -434,6 +452,26 @@ function mapRateCoatingType(coatingType: QuoteCoatingType) {
     case 'specialty':
       return 'repaint_2coat' as const;
   }
+}
+
+export function normalizeQuoteCoatingType(
+  coatingType: QuoteCoatingTypeDb | null | undefined
+): QuoteCoatingType {
+  if (coatingType === 'touch_up_1coat') return 'refresh_1coat';
+  return coatingType ?? 'repaint_2coat';
+}
+
+export function serializeQuoteCoatingType(
+  coatingType: QuoteCoatingType | null | undefined
+): QuoteCoatingTypeDb {
+  return coatingType ?? 'repaint_2coat';
+}
+
+export function serializeLegacyQuoteCoatingType(
+  coatingType: QuoteCoatingType | null | undefined
+): QuoteCoatingTypeDb {
+  if (coatingType === 'refresh_1coat') return 'touch_up_1coat';
+  return coatingType ?? 'repaint_2coat';
 }
 
 function roundToOneDecimal(value: number) {
@@ -621,6 +659,7 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       customer_id: parsed.data.customer_id,
       customer_email: parsed.data.customer_email?.trim() || null,
       customer_address: parsed.data.customer_address?.trim() || null,
+      quote_number: parsed.data.quote_number?.trim() || null,
       title: parsed.data.title.trim(),
       status: parsed.data.status,
       valid_until: parsed.data.valid_until,
@@ -628,6 +667,8 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       labour_margin_percent: parsed.data.labour_margin_percent,
       material_margin_percent: parsed.data.material_margin_percent,
       manual_adjustment_cents: parsed.data.manual_adjustment_cents ?? 0,
+      discount_cents: parsed.data.discount_cents ?? 0,
+      deposit_percent: parsed.data.deposit_percent ?? 0,
       notes: parsed.data.notes?.trim() || null,
       internal_notes: parsed.data.internal_notes?.trim() || null,
       pricing_method: parsed.data.pricing_method,
@@ -740,6 +781,8 @@ export function mapQuoteDetail(row: {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  discount_cents?: number | null;
+  deposit_percent?: number | null;
   estimate_category?: string | null;
   property_type?: string | null;
   estimate_mode?: string | null;
@@ -763,7 +806,7 @@ export function mapQuoteDetail(row: {
       room_id: string;
       surface_type: QuoteSurfaceType;
       area_m2: number;
-      coating_type: QuoteCoatingType | null;
+      coating_type: QuoteCoatingTypeDb | null;
       rate_per_m2_cents: number;
       material_cost_cents: number;
       labour_cost_cents: number;
@@ -805,6 +848,8 @@ export function mapQuoteDetail(row: {
     pricing_snapshot: row.pricing_snapshot ?? {},
     pricing_method: (row.pricing_method as PricingMethod | null) ?? 'hybrid',
     pricing_method_inputs: (row.pricing_method_inputs as PricingMethodInputs | null) ?? null,
+    discount_cents: row.discount_cents ?? 0,
+    deposit_percent: row.deposit_percent ?? 0,
     created_at: row.created_at,
     updated_at: row.updated_at,
     customer: resolveQuoteCustomerSummary(row),
@@ -814,7 +859,7 @@ export function mapQuoteDetail(row: {
         room_id: surface.room_id,
         surface_type: surface.surface_type,
         area_m2: surface.area_m2,
-        coating_type: surface.coating_type ?? 'repaint_2coat',
+        coating_type: normalizeQuoteCoatingType(surface.coating_type),
         rate_per_m2_cents: surface.rate_per_m2_cents,
         material_cost_cents: surface.material_cost_cents,
         labour_cost_cents: surface.labour_cost_cents,

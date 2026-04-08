@@ -10,7 +10,7 @@
  *  - Condition Good/Normal/Poor → excellent/fair/poor
  *  - Skirting toggle → auto-estimated lm from room size
  *  - paint_system is per-room and only applies to trim items
- *    (walls/ceiling use the standard 2-coat base from anchor pricing)
+ *    (walls/ceiling use the selected wall coating from the quote form)
  */
 
 import {
@@ -68,7 +68,7 @@ export type QuickRoom = {
 };
 
 export type QuickQuoteInput = {
-  /** Paint system for walls/ceiling: standard 2-coat or new plaster 3-coat */
+  /** Coating for walls/ceiling: refresh, repaint, or new plaster */
   wall_paint_system: InteriorWallPaintSystem;
   rooms: QuickRoom[];
 };
@@ -94,12 +94,6 @@ export const QUICK_SKIRTING_LM: Record<QuickRoomSize, number> = {
   small: 10,
   medium: 16,
   large: 22,
-};
-
-/** Price multiplier for walls/ceiling based on paint system (new plaster needs extra coat) */
-export const QUICK_WALL_PAINT_MULTIPLIERS: Record<InteriorWallPaintSystem, number> = {
-  standard_2coat: 1.0,
-  new_plaster_3coat: 1.2,
 };
 
 // ─── Scope helpers ────────────────────────────────────────────────────────────
@@ -214,11 +208,9 @@ export function mapQuickQuoteToInteriorEstimate(
   });
 
   // Build size_multipliers map — indexed by room position.
-  // Also applies wall_paint_system multiplier (new plaster = 1.2x).
-  const wallMult = QUICK_WALL_PAINT_MULTIPLIERS[wall_paint_system];
   const sizeMultipliers: Record<number, number> = {};
   rooms.forEach((room, index) => {
-    sizeMultipliers[index] = QUICK_SIZE_MULTIPLIERS[room.size] * wallMult;
+    sizeMultipliers[index] = QUICK_SIZE_MULTIPLIERS[room.size];
   });
 
   return {
@@ -226,6 +218,7 @@ export function mapQuickQuoteToInteriorEstimate(
     estimate_mode: 'specific_areas',
     condition: dominantCondition,
     scope: ['walls', 'ceiling', 'trim'],
+    wall_paint_system,
     property_details: {
       apartment_type: null,
       sqm: null,

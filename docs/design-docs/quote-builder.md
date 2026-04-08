@@ -17,7 +17,7 @@ Quote (견적서)
   │     └── QuoteRoomSurface (도색 면) × N
   │           ├── surface_type: walls | ceiling | trim | doors | ...
   │           ├── area_sqm: 자동 계산 or 수동 입력
-  │           ├── coating_type: touch_up_1coat | repaint_2coat | ...
+  │           ├── coating_type: refresh_1coat | repaint_2coat | ...
   │           ├── complexity: standard | moderate | complex
   │           ├── rate_per_sqm_cents: 단가 (base × complexity multiplier)
   │           ├── material_cost_cents, labour_cost_cents
@@ -39,6 +39,7 @@ Quote (견적서)
 - Complexity는 **labour cost에 적용되는 배율**로, 같은 면적·코팅이어도 현장 조건에 따라 단가가 달라짐
 - `config/paint-rates.ts`에 면 종류 × 코팅 방식별 기본 단가 정의
 - 사용자가 단가 커스터마이즈 가능
+- 사용자 용어는 `Touch-up` 대신 `Refresh`를 사용하고, `New Plaster (3 coats)`는 walls/ceiling 전용으로 제한
 
 ## 상태 워크플로우
 

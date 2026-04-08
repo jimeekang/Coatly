@@ -40,8 +40,16 @@
 페인터가 자신의 단가를 커스터마이즈하는 흐름.
 
 1. `/settings/price-rates` 접근
-2. 면 종류 × 코팅 방식별 단가(cents) 수정
-3. 저장 → 이후 모든 견적 계산에 반영
+2. `walls`, `ceiling`은 `Refresh (1 coat) / Repaint (2 coats) / New Plaster (3 coats)` 기준으로 단가 수정
+3. `trim`, `doors`, `windows`는 별도 가격 체계로 관리
+4. 저장 → 이후 모든 견적 계산에 반영
+
+### 설계 결정
+
+- 기본 rate preset 관리는 `Quote`가 아니라 `Price Rates`에서 수행
+- `new_plaster_3coat`는 `walls`, `ceiling`에만 적용
+- `trim`, `doors`, `windows`는 `new_plaster_3coat`를 사용하지 않음
+- 사용자 라벨은 `Touch-up` 대신 `Refresh`로 표기
 
 ## Acceptance Criteria
 

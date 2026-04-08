@@ -4,8 +4,11 @@ import {
   calculateQuotePreview,
   getSuggestedRatePerSqmCents,
   isQuoteExpired,
+  normalizeQuoteCoatingType,
   parseQuoteCreateInput,
   resolveQuoteStatus,
+  serializeLegacyQuoteCoatingType,
+  serializeQuoteCoatingType,
 } from '@/lib/quotes';
 
 describe('lib/quotes', () => {
@@ -75,10 +78,15 @@ describe('lib/quotes', () => {
       success: true,
       data: {
         customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        customer_email: null,
+        customer_address: null,
+        quote_number: null,
         title: 'Harbor Cafe repaint',
         status: 'draft',
         valid_until: '2026-04-10',
         complexity: 'standard',
+        discount_cents: 0,
+        deposit_percent: 0,
         labour_margin_percent: 10,
         material_margin_percent: 5,
         manual_adjustment_cents: 0,
@@ -269,10 +277,15 @@ describe('lib/quotes', () => {
       success: true,
       data: {
         customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        customer_email: null,
+        customer_address: null,
+        quote_number: null,
         title: 'Apartment repaint',
         status: 'draft',
         valid_until: '2026-04-10',
         complexity: 'standard',
+        discount_cents: 0,
+        deposit_percent: 0,
         labour_margin_percent: 10,
         material_margin_percent: 5,
         manual_adjustment_cents: 0,
@@ -286,6 +299,7 @@ describe('lib/quotes', () => {
           estimate_mode: 'specific_areas',
           condition: 'fair',
           scope: ['walls', 'trim'],
+          wall_paint_system: 'repaint_2coat',
           property_details: {
             apartment_type: '2_bedroom_standard',
             sqm: null,
@@ -357,6 +371,12 @@ describe('lib/quotes', () => {
     expect(getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'complex')).toBeGreaterThan(
       1800
     );
+  });
+
+  it('serializes refresh coatings canonically while still supporting legacy fallback', () => {
+    expect(serializeQuoteCoatingType('refresh_1coat')).toBe('refresh_1coat');
+    expect(serializeLegacyQuoteCoatingType('refresh_1coat')).toBe('touch_up_1coat');
+    expect(normalizeQuoteCoatingType('touch_up_1coat')).toBe('refresh_1coat');
   });
 
   it('marks draft and sent quotes as expired after the valid-until date in Sydney time', () => {

@@ -9,6 +9,7 @@ import {
   type QuoteStatus,
 } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
+import { DuplicateQuoteButton } from '@/components/quotes/DuplicateQuoteButton';
 
 const QUOTE_STATUS_STYLES: Record<QuoteStatus, string> = {
   draft:    'bg-secondary/10 text-secondary',
@@ -202,10 +203,13 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
               const borderClass = QUOTE_LEFT_BORDER[quote.status] ?? 'border-l-outline';
               const expired = isQuoteExpired(quote.valid_until);
               return (
-                <li key={quote.id}>
+                <li
+                  key={quote.id}
+                  className={`relative bg-surface-container-lowest rounded-lg shadow-sm border border-black/5 border-l-4 ${borderClass} hover:shadow-md transition-shadow`}
+                >
                   <Link
                     href={`/quotes/${quote.id}`}
-                    className={`block bg-surface-container-lowest p-5 rounded-lg shadow-sm border border-black/5 border-l-4 ${borderClass} hover:shadow-md transition-shadow`}
+                    className="block p-5 pr-14"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="min-w-0">
@@ -257,6 +261,10 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                       </div>
                     </div>
                   </Link>
+                  {/* Duplicate button — sits outside the Link to prevent event bubbling */}
+                  <div className="absolute right-3 top-3">
+                    <DuplicateQuoteButton quoteId={quote.id} variant="icon" />
+                  </div>
                 </li>
               );
             })}

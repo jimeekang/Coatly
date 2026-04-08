@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { LineItemPicker } from './LineItemPicker';
+import { NumericInput, sanitizeDecimalInput, sanitizeIntegerInput } from '@/components/shared/NumericInput';
 import type { MaterialItem, QuoteLineItemFormInput } from '@/lib/supabase/validators';
 import { calculateQuoteLineItemsSubtotal } from '@/lib/quotes';
 
@@ -19,6 +20,55 @@ interface LineItemsSectionProps {
   libraryItems: MaterialItem[];
   value: QuoteLineItemFormInput[];
   onChange: (items: QuoteLineItemFormInput[]) => void;
+}
+
+function isWholeNumberQuantity(category: QuoteLineItemFormInput['category']) {
+  return category === 'paint';
+}
+
+function sanitizeWholeNumberQuantityInput(value: string) {
+  const [integerPortion] = value.split('.');
+  return sanitizeIntegerInput(integerPortion ?? '');
+}
+
+function parseQuantityDraft(
+  category: QuoteLineItemFormInput['category'],
+  draft: string
+) {
+  if (draft.trim() === '') {
+    return null;
+  }
+
+  const parsed = isWholeNumberQuantity(category) ? Number.parseInt(draft, 10) : Number.parseFloat(draft);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function QuantityInput({
+  entry,
+  onChange,
+}: {
+  entry: LineItemEntry;
+  onChange: (quantity: number) => void;
+}) {
+  return (
+    <NumericInput
+      value={String(entry.quantity)}
+      inputMode={isWholeNumberQuantity(entry.category) ? 'numeric' : 'decimal'}
+      sanitize={isWholeNumberQuantity(entry.category) ? sanitizeWholeNumberQuantityInput : sanitizeDecimalInput}
+      onValueChange={(draft) => {
+        const nextQuantity = parseQuantityDraft(entry.category, draft);
+        if (nextQuantity != null) {
+          onChange(nextQuantity);
+        }
+      }}
+      className="h-9 w-20 rounded-lg border border-pm-border bg-white px-2 text-center text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none"
+      aria-label={`${entry.name} quantity`}
+    />
+  );
 }
 
 export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSectionProps) {
@@ -110,16 +160,7 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
 
                 <div className="mt-3 flex items-center gap-2 border-t border-pm-border/70 pt-3">
                   <label className="sr-only">Quantity</label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0.01"
-                    step="0.01"
-                    value={entry.quantity}
-                    onChange={(e) => handleQtyChange(index, parseFloat(e.target.value) || 0)}
-                    className="h-9 w-20 rounded-lg border border-pm-border bg-white px-2 text-center text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none"
-                    aria-label={`${entry.name} quantity`}
-                  />
+                  <QuantityInput entry={entry} onChange={(quantity) => handleQtyChange(index, quantity)} />
                   <span className="text-xs text-pm-secondary">{entry.unit}</span>
                   <span className="ml-2 text-sm font-semibold text-pm-body">
                     {formatAUD(entry.total_cents)}
