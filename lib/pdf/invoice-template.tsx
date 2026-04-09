@@ -116,6 +116,7 @@ interface InvoiceTemplateProps {
   phone: string | null;
   email: string | null;
   logoUrl: string | null;
+  paymentTerms?: string | null;
   bankDetails?: string | null;
 }
 
@@ -125,6 +126,7 @@ export function InvoiceTemplate({
   abn,
   phone,
   email,
+  paymentTerms,
   bankDetails,
   logoUrl,
 }: InvoiceTemplateProps) {
@@ -214,10 +216,27 @@ export function InvoiceTemplate({
           )}
         </View>
 
-        {bankDetails && (
+        {(paymentTerms || bankDetails) && (
           <View style={[styles.section, { marginTop: 24 }]}>
             <Text style={styles.sectionTitle}>Payment Details</Text>
-            <Text style={{ color: '#374151', lineHeight: 1.6 }}>{bankDetails}</Text>
+            {paymentTerms && (
+              <>
+                <Text style={{ fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>
+                  Payment Terms
+                </Text>
+                <Text style={{ color: '#374151', lineHeight: 1.6, marginBottom: bankDetails ? 10 : 0 }}>
+                  {paymentTerms}
+                </Text>
+              </>
+            )}
+            {bankDetails && (
+              <>
+                <Text style={{ fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>
+                  Bank Details
+                </Text>
+                <Text style={{ color: '#374151', lineHeight: 1.6 }}>{bankDetails}</Text>
+              </>
+            )}
           </View>
         )}
 

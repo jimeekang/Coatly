@@ -21,7 +21,7 @@ export default async function EditInvoicePage({ params }: Props) {
   const quotes = formOptions.quotes;
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4">
+    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
       <div className="mb-6 flex items-center gap-3">
         <Link
           href={`/invoices/${invoice.id}`}
@@ -56,14 +56,19 @@ export default async function EditInvoicePage({ params }: Props) {
         <InvoiceForm
           customers={customers}
           quotes={quotes}
+          businessDefaults={formOptions.businessDefaults}
           onSubmit={(data) => updateInvoice(invoice.id, data)}
           invoiceNumberPreview={invoice.invoice_number}
           submitLabel="Save Changes"
+          mode="edit"
           defaultValues={{
             customer_id: invoice.customer_id,
             quote_id: invoice.quote_id,
             invoice_type: invoice.invoice_type,
             status: invoice.status,
+            business_abn: invoice.business_abn,
+            payment_terms: invoice.payment_terms,
+            bank_details: invoice.bank_details,
             due_date: invoice.due_date,
             notes: invoice.notes,
             line_items: invoice.line_items.map((item) => ({

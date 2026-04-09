@@ -22,9 +22,22 @@ type QuoteRecord = {
   quote_number: string;
   title: string | null;
   customer_id: string;
+  subtotal_cents: number;
   total_cents: number;
+  deposit_percent: number | null;
   status: string;
   valid_until: string | null;
+  line_items:
+    | Array<{
+        name: string;
+        quantity: number;
+        unit_price_cents: number;
+        total_cents: number;
+        notes: string | null;
+        is_optional: boolean | null;
+        is_selected: boolean | null;
+      }>
+    | null;
 };
 
 type InvoiceRecord = {
@@ -39,6 +52,9 @@ type InvoiceRecord = {
   gst_cents: number;
   total_cents: number;
   amount_paid_cents: number;
+  business_abn: string | null;
+  payment_terms: string | null;
+  bank_details: string | null;
   due_date: string | null;
   paid_at: string | null;
   notes: string | null;
@@ -78,6 +94,9 @@ type ParsedInvoiceCreate =
         quote_id: string | null;
         status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
         invoice_type: 'full' | 'deposit' | 'progress' | 'final';
+        business_abn: string | null;
+        payment_terms: string | null;
+        bank_details: string | null;
         due_date: string | null;
         notes: string | null;
         line_items: Array<{
@@ -170,6 +189,9 @@ export function mapInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
     amount_paid_cents: row.amount_paid_cents,
+    business_abn: row.business_abn ?? null,
+    payment_terms: row.payment_terms ?? null,
+    bank_details: row.bank_details ?? null,
     due_date: row.due_date,
     paid_at: row.paid_at,
     notes: row.notes,
@@ -196,6 +218,9 @@ export function mapInvoiceDetail(row: InvoiceDetailRow): InvoiceWithCustomer {
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
     amount_paid_cents: row.amount_paid_cents,
+    business_abn: row.business_abn ?? null,
+    payment_terms: row.payment_terms ?? null,
+    bank_details: row.bank_details ?? null,
     due_date: row.due_date,
     paid_at: row.paid_at,
     notes: row.notes,
@@ -250,6 +275,9 @@ export function parseInvoiceCreateInput(input: InvoiceCreateInput): ParsedInvoic
       quote_id: parsed.data.quote_id ?? null,
       status: parsed.data.status,
       invoice_type: parsed.data.invoice_type,
+      business_abn: parsed.data.business_abn ?? null,
+      payment_terms: parsed.data.payment_terms ?? null,
+      bank_details: parsed.data.bank_details ?? null,
       due_date: parsed.data.due_date ?? null,
       notes: parsed.data.notes?.trim() || null,
       line_items: parsed.data.line_items.map((item) => ({
@@ -283,22 +311,59 @@ export async function getInvoiceCustomerOptions(supabase: AppSupabaseClient, use
 }
 
 export async function getInvoiceQuoteOptions(supabase: AppSupabaseClient, userId: string) {
-  const { data, error } = await supabase
+  const [{ data, error }, { data: linkedInvoices, error: linkedInvoicesError }] = await Promise.all([
+    supabase
     .from('quotes')
-    .select('id, quote_number, title, customer_id, total_cents, status, valid_until')
+    .select(
+      'id, quote_number, title, customer_id, subtotal_cents, total_cents, deposit_percent, status, valid_until, line_items:quote_line_items(name, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected)'
+    )
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }),
+    supabase
+      .from('invoices')
+      .select('id, quote_id, subtotal_cents, status')
+      .eq('user_id', userId)
+      .not('quote_id', 'is', null),
+  ]);
+
+  if (error || linkedInvoicesError) {
+    return {
+      data: [],
+      error: error?.message ?? linkedInvoicesError?.message ?? null,
+    };
+  }
+
+  const billedSubtotalByQuoteId = new Map<string, number>();
+  for (const invoice of linkedInvoices ?? []) {
+    if (!invoice.quote_id || invoice.status === 'cancelled') continue;
+    billedSubtotalByQuoteId.set(
+      invoice.quote_id,
+      (billedSubtotalByQuoteId.get(invoice.quote_id) ?? 0) + invoice.subtotal_cents
+    );
+  }
 
   return {
-    data: (data as QuoteRecord[] | null)?.map((quote) => ({
+    data: (data as unknown as QuoteRecord[] | null)?.map((quote) => ({
       id: quote.id,
       quote_number: quote.quote_number,
       title: quote.title,
       customer_id: quote.customer_id,
+      subtotal_cents: quote.subtotal_cents,
       total_cents: quote.total_cents,
+      deposit_percent: quote.deposit_percent ?? 0,
       status: quote.status,
       valid_until: quote.valid_until,
+      billed_subtotal_cents: billedSubtotalByQuoteId.get(quote.id) ?? 0,
+      line_items:
+        quote.line_items?.map((item) => ({
+          description: item.notes?.trim() ? `${item.name}\n${item.notes.trim()}` : item.name,
+          quantity: Number(item.quantity),
+          unit_price_cents: item.unit_price_cents,
+          total_cents: item.total_cents,
+          is_optional: item.is_optional ?? false,
+          is_selected: item.is_optional ? item.is_selected ?? false : true,
+        })) ?? [],
     })) ?? [],
-    error: error?.message ?? null,
+    error: null,
   };
 }

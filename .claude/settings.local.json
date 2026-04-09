@@ -32,7 +32,8 @@
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
       "Bash(ssh -T git@github.com)",
-      "Read(//Users/jimee/**)"
+      "Read(//Users/jimee/**)",
+      "Bash(grep -n \"duplicate\\\\|clone\\\\|copy\" /Users/jimee/Desktop/Project/Coatly/components/quotes/*.tsx -i)"
     ]
   }
 }

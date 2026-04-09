@@ -296,6 +296,27 @@ describe('QuoteForm', () => {
     );
   });
 
+  it('ignores invalid saved interior estimate defaults instead of crashing edit mode', () => {
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        defaultValues={{
+          customer_id: CUSTOMER.id,
+          title: 'Legacy quote',
+          status: 'draft',
+          valid_until: '2026-04-24',
+          notes: '',
+          internal_notes: '',
+          rooms: [],
+          interior_estimate: {} as never,
+        }}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Apartment' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Living Room/i })).toBeInTheDocument();
+  });
+
   it('shows the estimate total', () => {
     render(<QuoteForm customers={[CUSTOMER]} />);
 

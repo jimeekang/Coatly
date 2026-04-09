@@ -60,6 +60,9 @@ export async function GET(request: NextRequest) {
       gst_cents: number;
       total_cents: number;
       amount_paid_cents: number;
+      business_abn: string | null;
+      payment_terms: string | null;
+      bank_details: string | null;
       due_date: string | null;
       paid_at: string | null;
       notes: string | null;
@@ -108,9 +111,11 @@ export async function GET(request: NextRequest) {
     InvoiceTemplate({
       invoice: invoiceData,
       businessName: businessBranding?.name || 'My Painting Business',
-      abn: businessBranding?.abn ?? null,
+      abn: invoiceData.business_abn ?? businessBranding?.abn ?? null,
       phone: businessBranding?.phone ?? null,
       email: businessBranding?.email ?? user.email ?? null,
+      paymentTerms: invoiceData.payment_terms,
+      bankDetails: invoiceData.bank_details,
       logoUrl,
     })
   );

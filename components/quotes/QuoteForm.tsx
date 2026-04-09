@@ -9,6 +9,7 @@ import {
 import {
   INTERIOR_ROOM_TYPES,
   calculateInteriorEstimate,
+  isInteriorEstimateInput,
   normalizeInteriorWallPaintSystem,
   type InteriorEstimateInput,
   type InteriorRoomType,
@@ -160,7 +161,9 @@ function buildInitialAdvancedEstimate(
   defaultValues?: QuoteFormDefaultValues
 ): InteriorEstimateFormState {
   const base = createEmptyInteriorEstimateState();
-  const estimateContext = defaultValues?.interior_estimate;
+  const estimateContext = isInteriorEstimateInput(defaultValues?.interior_estimate)
+    ? defaultValues.interior_estimate
+    : null;
 
   if (estimateContext) {
     const roomOptions = estimateContext.rooms.length > 0
@@ -662,10 +665,11 @@ export function QuoteForm({
   const [showDepositEditor, setShowDepositEditor] = useState(
     (defaultValues?.deposit_percent ?? 0) > 0
   );
+  const hasSavedInteriorEstimate = isInteriorEstimateInput(defaultValues?.interior_estimate);
 
   // If pre-filled rooms exist (e.g., AI draft), start in advanced mode
   const [estimateMode, setEstimateMode] = useState<EstimateMode>(
-    defaultValues?.interior_estimate || defaultValues?.rooms?.length ? 'advanced' : 'quick'
+    hasSavedInteriorEstimate || defaultValues?.rooms?.length ? 'advanced' : 'quick'
   );
 
   // Pricing strategy (which method to use for this quote)

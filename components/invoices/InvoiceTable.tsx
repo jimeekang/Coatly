@@ -6,29 +6,71 @@ import type { InvoiceListItem, InvoiceStatus } from '@/types/invoice';
 import { formatCustomerLocation } from '@/lib/invoices';
 import { formatAUD, formatDate } from '@/utils/format';
 
-const STATUS_STYLES: Record<InvoiceStatus, string> = {
-  draft: 'bg-pm-surface text-pm-secondary',
-  sent: 'bg-pm-teal-light text-pm-teal',
-  paid: 'bg-pm-teal-mid text-white',
-  overdue: 'bg-pm-coral-light text-pm-coral-mid',
-  cancelled: 'bg-pm-surface text-pm-secondary',
+const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
+  draft:     'bg-secondary/10 text-secondary',
+  sent:      'bg-primary/10 text-primary',
+  paid:      'bg-tertiary/10 text-tertiary',
+  overdue:   'bg-error/10 text-error',
+  cancelled: 'bg-surface-container-high text-on-surface-variant',
+};
+
+const INVOICE_LEFT_BORDER: Record<InvoiceStatus, string> = {
+  draft:     'border-l-secondary',
+  sent:      'border-l-primary',
+  paid:      'border-l-tertiary',
+  overdue:   'border-l-error',
+  cancelled: 'border-l-outline',
+};
+
+const STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft:     'Draft',
+  sent:      'Sent',
+  paid:      'Paid',
+  overdue:   'Overdue',
+  cancelled: 'Cancelled',
 };
 
 const STATUS_OPTIONS: Array<{ value: 'all' | InvoiceStatus; label: string }> = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'sent', label: 'Sent' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'overdue', label: 'Overdue' },
+  { value: 'all',       label: 'All' },
+  { value: 'draft',     label: 'Draft' },
+  { value: 'sent',      label: 'Sent' },
+  { value: 'paid',      label: 'Paid' },
+  { value: 'overdue',   label: 'Overdue' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
-function StatusBadge({ status }: { status: InvoiceStatus }) {
+type DateFilter = 'all' | '30d' | '90d' | 'this_month';
+
+const DATE_FILTER_OPTIONS: Array<{ value: DateFilter; label: string }> = [
+  { value: 'all',        label: 'All time' },
+  { value: 'this_month', label: 'This month' },
+  { value: '30d',        label: 'Last 30 days' },
+  { value: '90d',        label: 'Last 90 days' },
+];
+
+function getDateFilterCutoff(filter: DateFilter): Date | null {
+  const now = new Date();
+  if (filter === '30d') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 30);
+    return d;
+  }
+  if (filter === '90d') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 90);
+    return d;
+  }
+  if (filter === 'this_month') {
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return null;
+}
+
+function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
+  const style = INVOICE_STATUS_STYLES[status] ?? 'bg-surface-container-high text-on-surface-variant';
   return (
-    <span
-      className={`inline-flex rounded px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[status]}`}
-    >
-      {status}
+    <span className={`inline-flex rounded px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${style}`}>
+      {STATUS_LABELS[status]}
     </span>
   );
 }
@@ -36,7 +78,6 @@ function StatusBadge({ status }: { status: InvoiceStatus }) {
 function matchesQuery(invoice: InvoiceListItem, query: string) {
   const value = query.toLowerCase();
   const location = formatCustomerLocation(invoice.customer).toLowerCase();
-
   return (
     invoice.invoice_number.toLowerCase().includes(value) ||
     invoice.customer.name.toLowerCase().includes(value) ||
@@ -49,233 +90,179 @@ function matchesQuery(invoice: InvoiceListItem, query: string) {
 export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim();
+
+  const cutoff = getDateFilterCutoff(dateFilter);
 
   const filtered = invoices.filter((invoice) => {
     const matchesStatus = status === 'all' ? true : invoice.status === status;
     const matchesSearch = normalizedQuery ? matchesQuery(invoice, normalizedQuery) : true;
-    return matchesStatus && matchesSearch;
+    const matchesDate = cutoff ? new Date(invoice.created_at) >= cutoff : true;
+    return matchesStatus && matchesSearch && matchesDate;
   });
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_200px]">
-        <div className="relative">
-          <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-pm-secondary">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-          </span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by invoice, customer, type, or suburb..."
-            className="h-12 w-full rounded-lg border border-pm-border bg-white pl-10 pr-4 text-base text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery('')}
-              className="absolute inset-y-0 right-3.5 flex items-center text-pm-secondary hover:text-pm-body"
-              aria-label="Clear search"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          )}
-        </div>
+  const hasActiveFilters = normalizedQuery || status !== 'all' || dateFilter !== 'all';
 
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value as 'all' | InvoiceStatus)}
-          className="h-12 rounded-lg border border-pm-border bg-white px-4 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
-          aria-label="Filter by invoice status"
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Search */}
+      <div className="relative">
+        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+        </span>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search invoices..."
+          className="w-full bg-surface-container border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            className="absolute inset-y-0 right-4 flex items-center text-outline hover:text-on-surface"
+            aria-label="Clear search"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
       </div>
 
+      {/* Status filter chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        {STATUS_OPTIONS.map((option) => {
+          const active = status === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setStatus(option.value)}
+              className={`px-5 py-2 rounded-lg text-sm font-bold tracking-tight whitespace-nowrap transition-colors ${
+                active
+                  ? 'bg-primary text-on-primary shadow-sm'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Date filter chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        {DATE_FILTER_OPTIONS.map((option) => {
+          const active = dateFilter === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDateFilter(option.value)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-tight whitespace-nowrap transition-colors border ${
+                active
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-outline-variant bg-transparent text-on-surface-variant hover:bg-surface-container-high'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Empty states */}
       {invoices.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-pm-border bg-pm-surface py-16 text-center">
-          <p className="text-base text-pm-secondary">No invoices yet.</p>
-          <p className="mt-1 text-sm text-pm-secondary opacity-70">
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-16 text-center">
+          <p className="text-base text-on-surface-variant">No invoices yet.</p>
+          <p className="mt-1 text-sm text-on-surface-variant opacity-70">
             Create your first invoice to start tracking payments.
           </p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-pm-border bg-pm-surface py-12 text-center">
-          <p className="text-base text-pm-secondary">No invoices match this search.</p>
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-12 text-center">
+          <p className="text-base text-on-surface-variant">No invoices match this search.</p>
           <button
             type="button"
-            onClick={() => {
-              setQuery('');
-              setStatus('all');
-            }}
-            className="mt-2 text-sm text-pm-teal-hover hover:underline"
+            onClick={() => { setQuery(''); setStatus('all'); setDateFilter('all'); }}
+            className="mt-2 text-sm text-primary hover:underline"
           >
             Clear search and filters
           </button>
         </div>
       ) : (
         <>
-          <ul className="flex flex-col gap-3 sm:hidden">
-            {filtered.map((invoice) => (
-              <li key={invoice.id}>
-                <Link
-                  href={`/invoices/${invoice.id}`}
-                  className="block rounded-xl border border-pm-border bg-white px-4 py-4 transition-colors hover:bg-pm-teal-light active:bg-pm-teal-light"
+          {/* Card list */}
+          <ul className="flex flex-col gap-3">
+            {filtered.map((invoice) => {
+              const borderClass = INVOICE_LEFT_BORDER[invoice.status] ?? 'border-l-outline';
+              return (
+                <li
+                  key={invoice.id}
+                  className={`relative bg-surface-container-lowest rounded-lg shadow-sm border border-black/5 border-l-4 ${borderClass} hover:shadow-md transition-shadow`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-pm-body">
-                        {invoice.invoice_number}
-                      </p>
-                      <p className="mt-0.5 truncate text-sm text-pm-secondary">
-                        {invoice.customer.name}
-                      </p>
+                  <Link href={`/invoices/${invoice.id}`} className="block p-5">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+                          {invoice.invoice_number}
+                        </p>
+                        <h3 className="font-bold text-on-surface text-base leading-tight">
+                          {invoice.customer.name}
+                        </h3>
+                        <p className="text-on-surface-variant text-sm font-medium mt-0.5 capitalize">
+                          {invoice.invoice_type} invoice
+                        </p>
+                      </div>
+                      <InvoiceStatusBadge status={invoice.status} />
                     </div>
-                    <StatusBadge status={invoice.status} />
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-xs text-pm-secondary">Total</p>
-                      <p className="mt-0.5 font-semibold text-pm-body">
-                        {formatAUD(invoice.total_cents)}
-                      </p>
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                          Created {formatDate(invoice.created_at)}
+                        </div>
+                        {invoice.due_date && (
+                          <div className={`flex items-center gap-1.5 text-xs font-medium ${
+                            invoice.status === 'overdue' ? 'text-error' : 'text-outline'
+                          }`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"/>
+                              <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            Due {formatDate(invoice.due_date)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-outline font-bold uppercase tracking-wider">Balance</p>
+                        <p className="text-lg font-extrabold text-on-surface tracking-tight">
+                          {formatAUD(invoice.balance_cents)}{' '}
+                          <span className="text-[10px] font-bold text-outline">AUD</span>
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-pm-secondary">Balance</p>
-                      <p className="mt-0.5 font-semibold text-pm-body">
-                        {formatAUD(invoice.balance_cents)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-pm-secondary">Due</p>
-                      <p className="mt-0.5 text-sm text-pm-body">
-                        {invoice.due_date ? formatDate(invoice.due_date) : 'No due date'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-pm-secondary">Location</p>
-                      <p className="mt-0.5 truncate text-sm text-pm-body">
-                        {formatCustomerLocation(invoice.customer)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex items-center justify-between text-sm">
-                    <span className="text-xs capitalize text-pm-secondary">
-                      {invoice.invoice_type}
-                    </span>
-                    <span className="text-xs font-medium text-pm-teal-hover">View invoice →</span>
-                  </div>
-                </Link>
-              </li>
-            ))}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
-          <div className="hidden overflow-x-auto rounded-xl border border-pm-border bg-white sm:block">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-pm-border bg-pm-surface">
-                <tr>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Invoice
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Customer
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Due Date
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Total
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Balance
-                  </th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Items
-                  </th>
-                  <th className="px-5 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-pm-border">
-                {filtered.map((invoice) => (
-                  <tr key={invoice.id} className="transition-colors hover:bg-pm-teal-light">
-                    <td className="px-5 py-4">
-                      <div className="font-medium text-pm-body">{invoice.invoice_number}</div>
-                      <div className="mt-0.5 text-xs capitalize text-pm-secondary">
-                        {invoice.invoice_type}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-pm-secondary">
-                      <div className="text-pm-body">{invoice.customer.name}</div>
-                      <div className="mt-0.5 text-xs text-pm-secondary">
-                        {formatCustomerLocation(invoice.customer)}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <StatusBadge status={invoice.status} />
-                    </td>
-                    <td className="px-5 py-4 text-pm-secondary">
-                      {invoice.due_date ? formatDate(invoice.due_date) : 'No due date'}
-                    </td>
-                    <td className="px-5 py-4 font-medium text-pm-body">
-                      {formatAUD(invoice.total_cents)}
-                    </td>
-                    <td className="px-5 py-4 font-medium text-pm-body">
-                      {formatAUD(invoice.balance_cents)}
-                    </td>
-                    <td className="px-5 py-4 text-pm-secondary">{invoice.line_item_count}</td>
-                    <td className="px-5 py-4 text-right">
-                      <Link
-                        href={`/invoices/${invoice.id}`}
-                        className="inline-flex items-center gap-1 font-medium text-pm-teal-hover hover:underline"
-                      >
-                        View →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {(normalizedQuery || status !== 'all') && (
-            <p className="text-right text-xs text-pm-secondary">
+          {hasActiveFilters && (
+            <p className="text-xs text-on-surface-variant text-right">
               {filtered.length} of {invoices.length} invoices
             </p>
           )}

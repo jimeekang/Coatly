@@ -85,6 +85,20 @@ export const businessUpdateSchema = z.object({
   postcode: optionalPostcodeString,
   phone: optionalTrimmedString,
   email: optionalEmailString,
+  paymentTerms: z
+    .string()
+    .trim()
+    .max(1000, 'Payment terms must be 1000 characters or less')
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional(),
+  bankDetails: z
+    .string()
+    .trim()
+    .max(2000, 'Bank details must be 2000 characters or less')
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional(),
   logo_url: optionalLogoReferenceString,
 });
 
@@ -114,6 +128,21 @@ export const invoiceCreateSchema = z.object({
   quote_id: optionalUuidString,
   status: z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']).default('draft'),
   invoice_type: z.enum(['full', 'deposit', 'progress', 'final']).default('full'),
+  business_abn: optionalAbnString,
+  payment_terms: z
+    .string()
+    .trim()
+    .max(1000, 'Payment terms must be 1000 characters or less')
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional(),
+  bank_details: z
+    .string()
+    .trim()
+    .max(2000, 'Bank details must be 2000 characters or less')
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional(),
   due_date: z
     .string()
     .trim()

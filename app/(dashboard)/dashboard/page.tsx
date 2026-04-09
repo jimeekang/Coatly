@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { WorkspaceAssistant } from '@/components/dashboard/WorkspaceAssistant';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
+import { getInvoiceQuoteOptions } from '@/lib/invoices';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSubscriptionSnapshotForCurrentUser, requireCurrentUser } from '@/lib/supabase/request-context';
 import { formatAUD } from '@/utils/format';
@@ -27,7 +28,8 @@ export default async function DashboardPage() {
     user.email?.split('@')[0] ??
     'there';
 
-  const [{ data: customers }, { data: quotes }, { data: invoices }] = await Promise.all([
+  const [{ data: customers }, { data: quotes }, { data: invoices }, quoteOptionsResult] =
+    await Promise.all([
     supabase
       .from('customers')
       .select('id, name, company_name, email, phone, address_line1, city, state, postcode')
@@ -44,6 +46,7 @@ export default async function DashboardPage() {
       .select('id, status, total_cents, amount_paid_cents, paid_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
+    getInvoiceQuoteOptions(supabase, user.id),
   ]);
 
   const customerOptions =
@@ -58,16 +61,7 @@ export default async function DashboardPage() {
         .join(', ') || null,
     })) ?? [];
 
-  const quoteOptions =
-    quotes?.map((quote) => ({
-      id: quote.id,
-      customer_id: quote.customer_id,
-      quote_number: quote.quote_number,
-      title: quote.title,
-      total_cents: quote.total_cents,
-      status: quote.status,
-      valid_until: quote.valid_until,
-    })) ?? [];
+  const quoteOptions = quoteOptionsResult.data;
 
   const currentSydneyMonth = getSydneyYearMonth(new Date());
   const activeQuoteCount =

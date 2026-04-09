@@ -28,7 +28,7 @@ vi.mock('@/lib/subscription/access', () => ({
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
-import { createInvoice } from '@/app/actions/invoices';
+import { createInvoice, getInvoiceDraftFromQuote } from '@/app/actions/invoices';
 
 function createFilterQuery<Result>(result: Result) {
   return {
@@ -74,6 +74,9 @@ describe('createInvoice', () => {
       quote_id: null,
       invoice_type: 'full',
       status: 'draft',
+      business_abn: null,
+      payment_terms: null,
+      bank_details: null,
       due_date: null,
       notes: null,
       line_items: [],
@@ -112,6 +115,9 @@ describe('createInvoice', () => {
       quote_id: null,
       invoice_type: 'full',
       status: 'draft',
+      business_abn: null,
+      payment_terms: null,
+      bank_details: null,
       due_date: '2026-04-03',
       notes: null,
       line_items: [
@@ -217,6 +223,9 @@ describe('createInvoice', () => {
       quote_id: null,
       invoice_type: 'full',
       status: 'draft',
+      business_abn: '12345678901',
+      payment_terms: 'Payment due within 7 days',
+      bank_details: 'BSB: 123-456\nAccount Number: 12345678',
       due_date: '2026-04-03',
       notes: 'Final coat and trim',
       line_items: [
@@ -233,6 +242,9 @@ describe('createInvoice', () => {
       user_id: 'user-1',
       customer_id: '550e8400-e29b-41d4-a716-446655440000',
       invoice_number: 'INV-0007',
+      business_abn: '12345678901',
+      payment_terms: 'Payment due within 7 days',
+      bank_details: 'BSB: 123-456\nAccount Number: 12345678',
       subtotal_cents: 25000,
       gst_cents: 2500,
       total_cents: 27500,
@@ -298,7 +310,10 @@ describe('createInvoice', () => {
       customer_id: '550e8400-e29b-41d4-a716-446655440000',
       quote_id: '550e8400-e29b-41d4-a716-446655440001',
       invoice_type: 'progress',
-      status: 'sent',
+      status: 'draft',
+      business_abn: null,
+      payment_terms: null,
+      bank_details: null,
       due_date: '2026-04-03',
       notes: null,
       line_items: [
@@ -314,5 +329,160 @@ describe('createInvoice', () => {
       error: 'Quote customer does not match the selected customer.',
     });
     expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects sent status during manual invoice creation', async () => {
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const result = await createInvoice({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_id: null,
+      invoice_type: 'deposit',
+      status: 'sent',
+      business_abn: null,
+      payment_terms: null,
+      bank_details: null,
+      due_date: '2026-04-03',
+      notes: null,
+      line_items: [
+        {
+          description: 'Deposit claim',
+          quantity: 1,
+          unit_price_cents: 50000,
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      error:
+        'Save invoices as draft, paid, or cancelled here. Sent is set after the invoice email is sent, and overdue follows automatically after the due date passes.',
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('builds an invoice draft from an approved quote and selected line items', async () => {
+    const quoteQuery = createFilterQuery({
+      data: {
+        id: 'quote-1',
+        customer_id: 'customer-1',
+        status: 'approved',
+        title: 'Cafe repaint',
+        quote_number: 'QUO-0010',
+      },
+      error: null,
+    });
+    const lineItemsQuery = {
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'line-1',
+            name: 'Interior repaint',
+            notes: 'Walls and ceiling',
+            quantity: 2,
+            unit_price_cents: 12500,
+            is_optional: false,
+            is_selected: true,
+            sort_order: 0,
+          },
+          {
+            id: 'line-2',
+            name: 'Optional trim work',
+            notes: null,
+            quantity: 1,
+            unit_price_cents: 8000,
+            is_optional: true,
+            is_selected: false,
+            sort_order: 1,
+          },
+        ],
+        error: null,
+      }),
+    };
+    const businessesQuery = createFilterQuery({
+      data: {
+        user_id: 'user-1',
+        name: 'Coatly',
+        abn: '12345678901',
+        address: '128 Beach Street, Manly NSW 2095',
+        address_line1: '128 Beach Street',
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+        phone: '0412 555 012',
+        email: 'owner@example.com',
+        invoice_payment_terms: 'Payment due within 7 days',
+        invoice_bank_details: 'BSB: 123-456\nAccount Number: 12345678',
+        logo_url: null,
+      },
+      error: null,
+    });
+    const profilesQuery = createFilterQuery({
+      data: null,
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(quoteQuery),
+          };
+        }
+        if (table === 'quote_line_items') {
+          return {
+            select: vi.fn().mockReturnValue(lineItemsQuery),
+          };
+        }
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue(businessesQuery),
+          };
+        }
+        if (table === 'profiles') {
+          return {
+            select: vi.fn().mockReturnValue(profilesQuery),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await getInvoiceDraftFromQuote('quote-1');
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      customer_id: 'customer-1',
+      quote_id: 'quote-1',
+      invoice_type: 'full',
+      status: 'draft',
+      business_abn: '12345678901',
+      payment_terms: 'Payment due within 7 days',
+      bank_details: 'BSB: 123-456\nAccount Number: 12345678',
+      due_date: null,
+      notes: 'Linked to approved quote QUO-0010 - Cafe repaint',
+      line_items: [
+        {
+          description: 'Interior repaint\nWalls and ceiling',
+          quantity: 2,
+          unit_price_cents: 12500,
+        },
+      ],
+    });
   });
 });
