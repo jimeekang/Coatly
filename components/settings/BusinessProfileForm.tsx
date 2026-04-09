@@ -55,6 +55,8 @@ export default function BusinessProfileForm({
       postcode: defaultValues.postcode,
       phone: defaultValues.phone,
       email: defaultValues.email,
+      paymentTerms: defaultValues.paymentTerms,
+      bankDetails: defaultValues.bankDetails,
       logo_url: defaultValues.logoUrl,
     },
   });
@@ -340,6 +342,45 @@ export default function BusinessProfileForm({
               {...register('email')}
             />
             {errors.email && <p className={errorClass}>{errors.email.message}</p>}
+          </div>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <label htmlFor="paymentTerms" className={labelClass}>
+              Default Payment Terms
+            </label>
+            <textarea
+              id="paymentTerms"
+              rows={5}
+              disabled={isPending}
+              placeholder="Example: Payment due within 7 days from invoice date."
+              className={inputClass(!!errors.paymentTerms, 'min-h-[132px] py-3')}
+              {...register('paymentTerms')}
+            />
+            {errors.paymentTerms && (
+              <p className={errorClass}>{errors.paymentTerms.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="bankDetails" className={labelClass}>
+              Default Bank Details
+            </label>
+            <textarea
+              id="bankDetails"
+              rows={5}
+              disabled={isPending}
+              placeholder={'Example: Account Name: Coatly Pty Ltd\nBSB: 123-456\nAccount Number: 12345678'}
+              className={inputClass(!!errors.bankDetails, 'min-h-[132px] py-3')}
+              {...register('bankDetails')}
+            />
+            {errors.bankDetails && (
+              <p className={errorClass}>{errors.bankDetails.message}</p>
+            )}
+            <p className="mt-1.5 text-xs text-pm-secondary">
+              These defaults are copied into new invoices and can still be edited per invoice.
+            </p>
           </div>
         </div>
 

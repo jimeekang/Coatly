@@ -156,6 +156,41 @@ export function normalizeInteriorWallPaintSystem(
     : null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
+export function isInteriorEstimateInput(value: unknown): value is InteriorEstimateInput {
+  if (!isRecord(value) || !isRecord(value.property_details)) {
+    return false;
+  }
+
+  if (value.property_type !== 'apartment' && value.property_type !== 'house') {
+    return false;
+  }
+
+  if (value.estimate_mode !== 'entire_property' && value.estimate_mode !== 'specific_areas') {
+    return false;
+  }
+
+  if (!INTERIOR_CONDITIONS.includes(value.condition as InteriorCondition)) {
+    return false;
+  }
+
+  if (
+    !Array.isArray(value.scope) ||
+    !value.scope.every((scope) => INTERIOR_SCOPE_OPTIONS.includes(scope as InteriorScope))
+  ) {
+    return false;
+  }
+
+  return (
+    Array.isArray(value.rooms) &&
+    Array.isArray(value.opening_items) &&
+    Array.isArray(value.trim_items)
+  );
+}
+
 function cap(value: number) {
   return Math.min(Math.max(Math.round(value), 0), MAX_TOTAL_CENTS);
 }

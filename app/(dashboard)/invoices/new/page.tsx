@@ -1,26 +1,36 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getInvoiceFormOptions } from '@/app/actions/invoices';
+import { getInvoiceDraftFromQuote, getInvoiceFormOptions } from '@/app/actions/invoices';
 import { InvoiceCreateScreen } from '@/components/invoices/InvoiceCreateScreen';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveSubscriptionSnapshotForUser } from '@/lib/subscription/server';
 
 export const metadata: Metadata = { title: 'New Invoice' };
 
-export default async function NewInvoicePage() {
+export default async function NewInvoicePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ quoteId?: string }>;
+}) {
   const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const requestedQuoteId =
+    typeof resolvedSearchParams.quoteId === 'string' ? resolvedSearchParams.quoteId : null;
   const subscription = user
     ? await getLiveSubscriptionSnapshotForUser(user.id)
     : null;
   const { data, error } = await getInvoiceFormOptions();
   const customers = data.customers;
   const quotes = data.quotes;
+  const quoteDraftResult =
+    requestedQuoteId ? await getInvoiceDraftFromQuote(requestedQuoteId) : { data: null, error: null };
+  const pageError = error ?? quoteDraftResult.error;
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4">
+    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/invoices"
@@ -44,14 +54,15 @@ export default async function NewInvoicePage() {
         <div>
           <h1 className="text-[22px] font-semibold text-pm-body">New Invoice</h1>
           <p className="mt-0.5 text-sm text-pm-secondary">
-            Save an invoice against a customer and optionally link the quote.
+            Create a draft, compare it against the linked quote, and keep payment details ready
+            for sending.
           </p>
         </div>
       </div>
 
-      {error ? (
+      {pageError ? (
         <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{error}</p>
+          <p className="text-sm text-pm-coral-dark">{pageError}</p>
         </div>
       ) : customers.length === 0 ? (
         <div className="rounded-xl border border-dashed border-pm-border bg-pm-surface px-5 py-8">
@@ -70,6 +81,8 @@ export default async function NewInvoicePage() {
         <InvoiceCreateScreen
           customers={customers}
           quotes={quotes}
+          businessDefaults={data.businessDefaults}
+          initialDefaultValues={quoteDraftResult.data ?? undefined}
           canUseAI={subscription?.features.ai ?? false}
         />
       )}

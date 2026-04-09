@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope } from 'next/font/google';
+import { Manrope, Geist } from 'next/font/google';
 import { APP_DESCRIPTION, APP_NAME } from '@/config/constants';
 import { ToastProvider } from '@/components/ui/toast';
 import './globals.css';
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const manrope = Manrope({
   subsets: ['latin'],
@@ -38,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en-AU" suppressHydrationWarning className={`h-full ${manrope.variable}`}>
+    <html lang="en-AU" suppressHydrationWarning className={cn("h-full", manrope.variable, "font-sans", geist.variable)}>
       <body suppressHydrationWarning className="min-h-full bg-surface text-on-surface">
         {children}
         <ToastProvider />

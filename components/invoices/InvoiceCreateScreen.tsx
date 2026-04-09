@@ -6,7 +6,9 @@ import { generateAIDraft } from '@/app/actions/ai-drafts';
 import { AIDraftPanel } from '@/components/ai/AIDraftPanel';
 import {
   InvoiceForm,
+  type InvoiceBusinessDefaults,
   type InvoiceFormCustomerOption,
+  type InvoiceFormDefaultValues,
   type InvoiceFormQuoteOption,
 } from '@/components/invoices/InvoiceForm';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
@@ -15,10 +17,14 @@ import type { AIInvoiceDraft } from '@/lib/ai/draft-types';
 export function InvoiceCreateScreen({
   customers,
   quotes,
+  businessDefaults,
+  initialDefaultValues,
   canUseAI,
 }: {
   customers: InvoiceFormCustomerOption[];
   quotes: InvoiceFormQuoteOption[];
+  businessDefaults: InvoiceBusinessDefaults;
+  initialDefaultValues?: InvoiceFormDefaultValues;
   canUseAI: boolean;
 }) {
   const [prompt, setPrompt] = useState('');
@@ -28,6 +34,8 @@ export function InvoiceCreateScreen({
   const [error, setError] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [isPending, startTransition] = useTransition();
+  const draftStatus =
+    draft?.status === 'sent' || draft?.status === 'overdue' ? 'draft' : draft?.status;
 
   function handleGenerate() {
     startTransition(async () => {
@@ -90,18 +98,28 @@ export function InvoiceCreateScreen({
         key={resetKey}
         customers={customers}
         quotes={quotes}
+        businessDefaults={businessDefaults}
         defaultValues={
           draft
             ? {
-                customer_id: draft.customer_id ?? '',
-                quote_id: draft.quote_id,
+                customer_id: draft.customer_id ?? initialDefaultValues?.customer_id ?? '',
+                quote_id: draft.quote_id ?? initialDefaultValues?.quote_id ?? null,
                 invoice_type: draft.invoice_type,
-                status: draft.status,
+                status: draftStatus ?? 'draft',
+                business_abn:
+                  initialDefaultValues?.business_abn ?? businessDefaults.business_abn,
+                payment_terms:
+                  initialDefaultValues?.payment_terms ?? businessDefaults.payment_terms,
+                bank_details:
+                  initialDefaultValues?.bank_details ?? businessDefaults.bank_details,
                 due_date: draft.due_date,
-                notes: draft.notes,
-                line_items: draft.line_items,
+                notes: draft.notes ?? initialDefaultValues?.notes ?? null,
+                line_items:
+                  draft.line_items.length > 0
+                    ? draft.line_items
+                    : initialDefaultValues?.line_items ?? [],
               }
-            : undefined
+            : initialDefaultValues
         }
         onSubmit={createInvoice}
       />

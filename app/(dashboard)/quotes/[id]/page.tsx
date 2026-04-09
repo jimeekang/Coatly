@@ -510,6 +510,14 @@ export default async function QuoteDetailPage({
           </section>
 
           <div className="grid gap-3 sm:grid-cols-3">
+            {quote.status === 'approved' && (
+              <Link
+                href={`/invoices/new?quoteId=${quote.id}`}
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
+              >
+                Create Invoice
+              </Link>
+            )}
             <form action={createJobFromQuoteAndRedirect}>
               <input type="hidden" name="quoteId" value={quote.id} />
               <button

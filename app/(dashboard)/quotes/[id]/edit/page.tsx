@@ -10,6 +10,7 @@ import { QuoteEditScreen } from '@/components/quotes/QuoteEditScreen';
 import type { ExtraLineItemInput } from '@/components/quotes/QuoteExtraLineItems';
 import type { QuoteStatus } from '@/lib/quotes';
 import {
+  isInteriorEstimateInput,
   normalizeInteriorWallPaintSystem,
   type InteriorEstimateInput,
 } from '@/lib/interior-estimates';
@@ -69,7 +70,9 @@ export default async function EditQuotePage({
     }
   }
 
-  const savedInteriorEstimate = (quote.estimate_context as InteriorEstimateInput | null) ?? null;
+  const savedInteriorEstimate = isInteriorEstimateInput(quote.estimate_context)
+    ? quote.estimate_context
+    : null;
 
   const defaultValues: QuoteFormDefaultValues = {
     customer_id: quote.customer_id,

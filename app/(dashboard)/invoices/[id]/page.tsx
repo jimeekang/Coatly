@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getInvoice } from '@/app/actions/invoices';
+import { getInvoice, getInvoiceFormOptions } from '@/app/actions/invoices';
 import { InvoiceDetail } from '@/components/invoices/InvoiceDetail';
 
 interface Props {
@@ -16,12 +16,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function InvoiceDetailPage({ params }: Props) {
   const { id } = await params;
-  const { data: invoice, error } = await getInvoice(id);
+  const [{ data: invoice, error }, { data: formOptions }] = await Promise.all([
+    getInvoice(id),
+    getInvoiceFormOptions(),
+  ]);
 
   if (!invoice || error) notFound();
+  const linkedQuote =
+    invoice.quote_id
+      ? formOptions.quotes.find((quote) => quote.id === invoice.quote_id) ?? null
+      : null;
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4">
+    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/invoices"
@@ -46,11 +53,13 @@ export default async function InvoiceDetailPage({ params }: Props) {
           <h1 className="truncate text-2xl font-bold text-pm-body">
             {invoice.invoice_number}
           </h1>
-          <p className="truncate text-sm text-pm-secondary">{invoice.customer.name}</p>
+          <p className="truncate text-sm text-pm-secondary">
+            {invoice.customer.name} · {invoice.invoice_type} · {invoice.status}
+          </p>
         </div>
       </div>
 
-      <InvoiceDetail invoice={invoice} />
+      <InvoiceDetail invoice={invoice} linkedQuote={linkedQuote} />
     </div>
   );
 }

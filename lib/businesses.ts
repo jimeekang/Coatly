@@ -30,6 +30,8 @@ type BusinessRow = {
   postcode: string | null;
   phone: string | null;
   email: string | null;
+  invoice_payment_terms: string | null;
+  invoice_bank_details: string | null;
   logo_url: string | null;
 };
 
@@ -42,6 +44,8 @@ export type BusinessFormValues = {
   postcode: string;
   phone: string;
   email: string;
+  paymentTerms: string;
+  bankDetails: string;
   logoUrl: string;
   logoPreviewUrl: string;
 };
@@ -53,6 +57,12 @@ export type BusinessDocumentBranding = {
   email: string | null;
   logoPath: string | null;
   logoUrl: string | null;
+};
+
+export type BusinessInvoiceDefaults = {
+  business_abn: string | null;
+  payment_terms: string | null;
+  bank_details: string | null;
 };
 
 type ParsedBusinessInput =
@@ -68,6 +78,8 @@ type ParsedBusinessInput =
         postcode: string | null;
         phone: string | null;
         email: string | null;
+        invoice_payment_terms: string | null;
+        invoice_bank_details: string | null;
         logo_url: string | null;
       };
     }
@@ -125,6 +137,8 @@ function toFormValues({
       postcode: business.postcode ?? profile?.postcode ?? '',
       phone: business.phone ?? profile?.phone ?? '',
       email: business.email ?? profile?.email ?? fallbackEmail ?? '',
+      paymentTerms: business.invoice_payment_terms ?? '',
+      bankDetails: business.invoice_bank_details ?? '',
       logoUrl,
       logoPreviewUrl,
     };
@@ -139,6 +153,8 @@ function toFormValues({
     postcode: profile?.postcode ?? '',
     phone: profile?.phone ?? '',
     email: profile?.email ?? fallbackEmail ?? '',
+    paymentTerms: '',
+    bankDetails: '',
     logoUrl,
     logoPreviewUrl,
   };
@@ -178,6 +194,8 @@ function parseBusinessInput(
       postcode: parsed.data.postcode ?? null,
       phone: parsed.data.phone ?? null,
       email: parsed.data.email ?? fallbackEmail ?? null,
+      invoice_payment_terms: parsed.data.paymentTerms ?? null,
+      invoice_bank_details: parsed.data.bankDetails ?? null,
       logo_url: parsed.data.logo_url ?? null,
     },
   };
@@ -187,13 +205,17 @@ async function loadBusinessRecords(supabase: AppSupabaseClient, userId: string) 
   const businessQuery = supabase
     .from('businesses')
     .select(
-      'user_id, name, abn, address, address_line1, city, state, postcode, phone, email, logo_url'
+      'user_id, name, abn, address, address_line1, city, state, postcode, phone, email, invoice_payment_terms, invoice_bank_details, logo_url'
     )
     .eq('user_id', userId);
 
   let businessResult = await businessQuery.maybeSingle();
 
-  if (hasMissingBusinessesColumn(businessResult.error, 'address_line1')) {
+  if (
+    hasMissingBusinessesColumn(businessResult.error, 'address_line1') ||
+    hasMissingBusinessesColumn(businessResult.error, 'invoice_payment_terms') ||
+    hasMissingBusinessesColumn(businessResult.error, 'invoice_bank_details')
+  ) {
     businessResult = await supabase
       .from('businesses')
       .select('user_id, name, abn, address, phone, email, logo_url')
@@ -311,6 +333,33 @@ export async function getBusinessProfile(
   };
 }
 
+export async function getBusinessInvoiceDefaults(
+  supabase: AppSupabaseClient,
+  userId: string,
+  fallbackEmail: string | null
+): Promise<{ data: BusinessInvoiceDefaults | null; error: string | null }> {
+  const result = await loadBusinessRecords(supabase, userId);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  const merged = mergeBusinessIdentity({
+    business: result.business,
+    profile: result.profile,
+    fallbackEmail,
+  });
+
+  return {
+    data: {
+      business_abn: merged.abn,
+      payment_terms: result.business?.invoice_payment_terms ?? null,
+      bank_details: result.business?.invoice_bank_details ?? null,
+    },
+    error: null,
+  };
+}
+
 export async function getBusinessRateSettings(
   supabase: AppSupabaseClient,
   userId: string
@@ -379,7 +428,11 @@ export async function saveBusinessProfileForUser({
     )
   ).error;
 
-  if (hasMissingBusinessesColumn(businessError, 'address_line1')) {
+  if (
+    hasMissingBusinessesColumn(businessError, 'address_line1') ||
+    hasMissingBusinessesColumn(businessError, 'invoice_payment_terms') ||
+    hasMissingBusinessesColumn(businessError, 'invoice_bank_details')
+  ) {
     businessError = (
       await supabase.from('businesses').upsert(
         {
@@ -389,6 +442,8 @@ export async function saveBusinessProfileForUser({
           address: parsed.data.address,
           phone: parsed.data.phone,
           email: parsed.data.email,
+          invoice_payment_terms: parsed.data.invoice_payment_terms,
+          invoice_bank_details: parsed.data.invoice_bank_details,
           logo_url: parsed.data.logo_url,
         },
         { onConflict: 'user_id' }

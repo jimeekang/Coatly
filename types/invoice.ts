@@ -26,6 +26,9 @@ export interface Invoice {
   gst_cents: number;
   total_cents: number;
   amount_paid_cents: number;
+  business_abn: string | null;
+  payment_terms: string | null;
+  bank_details: string | null;
   due_date: string | null;
   paid_at: string | null;
   notes: string | null;

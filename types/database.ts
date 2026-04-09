@@ -48,6 +48,8 @@ export type Database = {
           created_at: string
           default_rates: Json
           email: string | null
+          invoice_bank_details: string | null
+          invoice_payment_terms: string | null
           logo_url: string | null
           name: string
           phone: string | null
@@ -64,6 +66,8 @@ export type Database = {
           created_at?: string
           default_rates?: Json
           email?: string | null
+          invoice_bank_details?: string | null
+          invoice_payment_terms?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
@@ -80,6 +84,8 @@ export type Database = {
           created_at?: string
           default_rates?: Json
           email?: string | null
+          invoice_bank_details?: string | null
+          invoice_payment_terms?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
@@ -203,6 +209,8 @@ export type Database = {
       invoices: {
         Row: {
           amount_paid_cents: number
+          bank_details: string | null
+          business_abn: string | null
           created_at: string
           customer_id: string
           due_date: string | null
@@ -214,6 +222,7 @@ export type Database = {
           invoice_type: string
           notes: string | null
           paid_at: string | null
+          payment_terms: string | null
           quote_id: string | null
           status: string
           subtotal_cents: number
@@ -223,6 +232,8 @@ export type Database = {
         }
         Insert: {
           amount_paid_cents?: number
+          bank_details?: string | null
+          business_abn?: string | null
           created_at?: string
           customer_id: string
           due_date?: string | null
@@ -234,6 +245,7 @@ export type Database = {
           invoice_type?: string
           notes?: string | null
           paid_at?: string | null
+          payment_terms?: string | null
           quote_id?: string | null
           status?: string
           subtotal_cents?: number
@@ -243,6 +255,8 @@ export type Database = {
         }
         Update: {
           amount_paid_cents?: number
+          bank_details?: string | null
+          business_abn?: string | null
           created_at?: string
           customer_id?: string
           due_date?: string | null
@@ -254,6 +268,7 @@ export type Database = {
           invoice_type?: string
           notes?: string | null
           paid_at?: string | null
+          payment_terms?: string | null
           quote_id?: string | null
           status?: string
           subtotal_cents?: number

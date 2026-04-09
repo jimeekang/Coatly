@@ -33,6 +33,9 @@ describe('lib/invoices', () => {
       quote_id: '',
       status: 'draft',
       invoice_type: 'full',
+      business_abn: '',
+      payment_terms: '  Payment due within 7 days  ',
+      bank_details: '  BSB: 123-456  ',
       due_date: '2026-04-05',
       notes: '  Paint entry hallway  ',
       line_items: [
@@ -51,6 +54,9 @@ describe('lib/invoices', () => {
         quote_id: null,
         status: 'draft',
         invoice_type: 'full',
+        business_abn: null,
+        payment_terms: 'Payment due within 7 days',
+        bank_details: 'BSB: 123-456',
         due_date: '2026-04-05',
         notes: 'Paint entry hallway',
         line_items: [
