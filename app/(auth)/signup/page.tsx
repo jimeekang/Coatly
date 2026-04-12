@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { signUpWithEmail } from '@/app/actions/auth';
-import { BrandLogo } from '@/components/branding/BrandLogo';
+import { AuthShell } from '@/components/auth/AuthShell';
 
 const signupSchema = z
   .object({
@@ -55,159 +55,160 @@ export default function SignupPage() {
 
   if (successState === 'check-email') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-pm-surface px-4 py-8">
-        <div className="w-full max-w-sm text-center">
-          <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-pm-teal-light flex items-center justify-center">
+      <AuthShell
+        eyebrow="Account created"
+        title="Check your inbox."
+        description="Confirm the email we just sent, then come back to finish your business setup."
+        sideTitle="A cleaner first-run experience builds trust early."
+        sideDescription="Even the confirmation step should feel like part of the same product, not a blank dead-end between auth and onboarding."
+      >
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-pm-teal-light">
             <CheckCircle className="h-7 w-7 text-pm-teal-mid" aria-hidden="true" />
           </div>
-          <h2 className="text-[22px] font-semibold text-pm-body mb-2">Check your email</h2>
-          <p className="text-sm text-pm-secondary">
+          <p className="text-sm leading-6 text-pm-secondary">
             We sent a confirmation link to your email. After confirming, sign in to continue to
             business setup.
           </p>
           <Link
             href="/login"
-            className="mt-6 inline-block text-sm text-pm-teal-hover font-medium hover:underline"
+            className="mt-6 inline-block text-sm font-medium text-pm-teal-hover hover:underline"
           >
             Back to login
           </Link>
         </div>
-      </main>
+      </AuthShell>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-pm-surface px-4 py-8">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="mb-8 flex justify-center">
-          <BrandLogo width={176} height={40} priority />
-        </div>
-
-        <div className="bg-white rounded-2xl border border-pm-border p-6">
-          <h1 className="text-[22px] font-semibold text-pm-body mb-6">Create account</h1>
-
-          {serverError && (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg bg-pm-coral-light border border-pm-coral px-4 py-3 text-sm text-pm-coral-dark"
-            >
-              {serverError}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-            <div>
-              <label htmlFor="businessName" className="block text-sm font-medium text-pm-body mb-1.5">
-                Business Name
-              </label>
-              <input
-                id="businessName"
-                type="text"
-                autoComplete="organization"
-                placeholder="Smith's Painting"
-                disabled={isPending}
-                aria-invalid={!!errors.businessName}
-                aria-describedby={errors.businessName ? 'businessName-error' : undefined}
-                className={inputClass}
-                {...register('businessName')}
-              />
-              {errors.businessName && (
-                <p id="businessName-error" className="mt-1.5 text-xs text-pm-coral">
-                  {errors.businessName.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-pm-body mb-1.5">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                placeholder="you@example.com"
-                disabled={isPending}
-                aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? 'email-error' : undefined}
-                className={inputClass}
-                {...register('email')}
-              />
-              {errors.email && (
-                <p id="email-error" className="mt-1.5 text-xs text-pm-coral">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-pm-body mb-1.5">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Min. 8 characters"
-                disabled={isPending}
-                aria-invalid={!!errors.password}
-                aria-describedby={errors.password ? 'password-error' : undefined}
-                className={inputClass}
-                {...register('password')}
-              />
-              {errors.password && (
-                <p id="password-error" className="mt-1.5 text-xs text-pm-coral">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-pm-body mb-1.5">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                placeholder="••••••••"
-                disabled={isPending}
-                aria-invalid={!!errors.confirmPassword}
-                aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
-                className={inputClass}
-                {...register('confirmPassword')}
-              />
-              {errors.confirmPassword && (
-                <p id="confirmPassword-error" className="mt-1.5 text-xs text-pm-coral">
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isPending}
-              className="w-full h-12 rounded-lg bg-pm-teal text-white text-sm font-semibold hover:bg-pm-teal-hover focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-            >
-              {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-              Create account
-            </button>
-          </form>
-
-          <p className="mt-3 text-center text-xs text-pm-secondary">
-            After sign up, you&apos;ll continue to business setup before using the dashboard.
-          </p>
-        </div>
-
-        <p className="mt-5 text-center text-sm text-pm-secondary">
+    <AuthShell
+      eyebrow="Create account"
+      title="Set up Coatly for your business."
+      description="Create your account, then continue into business setup before you start quoting and invoicing."
+      sideTitle="The first form should feel confident, not cramped."
+      sideDescription="Sign up is often the first real interaction with the product. Better spacing, hierarchy, and scale make Coatly feel more credible before the dashboard even loads."
+      footer={
+        <>
           Already have an account?{' '}
-          <Link href="/login" className="text-pm-teal-hover font-medium hover:underline">
+          <Link href="/login" className="font-medium text-pm-teal-hover hover:underline">
             Sign in
           </Link>
-        </p>
-      </div>
-    </main>
+        </>
+      }
+    >
+      {serverError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark"
+        >
+          {serverError}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        <div>
+          <label htmlFor="businessName" className="mb-1.5 block text-sm font-medium text-pm-body">
+            Business Name
+          </label>
+          <input
+            id="businessName"
+            type="text"
+            autoComplete="organization"
+            placeholder="Smith's Painting"
+            disabled={isPending}
+            aria-invalid={!!errors.businessName}
+            aria-describedby={errors.businessName ? 'businessName-error' : undefined}
+            className={inputClass}
+            {...register('businessName')}
+          />
+          {errors.businessName && (
+            <p id="businessName-error" className="mt-1.5 text-xs text-pm-coral">
+              {errors.businessName.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-pm-body">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="you@example.com"
+            disabled={isPending}
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? 'email-error' : undefined}
+            className={inputClass}
+            {...register('email')}
+          />
+          {errors.email && (
+            <p id="email-error" className="mt-1.5 text-xs text-pm-coral">
+              {errors.email.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-pm-body">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Min. 8 characters"
+            disabled={isPending}
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? 'password-error' : undefined}
+            className={inputClass}
+            {...register('password')}
+          />
+          {errors.password && (
+            <p id="password-error" className="mt-1.5 text-xs text-pm-coral">
+              {errors.password.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-pm-body">
+            Confirm Password
+          </label>
+          <input
+            id="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            disabled={isPending}
+            aria-invalid={!!errors.confirmPassword}
+            aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
+            className={inputClass}
+            {...register('confirmPassword')}
+          />
+          {errors.confirmPassword && (
+            <p id="confirmPassword-error" className="mt-1.5 text-xs text-pm-coral">
+              {errors.confirmPassword.message}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-pm-teal text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          Create account
+        </button>
+      </form>
+
+      <p className="mt-3 text-center text-xs text-pm-secondary">
+        After sign up, you&apos;ll continue to business setup before using the dashboard.
+      </p>
+    </AuthShell>
   );
 }

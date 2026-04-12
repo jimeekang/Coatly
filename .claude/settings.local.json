@@ -2,26 +2,13 @@
   "permissions": {
     "allow": [
       "mcp__claude_ai_Notion__notion-fetch",
-      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --skip-git)",
-      "Bash(npx create-next-app@latest \"C:/Users/kjm12/OneDrive/바탕 화면/Project/paintmate-init\" --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --skip-git)",
-      "Bash(printf \"No\\\\nNo\\\\n\")",
-      "Bash(yes \"\")",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_migrations",
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
-      "Bash(node -e \"const s = require\\(''''stripe''''\\); console.log\\(Object.keys\\(s\\)\\)\")",
-      "Bash(node -e \"const s = require\\(''stripe''\\); console.log\\(s.API_VERSION\\)\")",
-      "Bash(curl -L \"https://github.com/stripe/stripe-cli/releases/download/v1.21.11/stripe_1.21.11_windows_x86_64.zip\" -o \"C:/Users/kjm12/Downloads/stripe-cli.zip\")",
-      "Bash(unzip -o \"C:/Users/kjm12/Downloads/stripe-cli.zip\" -d \"C:/Users/kjm12/stripe-cli\")",
-      "Bash(wc -l \"c:/Users/kjm12/OneDrive/바탕 화면/Project/Coatly/.claude/worktrees/clever-hoover/supabase/migrations\"/*.sql)",
       "Bash(npx vitest:*)",
-      "mcp__claude_ai_Supabase__list_projects",
       "Bash(npx eslint:*)",
       "Read(//tmp/**)",
-      "mcp__claude_ai_Supabase__list_migrations",
-      "Bash(curl -s https://qwjpqujdykojxsisjltd.supabase.co/rest/v1/ -H 'apikey: ***REDACTED_SERVICE_ROLE_KEY***' -H 'Authorization: Bearer ***REDACTED_SERVICE_ROLE_KEY***')",
-      "Bash(python3 -m json.tool)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k\\) for k in d.keys\\(\\)]\")",
-      "Bash(curl -s 'https://qwjpqujdykojxsisjltd.supabase.co/rest/v1/quotes?select=id,title,public_share_token,customers\\(name\\)&customers.name=ilike.*Richardson*' -H 'apikey: ***REDACTED_SERVICE_ROLE_KEY***' -H 'Authorization: Bearer ***REDACTED_SERVICE_ROLE_KEY***')",
       "Skill(plan)",
       "Skill(plan:*)",
       "Skill(build)",
@@ -32,8 +19,7 @@
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
       "Bash(ssh -T git@github.com)",
-      "Read(//Users/jimee/**)",
-      "Bash(grep -n \"duplicate\\\\|clone\\\\|copy\" /Users/jimee/Desktop/Project/Coatly/components/quotes/*.tsx -i)"
+      "Read(//Users/jimee/**)"
     ]
   }
 }
