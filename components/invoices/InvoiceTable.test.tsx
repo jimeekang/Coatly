@@ -72,9 +72,8 @@ describe('InvoiceTable', () => {
     expect(screen.getAllByText('INV-0012').length).toBeGreaterThan(0);
     expect(screen.queryByText('INV-0013')).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Filter by invoice status/i), {
-      target: { value: 'paid' },
-    });
+    // Status filter chips replace the old dropdown — click the 'Paid' chip
+    fireEvent.click(screen.getByRole('button', { name: 'Paid' }));
 
     expect(screen.getByText('No invoices match this search.')).toBeInTheDocument();
 

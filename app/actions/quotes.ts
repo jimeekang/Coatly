@@ -24,6 +24,7 @@ import {
   type QuoteEstimateItemCategory,
   type QuoteListItem,
   type QuoteLineItemRecord,
+  type PublicQuoteDetail,
   type QuoteSurfaceType,
 } from '@/lib/quotes';
 import { calculateInteriorEstimate } from '@/lib/interior-estimates';
@@ -125,7 +126,7 @@ type QuoteDetailRow = {
   valid_until: string | null;
   tier: string | null;
   notes: string | null;
-  internal_notes: string | null;
+  internal_notes?: string | null;
   labour_margin_percent: number;
   material_margin_percent: number;
   subtotal_cents: number;
@@ -138,6 +139,7 @@ type QuoteDetailRow = {
   pricing_snapshot?: Record<string, unknown> | null;
   pricing_method?: string | null;
   pricing_method_inputs?: Record<string, unknown> | null;
+  linked_invoice_count?: number | null;
   created_at: string;
   updated_at: string;
   customer: QuoteListRow['customer'];
@@ -160,11 +162,17 @@ const QUOTE_DETAIL_SELECT =
 const QUOTE_DETAIL_SELECT_LEGACY =
   `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
-const PUBLIC_QUOTE_SELECT =
-  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const PUBLIC_QUOTE_DETAIL_SELECT =
+  `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, notes, subtotal_cents, gst_cents, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
-const PUBLIC_QUOTE_SELECT_LEGACY =
-  `id, user_id, customer_id, public_share_token, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const PUBLIC_QUOTE_DETAIL_SELECT_LEGACY =
+  `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, quote_number, title, status, valid_until, notes, subtotal_cents, gst_cents, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
+
+const PUBLIC_QUOTE_APPROVAL_SELECT =
+  `id, user_id, customer_email, customer_address, quote_number, title, status, valid_until, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
+
+const PUBLIC_QUOTE_APPROVAL_SELECT_LEGACY =
+  `id, user_id, quote_number, title, status, valid_until, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
 type QuoteDataClient =
   | Awaited<ReturnType<typeof createServerClient>>
@@ -194,6 +202,45 @@ type QuoteHydratedRelations = {
   }>;
   estimate_items: QuoteDetail['estimate_items'];
   line_items: QuoteDetail['line_items'];
+};
+
+type PublicQuoteRow = {
+  id: string;
+  user_id: string;
+  approved_at?: string | null;
+  approved_by_name?: string | null;
+  approved_by_email?: string | null;
+  approval_signature?: string | null;
+  customer_email?: string | null;
+  customer_address?: string | null;
+  quote_number: string;
+  title: string | null;
+  status: string;
+  valid_until: string | null;
+  notes: string | null;
+  subtotal_cents: number;
+  gst_cents: number;
+  total_cents: number;
+  customer: QuoteListRow['customer'];
+};
+
+type PublicQuoteHydratedRelations = {
+  rooms: PublicQuoteDetail['rooms'];
+  estimate_items: PublicQuoteDetail['estimate_items'];
+  line_items: PublicQuoteDetail['line_items'];
+};
+
+type PublicQuoteApprovalRow = {
+  id: string;
+  user_id: string;
+  customer_email?: string | null;
+  customer_address?: string | null;
+  quote_number: string;
+  title: string | null;
+  status: string;
+  valid_until: string | null;
+  total_cents: number;
+  customer: QuoteListRow['customer'];
 };
 
 type CreateQuoteOptions = {
@@ -384,6 +431,123 @@ async function loadQuoteRelations(
   };
 }
 
+async function loadPublicQuoteRelations(
+  supabase: QuoteDataClient,
+  quoteId: string
+): Promise<{ data: PublicQuoteHydratedRelations | null; error: string | null }> {
+  const { data: rooms, error: roomsError } = await supabase
+    .from('quote_rooms')
+    .select('id, name, room_type, sort_order')
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (roomsError) {
+    return { data: null, error: roomsError.message };
+  }
+
+  const roomIds = rooms?.map((room) => room.id) ?? [];
+
+  const { data: surfaces, error: surfacesError } = roomIds.length
+    ? await supabase
+        .from('quote_room_surfaces')
+        .select(
+          'id, room_id, surface_type, area_m2, coating_type, rate_per_m2_cents, material_cost_cents, labour_cost_cents, notes'
+        )
+        .in('room_id', roomIds)
+    : { data: [], error: null };
+
+  if (surfacesError) {
+    return { data: null, error: surfacesError.message };
+  }
+
+  const { data: estimateItems, error: estimateItemsError } = await supabase
+    .from('quote_estimate_items')
+    .select('id, category, label, quantity, unit, unit_price_cents, total_cents, sort_order')
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (estimateItemsError) {
+    return { data: null, error: estimateItemsError.message };
+  }
+
+  const { data: lineItems, error: lineItemsError } = await supabase
+    .from('quote_line_items')
+    .select('id, name, category, unit, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected, sort_order')
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (lineItemsError) {
+    return { data: null, error: lineItemsError.message };
+  }
+
+  return {
+    data: {
+      rooms:
+        rooms?.map((room) => ({
+          id: room.id,
+          name: room.name,
+          room_type: room.room_type as PublicQuoteDetail['rooms'][number]['room_type'],
+          total_cents: 0,
+          surfaces:
+            surfaces
+              ?.filter((surface) => surface.room_id === room.id)
+              .map((surface) => ({
+                id: surface.id,
+                surface_type: surface.surface_type as QuoteSurfaceType,
+                area_m2: Number(surface.area_m2),
+                coating_type: normalizeQuoteCoatingType(
+                  surface.coating_type as QuoteCoatingType | 'touch_up_1coat' | null
+                ),
+                rate_per_m2_cents: surface.rate_per_m2_cents,
+                notes: surface.notes,
+                total_cents: surface.material_cost_cents + surface.labour_cost_cents,
+              })) ?? [],
+        })) ?? [],
+      estimate_items: ((estimateItems as Array<{
+        id: string;
+        category: string;
+        label: string;
+        quantity: number | string;
+        unit: string;
+        unit_price_cents: number;
+        total_cents: number;
+      }> | null) ?? []).map((item) => ({
+        id: item.id,
+        category: item.category as PublicQuoteDetail['estimate_items'][number]['category'],
+        label: item.label,
+        quantity: typeof item.quantity === 'string' ? Number(item.quantity) : item.quantity,
+        unit: item.unit,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: item.total_cents,
+      })),
+      line_items: ((lineItems as Array<{
+        id: string;
+        name: string;
+        category: string;
+        unit: string;
+        quantity: number | string;
+        unit_price_cents: number;
+        total_cents: number;
+        notes: string | null;
+        is_optional: boolean | null;
+        is_selected: boolean | null;
+      }> | null) ?? []).map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        unit: item.unit,
+        quantity: typeof item.quantity === 'string' ? Number(item.quantity) : item.quantity,
+        unit_price_cents: item.unit_price_cents,
+        total_cents: item.total_cents,
+        notes: item.notes,
+        is_optional: item.is_optional ?? false,
+        is_selected: item.is_optional ? item.is_selected ?? false : true,
+      })),
+    },
+    error: null,
+  };
+}
+
 function mapHydratedQuoteDetail(
   quote: QuoteDetailRow,
   relations: QuoteHydratedRelations
@@ -396,10 +560,69 @@ function mapHydratedQuoteDetail(
       customer_email: quote.customer_email,
       customer_address: quote.customer_address,
     }),
+    internal_notes: quote.internal_notes ?? null,
     estimate_context: jsonObjectOrEmpty(quote.estimate_context),
     pricing_snapshot: jsonObjectOrEmpty(quote.pricing_snapshot),
     ...relations,
   });
+}
+
+function mapHydratedPublicQuoteDetail(
+  quote: PublicQuoteRow,
+  relations: PublicQuoteHydratedRelations
+): PublicQuoteDetail {
+  return {
+    approved_at: quote.approved_at ?? null,
+    approved_by_name: quote.approved_by_name ?? null,
+    approved_by_email: quote.approved_by_email ?? null,
+    approval_signature: quote.approval_signature ?? null,
+    quote_number: quote.quote_number,
+    title: quote.title,
+    status: resolveQuoteStatus({
+      status: quote.status,
+      valid_until: quote.valid_until,
+    }),
+    valid_until: quote.valid_until,
+    notes: quote.notes,
+    subtotal_cents: quote.subtotal_cents,
+    gst_cents: quote.gst_cents,
+    total_cents: quote.total_cents,
+    working_days: (quote as unknown as { working_days?: number | null }).working_days ?? null,
+    customer: resolveQuoteCustomerSummary({
+      customer: quote.customer,
+      customer_email: quote.customer_email,
+      customer_address: quote.customer_address,
+    }),
+    rooms: relations.rooms,
+    estimate_items: relations.estimate_items,
+    line_items: relations.line_items,
+  };
+}
+
+const QUOTE_INVOICE_LOCK_MESSAGE =
+  'This quote can no longer be edited because an invoice already exists for it.';
+const QUOTE_DELETE_LOCK_MESSAGE = 'Quotes with linked invoices can no longer be deleted.';
+
+async function getLinkedInvoiceCountForQuote(
+  supabase: QuoteDataClient,
+  quoteId: string,
+  userId?: string
+): Promise<{ count: number; error: string | null }> {
+  let query = supabase
+    .from('invoices')
+    .select('id', { count: 'exact', head: true })
+    .eq('quote_id', quoteId);
+
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { count, error } = await query;
+
+  return {
+    count: count ?? 0,
+    error: error?.message ?? null,
+  };
 }
 
 function normalizeCustomerEmails(customer: { email?: string | null; emails?: unknown }) {
@@ -574,14 +797,27 @@ export async function getQuote(id: string): Promise<{
     return { data: null, error: quoteError?.message ?? 'Quote not found.' };
   }
 
-  const relationsResult = await loadQuoteRelations(supabase, id);
+  const [relationsResult, linkedInvoicesResult] = await Promise.all([
+    loadQuoteRelations(supabase, id),
+    getLinkedInvoiceCountForQuote(supabase, id, user.id),
+  ]);
 
   if (relationsResult.error || !relationsResult.data) {
     return { data: null, error: relationsResult.error ?? 'Quote details could not be loaded.' };
   }
 
+  if (linkedInvoicesResult.error) {
+    return { data: null, error: linkedInvoicesResult.error };
+  }
+
   return {
-    data: mapHydratedQuoteDetail(quote, relationsResult.data),
+    data: mapHydratedQuoteDetail(
+      {
+        ...quote,
+        linked_invoice_count: linkedInvoicesResult.count,
+      },
+      relationsResult.data
+    ),
     error: null,
   };
 }
@@ -598,7 +834,7 @@ function isMissingQuoteSelectColumnError(message: string | null | undefined) {
 export async function getPublicQuoteByToken(token: string): Promise<{
   data:
     | {
-        quote: QuoteDetail;
+        quote: PublicQuoteDetail;
         business: {
           name: string;
           abn: string | null;
@@ -618,20 +854,20 @@ export async function getPublicQuoteByToken(token: string): Promise<{
   const supabase = createAdminClient();
   const quoteResult = await supabase
     .from('quotes')
-    .select(PUBLIC_QUOTE_SELECT)
+    .select(PUBLIC_QUOTE_DETAIL_SELECT)
     .eq('public_share_token', trimmedToken)
     .single();
-  let quote = quoteResult.data as QuoteDetailRow | null;
+  let quote = quoteResult.data as PublicQuoteRow | null;
   let quoteError = quoteResult.error;
 
   if (quoteError && isMissingQuoteCustomerSnapshotColumnError(quoteError.message)) {
     const legacyResult = await supabase
       .from('quotes')
-      .select(PUBLIC_QUOTE_SELECT_LEGACY)
+      .select(PUBLIC_QUOTE_DETAIL_SELECT_LEGACY)
       .eq('public_share_token', trimmedToken)
       .single();
 
-    quote = legacyResult.data as QuoteDetailRow | null;
+    quote = legacyResult.data as PublicQuoteRow | null;
     quoteError = legacyResult.error;
   }
 
@@ -647,7 +883,7 @@ export async function getPublicQuoteByToken(token: string): Promise<{
   }
 
   const [relationsResult, businessResult] = await Promise.all([
-    loadQuoteRelations(supabase, quote.id),
+    loadPublicQuoteRelations(supabase, quote.id),
     getBusinessDocumentBranding(supabase, quote.user_id, null),
   ]);
 
@@ -660,7 +896,7 @@ export async function getPublicQuoteByToken(token: string): Promise<{
 
   return {
     data: {
-      quote: mapHydratedQuoteDetail(quote, relationsResult.data),
+      quote: mapHydratedPublicQuoteDetail(quote, relationsResult.data),
       business: businessResult.data
         ? {
             name: businessResult.data.name,
@@ -1011,6 +1247,11 @@ export async function setQuoteOptionalLineItemSelection(
     return;
   }
 
+  const linkedInvoicesResult = await getLinkedInvoiceCountForQuote(supabase, quoteId, user.id);
+  if (linkedInvoicesResult.error || linkedInvoicesResult.count > 0) {
+    return;
+  }
+
   const { data: lineItems, error: lineItemsError } = await supabase
     .from('quote_line_items')
     .select('id, total_cents, is_optional, is_selected')
@@ -1115,6 +1356,11 @@ export async function setPublicQuoteOptionalLineItemSelection(
     return;
   }
 
+  const linkedInvoicesResult = await getLinkedInvoiceCountForQuote(supabase, quote.id);
+  if (linkedInvoicesResult.error || linkedInvoicesResult.count > 0) {
+    return;
+  }
+
   const { data: lineItems, error: lineItemsError } = await supabase
     .from('quote_line_items')
     .select('id, total_cents, is_optional, is_selected')
@@ -1178,7 +1424,8 @@ export async function setPublicQuoteOptionalLineItemSelection(
       gst_cents: nextGstCents,
       total_cents: nextTotalCents,
     })
-    .eq('id', quote.id);
+    .eq('id', quote.id)
+    .eq('public_share_token', quoteToken);
 
   if (updateQuoteError) {
     return;
@@ -1206,13 +1453,25 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
   const supabase = createAdminClient();
   const quoteResult = await supabase
     .from('quotes')
-    .select(PUBLIC_QUOTE_SELECT)
+    .select(PUBLIC_QUOTE_APPROVAL_SELECT)
     .eq('public_share_token', quoteToken)
     .single();
-  const quote = quoteResult.data as QuoteDetailRow | null;
+  let quote = quoteResult.data as PublicQuoteApprovalRow | null;
+  let quoteError = quoteResult.error;
+
+  if (quoteError && isMissingQuoteCustomerSnapshotColumnError(quoteError.message)) {
+    const legacyResult = await supabase
+      .from('quotes')
+      .select(PUBLIC_QUOTE_APPROVAL_SELECT_LEGACY)
+      .eq('public_share_token', quoteToken)
+      .single();
+
+    quote = legacyResult.data as PublicQuoteApprovalRow | null;
+    quoteError = legacyResult.error;
+  }
 
   if (
-    quoteResult.error ||
+    quoteError ||
     !quote ||
     resolveQuoteStatus({
       status: quote.status,
@@ -1223,10 +1482,6 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
   }
 
   const approvedAt = new Date().toISOString();
-  const approvalLog = `Client approved via public page on ${approvedAt} by ${approvedByName} <${approvedByEmail}>. Signature: ${approvalSignature}.`;
-  const nextInternalNotes = quote.internal_notes?.trim()
-    ? `${quote.internal_notes.trim()}\n\n${approvalLog}`
-    : approvalLog;
 
   const { error: updateQuoteError } = await supabase
     .from('quotes')
@@ -1236,7 +1491,6 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
       approved_by_name: approvedByName,
       approved_by_email: approvedByEmail,
       approval_signature: approvalSignature,
-      internal_notes: nextInternalNotes,
     })
     .eq('id', quote.id)
     .eq('public_share_token', quoteToken);
@@ -1290,10 +1544,10 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
   const supabase = createAdminClient();
   const quoteResult = await supabase
     .from('quotes')
-    .select(PUBLIC_QUOTE_SELECT)
+    .select('id, status, valid_until')
     .eq('public_share_token', quoteToken)
     .single();
-  const quote = quoteResult.data as QuoteDetailRow | null;
+  const quote = quoteResult.data as { id: string; status: string; valid_until: string | null } | null;
 
   if (
     quoteResult.error ||
@@ -1306,17 +1560,10 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
     return;
   }
 
-  const rejectedAt = new Date().toISOString();
-  const rejectionLog = `Client rejected via public page on ${rejectedAt} by ${rejectedByName} <${rejectedByEmail}>.`;
-  const nextInternalNotes = quote.internal_notes?.trim()
-    ? `${quote.internal_notes.trim()}\n\n${rejectionLog}`
-    : rejectionLog;
-
   const { error: updateQuoteError } = await supabase
     .from('quotes')
     .update({
       status: 'rejected',
-      internal_notes: nextInternalNotes,
     })
     .eq('id', quote.id)
     .eq('public_share_token', quoteToken);
@@ -1536,6 +1783,15 @@ export async function updateQuote(
     return { error: 'Quote not found.' };
   }
 
+  const linkedInvoicesResult = await getLinkedInvoiceCountForQuote(supabase, quoteId, user.id);
+  if (linkedInvoicesResult.error) {
+    return { error: linkedInvoicesResult.error };
+  }
+
+  if (linkedInvoicesResult.count > 0) {
+    return { error: QUOTE_INVOICE_LOCK_MESSAGE };
+  }
+
   const { data: customer, error: customerError } = await supabase
     .from('customers')
     .select('id, email, emails, address_line1, address_line2, city, state, postcode, properties')
@@ -1744,6 +2000,48 @@ export async function updateQuote(
   redirect(`/quotes/${quoteId}`);
 }
 
+export async function approveQuote(quoteId: string): Promise<{ error: string } | void> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: quote, error: fetchError } = await supabase
+    .from('quotes')
+    .select('id, user_id, status, internal_notes')
+    .eq('id', quoteId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (fetchError || !quote) return { error: 'Quote not found.' };
+
+  if (!['draft', 'sent'].includes(quote.status)) {
+    return { error: 'Only draft or sent quotes can be approved.' };
+  }
+
+  const approvedAt = new Date().toISOString();
+  const approvalLog = `Manually approved by owner on ${approvedAt}.`;
+  const nextInternalNotes = quote.internal_notes?.trim()
+    ? `${quote.internal_notes.trim()}\n\n${approvalLog}`
+    : approvalLog;
+
+  const { error: updateError } = await supabase
+    .from('quotes')
+    .update({
+      status: 'approved',
+      approved_at: approvedAt,
+      internal_notes: nextInternalNotes,
+    })
+    .eq('id', quoteId)
+    .eq('user_id', user.id);
+
+  if (updateError) return { error: updateError.message };
+
+  revalidatePath('/quotes');
+  revalidatePath(`/quotes/${quoteId}`);
+}
+
 export async function deleteQuote(quoteId: string): Promise<{ error: string } | void> {
   const supabase = await createServerClient();
   const {
@@ -1761,6 +2059,15 @@ export async function deleteQuote(quoteId: string): Promise<{ error: string } | 
 
   if (quoteError || !quote) {
     return { error: 'Quote not found.' };
+  }
+
+  const linkedInvoicesResult = await getLinkedInvoiceCountForQuote(supabase, quoteId, user.id);
+  if (linkedInvoicesResult.error) {
+    return { error: linkedInvoicesResult.error };
+  }
+
+  if (linkedInvoicesResult.count > 0) {
+    return { error: QUOTE_DELETE_LOCK_MESSAGE };
   }
 
   // Delete relations first

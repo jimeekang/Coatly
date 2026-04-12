@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import type { InvoicePaymentMethod } from '@/types/invoice';
 import { formatAUD, formatDate } from '@/utils/format';
 
 const FIELD_CLASS =
@@ -21,8 +22,7 @@ const INVOICE_TYPE_COPY: Record<
   final: { label: 'Final invoice', hint: 'Closing balance after the work is complete.' },
 };
 
-// Status options only available for manual edit (not shown in create mode)
-const EDIT_STATUS_OPTIONS: Array<{
+const MANUAL_STATUS_OPTIONS: Array<{
   value: 'draft' | 'paid' | 'cancelled';
   label: string;
 }> = [
@@ -31,11 +31,42 @@ const EDIT_STATUS_OPTIONS: Array<{
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+const PAYMENT_METHOD_OPTIONS: Array<{
+  value: InvoicePaymentMethod;
+  label: string;
+}> = [
+  { value: 'bank_transfer', label: 'Bank transfer' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'card', label: 'Card' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'other', label: 'Other' },
+];
+
 type InvoiceLineDraft = {
   description: string;
   quantity: string;
   unitPrice: string;
 };
+
+function buildDefaultDueDate() {
+  const baseDate = new Date();
+  baseDate.setDate(baseDate.getDate() + 14);
+
+  const year = baseDate.getFullYear();
+  const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+  const day = String(baseDate.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function buildTodayDate() {
+  const baseDate = new Date();
+  const year = baseDate.getFullYear();
+  const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+  const day = String(baseDate.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
 
 export type InvoiceFormCustomerOption = {
   id: string;
@@ -57,6 +88,8 @@ export type InvoiceFormQuoteOption = {
   status: string;
   valid_until: string | null;
   billed_subtotal_cents: number;
+  linked_invoice_count: number;
+  has_linked_invoices: boolean;
   line_items: Array<{
     description: string;
     quantity: number;
@@ -82,6 +115,8 @@ export type InvoiceFormSubmitPayload = {
   payment_terms: string | null;
   bank_details: string | null;
   due_date: string | null;
+  paid_date: string | null;
+  payment_method: InvoicePaymentMethod | null;
   notes: string | null;
   line_items: Array<{
     description: string;
@@ -99,6 +134,8 @@ export type InvoiceFormDefaultValues = {
   payment_terms: string | null;
   bank_details: string | null;
   due_date: string | null;
+  paid_date: string | null;
+  payment_method: InvoicePaymentMethod | null;
   notes: string | null;
   line_items: Array<{
     description: string;
@@ -119,7 +156,9 @@ function createInitialInvoiceForm(
     business_abn: defaultValues?.business_abn ?? businessDefaults?.business_abn ?? '',
     payment_terms: defaultValues?.payment_terms ?? businessDefaults?.payment_terms ?? '',
     bank_details: defaultValues?.bank_details ?? businessDefaults?.bank_details ?? '',
-    due_date: defaultValues?.due_date ?? '',
+    due_date: defaultValues?.due_date ?? buildDefaultDueDate(),
+    paid_date: defaultValues?.paid_date ?? '',
+    payment_method: defaultValues?.payment_method ?? '',
     notes: defaultValues?.notes ?? '',
   };
 }
@@ -225,7 +264,9 @@ export function InvoiceForm({
   const [lineItems, setLineItems] = useState<InvoiceLineDraft[]>(() =>
     createInitialLineItems(defaultValues)
   );
-  const [showBusinessDetails, setShowBusinessDetails] = useState(false);
+  const [showBusinessDetails, setShowBusinessDetails] = useState(
+    () => Boolean(businessDefaults?.business_abn || businessDefaults?.payment_terms || businessDefaults?.bank_details)
+  );
 
   const filteredQuotes = useMemo(() => {
     if (!form.customer_id) return quotes;
@@ -286,21 +327,21 @@ export function InvoiceForm({
     };
   }, [existingLinkedQuoteSubtotal, selectedQuote, summary.subtotal]);
 
-  // For edit mode: only allow manual-settable statuses
-  const editStatusOptions = useMemo(() => {
+  const statusOptions = useMemo(() => {
     if (form.status === 'sent' || form.status === 'overdue') {
       return [
         { value: form.status as 'sent' | 'overdue', label: form.status === 'sent' ? 'Sent' : 'Overdue' },
-        ...EDIT_STATUS_OPTIONS,
+        ...MANUAL_STATUS_OPTIONS,
       ];
     }
-    return EDIT_STATUS_OPTIONS;
+    return MANUAL_STATUS_OPTIONS;
   }, [form.status]);
 
   const canSubmit =
     Boolean(onSubmit) &&
     Boolean(form.customer_id) &&
     Boolean(form.due_date) &&
+    (form.status !== 'paid' || Boolean(form.paid_date)) &&
     summary.total > 0 &&
     lineItems.some(
       (item) =>
@@ -332,6 +373,15 @@ export function InvoiceForm({
       if (name === 'customer_id' && prev.quote_id) {
         const matchedQuote = quotes.find((quote) => quote.id === prev.quote_id);
         if (matchedQuote && matchedQuote.customer_id !== value) next.quote_id = '';
+      }
+
+      if (name === 'status') {
+        if (value !== 'paid') {
+          next.paid_date = '';
+          next.payment_method = '';
+        } else if (!prev.paid_date) {
+          next.paid_date = buildTodayDate();
+        }
       }
 
       return next;
@@ -389,12 +439,16 @@ export function InvoiceForm({
         customer_id: form.customer_id,
         quote_id: form.quote_id || null,
         invoice_type: form.invoice_type,
-        // Create mode always saves as draft; edit mode respects current form status
-        status: mode === 'create' ? 'draft' : form.status,
+        status: form.status,
         business_abn: form.business_abn.trim() || null,
         payment_terms: form.payment_terms.trim() || null,
         bank_details: form.bank_details.trim() || null,
         due_date: form.due_date,
+        paid_date: form.status === 'paid' ? form.paid_date || null : null,
+        payment_method:
+          form.status === 'paid'
+            ? ((form.payment_method || null) as InvoicePaymentMethod | null)
+            : null,
         notes: form.notes.trim() || null,
         line_items: preparedLineItems,
       });
@@ -501,7 +555,9 @@ export function InvoiceForm({
                     <option value="final">Final</option>
                   </select>
                   <p className="mt-1.5 text-xs text-pm-secondary">
-                    {INVOICE_TYPE_COPY[form.invoice_type].hint}
+                    {form.invoice_type === 'deposit' && selectedQuote && selectedQuote.deposit_percent > 0
+                      ? `Deposit invoice uses the ${selectedQuote.deposit_percent}% deposit saved on the linked quote.`
+                      : INVOICE_TYPE_COPY[form.invoice_type].hint}
                   </p>
                 </div>
 
@@ -521,8 +577,7 @@ export function InvoiceForm({
                 </div>
               </div>
 
-              {/* Status — edit mode only */}
-              {mode === 'edit' && (
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="status" className={LABEL_CLASS}>
                     Status
@@ -534,7 +589,7 @@ export function InvoiceForm({
                     onChange={handleFormChange}
                     className={FIELD_CLASS}
                   >
-                    {editStatusOptions.map((opt) => (
+                    {statusOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
@@ -542,9 +597,56 @@ export function InvoiceForm({
                   </select>
                   {(form.status === 'sent' || form.status === 'overdue') && (
                     <p className="mt-1.5 text-xs text-pm-secondary">
-                      Sent and overdue are set automatically. You can mark as paid or cancelled here.
+                      Sent and overdue are set automatically. You can mark this invoice as paid or cancelled here.
                     </p>
                   )}
+                  {form.status === 'paid' && (
+                    <p className="mt-1.5 text-xs text-pm-secondary">
+                      Marking as paid will store the paid date and set the invoice balance to zero.
+                    </p>
+                  )}
+                </div>
+
+                {(form.status === 'paid' || form.paid_date || form.payment_method) && (
+                  <div>
+                    <label htmlFor="paid_date" className={LABEL_CLASS}>
+                      Paid Date
+                    </label>
+                    <input
+                      id="paid_date"
+                      name="paid_date"
+                      type="date"
+                      value={form.paid_date}
+                      onChange={handleFormChange}
+                      className={FIELD_CLASS}
+                      required={form.status === 'paid'}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {(form.status === 'paid' || form.payment_method || form.paid_date) && (
+                <div>
+                  <label htmlFor="payment_method" className={LABEL_CLASS}>
+                    Payment Method
+                  </label>
+                  <select
+                    id="payment_method"
+                    name="payment_method"
+                    value={form.payment_method}
+                    onChange={handleFormChange}
+                    className={FIELD_CLASS}
+                  >
+                    <option value="">Select a payment method</option>
+                    {PAYMENT_METHOD_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-xs text-pm-secondary">
+                    Optional, but useful for reconciling paid invoices later.
+                  </p>
                 </div>
               )}
             </div>
@@ -610,6 +712,8 @@ export function InvoiceForm({
                   Number.isFinite(quantity) && Number.isFinite(unitPrice)
                     ? Math.round(quantity * unitPrice * 100)
                     : 0;
+                const lineGst = Math.round(lineTotal * 0.1);
+                const lineGrandTotal = lineTotal + lineGst;
 
                 return (
                   <div
@@ -678,9 +782,21 @@ export function InvoiceForm({
                       </div>
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-4 py-2.5 text-sm">
-                      <span className="text-pm-secondary">Line total (excl. GST)</span>
-                      <span className="font-semibold text-pm-body">{formatAUD(lineTotal)}</span>
+                    <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-pm-secondary">Line total</span>
+                        <span className="font-semibold text-pm-body">{formatAUD(lineTotal)}</span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <span className="text-pm-secondary">GST (10%)</span>
+                        <span className="font-medium text-pm-body">{formatAUD(lineGst)}</span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-3 border-t border-pm-border pt-2">
+                        <span className="font-medium text-pm-body">Item total</span>
+                        <span className="font-semibold text-pm-teal">
+                          {formatAUD(lineGrandTotal)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -688,18 +804,40 @@ export function InvoiceForm({
             </div>
           </section>
 
-          {/* Notes */}
+          {/* Notes & Terms */}
           <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
-            <h3 className="mb-4 text-base font-semibold text-pm-body">Notes</h3>
-            <textarea
-              id="notes"
-              name="notes"
-              rows={4}
-              value={form.notes}
-              onChange={handleFormChange}
-              placeholder="Payment note or job summary for the client"
-              className={TEXTAREA_CLASS}
-            />
+            <h3 className="mb-4 text-base font-semibold text-pm-body">Notes & Terms</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="notes" className={LABEL_CLASS}>
+                  Notes
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={4}
+                  value={form.notes}
+                  onChange={handleFormChange}
+                  placeholder="Add a payment note or job summary"
+                  className={TEXTAREA_CLASS}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="payment_terms" className={LABEL_CLASS}>
+                  Payment Terms
+                </label>
+                <textarea
+                  id="payment_terms"
+                  name="payment_terms"
+                  rows={3}
+                  value={form.payment_terms}
+                  onChange={handleFormChange}
+                  placeholder="Payment due within 14 days from invoice date."
+                  className={TEXTAREA_CLASS}
+                />
+              </div>
+            </div>
           </section>
 
           {/* Business & Payment Details — collapsed by default */}
@@ -729,22 +867,6 @@ export function InvoiceForm({
                     className={FIELD_CLASS}
                   />
                 </div>
-
-                <div>
-                  <label htmlFor="payment_terms" className={LABEL_CLASS}>
-                    Payment Terms
-                  </label>
-                  <textarea
-                    id="payment_terms"
-                    name="payment_terms"
-                    rows={3}
-                    value={form.payment_terms}
-                    onChange={handleFormChange}
-                    placeholder="Payment due within 7 days from invoice date."
-                    className={TEXTAREA_CLASS}
-                  />
-                </div>
-
                 <div>
                   <label htmlFor="bank_details" className={LABEL_CLASS}>
                     Bank Details
@@ -791,7 +913,7 @@ export function InvoiceForm({
           {selectedQuote && selectedQuoteIncludedItems.length > 0 && (
             <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-pm-secondary">
-                Quote Items
+                Quote items
               </h3>
               <div className="space-y-2">
                 {selectedQuoteIncludedItems.map((item, index) => (
@@ -825,7 +947,7 @@ export function InvoiceForm({
           {selectedCustomer && (
             <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-pm-secondary">
-                Customer
+                Customer Snapshot
               </h3>
               <div className="space-y-1 text-sm">
                 <p className="font-semibold text-pm-body">

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildQuoteInvoiceLinkStateMap,
   calculateInvoiceTotals,
   formatCustomerAddress,
   parseInvoiceCreateInput,
@@ -37,6 +38,8 @@ describe('lib/invoices', () => {
       payment_terms: '  Payment due within 7 days  ',
       bank_details: '  BSB: 123-456  ',
       due_date: '2026-04-05',
+      paid_date: '',
+      payment_method: '',
       notes: '  Paint entry hallway  ',
       line_items: [
         {
@@ -58,6 +61,8 @@ describe('lib/invoices', () => {
         payment_terms: 'Payment due within 7 days',
         bank_details: 'BSB: 123-456',
         due_date: '2026-04-05',
+        paid_date: null,
+        payment_method: null,
         notes: 'Paint entry hallway',
         line_items: [
           {
@@ -67,6 +72,34 @@ describe('lib/invoices', () => {
           },
         ],
       },
+    });
+  });
+
+  it('requires a paid date when status is paid', () => {
+    const parsed = parseInvoiceCreateInput({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_id: '',
+      status: 'paid',
+      invoice_type: 'full',
+      business_abn: '',
+      payment_terms: '',
+      bank_details: '',
+      due_date: '2026-04-05',
+      paid_date: '',
+      payment_method: 'card',
+      notes: '',
+      line_items: [
+        {
+          description: 'Prep and paint',
+          quantity: 1,
+          unit_price_cents: 42000,
+        },
+      ],
+    });
+
+    expect(parsed).toEqual({
+      success: false,
+      error: 'Paid date is required when status is paid',
     });
   });
 
@@ -89,5 +122,36 @@ describe('lib/invoices', () => {
         postcode: '2095',
       })
     ).toBe('12 Harbour St, Manly, NSW, 2095');
+  });
+
+  it('builds quote-linked invoice state including edit-lock count and billed subtotal', () => {
+    const stateByQuoteId = buildQuoteInvoiceLinkStateMap([
+      {
+        quote_id: 'quote-1',
+        subtotal_cents: 40000,
+        status: 'draft',
+      },
+      {
+        quote_id: 'quote-1',
+        subtotal_cents: 10000,
+        status: 'cancelled',
+      },
+      {
+        quote_id: 'quote-2',
+        subtotal_cents: 25000,
+        status: 'sent',
+      },
+    ]);
+
+    expect(stateByQuoteId.get('quote-1')).toEqual({
+      linked_invoice_count: 2,
+      has_linked_invoices: true,
+      billed_subtotal_cents: 40000,
+    });
+    expect(stateByQuoteId.get('quote-2')).toEqual({
+      linked_invoice_count: 1,
+      has_linked_invoices: true,
+      billed_subtotal_cents: 25000,
+    });
   });
 });

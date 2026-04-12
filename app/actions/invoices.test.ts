@@ -28,7 +28,7 @@ vi.mock('@/lib/subscription/access', () => ({
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
-import { createInvoice, getInvoiceDraftFromQuote } from '@/app/actions/invoices';
+import { createInvoice, getInvoiceDraftFromQuote, updateInvoice } from '@/app/actions/invoices';
 
 function createFilterQuery<Result>(result: Result) {
   return {
@@ -78,6 +78,8 @@ describe('createInvoice', () => {
       payment_terms: null,
       bank_details: null,
       due_date: null,
+      paid_date: null,
+      payment_method: null,
       notes: null,
       line_items: [],
     });
@@ -119,6 +121,8 @@ describe('createInvoice', () => {
       payment_terms: null,
       bank_details: null,
       due_date: '2026-04-03',
+      paid_date: null,
+      payment_method: null,
       notes: null,
       line_items: [
         {
@@ -227,6 +231,8 @@ describe('createInvoice', () => {
       payment_terms: 'Payment due within 7 days',
       bank_details: 'BSB: 123-456\nAccount Number: 12345678',
       due_date: '2026-04-03',
+      paid_date: null,
+      payment_method: null,
       notes: 'Final coat and trim',
       line_items: [
         {
@@ -250,6 +256,9 @@ describe('createInvoice', () => {
       total_cents: 27500,
       amount_paid_cents: 0,
       due_date: '2026-04-03',
+      paid_date: null,
+      paid_at: null,
+      payment_method: null,
     });
     expect(captured.lineItemsInsert).toEqual([
       {
@@ -272,7 +281,7 @@ describe('createInvoice', () => {
     });
 
     const quotesQuery = createFilterQuery({
-      data: { id: 'quote-1', customer_id: 'different-customer' },
+      data: { id: 'quote-1', customer_id: 'different-customer', status: 'approved' },
       error: null,
     });
 
@@ -315,6 +324,8 @@ describe('createInvoice', () => {
       payment_terms: null,
       bank_details: null,
       due_date: '2026-04-03',
+      paid_date: null,
+      payment_method: null,
       notes: null,
       line_items: [
         {
@@ -327,6 +338,74 @@ describe('createInvoice', () => {
 
     expect(result).toEqual({
       error: 'Quote customer does not match the selected customer.',
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a quote link when the quote is not approved', async () => {
+    const customersQuery = createFilterQuery({
+      data: { id: 'customer-1' },
+      error: null,
+    });
+
+    const quotesQuery = createFilterQuery({
+      data: { id: 'quote-1', customer_id: 'customer-1', status: 'sent' },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customersQuery),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(quotesQuery),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            insert: vi.fn(),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await createInvoice({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_id: '550e8400-e29b-41d4-a716-446655440001',
+      invoice_type: 'progress',
+      status: 'draft',
+      business_abn: null,
+      payment_terms: null,
+      bank_details: null,
+      due_date: '2026-04-03',
+      paid_date: null,
+      payment_method: null,
+      notes: null,
+      line_items: [
+        {
+          description: 'Progress payment',
+          quantity: 1,
+          unit_price_cents: 50000,
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      error: 'Only approved quotes can be linked to invoices.',
     });
     expect(redirectMock).not.toHaveBeenCalled();
   });
@@ -351,6 +430,8 @@ describe('createInvoice', () => {
       payment_terms: null,
       bank_details: null,
       due_date: '2026-04-03',
+      paid_date: null,
+      payment_method: null,
       notes: null,
       line_items: [
         {
@@ -429,6 +510,17 @@ describe('createInvoice', () => {
       data: null,
       error: null,
     });
+    const linkedInvoicesQuery = {
+      data: [
+        {
+          quote_id: 'quote-1',
+          subtotal_cents: 25000,
+          status: 'draft',
+        },
+      ],
+      error: null,
+      eq: vi.fn().mockReturnThis(),
+    };
 
     createServerClientMock.mockResolvedValue({
       auth: {
@@ -457,6 +549,11 @@ describe('createInvoice', () => {
             select: vi.fn().mockReturnValue(profilesQuery),
           };
         }
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue(linkedInvoicesQuery),
+          };
+        }
 
         throw new Error(`Unexpected table ${table}`);
       }),
@@ -475,6 +572,10 @@ describe('createInvoice', () => {
       payment_terms: 'Payment due within 7 days',
       bank_details: 'BSB: 123-456\nAccount Number: 12345678',
       due_date: null,
+      paid_date: null,
+      payment_method: null,
+      linked_invoice_count: 1,
+      has_linked_invoices: true,
       notes: 'Linked to approved quote QUO-0010 - Cafe repaint',
       line_items: [
         {
@@ -484,5 +585,201 @@ describe('createInvoice', () => {
         },
       ],
     });
+  });
+
+  it('stores payment tracking when a paid invoice is created', async () => {
+    const captured: {
+      invoiceInsert?: Record<string, unknown>;
+      lineItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    const customersQuery = createFilterQuery({
+      data: { id: 'customer-1' },
+      error: null,
+    });
+
+    const invoiceInsertResult = {
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'invoice-paid-1' },
+          error: null,
+        }),
+      }),
+    };
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customersQuery),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            insert: vi.fn((payload) => {
+              captured.invoiceInsert = payload;
+              return invoiceInsertResult;
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'invoice_line_items') {
+          return {
+            insert: vi.fn(async (payload) => {
+              captured.lineItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: null,
+                error: null,
+              })
+            ),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'generate_invoice_number') {
+          return { data: 'INV-0008', error: null };
+        }
+
+        if (fn === 'calculate_invoice_totals') {
+          return { data: null, error: null };
+        }
+
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    const result = await createInvoice({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_id: null,
+      invoice_type: 'full',
+      status: 'paid',
+      business_abn: null,
+      payment_terms: 'Paid on completion',
+      bank_details: null,
+      due_date: '2026-04-18',
+      paid_date: '2026-04-09',
+      payment_method: 'card',
+      notes: 'Settled on site',
+      line_items: [
+        {
+          description: 'Final invoice',
+          quantity: 1,
+          unit_price_cents: 50000,
+        },
+      ],
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.invoiceInsert).toMatchObject({
+      status: 'paid',
+      subtotal_cents: 50000,
+      gst_cents: 5000,
+      total_cents: 55000,
+      amount_paid_cents: 55000,
+      due_date: '2026-04-18',
+      paid_date: '2026-04-09',
+      paid_at: '2026-04-09T12:00:00.000Z',
+      payment_method: 'card',
+    });
+    expect(captured.lineItemsInsert).toEqual([
+      {
+        invoice_id: 'invoice-paid-1',
+        description: 'Final invoice',
+        quantity: 1,
+        unit_price_cents: 50000,
+        gst_cents: 5000,
+        total_cents: 50000,
+        sort_order: 0,
+      },
+    ]);
+    expect(redirectMock).toHaveBeenCalledWith('/invoices/invoice-paid-1');
+  });
+});
+
+describe('updateInvoice', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getSubscriptionSnapshotForUserMock.mockResolvedValue({
+      plan: 'pro',
+      status: 'active',
+      active: true,
+      cancelScheduled: false,
+      features: {
+        ai: true,
+        xeroSync: true,
+        jobCosting: true,
+        prioritySupport: true,
+        unlimitedQuotes: true,
+        activeQuoteLimit: null,
+      },
+    });
+  });
+
+  it('blocks edits once an invoice has been sent', async () => {
+    const existingInvoiceQuery = createFilterQuery({
+      data: { id: 'invoice-1', user_id: 'user-1', status: 'sent' },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue(existingInvoiceQuery),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateInvoice('invoice-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_id: null,
+      invoice_type: 'full',
+      status: 'sent',
+      business_abn: null,
+      payment_terms: null,
+      bank_details: null,
+      due_date: '2026-04-18',
+      paid_date: null,
+      payment_method: null,
+      notes: null,
+      line_items: [
+        {
+          description: 'Final invoice',
+          quantity: 1,
+          unit_price_cents: 50000,
+        },
+      ],
+    });
+
+    expect(result).toEqual({ error: 'Only draft invoices can be edited.' });
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });

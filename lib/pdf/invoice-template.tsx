@@ -1,8 +1,23 @@
 import { Document, Image, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { APP_NAME } from '@/config/constants';
 import { formatCustomerAddress } from '@/lib/invoices';
-import type { InvoiceWithCustomer } from '@/types/invoice';
+import type { InvoiceType, InvoiceWithCustomer } from '@/types/invoice';
 import { formatAUD, formatDate, formatABN } from '@/utils/format';
+
+const INVOICE_TYPE_TITLE: Record<InvoiceType, string> = {
+  full:     'TAX INVOICE',
+  deposit:  'DEPOSIT INVOICE',
+  progress: 'PROGRESS CLAIM',
+  final:    'FINAL INVOICE',
+};
+
+const PAYMENT_METHOD_LABEL: Record<NonNullable<InvoiceWithCustomer['payment_method']>, string> = {
+  bank_transfer: 'Bank transfer',
+  cash: 'Cash',
+  card: 'Card',
+  cheque: 'Cheque',
+  other: 'Other',
+};
 
 const styles = StyleSheet.create({
   page: {
@@ -148,15 +163,24 @@ export function InvoiceTemplate({
             {abn && <Text style={styles.metaLine}>ABN: {formatABN(abn)}</Text>}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.invoiceTitle}>TAX INVOICE</Text>
+            <Text style={styles.invoiceTitle}>
+              {INVOICE_TYPE_TITLE[invoice.invoice_type] ?? 'TAX INVOICE'}
+            </Text>
             <Text style={styles.metaLine}>Invoice No: {invoice.invoice_number}</Text>
             <Text style={styles.metaLine}>Issue Date: {formatDate(invoice.created_at)}</Text>
-            <Text style={styles.metaLine}>Due Date: {formatDate(invoice.due_date)}</Text>
-            {isPaid && invoice.paid_at && (
+            <Text style={styles.metaLine}>
+              Due Date: {invoice.due_date ? formatDate(invoice.due_date) : 'Not set'}
+            </Text>
+            {isPaid && (invoice.paid_date || invoice.paid_at) && (
               <Text
                 style={[styles.metaLine, { color: '#16a34a', fontFamily: 'Helvetica-Bold' }]}
               >
-                PAID {formatDate(invoice.paid_at)}
+                PAID {formatDate(invoice.paid_date ?? invoice.paid_at)}
+              </Text>
+            )}
+            {invoice.payment_method && (
+              <Text style={styles.metaLine}>
+                Method: {PAYMENT_METHOD_LABEL[invoice.payment_method]}
               </Text>
             )}
           </View>

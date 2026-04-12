@@ -64,7 +64,9 @@ export async function GET(request: NextRequest) {
       payment_terms: string | null;
       bank_details: string | null;
       due_date: string | null;
+      paid_date: string | null;
       paid_at: string | null;
+      payment_method: string | null;
       notes: string | null;
       created_at: string;
       updated_at: string;

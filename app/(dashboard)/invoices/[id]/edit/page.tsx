@@ -16,6 +16,7 @@ export default async function EditInvoicePage({ params }: Props) {
     await Promise.all([getInvoice(id), getInvoiceFormOptions()]);
 
   if (!invoice || invoiceError) notFound();
+  if (invoice.status !== 'draft') notFound();
 
   const customers = formOptions.customers;
   const quotes = formOptions.quotes;
@@ -70,6 +71,8 @@ export default async function EditInvoicePage({ params }: Props) {
             payment_terms: invoice.payment_terms,
             bank_details: invoice.bank_details,
             due_date: invoice.due_date,
+            paid_date: invoice.paid_date,
+            payment_method: invoice.payment_method,
             notes: invoice.notes,
             line_items: invoice.line_items.map((item) => ({
               description: item.description,

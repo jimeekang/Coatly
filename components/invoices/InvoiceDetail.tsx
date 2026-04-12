@@ -26,6 +26,14 @@ const INVOICE_TYPE_LABEL: Record<InvoiceWithCustomer['invoice_type'], string> = 
   final: 'Final',
 };
 
+const PAYMENT_METHOD_LABEL: Record<NonNullable<InvoiceWithCustomer['payment_method']>, string> = {
+  bank_transfer: 'Bank transfer',
+  cash: 'Cash',
+  card: 'Card',
+  cheque: 'Cheque',
+  other: 'Other',
+};
+
 function InfoRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
@@ -139,12 +147,14 @@ export function InvoiceDetail({
                 {isSending ? 'Sending…' : 'Send Invoice'}
               </button>
             )}
-            <Link
-              href={`/invoices/${invoice.id}/edit`}
-              className="inline-flex h-11 items-center rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
-            >
-              Edit
-            </Link>
+            {invoice.status === 'draft' && (
+              <Link
+                href={`/invoices/${invoice.id}/edit`}
+                className="inline-flex h-11 items-center rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
+              >
+                Edit
+              </Link>
+            )}
             <a
               href={`/api/pdf/invoice?id=${invoice.id}`}
               target="_blank"
@@ -165,6 +175,11 @@ export function InvoiceDetail({
           {invoice.status === 'draft' && (
             <p className="mt-3 text-xs text-pm-secondary">
               Sending this invoice will email it to the customer and mark it as sent.
+            </p>
+          )}
+          {invoice.status !== 'draft' && (
+            <p className="mt-3 text-xs text-pm-secondary">
+              Sent, paid, overdue, and cancelled invoices are locked to preserve billing history.
             </p>
           )}
         </section>
@@ -268,6 +283,9 @@ export function InvoiceDetail({
                   label="Due Date"
                   value={invoice.due_date ? formatDate(invoice.due_date) : 'No due date'}
                 />
+                {invoice.paid_date && (
+                  <InfoRow label="Paid Date" value={formatDate(invoice.paid_date)} />
+                )}
                 {linkedQuote && (
                   <InfoRow
                     label="Linked Quote"
@@ -307,6 +325,14 @@ export function InvoiceDetail({
                   <dt className="text-pm-secondary">Paid</dt>
                   <dd className="font-medium text-pm-body">{formatAUD(invoice.amount_paid_cents)}</dd>
                 </div>
+                {invoice.payment_method && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-pm-secondary">Method</dt>
+                    <dd className="font-medium text-pm-body">
+                      {PAYMENT_METHOD_LABEL[invoice.payment_method]}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-3 border-t border-pm-border pt-3">
                   <dt className="font-semibold text-pm-body">Balance Due</dt>
                   <dd className="text-base font-semibold text-pm-teal">{formatAUD(balanceCents)}</dd>

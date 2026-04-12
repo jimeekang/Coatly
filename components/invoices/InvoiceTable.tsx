@@ -119,7 +119,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search invoices..."
+          placeholder="Search by invoice, customer, or type..."
           className="w-full bg-surface-container border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
         />
         {query && (

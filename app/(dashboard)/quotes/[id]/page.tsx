@@ -4,14 +4,12 @@ import {
   getQuote,
   setQuoteOptionalLineItemSelection,
 } from '@/app/actions/quotes';
-import { createJobFromQuoteAndRedirect } from '@/app/actions/jobs';
 import { APP_URL } from '@/config/constants';
 import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
 import { ProfitabilityCard } from '@/components/quotes/ProfitabilityCard';
 import { QuoteStatusCard } from '@/components/quotes/QuoteStatusCard';
-import { DuplicateQuoteButton } from '@/components/quotes/DuplicateQuoteButton';
-import { DeleteQuoteButton } from '@/components/quotes/DeleteQuoteButton';
+import { QuoteActions } from '@/components/quotes/QuoteActions';
 import { getBusinessRateSettings } from '@/lib/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -22,7 +20,7 @@ export default async function QuoteDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ jobError?: string; emailDemo?: string }>;
+  searchParams?: Promise<{ jobError?: string; emailDemo?: string; editLocked?: string }>;
 }) {
   const { id } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
@@ -35,6 +33,7 @@ export default async function QuoteDetailPage({
   const jobError =
     typeof resolvedSearchParams.jobError === 'string' ? resolvedSearchParams.jobError : null;
   const emailDemo = resolvedSearchParams.emailDemo === '1';
+  const editLocked = resolvedSearchParams.editLocked === '1';
 
   // ── Internal cost breakdown (not shown in PDF) ──────────────────────────
   const hasManualRooms = (quote?.rooms?.length ?? 0) > 0;
@@ -111,7 +110,7 @@ export default async function QuoteDetailPage({
             {quote ? QUOTE_STATUS_LABELS[quote.status] : 'Quote not found'}
           </p>
         </div>
-        {quote && (
+        {quote && !quote.has_linked_invoices && (
           <Link
             href={`/quotes/${id}/edit`}
             className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
@@ -152,6 +151,14 @@ export default async function QuoteDetailPage({
           {jobError && (
             <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
               <p className="text-sm text-pm-coral-dark">{jobError}</p>
+            </div>
+          )}
+          {(editLocked || quote.has_linked_invoices) && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <p className="text-sm text-amber-900">
+                This quote is locked because at least one linked invoice already exists. Create any
+                needed variations before invoicing a quote.
+              </p>
             </div>
           )}
 
@@ -353,26 +360,32 @@ export default async function QuoteDetailPage({
                             <p className="text-sm font-semibold text-pm-body">
                               {formatAUD(item.total_cents)}
                             </p>
-                            <form action={setQuoteOptionalLineItemSelection}>
-                              <input type="hidden" name="quoteId" value={quote.id} />
-                              <input type="hidden" name="lineItemId" value={item.id} />
-                              <input
-                                type="hidden"
-                                name="isSelected"
-                                value={item.is_selected ? 'false' : 'true'}
-                              />
-                              <button
-                                type="submit"
-                                className={[
-                                  'inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
-                                  item.is_selected
-                                    ? 'border border-pm-border bg-white text-pm-body hover:bg-pm-surface'
-                                    : 'bg-pm-teal text-white hover:bg-pm-teal-hover',
-                                ].join(' ')}
-                              >
-                                {item.is_selected ? 'Remove from Total' : 'Add to Total'}
-                              </button>
-                            </form>
+                            {quote.has_linked_invoices ? (
+                              <p className="text-xs text-pm-secondary">
+                                Locked after invoice creation
+                              </p>
+                            ) : (
+                              <form action={setQuoteOptionalLineItemSelection}>
+                                <input type="hidden" name="quoteId" value={quote.id} />
+                                <input type="hidden" name="lineItemId" value={item.id} />
+                                <input
+                                  type="hidden"
+                                  name="isSelected"
+                                  value={item.is_selected ? 'false' : 'true'}
+                                />
+                                <button
+                                  type="submit"
+                                  className={[
+                                    'inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
+                                    item.is_selected
+                                      ? 'border border-pm-border bg-white text-pm-body hover:bg-pm-surface'
+                                      : 'bg-pm-teal text-white hover:bg-pm-teal-hover',
+                                  ].join(' ')}
+                                >
+                                  {item.is_selected ? 'Remove from Total' : 'Add to Total'}
+                                </button>
+                              </form>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -509,43 +522,13 @@ export default async function QuoteDetailPage({
             </div>
           </section>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            {quote.status === 'approved' && (
-              <Link
-                href={`/invoices/new?quoteId=${quote.id}`}
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
-              >
-                Create Invoice
-              </Link>
-            )}
-            <form action={createJobFromQuoteAndRedirect}>
-              <input type="hidden" name="quoteId" value={quote.id} />
-              <button
-                type="submit"
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-pm-teal px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
-              >
-                Create Job
-              </button>
-            </form>
-            <Link
-              href={`/api/pdf/quote?id=${quote.id}`}
-              target="_blank"
-              className="inline-flex min-h-12 items-center justify-center rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-medium text-pm-body transition-colors active:bg-pm-surface"
-            >
-              Open PDF
-            </Link>
-            {publicQuoteUrl && (
-              <Link
-                href={publicQuoteUrl}
-                target="_blank"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-medium text-pm-body transition-colors active:bg-pm-surface"
-              >
-                Open Client Page
-              </Link>
-            )}
-            <DuplicateQuoteButton quoteId={quote.id} />
-            <DeleteQuoteButton quoteId={quote.id} quoteNumber={quote.quote_number} />
-          </div>
+          <QuoteActions
+            quoteId={quote.id}
+            quoteNumber={quote.quote_number}
+            status={quote.status}
+            publicQuoteUrl={publicQuoteUrl}
+            hasLinkedInvoices={quote.has_linked_invoices}
+          />
         </div>
       )}
     </div>

@@ -222,6 +222,8 @@ export type Database = {
           invoice_type: string
           notes: string | null
           paid_at: string | null
+          paid_date: string | null
+          payment_method: string | null
           payment_terms: string | null
           quote_id: string | null
           status: string
@@ -245,6 +247,8 @@ export type Database = {
           invoice_type?: string
           notes?: string | null
           paid_at?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
           payment_terms?: string | null
           quote_id?: string | null
           status?: string
@@ -268,6 +272,8 @@ export type Database = {
           invoice_type?: string
           notes?: string | null
           paid_at?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
           payment_terms?: string | null
           quote_id?: string | null
           status?: string
@@ -546,6 +552,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valid_until: string | null
+          working_days: number | null
         }
         Insert: {
           approval_signature?: string | null
@@ -572,6 +579,7 @@ export type Database = {
           pricing_snapshot?: Json
           property_type?: string | null
           quote_number: string
+          working_days?: number | null
           status?: string
           subtotal_cents?: number
           tier?: string | null
@@ -678,8 +686,25 @@ export type Database = {
         Args: { quote_uuid: string }
         Returns: undefined
       }
+      check_job_date_overlap: {
+        Args: {
+          p_user_id: string
+          p_start_date: string
+          p_end_date: string
+          p_exclude_job_id?: string | null
+        }
+        Returns: boolean
+      }
       generate_invoice_number: { Args: { user_uuid: string }; Returns: string }
       generate_quote_number: { Args: { user_uuid: string }; Returns: string }
+      get_blocked_dates_for_user: {
+        Args: {
+          p_user_id: string
+          p_from_date?: string
+          p_to_date?: string
+        }
+        Returns: Array<{ blocked_date: string }>
+      }
       get_user_active_quote_count: {
         Args: { user_uuid: string }
         Returns: number

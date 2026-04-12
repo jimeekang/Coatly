@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { formatAUD, formatDate } from '@/utils/format';
-import type { QuoteDetail } from '@/lib/quotes';
+import type { PublicQuoteDetail } from '@/lib/quotes';
 import { PublicOptionalItems } from './PublicOptionalItems';
 import { PublicApprovalForm } from './PublicApprovalForm';
+import { PublicDatePickerStep } from './PublicDatePickerStep';
 import { QUOTE_COATING_LABELS, QUOTE_STATUS_LABELS, QUOTE_SURFACE_LABELS } from '@/lib/quotes';
 
 interface Business {
@@ -17,7 +18,7 @@ interface Business {
 
 interface PublicQuoteClientProps {
   token: string;
-  quote: QuoteDetail;
+  quote: PublicQuoteDetail;
   business: Business | null;
 }
 
@@ -361,6 +362,23 @@ export function PublicQuoteClient({ token, quote, business }: PublicQuoteClientP
               />
             </div>
           </SectionCard>
+
+          {/* Date Booking — only shown after approval */}
+          {quote.approved_at && (
+            <SectionCard>
+              <SectionHeader
+                label="Book Your Dates"
+                description="Select your preferred start date. We'll block out the required days automatically."
+              />
+              <div className="p-5">
+                <PublicDatePickerStep
+                  token={token}
+                  workingDays={quote.working_days ?? 1}
+                  customerName={quote.customer.name}
+                />
+              </div>
+            </SectionCard>
+          )}
 
           {/* Business contact — mobile only (sidebar shows it on desktop) */}
           {business && (

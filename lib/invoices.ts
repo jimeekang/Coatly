@@ -1,7 +1,12 @@
 import type { InvoiceCreateInput } from '@/lib/supabase/validators';
 import { invoiceCreateSchema } from '@/lib/supabase/validators';
 import { createServerClient } from '@/lib/supabase/server';
-import type { InvoiceCustomerSummary, InvoiceListItem, InvoiceWithCustomer } from '@/types/invoice';
+import type {
+  InvoiceCustomerSummary,
+  InvoiceListItem,
+  InvoicePaymentMethod,
+  InvoiceWithCustomer,
+} from '@/types/invoice';
 
 type AppSupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -40,6 +45,12 @@ type QuoteRecord = {
     | null;
 };
 
+type LinkedInvoiceRecord = {
+  quote_id: string | null;
+  subtotal_cents: number;
+  status: string;
+};
+
 type InvoiceRecord = {
   id: string;
   user_id: string;
@@ -56,7 +67,9 @@ type InvoiceRecord = {
   payment_terms: string | null;
   bank_details: string | null;
   due_date: string | null;
+  paid_date: string | null;
   paid_at: string | null;
+  payment_method: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -98,6 +111,8 @@ type ParsedInvoiceCreate =
         payment_terms: string | null;
         bank_details: string | null;
         due_date: string | null;
+        paid_date: string | null;
+        payment_method: InvoicePaymentMethod | null;
         notes: string | null;
         line_items: Array<{
           description: string;
@@ -106,6 +121,18 @@ type ParsedInvoiceCreate =
         }>;
       };
     };
+
+export type QuoteInvoiceLinkState = {
+  linked_invoice_count: number;
+  has_linked_invoices: boolean;
+  billed_subtotal_cents: number;
+};
+
+const EMPTY_QUOTE_INVOICE_LINK_STATE: QuoteInvoiceLinkState = {
+  linked_invoice_count: 0,
+  has_linked_invoices: false,
+  billed_subtotal_cents: 0,
+};
 
 function getSingleRelation<T>(relation: T | T[] | null): T | null {
   if (Array.isArray(relation)) {
@@ -193,7 +220,9 @@ export function mapInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
     payment_terms: row.payment_terms ?? null,
     bank_details: row.bank_details ?? null,
     due_date: row.due_date,
+    paid_date: row.paid_date ?? null,
     paid_at: row.paid_at,
+    payment_method: (row.payment_method as InvoicePaymentMethod | null) ?? null,
     notes: row.notes,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -222,7 +251,9 @@ export function mapInvoiceDetail(row: InvoiceDetailRow): InvoiceWithCustomer {
     payment_terms: row.payment_terms ?? null,
     bank_details: row.bank_details ?? null,
     due_date: row.due_date,
+    paid_date: row.paid_date ?? null,
     paid_at: row.paid_at,
+    payment_method: (row.payment_method as InvoicePaymentMethod | null) ?? null,
     notes: row.notes,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -258,6 +289,60 @@ export function calculateInvoiceTotals(
   };
 }
 
+export function buildQuoteInvoiceLinkStateMap(
+  linkedInvoices: LinkedInvoiceRecord[] | null | undefined
+) {
+  const byQuoteId = new Map<string, QuoteInvoiceLinkState>();
+
+  for (const invoice of linkedInvoices ?? []) {
+    if (!invoice.quote_id) continue;
+
+    const current =
+      byQuoteId.get(invoice.quote_id) ?? {
+        ...EMPTY_QUOTE_INVOICE_LINK_STATE,
+      };
+
+    current.linked_invoice_count += 1;
+    current.has_linked_invoices = true;
+
+    if (invoice.status !== 'cancelled') {
+      current.billed_subtotal_cents += invoice.subtotal_cents;
+    }
+
+    byQuoteId.set(invoice.quote_id, current);
+  }
+
+  return byQuoteId;
+}
+
+export async function getQuoteInvoiceLinkState(
+  supabase: AppSupabaseClient,
+  userId: string,
+  quoteId: string
+) {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('quote_id, subtotal_cents, status')
+    .eq('user_id', userId)
+    .eq('quote_id', quoteId);
+
+  if (error) {
+    return {
+      data: null,
+      error: error.message,
+    };
+  }
+
+  const state =
+    buildQuoteInvoiceLinkStateMap((data as LinkedInvoiceRecord[] | null) ?? []).get(quoteId) ??
+    EMPTY_QUOTE_INVOICE_LINK_STATE;
+
+  return {
+    data: state,
+    error: null,
+  };
+}
+
 export function parseInvoiceCreateInput(input: InvoiceCreateInput): ParsedInvoiceCreate {
   const parsed = invoiceCreateSchema.safeParse(input);
 
@@ -279,6 +364,8 @@ export function parseInvoiceCreateInput(input: InvoiceCreateInput): ParsedInvoic
       payment_terms: parsed.data.payment_terms ?? null,
       bank_details: parsed.data.bank_details ?? null,
       due_date: parsed.data.due_date ?? null,
+      paid_date: parsed.data.paid_date ?? null,
+      payment_method: (parsed.data.payment_method as InvoicePaymentMethod | null) ?? null,
       notes: parsed.data.notes?.trim() || null,
       line_items: parsed.data.line_items.map((item) => ({
         description: item.description.trim(),
@@ -318,6 +405,7 @@ export async function getInvoiceQuoteOptions(supabase: AppSupabaseClient, userId
       'id, quote_number, title, customer_id, subtotal_cents, total_cents, deposit_percent, status, valid_until, line_items:quote_line_items(name, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected)'
     )
     .eq('user_id', userId)
+    .eq('status', 'approved')
     .order('created_at', { ascending: false }),
     supabase
       .from('invoices')
@@ -333,37 +421,40 @@ export async function getInvoiceQuoteOptions(supabase: AppSupabaseClient, userId
     };
   }
 
-  const billedSubtotalByQuoteId = new Map<string, number>();
-  for (const invoice of linkedInvoices ?? []) {
-    if (!invoice.quote_id || invoice.status === 'cancelled') continue;
-    billedSubtotalByQuoteId.set(
-      invoice.quote_id,
-      (billedSubtotalByQuoteId.get(invoice.quote_id) ?? 0) + invoice.subtotal_cents
-    );
-  }
+  const quoteInvoiceLinkStateById = buildQuoteInvoiceLinkStateMap(
+    (linkedInvoices as LinkedInvoiceRecord[] | null) ?? []
+  );
 
   return {
-    data: (data as unknown as QuoteRecord[] | null)?.map((quote) => ({
-      id: quote.id,
-      quote_number: quote.quote_number,
-      title: quote.title,
-      customer_id: quote.customer_id,
-      subtotal_cents: quote.subtotal_cents,
-      total_cents: quote.total_cents,
-      deposit_percent: quote.deposit_percent ?? 0,
-      status: quote.status,
-      valid_until: quote.valid_until,
-      billed_subtotal_cents: billedSubtotalByQuoteId.get(quote.id) ?? 0,
-      line_items:
-        quote.line_items?.map((item) => ({
-          description: item.notes?.trim() ? `${item.name}\n${item.notes.trim()}` : item.name,
-          quantity: Number(item.quantity),
-          unit_price_cents: item.unit_price_cents,
-          total_cents: item.total_cents,
-          is_optional: item.is_optional ?? false,
-          is_selected: item.is_optional ? item.is_selected ?? false : true,
-        })) ?? [],
-    })) ?? [],
+    data:
+      (data as unknown as QuoteRecord[] | null)?.map((quote) => {
+        const quoteInvoiceLinkState =
+          quoteInvoiceLinkStateById.get(quote.id) ?? EMPTY_QUOTE_INVOICE_LINK_STATE;
+
+        return {
+          id: quote.id,
+          quote_number: quote.quote_number,
+          title: quote.title,
+          customer_id: quote.customer_id,
+          subtotal_cents: quote.subtotal_cents,
+          total_cents: quote.total_cents,
+          deposit_percent: quote.deposit_percent ?? 0,
+          status: quote.status,
+          valid_until: quote.valid_until,
+          billed_subtotal_cents: quoteInvoiceLinkState.billed_subtotal_cents,
+          linked_invoice_count: quoteInvoiceLinkState.linked_invoice_count,
+          has_linked_invoices: quoteInvoiceLinkState.has_linked_invoices,
+          line_items:
+            quote.line_items?.map((item) => ({
+              description: item.notes?.trim() ? `${item.name}\n${item.notes.trim()}` : item.name,
+              quantity: Number(item.quantity),
+              unit_price_cents: item.unit_price_cents,
+              total_cents: item.total_cents,
+              is_optional: item.is_optional ?? false,
+              is_selected: item.is_optional ? item.is_selected ?? false : true,
+            })) ?? [],
+        };
+      }) ?? [],
     error: null,
   };
 }
