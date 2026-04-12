@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import {
   calculateInvoiceTotals,
   getInvoiceCustomerOptions,
+  getQuoteInvoiceLinkState,
   getInvoiceQuoteOptions,
   mapInvoiceDetail,
   mapInvoiceListItem,
@@ -19,7 +20,11 @@ import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import { sendInvoiceEmail } from '@/lib/email/resend';
 import { formatAUD, formatDate } from '@/utils/format';
-import type { InvoiceListItem, InvoiceWithCustomer } from '@/types/invoice';
+import type {
+  InvoiceListItem,
+  InvoicePaymentMethod,
+  InvoiceWithCustomer,
+} from '@/types/invoice';
 
 type InvoiceListRow = {
   id: string;
@@ -37,7 +42,9 @@ type InvoiceListRow = {
   payment_terms: string | null;
   bank_details: string | null;
   due_date: string | null;
+  paid_date: string | null;
   paid_at: string | null;
+  payment_method: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -75,6 +82,8 @@ type CreateInvoiceActionInput = {
   payment_terms: string | null;
   bank_details: string | null;
   due_date: string | null;
+  paid_date: string | null;
+  payment_method: InvoicePaymentMethod | null;
   notes: string | null;
   subtotal_cents?: number;
   gst_cents?: number;
@@ -119,6 +128,70 @@ function resolveInvoiceStatusForSave(
   };
 }
 
+function buildPaidTimestamp(paidDate: string) {
+  return new Date(`${paidDate}T12:00:00.000Z`).toISOString();
+}
+
+function resolveInvoicePaymentTracking(input: {
+  status: CreateInvoiceActionInput['status'];
+  total_cents: number;
+  paid_date: string | null;
+  payment_method: InvoicePaymentMethod | null;
+}) {
+  if (input.status !== 'paid') {
+    return {
+      amount_paid_cents: 0,
+      paid_at: null,
+      paid_date: null,
+      payment_method: null,
+    };
+  }
+
+  const paidDate = input.paid_date ?? new Date().toISOString().slice(0, 10);
+
+  return {
+    amount_paid_cents: input.total_cents,
+    paid_at: buildPaidTimestamp(paidDate),
+    paid_date: paidDate,
+    payment_method: input.payment_method ?? null,
+  };
+}
+
+async function validateQuoteLinkForInvoice(input: {
+  supabase: Awaited<ReturnType<typeof createServerClient>>;
+  userId: string;
+  quoteId: string;
+  customerId: string;
+}) {
+  const { data: quote, error: quoteError } = await input.supabase
+    .from('quotes')
+    .select('id, customer_id, status')
+    .eq('id', input.quoteId)
+    .eq('user_id', input.userId)
+    .maybeSingle();
+
+  if (quoteError) {
+    return { data: null, error: quoteError.message };
+  }
+
+  if (!quote) {
+    return { data: null, error: 'Selected quote was not found.' };
+  }
+
+  if (quote.status !== 'approved') {
+    return { data: null, error: 'Only approved quotes can be linked to invoices.' };
+  }
+
+  if (quote.customer_id !== input.customerId) {
+    return { data: null, error: 'Quote customer does not match the selected customer.' };
+  }
+
+  return {
+    data: quote,
+    error: null,
+  };
+}
+
 type InvoiceDetailRow = {
   id: string;
   user_id: string;
@@ -135,7 +208,9 @@ type InvoiceDetailRow = {
   payment_terms: string | null;
   bank_details: string | null;
   due_date: string | null;
+  paid_date: string | null;
   paid_at: string | null;
+  payment_method: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -186,7 +261,7 @@ export async function getInvoices(): Promise<{
   const { data, error } = await supabase
     .from('invoices')
     .select(
-      'id, user_id, customer_id, quote_id, invoice_number, status, invoice_type, subtotal_cents, gst_cents, total_cents, amount_paid_cents, business_abn, payment_terms, bank_details, due_date, paid_at, notes, created_at, updated_at, customer:customers!invoices_customer_user_fk(id, name, email, phone, address_line1, city, state, postcode), line_items:invoice_line_items(id)'
+      'id, user_id, customer_id, quote_id, invoice_number, status, invoice_type, subtotal_cents, gst_cents, total_cents, amount_paid_cents, business_abn, payment_terms, bank_details, due_date, paid_date, paid_at, payment_method, notes, created_at, updated_at, customer:customers!invoices_customer_user_fk(id, name, email, phone, address_line1, city, state, postcode), line_items:invoice_line_items(id)'
     )
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
@@ -220,6 +295,8 @@ export async function getInvoiceFormOptions(): Promise<{
       status: string;
       valid_until: string | null;
       billed_subtotal_cents: number;
+      linked_invoice_count: number;
+      has_linked_invoices: boolean;
       line_items: Array<{
         description: string;
         quantity: number;
@@ -279,6 +356,10 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
         payment_terms: string | null;
         bank_details: string | null;
         due_date: string | null;
+        paid_date: string | null;
+        payment_method: InvoicePaymentMethod | null;
+        linked_invoice_count: number;
+        has_linked_invoices: boolean;
         notes: string | null;
         line_items: Array<{
           description: string;
@@ -295,20 +376,24 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const [quoteResult, lineItemsResult, businessDefaultsResult] = await Promise.all([
-    supabase
-      .from('quotes')
-      .select('id, customer_id, status, title, quote_number')
-      .eq('id', quoteId)
-      .eq('user_id', user.id)
-      .maybeSingle(),
-    supabase
-      .from('quote_line_items')
-      .select('id, name, notes, quantity, unit_price_cents, is_optional, is_selected, sort_order')
-      .eq('quote_id', quoteId)
-      .order('sort_order', { ascending: true }),
-    getBusinessInvoiceDefaults(supabase, user.id, user.email ?? null),
-  ]);
+  const [quoteResult, lineItemsResult, businessDefaultsResult, quoteInvoiceLinkStateResult] =
+    await Promise.all([
+      supabase
+        .from('quotes')
+        .select('id, customer_id, status, title, quote_number')
+        .eq('id', quoteId)
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      supabase
+        .from('quote_line_items')
+        .select(
+          'id, name, notes, quantity, unit_price_cents, is_optional, is_selected, sort_order'
+        )
+        .eq('quote_id', quoteId)
+        .order('sort_order', { ascending: true }),
+      getBusinessInvoiceDefaults(supabase, user.id, user.email ?? null),
+      getQuoteInvoiceLinkState(supabase, user.id, quoteId),
+    ]);
 
   if (quoteResult.error) {
     return { data: null, error: quoteResult.error.message };
@@ -320,6 +405,10 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
 
   if (businessDefaultsResult.error) {
     return { data: null, error: businessDefaultsResult.error };
+  }
+
+  if (quoteInvoiceLinkStateResult.error) {
+    return { data: null, error: quoteInvoiceLinkStateResult.error };
   }
 
   const quote = quoteResult.data;
@@ -349,6 +438,10 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
       payment_terms: businessDefaultsResult.data?.payment_terms ?? null,
       bank_details: businessDefaultsResult.data?.bank_details ?? null,
       due_date: null,
+      paid_date: null,
+      payment_method: null,
+      linked_invoice_count: quoteInvoiceLinkStateResult.data?.linked_invoice_count ?? 0,
+      has_linked_invoices: quoteInvoiceLinkStateResult.data?.has_linked_invoices ?? false,
       notes: quote.title?.trim()
         ? `Linked to approved quote ${quote.quote_number} - ${quote.title.trim()}`
         : `Linked to approved quote ${quote.quote_number}`,
@@ -367,7 +460,7 @@ export async function getInvoice(id: string): Promise<{
   const { data, error } = await supabase
     .from('invoices')
     .select(
-      'id, user_id, customer_id, quote_id, invoice_number, status, invoice_type, subtotal_cents, gst_cents, total_cents, amount_paid_cents, business_abn, payment_terms, bank_details, due_date, paid_at, notes, created_at, updated_at, customer:customers!invoices_customer_user_fk(id, name, email, phone, address_line1, city, state, postcode), line_items:invoice_line_items(id, invoice_id, description, quantity, unit_price_cents, gst_cents, total_cents, sort_order, created_at, updated_at)'
+      'id, user_id, customer_id, quote_id, invoice_number, status, invoice_type, subtotal_cents, gst_cents, total_cents, amount_paid_cents, business_abn, payment_terms, bank_details, due_date, paid_date, paid_at, payment_method, notes, created_at, updated_at, customer:customers!invoices_customer_user_fk(id, name, email, phone, address_line1, city, state, postcode), line_items:invoice_line_items(id, invoice_id, description, quantity, unit_price_cents, gst_cents, total_cents, sort_order, created_at, updated_at)'
     )
     .eq('id', id)
     .eq('user_id', user.id)
@@ -399,6 +492,8 @@ export async function createInvoice(
     payment_terms: input.payment_terms ?? undefined,
     bank_details: input.bank_details ?? undefined,
     due_date: input.due_date ?? '',
+    paid_date: input.paid_date ?? '',
+    payment_method: input.payment_method ?? undefined,
     notes: input.notes ?? undefined,
   });
   if (!parsed.success) {
@@ -409,6 +504,7 @@ export async function createInvoice(
   if (resolvedStatus.error) {
     return { error: resolvedStatus.error };
   }
+  const statusToSave = resolvedStatus.status as CreateInvoiceActionInput['status'];
 
   const { data: customer, error: customerError } = await supabase
     .from('customers')
@@ -427,23 +523,15 @@ export async function createInvoice(
   }
 
   if (parsed.data.quote_id) {
-    const { data: quote, error: quoteError } = await supabase
-      .from('quotes')
-      .select('id, customer_id')
-      .eq('id', parsed.data.quote_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const quoteValidation = await validateQuoteLinkForInvoice({
+      supabase,
+      userId: user.id,
+      quoteId: parsed.data.quote_id,
+      customerId: parsed.data.customer_id,
+    });
 
-    if (quoteError) {
-      return { error: quoteError.message };
-    }
-
-    if (!quote) {
-      return { error: 'Selected quote was not found.' };
-    }
-
-    if (quote.customer_id !== parsed.data.customer_id) {
-      return { error: 'Quote customer does not match the selected customer.' };
+    if (quoteValidation.error) {
+      return { error: quoteValidation.error };
     }
   }
 
@@ -451,8 +539,12 @@ export async function createInvoice(
     parsed.data.line_items
   );
 
-  const amount_paid_cents = resolvedStatus.status === 'paid' ? total_cents : 0;
-  const paid_at = resolvedStatus.status === 'paid' ? new Date().toISOString() : null;
+  const paymentTracking = resolveInvoicePaymentTracking({
+    status: statusToSave,
+    total_cents,
+    paid_date: parsed.data.paid_date,
+    payment_method: parsed.data.payment_method,
+  });
 
   const { data: invoiceNumber, error: invoiceNumberError } = await supabase.rpc(
     'generate_invoice_number',
@@ -472,7 +564,7 @@ export async function createInvoice(
       customer_id: parsed.data.customer_id,
       quote_id: parsed.data.quote_id,
       invoice_number: invoiceNumber,
-      status: resolvedStatus.status,
+      status: statusToSave,
       invoice_type: parsed.data.invoice_type,
       business_abn: parsed.data.business_abn,
       payment_terms: parsed.data.payment_terms,
@@ -480,9 +572,11 @@ export async function createInvoice(
       subtotal_cents,
       gst_cents,
       total_cents,
-      amount_paid_cents,
+      amount_paid_cents: paymentTracking.amount_paid_cents,
       due_date: parsed.data.due_date,
-      paid_at,
+      paid_date: paymentTracking.paid_date,
+      paid_at: paymentTracking.paid_at,
+      payment_method: paymentTracking.payment_method,
       notes: parsed.data.notes,
     })
     .select('id')
@@ -542,6 +636,8 @@ export async function updateInvoice(
     payment_terms: input.payment_terms ?? undefined,
     bank_details: input.bank_details ?? undefined,
     due_date: input.due_date ?? '',
+    paid_date: input.paid_date ?? '',
+    payment_method: input.payment_method ?? undefined,
     notes: input.notes ?? undefined,
   });
   if (!parsed.success) {
@@ -563,6 +659,10 @@ export async function updateInvoice(
     return { error: 'Invoice not found.' };
   }
 
+  if (existingInvoice.status !== 'draft') {
+    return { error: 'Only draft invoices can be edited.' };
+  }
+
   const resolvedStatus = resolveInvoiceStatusForSave(
     parsed.data.status,
     existingInvoice.status as CreateInvoiceActionInput['status']
@@ -570,6 +670,7 @@ export async function updateInvoice(
   if (resolvedStatus.error) {
     return { error: resolvedStatus.error };
   }
+  const statusToSave = resolvedStatus.status as CreateInvoiceActionInput['status'];
 
   const { data: customer, error: customerError } = await supabase
     .from('customers')
@@ -588,23 +689,15 @@ export async function updateInvoice(
   }
 
   if (parsed.data.quote_id) {
-    const { data: quote, error: quoteError } = await supabase
-      .from('quotes')
-      .select('id, customer_id')
-      .eq('id', parsed.data.quote_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const quoteValidation = await validateQuoteLinkForInvoice({
+      supabase,
+      userId: user.id,
+      quoteId: parsed.data.quote_id,
+      customerId: parsed.data.customer_id,
+    });
 
-    if (quoteError) {
-      return { error: quoteError.message };
-    }
-
-    if (!quote) {
-      return { error: 'Selected quote was not found.' };
-    }
-
-    if (quote.customer_id !== parsed.data.customer_id) {
-      return { error: 'Quote customer does not match the selected customer.' };
+    if (quoteValidation.error) {
+      return { error: quoteValidation.error };
     }
   }
 
@@ -612,15 +705,19 @@ export async function updateInvoice(
     parsed.data.line_items
   );
 
-  const amount_paid_cents = resolvedStatus.status === 'paid' ? total_cents : 0;
-  const paid_at = resolvedStatus.status === 'paid' ? new Date().toISOString() : null;
+  const paymentTracking = resolveInvoicePaymentTracking({
+    status: statusToSave,
+    total_cents,
+    paid_date: parsed.data.paid_date,
+    payment_method: parsed.data.payment_method,
+  });
 
   const { error: invoiceError } = await supabase
     .from('invoices')
     .update({
       customer_id: parsed.data.customer_id,
       quote_id: parsed.data.quote_id,
-      status: resolvedStatus.status,
+      status: statusToSave,
       invoice_type: parsed.data.invoice_type,
       business_abn: parsed.data.business_abn,
       payment_terms: parsed.data.payment_terms,
@@ -628,9 +725,11 @@ export async function updateInvoice(
       subtotal_cents,
       gst_cents,
       total_cents,
-      amount_paid_cents,
+      amount_paid_cents: paymentTracking.amount_paid_cents,
       due_date: parsed.data.due_date,
-      paid_at,
+      paid_date: paymentTracking.paid_date,
+      paid_at: paymentTracking.paid_at,
+      payment_method: paymentTracking.payment_method,
       notes: parsed.data.notes,
     })
     .eq('id', id)

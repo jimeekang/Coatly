@@ -1,5 +1,11 @@
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 export type InvoiceType = 'full' | 'deposit' | 'progress' | 'final';
+export type InvoicePaymentMethod =
+  | 'bank_transfer'
+  | 'cash'
+  | 'card'
+  | 'cheque'
+  | 'other';
 
 export interface InvoiceLineItem {
   id: string;
@@ -30,7 +36,9 @@ export interface Invoice {
   payment_terms: string | null;
   bank_details: string | null;
   due_date: string | null;
+  paid_date: string | null;
   paid_at: string | null;
+  payment_method: InvoicePaymentMethod | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

@@ -14,6 +14,7 @@ vi.mock('next/navigation', () => ({
 describe('InvoiceForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it('submits a DB-compatible payload from the filled form', async () => {
@@ -91,6 +92,8 @@ describe('InvoiceForm', () => {
       payment_terms: 'Payment due within 7 days',
       bank_details: 'BSB: 123-456\nAccount: 12345678',
       due_date: '2026-04-03',
+      paid_date: null,
+      payment_method: null,
       notes: 'Pay within 7 days',
       line_items: [
         {
@@ -272,5 +275,108 @@ describe('InvoiceForm', () => {
       'Progress claim for QUO-0004 - Cafe repaint'
     );
     expect(screen.getByLabelText('Unit Price (A$)')).toHaveValue(1900);
+  });
+
+  it('defaults the due date to 14 days ahead on create', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-09T10:00:00Z'));
+
+    render(<InvoiceForm customers={[]} quotes={[]} />);
+
+    expect(screen.getByLabelText('Due Date')).toHaveValue('2026-04-23');
+  });
+
+  it('updates item GST and invoice totals in real time when line items change', () => {
+    render(<InvoiceForm customers={[]} quotes={[]} />);
+
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Interior repaint' },
+    });
+    fireEvent.change(screen.getByLabelText('Qty'), {
+      target: { value: '2' },
+    });
+    fireEvent.change(screen.getByLabelText('Unit Price (A$)'), {
+      target: { value: '150' },
+    });
+
+    expect(screen.getAllByText('GST (10%)').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('$30.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('$330.00').length).toBeGreaterThan(0);
+  });
+
+  it('allows adding and removing line items', async () => {
+    const user = userEvent.setup();
+
+    render(<InvoiceForm customers={[]} quotes={[]} />);
+
+    await user.click(screen.getByRole('button', { name: '+ Add Item' }));
+    expect(screen.getAllByLabelText('Description')).toHaveLength(2);
+    expect(screen.getAllByLabelText('Qty')).toHaveLength(2);
+
+    await user.click(screen.getAllByRole('button', { name: 'Remove' })[0]);
+    expect(screen.getAllByLabelText('Description')).toHaveLength(1);
+  });
+
+  it('shows notes and payment terms as visible editable fields', () => {
+    render(
+      <InvoiceForm
+        customers={[]}
+        quotes={[]}
+        businessDefaults={{
+          business_abn: '12345678901',
+          payment_terms: 'Payment due within 14 days',
+          bank_details: 'BSB: 123-456\nAccount: 12345678',
+        }}
+      />
+    );
+
+    expect(screen.getByLabelText('Notes')).toBeInTheDocument();
+    expect(screen.getByLabelText('Payment Terms')).toHaveValue('Payment due within 14 days');
+  });
+
+  it('shows paid date and payment method fields when marking an invoice as paid', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <InvoiceForm
+        customers={[
+          {
+            id: 'customer-1',
+            name: 'Sarah Johnson',
+            company_name: 'Harbor Cafe',
+            email: 'sarah@example.com',
+            phone: '0412 555 012',
+            address: '128 Beach Street, Manly, NSW 2095',
+          },
+        ]}
+        quotes={[]}
+        onSubmit={onSubmit}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), 'customer-1');
+    await user.selectOptions(screen.getByLabelText('Status'), 'paid');
+    fireEvent.change(screen.getByLabelText('Paid Date'), {
+      target: { value: '2026-04-09' },
+    });
+    await user.selectOptions(screen.getByLabelText('Payment Method'), 'card');
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Final invoice' },
+    });
+    fireEvent.change(screen.getByLabelText('Unit Price (A$)'), {
+      target: { value: '550' },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save Invoice' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'paid',
+        paid_date: '2026-04-09',
+        payment_method: 'card',
+      })
+    );
   });
 });

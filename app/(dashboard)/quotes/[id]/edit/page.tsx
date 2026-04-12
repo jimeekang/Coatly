@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getQuote, getQuoteFormOptions } from '@/app/actions/quotes';
 import { getMaterialItemsForPicker } from '@/app/actions/materials';
@@ -35,6 +35,10 @@ export default async function EditQuotePage({
 
   if (error || !quote) {
     notFound();
+  }
+
+  if (quote.has_linked_invoices) {
+    redirect(`/quotes/${id}?editLocked=1`);
   }
 
   // ── Split saved line_items into library items vs custom extra items ─────────

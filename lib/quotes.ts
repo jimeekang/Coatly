@@ -259,12 +259,56 @@ export type QuoteDetail = {
   pricing_snapshot: Record<string, unknown>;
   pricing_method: PricingMethod;
   pricing_method_inputs: PricingMethodInputs | null;
+  linked_invoice_count: number;
+  has_linked_invoices: boolean;
   created_at: string;
   updated_at: string;
   customer: QuoteCustomerSummary;
   rooms: QuoteRoomDraft[];
   estimate_items: QuoteEstimateItemDraft[];
   line_items: QuoteLineItemRecord[];
+};
+
+export type PublicQuoteSurface = Pick<
+  QuoteSurfaceDraft,
+  'id' | 'surface_type' | 'area_m2' | 'coating_type' | 'rate_per_m2_cents' | 'notes' | 'total_cents'
+>;
+
+export type PublicQuoteRoom = Pick<
+  QuoteRoomDraft,
+  'id' | 'name' | 'room_type' | 'total_cents'
+> & {
+  surfaces: PublicQuoteSurface[];
+};
+
+export type PublicQuoteEstimateItem = Pick<
+  QuoteEstimateItemDraft,
+  'id' | 'category' | 'label' | 'quantity' | 'unit' | 'unit_price_cents' | 'total_cents'
+>;
+
+export type PublicQuoteLineItem = Pick<
+  QuoteLineItemRecord,
+  'id' | 'name' | 'category' | 'unit' | 'quantity' | 'unit_price_cents' | 'total_cents' | 'notes' | 'is_optional' | 'is_selected'
+>;
+
+export type PublicQuoteDetail = {
+  approved_at: string | null;
+  approved_by_name: string | null;
+  approved_by_email: string | null;
+  approval_signature: string | null;
+  quote_number: string;
+  title: string | null;
+  status: QuoteStatus;
+  valid_until: string | null;
+  notes: string | null;
+  subtotal_cents: number;
+  gst_cents: number;
+  total_cents: number;
+  working_days: number | null;
+  customer: QuoteCustomerSummary;
+  rooms: PublicQuoteRoom[];
+  estimate_items: PublicQuoteEstimateItem[];
+  line_items: PublicQuoteLineItem[];
 };
 
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -790,6 +834,7 @@ export function mapQuoteDetail(row: {
   pricing_snapshot?: Record<string, unknown> | null;
   pricing_method?: string | null;
   pricing_method_inputs?: Record<string, unknown> | null;
+  linked_invoice_count?: number | null;
   created_at: string;
   updated_at: string;
   customer: QuoteCustomerSource | null;
@@ -850,6 +895,8 @@ export function mapQuoteDetail(row: {
     pricing_method_inputs: (row.pricing_method_inputs as PricingMethodInputs | null) ?? null,
     discount_cents: row.discount_cents ?? 0,
     deposit_percent: row.deposit_percent ?? 0,
+    linked_invoice_count: row.linked_invoice_count ?? 0,
+    has_linked_invoices: (row.linked_invoice_count ?? 0) > 0,
     created_at: row.created_at,
     updated_at: row.updated_at,
     customer: resolveQuoteCustomerSummary(row),
@@ -883,6 +930,156 @@ export function mapQuoteDetail(row: {
     estimate_items: row.estimate_items ?? [],
     line_items: (row.line_items ?? []).map((item) => ({
       ...item,
+      is_optional: item.is_optional ?? false,
+      is_selected: item.is_optional ? item.is_selected ?? false : true,
+    })),
+  };
+}
+
+export function toPublicQuoteDetail(quote: QuoteDetail): PublicQuoteDetail {
+  return {
+    approved_at: quote.approved_at,
+    approved_by_name: quote.approved_by_name,
+    approved_by_email: quote.approved_by_email,
+    approval_signature: quote.approval_signature,
+    quote_number: quote.quote_number,
+    title: quote.title,
+    status: quote.status,
+    valid_until: quote.valid_until,
+    notes: quote.notes,
+    subtotal_cents: quote.subtotal_cents,
+    gst_cents: quote.gst_cents,
+    total_cents: quote.total_cents,
+    working_days: (quote as unknown as { working_days?: number | null }).working_days ?? null,
+    customer: quote.customer,
+    rooms: quote.rooms.map((room) => ({
+      id: room.id,
+      name: room.name,
+      room_type: room.room_type,
+      total_cents: room.total_cents,
+      surfaces: room.surfaces.map((surface) => ({
+        id: surface.id,
+        surface_type: surface.surface_type,
+        area_m2: surface.area_m2,
+        coating_type: surface.coating_type,
+        rate_per_m2_cents: surface.rate_per_m2_cents,
+        notes: surface.notes,
+        total_cents: surface.total_cents,
+      })),
+    })),
+    estimate_items: quote.estimate_items.map((item) => ({
+      id: item.id,
+      category: item.category,
+      label: item.label,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price_cents: item.unit_price_cents,
+      total_cents: item.total_cents,
+    })),
+    line_items: quote.line_items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      quantity: item.quantity,
+      unit_price_cents: item.unit_price_cents,
+      total_cents: item.total_cents,
+      notes: item.notes,
+      is_optional: item.is_optional,
+      is_selected: item.is_selected,
+    })),
+  };
+}
+
+export function mapPublicQuoteDetail(row: {
+  approved_at?: string | null;
+  approved_by_name?: string | null;
+  approved_by_email?: string | null;
+  approval_signature?: string | null;
+  customer_email?: string | null;
+  customer_address?: string | null;
+  quote_number: string;
+  title: string | null;
+  status: string;
+  valid_until: string | null;
+  notes: string | null;
+  subtotal_cents: number;
+  gst_cents: number;
+  total_cents: number;
+  customer: QuoteCustomerSource | null;
+  rooms: Array<{
+    id: string;
+    name: string;
+    room_type: string;
+    surfaces: Array<{
+      id: string;
+      surface_type: QuoteSurfaceType;
+      area_m2: number;
+      coating_type: QuoteCoatingTypeDb | null;
+      rate_per_m2_cents: number;
+      material_cost_cents: number;
+      labour_cost_cents: number;
+      notes: string | null;
+    }>;
+  }>;
+  estimate_items?: QuoteEstimateItemDraft[];
+  line_items?: QuoteLineItemRecord[];
+}): PublicQuoteDetail {
+  return {
+    approved_at: row.approved_at ?? null,
+    approved_by_name: row.approved_by_name ?? null,
+    approved_by_email: row.approved_by_email ?? null,
+    approval_signature: row.approval_signature ?? null,
+    quote_number: row.quote_number,
+    title: row.title,
+    status: resolveQuoteStatus({
+      status: row.status as QuoteStatus,
+      valid_until: row.valid_until,
+    }),
+    valid_until: row.valid_until,
+    notes: row.notes,
+    subtotal_cents: row.subtotal_cents,
+    gst_cents: row.gst_cents,
+    total_cents: row.total_cents,
+    working_days: (row as { working_days?: number | null }).working_days ?? null,
+    customer: resolveQuoteCustomerSummary(row),
+    rooms: row.rooms.map((room) => {
+      const surfaces = room.surfaces.map((surface) => ({
+        id: surface.id,
+        surface_type: surface.surface_type,
+        area_m2: surface.area_m2,
+        coating_type: normalizeQuoteCoatingType(surface.coating_type),
+        rate_per_m2_cents: surface.rate_per_m2_cents,
+        notes: surface.notes,
+        total_cents: surface.material_cost_cents + surface.labour_cost_cents,
+      }));
+
+      return {
+        id: room.id,
+        name: room.name,
+        room_type: room.room_type as QuoteRoomType,
+        total_cents: surfaces.reduce((sum, surface) => sum + surface.total_cents, 0),
+        surfaces,
+      };
+    }),
+    estimate_items: (row.estimate_items ?? []).map((item) => ({
+      id: item.id,
+      category: item.category,
+      label: item.label,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price_cents: item.unit_price_cents,
+      total_cents: item.total_cents,
+    })),
+    line_items: (row.line_items ?? []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      quantity: item.quantity,
+      unit_price_cents: item.unit_price_cents,
+      total_cents: item.total_cents,
+      notes: item.notes,
       is_optional: item.is_optional ?? false,
       is_selected: item.is_optional ? item.is_selected ?? false : true,
     })),

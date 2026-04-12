@@ -9,6 +9,7 @@ import {
   getSubscriptionSnapshotForUser,
 } from '@/lib/subscription/access';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
 import { jobUpsertSchema, type JobUpsertInput } from '@/lib/supabase/validators';
 
@@ -40,6 +41,9 @@ type JobListRow = {
   title: string;
   status: JobListItem['status'];
   scheduled_date: string;
+  start_date: string | null;
+  end_date: string | null;
+  duration_days: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -147,7 +151,7 @@ export async function getJobs(): Promise<{
   const { data, error } = await supabase
     .from('jobs')
     .select(
-      'id, customer_id, quote_id, title, status, scheduled_date, notes, created_at, updated_at, customer:customers!jobs_customer_user_fk(id, name, company_name, email, address_line1, city, state, postcode), quote:quotes!jobs_quote_id_fkey(id, quote_number, title, status, customer_id)'
+      'id, customer_id, quote_id, title, status, scheduled_date, start_date, end_date, duration_days, notes, created_at, updated_at, customer:customers!jobs_customer_user_fk(id, name, company_name, email, address_line1, city, state, postcode), quote:quotes!jobs_quote_id_fkey(id, quote_number, title, status, customer_id)'
     )
     .eq('user_id', user.id)
     .order('scheduled_date', { ascending: true })
@@ -174,6 +178,9 @@ export async function getJobs(): Promise<{
           title: job.title,
           status: job.status,
           scheduled_date: job.scheduled_date,
+          start_date: job.start_date,
+          end_date: job.end_date,
+          duration_days: job.duration_days,
           notes: job.notes,
           created_at: job.created_at,
           updated_at: job.updated_at,
@@ -478,4 +485,148 @@ export async function deleteJob(id: string): Promise<{ error: string | null }> {
   }
 
   return { error: null };
+}
+
+/**
+ * Books a job from a public quote approval flow.
+ * No auth required: user identity is derived from the quote's user_id via the public share token.
+ */
+export async function bookJobFromPublicQuote(
+  token: string,
+  startDate: string,
+): Promise<{ error: string | null; jobId: string | null }> {
+  const trimmedToken = token.trim();
+  if (!trimmedToken) {
+    return { error: 'Invalid booking link.', jobId: null };
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return { error: 'Invalid start date format.', jobId: null };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (startDate < today) {
+    return { error: 'Start date must be today or in the future.', jobId: null };
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: quote, error: quoteError } = await supabase
+    .from('quotes')
+    .select('id, user_id, customer_id, title, quote_number, status, working_days')
+    .eq('public_share_token', trimmedToken)
+    .maybeSingle();
+
+  if (quoteError) {
+    return { error: quoteError.message, jobId: null };
+  }
+
+  if (!quote) {
+    return { error: 'Quote not found.', jobId: null };
+  }
+
+  if (quote.status !== 'approved') {
+    return { error: 'Quote must be approved before booking.', jobId: null };
+  }
+
+  const workingDays = quote.working_days ?? 1;
+
+  // Use UTC to avoid timezone-shift issues when converting back to ISO date string
+  const [sy, sm, sd] = startDate.split('-').map(Number) as [number, number, number];
+  const endDate = new Date(Date.UTC(sy, sm - 1, sd + workingDays - 1))
+    .toISOString()
+    .slice(0, 10);
+
+  const { data: overlapResult, error: overlapError } = await supabase.rpc(
+    'check_job_date_overlap',
+    { p_user_id: quote.user_id, p_start_date: startDate, p_end_date: endDate },
+  );
+
+  if (overlapError) {
+    return { error: overlapError.message, jobId: null };
+  }
+
+  if (overlapResult === true) {
+    return { error: 'The selected dates are not available. Please choose different dates.', jobId: null };
+  }
+
+  const title = quote.title?.trim() || `Job for ${quote.quote_number}`;
+
+  const { data: insertedJob, error: insertError } = await supabase
+    .from('jobs')
+    .insert({
+      user_id: quote.user_id,
+      customer_id: quote.customer_id,
+      quote_id: quote.id,
+      title,
+      status: 'scheduled' as const,
+      scheduled_date: startDate,
+      start_date: startDate,
+      end_date: endDate,
+      duration_days: workingDays,
+      notes: null,
+    })
+    .select('id')
+    .single();
+
+  if (insertError) {
+    return { error: insertError.message, jobId: null };
+  }
+
+  revalidatePath('/jobs');
+  revalidatePath('/schedule');
+  revalidatePath(`/quotes/${quote.id}`);
+
+  return { error: null, jobId: insertedJob.id };
+}
+
+/**
+ * Returns blocked dates and working days for a public quote booking flow.
+ * No auth required: user identity is derived from the quote's user_id via the public share token.
+ * Security: only returns date strings — no job details exposed.
+ */
+export async function getAvailableDatesForToken(
+  token: string,
+): Promise<{ blockedDates: string[]; workingDays: number; error: string | null }> {
+  const trimmedToken = token.trim();
+  if (!trimmedToken) {
+    return { blockedDates: [], workingDays: 1, error: 'Invalid booking link.' };
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: quote, error: quoteError } = await supabase
+    .from('quotes')
+    .select('id, user_id, status, working_days')
+    .eq('public_share_token', trimmedToken)
+    .maybeSingle();
+
+  if (quoteError) {
+    return { blockedDates: [], workingDays: 1, error: quoteError.message };
+  }
+
+  if (!quote) {
+    return { blockedDates: [], workingDays: 1, error: 'Quote not found.' };
+  }
+
+  if (quote.status !== 'approved') {
+    return { blockedDates: [], workingDays: 1, error: 'Quote must be approved before booking.' };
+  }
+
+  const workingDays = quote.working_days ?? 1;
+
+  const { data: blockedRows, error: blockedError } = await supabase.rpc(
+    'get_blocked_dates_for_user',
+    { p_user_id: quote.user_id },
+  );
+
+  if (blockedError) {
+    return { blockedDates: [], workingDays, error: blockedError.message };
+  }
+
+  const blockedDates = (blockedRows ?? []).map(
+    (row: { blocked_date: string }) => row.blocked_date,
+  );
+
+  return { blockedDates, workingDays, error: null };
 }

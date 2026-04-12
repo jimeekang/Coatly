@@ -62,6 +62,7 @@ import {
   rejectPublicQuote,
   setPublicQuoteOptionalLineItemSelection,
   setQuoteOptionalLineItemSelection,
+  updateQuote,
 } from '@/app/actions/quotes';
 
 function createFilterQuery<Result>(result: Result) {
@@ -1046,6 +1047,91 @@ describe('createQuote', () => {
   });
 });
 
+describe('updateQuote', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('blocks quote edits once any linked invoice exists', async () => {
+    const existingQuoteQuery = createFilterQuery({
+      data: {
+        id: 'quote-1',
+        quote_number: 'QUO-0009',
+        customer_id: 'customer-1',
+      },
+      error: null,
+    });
+    const linkedInvoicesQuery = {
+      count: 1,
+      error: null,
+      eq: vi.fn().mockReturnThis(),
+    };
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(existingQuoteQuery),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue(linkedInvoicesQuery),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Apartment anchor repaint',
+      status: 'approved',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: 'Client note',
+      internal_notes: 'Internal note',
+      rooms: [],
+      line_items: [
+        {
+          material_item_id: null,
+          name: 'Feature wall upgrade',
+          category: 'service',
+          unit: 'job',
+          quantity: 1,
+          unit_price_cents: 5000,
+        },
+      ],
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'entire_property',
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        property_details: {
+          apartment_type: '2_bedroom_standard',
+        },
+        rooms: [],
+        opening_items: [],
+        trim_items: [],
+      },
+    });
+
+    expect(result).toEqual({
+      error: 'This quote can no longer be edited because an invoice already exists for it.',
+    });
+  });
+});
+
 describe('setQuoteOptionalLineItemSelection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1112,6 +1198,36 @@ describe('setQuoteOptionalLineItemSelection', () => {
               return {
                 eq: vi.fn().mockReturnThis(),
               };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
             }),
           };
         }
@@ -1221,6 +1337,16 @@ describe('public quote access', () => {
           };
         }
 
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
         if (table === 'quote_line_items') {
           return {
             select: vi.fn().mockReturnValue({
@@ -1289,10 +1415,13 @@ describe('public quote access', () => {
     const result = await getPublicQuoteByToken('public-token-1');
 
     expect(quoteSelectMock).toHaveBeenCalledWith(
-      expect.stringContaining('public_share_token')
+      expect.not.stringContaining('public_share_token')
+    );
+    expect(quoteSelectMock).toHaveBeenCalledWith(
+      expect.not.stringContaining('internal_notes')
     );
     expect(result.error).toBeNull();
-    expect(result.data?.quote.public_share_token).toBe('public-token-1');
+    expect(result.data?.quote).not.toHaveProperty('public_share_token');
     expect(result.data?.quote.customer.address).toBe('128 Beach Street, Manly, NSW, 2095');
     expect(result.data?.quote.line_items).toEqual([
       expect.objectContaining({
@@ -1371,6 +1500,16 @@ describe('public quote access', () => {
           };
         }
 
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
         throw new Error(`Unexpected table ${table}`);
       }),
     });
@@ -1417,7 +1556,7 @@ describe('public quote access', () => {
                   quote_number: 'QUO-2026-001',
                   title: 'Public quote',
                   status: 'sent',
-                  valid_until: '2026-04-10',
+                  valid_until: '2099-04-10',
                   tier: 'standard',
                   notes: 'Client-facing note',
                   internal_notes: 'Existing internal note',
@@ -1605,9 +1744,6 @@ describe('public quote access', () => {
     expect(result).toBeUndefined();
     expect(captured.quoteUpdate).toMatchObject({
       status: 'rejected',
-      internal_notes: expect.stringContaining(
-        'Client rejected via public page'
-      ),
     });
     expect(sendQuoteApprovalNotificationMock).not.toHaveBeenCalled();
   });
@@ -1729,6 +1865,16 @@ describe('getQuote', () => {
                 ],
                 error: null,
               }),
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
             }),
           };
         }

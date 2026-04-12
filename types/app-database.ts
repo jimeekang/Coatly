@@ -125,6 +125,9 @@ type JobRow = {
   title: string;
   status: JobStatus;
   scheduled_date: string;
+  start_date: string | null;
+  end_date: string | null;
+  duration_days: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -138,6 +141,9 @@ type JobInsert = {
   title: string;
   status?: JobStatus;
   scheduled_date: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  duration_days?: number | null;
   notes?: string | null;
   created_at?: string;
   updated_at?: string;

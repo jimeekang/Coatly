@@ -111,6 +111,8 @@ export interface Quote {
   total_cents: number;
   /** Date quote expires (ISO string) */
   valid_until: string;
+  /** Estimated number of working days required for this job */
+  working_days: number | null;
   created_at: string;
   updated_at: string;
 }

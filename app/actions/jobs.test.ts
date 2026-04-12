@@ -4,6 +4,7 @@ const {
   redirectMock,
   revalidatePathMock,
   createServerClientMock,
+  createAdminClientMock,
   requireCurrentUserMock,
   getActiveSubscriptionRequiredMessageMock,
   getSubscriptionSnapshotForUserMock,
@@ -11,6 +12,7 @@ const {
   redirectMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   createServerClientMock: vi.fn(),
+  createAdminClientMock: vi.fn(),
   requireCurrentUserMock: vi.fn(),
   getActiveSubscriptionRequiredMessageMock: vi.fn(
     (actionName: string) =>
@@ -31,6 +33,10 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerClient: createServerClientMock,
 }));
 
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: createAdminClientMock,
+}));
+
 vi.mock('@/lib/supabase/request-context', () => ({
   requireCurrentUser: requireCurrentUserMock,
 }));
@@ -41,9 +47,11 @@ vi.mock('@/lib/subscription/access', () => ({
 }));
 
 import {
+  bookJobFromPublicQuote,
   createJob,
   createJobFromQuote,
   deleteJob,
+  getAvailableDatesForToken,
   getJobFormOptions,
   getJobs,
   updateJob,
@@ -617,5 +625,233 @@ describe('jobs actions', () => {
     expect(eqUserMock).toHaveBeenCalledWith('user_id', 'user-1');
     expect(revalidatePathMock).toHaveBeenCalledWith('/jobs');
     expect(revalidatePathMock).toHaveBeenCalledWith('/quotes/quote-1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bookJobFromPublicQuote
+// ---------------------------------------------------------------------------
+
+describe('bookJobFromPublicQuote', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function makeQuoteTokenQuery(quote: Record<string, unknown> | null) {
+    return {
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: quote, error: null }),
+    };
+  }
+
+  it('creates job with correct date range when quote is approved', async () => {
+    const insertedJob = { id: 'job-1' };
+    const insertSelectSingleMock = vi.fn().mockResolvedValue({ data: insertedJob, error: null });
+    const insertSelectMock = vi.fn().mockReturnValue({ single: insertSelectSingleMock });
+    const insertMock = vi.fn().mockReturnValue({ select: insertSelectMock });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-1', status: 'approved', working_days: 3, user_id: 'uid-1', customer_id: 'customer-1', title: 'Fence paint', quote_number: 'Q-001' })) };
+        }
+        if (table === 'jobs') return { insert: insertMock };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('valid-token', '2026-04-15');
+
+    expect(result.error).toBeNull();
+    expect(result.jobId).toBe('job-1');
+    const insertPayload = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(insertPayload.start_date).toBe('2026-04-15');
+    expect(insertPayload.end_date).toBe('2026-04-17');
+    expect(insertPayload.duration_days).toBe(3);
+  });
+
+  it('returns error when quote is not approved', async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-2', status: 'sent', working_days: 2, user_id: 'uid-1', customer_id: 'customer-1', title: 'Deck coat', quote_number: 'Q-002' })) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('token-sent', '2026-04-15');
+
+    expect(result.error).not.toBeNull();
+    expect(result.jobId).toBeNull();
+    const errorLower = (result.error ?? '').toLowerCase();
+    expect(errorLower.includes('approved') || errorLower.includes('승인')).toBe(true);
+  });
+
+  it('returns error for invalid token', async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn(() => ({ select: vi.fn().mockReturnValue(makeQuoteTokenQuery(null)) })),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('invalid-token', '2026-04-15');
+
+    expect(result.error).not.toBeNull();
+    expect(result.jobId).toBeNull();
+  });
+
+  it('returns error when date range conflicts with existing job', async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-3', status: 'approved', working_days: 3, user_id: 'uid-1', customer_id: 'customer-1', title: 'Trim repaint', quote_number: 'Q-003' })) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('token-conflict', '2026-04-15');
+
+    expect(result.error).not.toBeNull();
+    expect(result.jobId).toBeNull();
+  });
+
+  it('returns error when start date is in the past', async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-4', status: 'approved', working_days: 2, user_id: 'uid-1', customer_id: 'customer-1', title: 'Roof coat', quote_number: 'Q-004' })) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('token-past', '2020-01-01');
+
+    expect(result.error).not.toBeNull();
+    expect(result.jobId).toBeNull();
+  });
+
+  it('uses 1 day when working_days is null', async () => {
+    const insertedJob = { id: 'job-2' };
+    const insertSelectSingleMock = vi.fn().mockResolvedValue({ data: insertedJob, error: null });
+    const insertMock = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: insertSelectSingleMock }) });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-5', status: 'approved', working_days: null, user_id: 'uid-1', customer_id: 'customer-1', title: 'Quick touch up', quote_number: 'Q-005' })) };
+        if (table === 'jobs') return { insert: insertMock };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('token-null-days', '2026-04-15');
+
+    expect(result.error).toBeNull();
+    const insertPayload = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(insertPayload.start_date).toBe('2026-04-15');
+    expect(insertPayload.end_date).toBe('2026-04-15');
+    expect(insertPayload.duration_days).toBe(1);
+  });
+
+  it('calculates end_date correctly for 3 working days (Apr 15 → Apr 17)', async () => {
+    const insertMock = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: { id: 'job-3' }, error: null }) }) });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-6', status: 'approved', working_days: 3, user_id: 'uid-1', customer_id: 'customer-1', title: 'Full exterior', quote_number: 'Q-006' })) };
+        if (table === 'jobs') return { insert: insertMock };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    await bookJobFromPublicQuote('token-3day', '2026-04-15');
+
+    const insertPayload = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(insertPayload.start_date).toBe('2026-04-15');
+    expect(insertPayload.end_date).toBe('2026-04-17');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getAvailableDatesForToken
+// ---------------------------------------------------------------------------
+
+describe('getAvailableDatesForToken', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function makeQuoteTokenQuery(quote: Record<string, unknown> | null) {
+    return {
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: quote, error: null }),
+    };
+  }
+
+  it('returns blocked dates from painter schedule', async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-1', status: 'approved', working_days: 3, user_id: 'uid-1' })) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: [{ blocked_date: '2026-04-20' }], error: null }),
+    });
+
+    const result = await getAvailableDatesForToken('valid-token');
+
+    expect(result.error).toBeNull();
+    expect(result.blockedDates).toEqual(['2026-04-20']);
+    expect(result.workingDays).toBe(3);
+  });
+
+  it('returns error for unapproved quote', async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-2', status: 'draft', working_days: 2, user_id: 'uid-1' })) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+    });
+
+    const result = await getAvailableDatesForToken('token-draft');
+
+    expect(result.error).not.toBeNull();
+    expect(result.blockedDates).toEqual([]);
+  });
+
+  it('returns empty array when no blocked dates', async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-3', status: 'approved', working_days: 1, user_id: 'uid-1' })) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+    });
+
+    const result = await getAvailableDatesForToken('token-no-blocks');
+
+    expect(result.error).toBeNull();
+    expect(result.blockedDates).toEqual([]);
+  });
+
+  it('only returns date strings, not job details', async () => {
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-4', status: 'approved', working_days: 2, user_id: 'uid-1' })) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: [{ blocked_date: '2026-04-22' }, { blocked_date: '2026-04-23' }], error: null }),
+    });
+
+    const result = await getAvailableDatesForToken('token-privacy');
+
+    expect(Array.isArray(result.blockedDates)).toBe(true);
+    for (const entry of result.blockedDates) {
+      expect(typeof entry).toBe('string');
+    }
+    expect(result).not.toHaveProperty('customer_id');
+    expect(result).not.toHaveProperty('title');
+    expect(result).not.toHaveProperty('notes');
   });
 });

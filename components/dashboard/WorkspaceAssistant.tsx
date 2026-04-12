@@ -380,6 +380,8 @@ export function WorkspaceAssistant({
                           payment_terms: null,
                           bank_details: null,
                           due_date: result.invoice.due_date,
+                          paid_date: null,
+                          payment_method: null,
                           notes: result.invoice.notes,
                           line_items: result.invoice.line_items,
                         }

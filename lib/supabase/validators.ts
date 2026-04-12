@@ -114,6 +114,13 @@ const optionalUuidString = z
   .nullable()
   .optional();
 
+const optionalPaymentMethodSchema = z
+  .enum(['bank_transfer', 'cash', 'card', 'cheque', 'other'])
+  .or(z.literal(''))
+  .transform((value) => (value === '' ? null : value))
+  .nullable()
+  .optional();
+
 export const invoiceLineItemSchema = z.object({
   description: z.string().trim().min(1, 'Line item description is required'),
   quantity: z.number().positive('Quantity must be greater than zero'),
@@ -153,8 +160,27 @@ export const invoiceCreateSchema = z.object({
     .refine((value) => value == null || !Number.isNaN(Date.parse(value)), {
       message: 'Due date must be a valid date',
     }),
+  paid_date: z
+    .string()
+    .trim()
+    .or(z.literal(''))
+    .transform((value) => (value === '' ? null : value))
+    .nullable()
+    .optional()
+    .refine((value) => value == null || !Number.isNaN(Date.parse(value)), {
+      message: 'Paid date must be a valid date',
+    }),
+  payment_method: optionalPaymentMethodSchema,
   notes: z.string().trim().max(2000, 'Notes must be 2000 characters or less').optional(),
   line_items: z.array(invoiceLineItemSchema).min(1, 'Add at least one line item'),
+}).superRefine((value, ctx) => {
+  if (value.status === 'paid' && !value.paid_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Paid date is required when status is paid',
+      path: ['paid_date'],
+    });
+  }
 });
 
 export type InvoiceLineItemInput = z.input<typeof invoiceLineItemSchema>;

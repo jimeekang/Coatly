@@ -113,6 +113,8 @@ export function InvoiceCreateScreen({
                 bank_details:
                   initialDefaultValues?.bank_details ?? businessDefaults.bank_details,
                 due_date: draft.due_date,
+                paid_date: null,
+                payment_method: null,
                 notes: draft.notes ?? initialDefaultValues?.notes ?? null,
                 line_items:
                   draft.line_items.length > 0
