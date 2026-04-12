@@ -108,11 +108,11 @@ export function buildSubscriptionSnapshot(input?: {
 }
 
 export function getSubscriptionSnapshotFromHeaders(headerStore: Headers): SubscriptionSnapshot {
-  const plan = headerStore.get('x-paintmate-subscription-plan');
-  const status = headerStore.get('x-paintmate-subscription-status');
-  const activeHeader = headerStore.get('x-paintmate-subscription-active');
+  const plan = headerStore.get('x-coatly-subscription-plan');
+  const status = headerStore.get('x-coatly-subscription-status');
+  const activeHeader = headerStore.get('x-coatly-subscription-active');
   const cancelScheduledHeader = headerStore.get(
-    'x-paintmate-subscription-cancel-scheduled'
+    'x-coatly-subscription-cancel-scheduled'
   );
   const snapshot = buildSubscriptionSnapshot({
     plan,
@@ -129,8 +129,8 @@ export function getSubscriptionSnapshotFromHeaders(headerStore: Headers): Subscr
 
 export function hasSubscriptionSnapshotHeaders(headerStore: Headers) {
   return (
-    headerStore.has('x-paintmate-subscription-plan') ||
-    headerStore.has('x-paintmate-subscription-status')
+    headerStore.has('x-coatly-subscription-plan') ||
+    headerStore.has('x-coatly-subscription-status')
   );
 }
 

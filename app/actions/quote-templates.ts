@@ -1,9 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireCurrentUser } from '@/lib/supabase/request-context';
+import {
+  requireCurrentUser,
+  getSubscriptionSnapshotForCurrentUser,
+} from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import type { QuoteCreateInput } from '@/lib/supabase/validators';
+import { getActiveSubscriptionRequiredMessage } from '@/lib/subscription/access';
+
+export const STARTER_TEMPLATE_LIMIT = 5;
 
 export type QuoteTemplatePayload = Pick<
   QuoteCreateInput,
@@ -66,14 +72,48 @@ export async function saveQuoteTemplate(
 ): Promise<{ error: string | null }> {
   if (!name.trim()) return { error: 'Template name is required' };
 
-  const supabase = await createServerClient();
-  const user = await requireCurrentUser();
+  const [supabase, user, subscription] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+    getSubscriptionSnapshotForCurrentUser(),
+  ]);
 
-  const db = supabase as unknown as {
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('quote templates') };
+  }
+
+  type TemplateTable = {
     from: (table: string) => {
+      select: (
+        cols: string,
+        opts: { count: 'exact'; head: true }
+      ) => {
+        eq: (col: string, val: string) => Promise<{
+          count: number | null;
+          error: { message: string } | null;
+        }>;
+      };
       insert: (row: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
     };
   };
+
+  const db = supabase as unknown as TemplateTable;
+
+  if (subscription.plan === 'starter') {
+    const { count, error: countError } = await db
+      .from('quote_templates')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    if (countError) return { error: countError.message };
+
+    if ((count ?? 0) >= STARTER_TEMPLATE_LIMIT) {
+      return {
+        error: `Starter plan includes up to ${STARTER_TEMPLATE_LIMIT} templates. Upgrade to Pro for unlimited templates.`,
+      };
+    }
+  }
+
   const { error } = await db.from('quote_templates').insert({
     user_id: user.id,
     name: name.trim(),

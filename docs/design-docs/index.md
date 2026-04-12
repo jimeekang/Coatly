@@ -14,6 +14,7 @@
 | [auth-onboarding.md](./auth-onboarding.md) | ✅ Active | Phase 0–1 |
 | [pdf-generation.md](./pdf-generation.md) | ✅ Active | Phase 1 |
 | [ai-assistant.md](./ai-assistant.md) | 📋 Draft | Phase 2 |
+| [coating-rate-settings.md](./coating-rate-settings.md) | 🔄 Phase 3–4 pending | Phase 2–3 |
 
 ## 문서 작성 규칙
 

@@ -18,7 +18,7 @@ function hasMissingOnboardingColumn(error: { message?: string } | null) {
 }
 
 export function getOnboardingCompletedFromHeaders(headerStore: Headers) {
-  const value = headerStore.get('x-paintmate-onboarding-completed');
+  const value = headerStore.get('x-coatly-onboarding-completed');
 
   if (value === 'true') return true;
   if (value === 'false') return false;
@@ -27,7 +27,7 @@ export function getOnboardingCompletedFromHeaders(headerStore: Headers) {
 }
 
 export function getBusinessNameFromHeaders(headerStore: Headers) {
-  const value = headerStore.get('x-paintmate-business-name')?.trim();
+  const value = headerStore.get('x-coatly-business-name')?.trim();
   return value ? value : null;
 }
 

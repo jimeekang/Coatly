@@ -7,6 +7,10 @@ const PAID_APP_PREFIXES = [
   '/invoices',
   '/customers',
   '/settings',
+  '/jobs',
+  '/schedule',
+  '/materials-service',
+  '/price-rates',
 ];
 
 function matchesPrefixes(pathname: string, prefixes: string[]): boolean {

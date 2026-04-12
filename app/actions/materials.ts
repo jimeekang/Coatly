@@ -3,12 +3,16 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createServerClient } from '@/lib/supabase/server';
-import { requireCurrentUser } from '@/lib/supabase/request-context';
+import {
+  requireCurrentUser,
+  getSubscriptionSnapshotForCurrentUser,
+} from '@/lib/supabase/request-context';
 import {
   materialItemUpsertSchema,
   type MaterialItem,
   type MaterialItemUpsertInput,
 } from '@/lib/supabase/validators';
+import { getActiveSubscriptionRequiredMessage } from '@/lib/subscription/access';
 
 export async function getMaterialItems(): Promise<{
   data: MaterialItem[];
@@ -52,7 +56,15 @@ export async function getMaterialItemsForPicker(): Promise<{
 export async function createMaterialItem(
   input: MaterialItemUpsertInput
 ): Promise<{ data?: MaterialItem; error?: string }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user, subscription] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+    getSubscriptionSnapshotForCurrentUser(),
+  ]);
+
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('materials management') };
+  }
 
   const parsed = materialItemUpsertSchema.safeParse(input);
   if (!parsed.success) {
@@ -82,7 +94,15 @@ export async function createMaterialItem(
 export async function importMaterialItems(
   inputs: MaterialItemUpsertInput[]
 ): Promise<{ data?: MaterialItem[]; error?: string }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user, subscription] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+    getSubscriptionSnapshotForCurrentUser(),
+  ]);
+
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('materials management') };
+  }
 
   const parsed = z.array(materialItemUpsertSchema).min(1, 'At least one item is required').safeParse(inputs);
   if (!parsed.success) {
@@ -114,7 +134,15 @@ export async function updateMaterialItem(
   id: string,
   input: MaterialItemUpsertInput
 ): Promise<{ error?: string }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user, subscription] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+    getSubscriptionSnapshotForCurrentUser(),
+  ]);
+
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('materials management') };
+  }
 
   const parsed = materialItemUpsertSchema.safeParse(input);
   if (!parsed.success) {
@@ -141,7 +169,15 @@ export async function updateMaterialItem(
 }
 
 export async function deleteMaterialItem(id: string): Promise<{ error?: string }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user, subscription] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+    getSubscriptionSnapshotForCurrentUser(),
+  ]);
+
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('materials management') };
+  }
 
   const { error } = await supabase
     .from('material_items')
@@ -158,7 +194,15 @@ export async function deleteMaterialItem(id: string): Promise<{ error?: string }
 export async function reorderMaterialItems(
   orderedIds: string[]
 ): Promise<{ error?: string }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user, subscription] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+    getSubscriptionSnapshotForCurrentUser(),
+  ]);
+
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('materials management') };
+  }
 
   const updates = orderedIds.map((id, index) =>
     supabase

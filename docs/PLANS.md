@@ -68,39 +68,42 @@
 - [x] Vitest + Testing Library setup
 - [x] 20+ test files (actions, API routes, components, utils)
 
-### Phase 2로 이월 (placeholder 상태)
-- [ ] Jobs 페이지
-- [ ] Schedule 페이지
-- [ ] Materials & Services 페이지
+### Phase 1 추가 완료
+- [x] Jobs 페이지 (JobsWorkspace — CRUD, 상태 관리)
+- [x] Schedule 페이지 (일정 목록, 월별 통계)
+- [x] Materials & Services 페이지 (재료/서비스 CRUD, CSV 임포트)
 
 ---
 
-## Phase 2 — AI & Advanced Features (예정)
+## Phase 2 — AI & Advanced Features (진행 중)
 
-> **시작 조건:** Phase 1 이월 항목(Jobs/Schedule/Materials) 완료 OR 별도 결정
-> **예상 시작:** 2026-Q2
+> **시작:** 2026-Q2
+> **기준일:** 2026-04-12
 
-### Phase 1 이월 항목
-- [ ] Jobs 페이지 구현 (현재 placeholder — TD-004)
-- [ ] Schedule 페이지 구현 (현재 placeholder — TD-004)
-- [ ] Materials & Services 페이지 구현 (현재 placeholder — TD-004)
+### 완료된 항목
+- [x] Workspace Assistant (AI chat — dashboard, Pro-gated, Gemini 2.5 Flash)
+- [x] Quote templates (Starter 5개, Pro 무제한)
+- [x] Email automation (quote 발송, invoice 발송, approval notification, 리마인더 cron)
 
-### 신규 기능
-- [ ] AI quote drafting (Gemini integration — 기반 코드 존재)
-- [ ] Workspace Assistant (AI chat — 기반 코드 존재)
-- [ ] Smart pricing suggestions
-- [ ] Quote templates / saved presets
-- [ ] Email automation (quote/invoice 발송)
-- [ ] Dashboard analytics (KPI, 매출 추이)
+### P1 — 높은 가치 / 단기 완료 가능
+- [ ] **Dashboard analytics** — 월별 매출 추이 차트, quote pipeline 현황 (현재: 당월 KPI 카드 3개만 존재)
+- [ ] **AI Quote Drafting UX** — Quote 생성 화면 내 "AI로 초안 작성" 버튼 (인프라: `lib/ai/drafts.ts` + `generateWorkspaceDraft` 완비, UX 미노출)
+
+### P2 — 중간 가치
+- [ ] **Smart pricing suggestions** — 작업 유형/히스토리 기반 단가 제안
+- [ ] **Job costing** — Jobs에 실제 자재비 입력 → 견적 대비 실비 비교
+
+### P3 — 낮은 우선순위 (Phase 3으로 이월 가능)
+- [ ] Xero/MYOB accounting sync
 
 ---
 
 ## Phase 3 — Integrations (계획)
 
-- [ ] Xero/MYOB accounting sync
-- [ ] Email notifications (Resend)
-- [ ] Job costing (자재비 vs 실제 비용)
-- [ ] Client portal (고객이 견적 확인/승인)
+- [ ] Xero/MYOB accounting sync (P3 이월 항목 포함)
+- [x] Email notifications (Resend — invoice reminders cron 구현 완료)
+- [x] Job costing → P2로 앞당김
+- [x] Client portal (공개 견적 링크 `/q/[token]` 구현 완료 — 고객 확인/서명/날짜 선택)
 
 ---
 
