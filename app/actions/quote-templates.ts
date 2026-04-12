@@ -8,8 +8,7 @@ import {
 import { createServerClient } from '@/lib/supabase/server';
 import type { QuoteCreateInput } from '@/lib/supabase/validators';
 import { getActiveSubscriptionRequiredMessage } from '@/lib/subscription/access';
-
-export const STARTER_TEMPLATE_LIMIT = 5;
+import { STARTER_TEMPLATE_LIMIT } from '@/config/plans';
 
 export type QuoteTemplatePayload = Pick<
   QuoteCreateInput,

@@ -14,6 +14,8 @@ export interface Plan {
   features: string[];
 }
 
+export const STARTER_TEMPLATE_LIMIT = 5;
+
 export const PLANS: Record<PlanId, Plan> = {
   starter: {
     id: 'starter',
