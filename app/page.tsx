@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function LandingPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(10,174,143,0.18),_transparent_38%),linear-gradient(180deg,_#f7fbfb_0%,_#eef5f4_100%)] px-6 py-10">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[radial-gradient(circle_at_top,rgba(139,94,60,0.12),transparent_38%),linear-gradient(180deg,#fcf9f4_0%,#f2eee9_100%)] px-6 py-10">
       <div className="max-w-md rounded-[28px] border border-white/70 bg-white/90 p-8 text-center shadow-[0_24px_60px_rgba(22,42,42,0.08)] backdrop-blur">
         <div className="mb-5 flex justify-center">
           <BrandLogo width={220} height={50} priority />
