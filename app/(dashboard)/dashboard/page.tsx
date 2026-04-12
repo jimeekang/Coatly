@@ -170,7 +170,7 @@ export default async function DashboardPage() {
 
       {quoteSlotsRemaining !== null && (
         <div className="rounded-xl border border-outline-variant bg-surface-container-low px-5 py-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
             Starter Usage
           </p>
           <p className="mt-1 text-base font-semibold text-on-surface">
@@ -187,7 +187,7 @@ export default async function DashboardPage() {
       <section aria-labelledby="kpi-heading">
         <h2
           id="kpi-heading"
-          className="mb-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant"
+          className="mb-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant"
         >
           This Month
         </h2>
@@ -227,7 +227,7 @@ export default async function DashboardPage() {
       <section aria-labelledby="overview-heading">
         <h2
           id="overview-heading"
-          className="mb-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant"
+          className="mb-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant"
         >
           Overview
         </h2>
