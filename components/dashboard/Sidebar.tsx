@@ -61,8 +61,8 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
             aria-current={active ? 'page' : undefined}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
               active
-                ? 'bg-stone-200 text-stone-900 font-bold'
-                : 'text-stone-600 hover:bg-stone-200/50 font-medium'
+                ? 'bg-surface-container-high text-on-surface font-bold'
+                : 'text-on-surface-variant hover:bg-surface-container font-medium'
             }`}
           >
             <Icon
@@ -82,7 +82,7 @@ function LogoutButton() {
     <form action={signOut} className="mt-2">
       <button
         type="submit"
-        className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-200/50 transition-colors w-full"
+        className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container transition-colors w-full"
         aria-label="Logout"
       >
         <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
@@ -106,11 +106,11 @@ export default function DashboardSidebar({
   return (
     <>
       {/* ── Desktop sidebar ── */}
-      <aside className="hidden md:flex w-64 flex-col bg-stone-100 p-4 min-h-screen sticky top-0 h-screen overflow-y-auto border-r-0 z-50">
+      <aside className="hidden md:flex w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50">
         {/* Logo */}
         <div className="mb-10 px-4">
-          <h1 className="text-2xl font-bold tracking-tighter text-stone-900">Coatly</h1>
-          <p className="text-xs font-medium tracking-tight text-stone-500 uppercase mt-0.5">
+          <h1 className="text-2xl font-bold tracking-tighter text-on-surface">Coatly</h1>
+          <p className="text-xs font-medium tracking-tight text-on-surface-variant uppercase mt-0.5">
             Painter Workspace
           </p>
         </div>
@@ -119,16 +119,16 @@ export default function DashboardSidebar({
         <LogoutButton />
 
         {/* User card */}
-        <div className="mt-auto px-4 py-4 bg-stone-200/50 rounded-xl">
+        <div className="mt-auto px-4 py-4 bg-surface-container rounded-xl">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-on-primary text-sm font-bold flex-shrink-0">
               {businessName.slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-stone-900 truncate">{businessName}</p>
+              <p className="text-xs font-bold text-on-surface truncate">{businessName}</p>
               <p
-                className={`text-[10px] uppercase tracking-widest font-semibold ${
-                  isPro ? 'text-primary' : 'text-stone-500'
+                className={`text-[11px] uppercase tracking-widest font-semibold ${
+                  isPro ? 'text-primary' : 'text-on-surface-variant'
                 }`}
               >
                 {planLabel}
@@ -140,7 +140,7 @@ export default function DashboardSidebar({
 
       {/* ── Mobile top bar ── */}
       <header className="md:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between bg-surface/90 backdrop-blur-md border-b border-outline-variant px-4 h-14 shadow-sm">
-        <h1 className="text-xl font-bold tracking-tight text-stone-900">Coatly</h1>
+        <h1 className="text-xl font-bold tracking-tight text-on-surface">Coatly</h1>
         <div className="flex items-center gap-2">
           <p className="text-xs text-on-surface-variant truncate max-w-[120px] font-medium">
             {businessName}
