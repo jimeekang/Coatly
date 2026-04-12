@@ -103,7 +103,7 @@ export default function DashboardSidebar({
         <div className="mb-10 px-4">
           <h1 className="text-2xl font-bold tracking-tighter text-stone-900">Coatly</h1>
           <p className="text-xs font-medium tracking-tight text-stone-500 uppercase mt-0.5">
-            Premium Painting SaaS
+            Painter Workspace
           </p>
         </div>
 
