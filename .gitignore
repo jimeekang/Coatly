@@ -55,3 +55,6 @@ next-env.d.ts
 # generated design assets (Stitch AI output — re-run stitch skill to regenerate)
 /docs/stitch/
 .gstack/
+
+# Claude Code local session config (may contain API keys in permissions.allow)
+.claude/settings.local.json
