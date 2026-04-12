@@ -2,14 +2,7 @@
 
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
-
-type AuthEmailSignupStatus = {
-  email_exists: boolean;
-  has_email_provider: boolean;
-  has_google_provider: boolean;
-};
 
 const DUPLICATE_SIGNUP_ERROR = 'This ID is already signed up.';
 
@@ -28,16 +21,6 @@ export async function signUpWithEmail(data: {
   password: string;
   businessName: string;
 }): Promise<{ error: string } | { success: 'check-email' }> {
-  const existingAuthStatus = await getAuthEmailSignupStatus(data.email);
-
-  if (existingAuthStatus?.has_google_provider && !existingAuthStatus.has_email_provider) {
-    return { error: `${DUPLICATE_SIGNUP_ERROR} Continue with Google instead.` };
-  }
-
-  if (existingAuthStatus?.email_exists) {
-    return { error: `${DUPLICATE_SIGNUP_ERROR} Sign in instead.` };
-  }
-
   const supabase = await createServerClient();
   const { data: signUpData, error } = await supabase.auth.signUp({
     email: data.email,
@@ -117,65 +100,6 @@ export async function requestPasswordReset(data: {
   return { success: true };
 }
 
-async function getAuthEmailSignupStatus(
-  email: string
-): Promise<AuthEmailSignupStatus | null> {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return null;
-  }
-
-  try {
-    const supabase = createAdminClient();
-    const normalizedEmail = email.trim().toLowerCase();
-    let page = 1;
-
-    while (true) {
-      const { data, error } = await supabase.auth.admin.listUsers({
-        page,
-        perPage: 200,
-      });
-
-      if (error) {
-        console.error('Failed to look up signup email status', error);
-        return null;
-      }
-
-      const matchedUser = data.users.find(
-        (user) => user.email?.trim().toLowerCase() === normalizedEmail
-      );
-
-      if (matchedUser) {
-        const providers = Array.isArray(matchedUser.app_metadata?.providers)
-          ? matchedUser.app_metadata.providers
-          : [];
-        const primaryProvider = matchedUser.app_metadata?.provider;
-
-        return {
-          email_exists: true,
-          has_email_provider:
-            primaryProvider === 'email' || providers.includes('email'),
-          has_google_provider:
-            primaryProvider === 'google' || providers.includes('google'),
-        };
-      }
-
-      if (data.users.length < 200) {
-        break;
-      }
-
-      page += 1;
-    }
-
-    return {
-      email_exists: false,
-      has_email_provider: false,
-      has_google_provider: false,
-    };
-  } catch (error) {
-    console.error('Failed to create Supabase admin client for signup lookup', error);
-    return null;
-  }
-}
 
 function normalizeAuthError(message: string): string {
   if (!message) {

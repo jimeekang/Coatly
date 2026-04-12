@@ -851,6 +851,12 @@ export async function getPublicQuoteByToken(token: string): Promise<{
     return { data: null, error: 'Public quote link is invalid.' };
   }
 
+  // Reject non-UUID tokens before hitting the DB — blocks brute-force attempts cheaply
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(trimmedToken)) {
+    return { data: null, error: 'Quote not found.' };
+  }
+
   const supabase = createAdminClient();
   const quoteResult = await supabase
     .from('quotes')
