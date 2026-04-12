@@ -59,8 +59,8 @@ export default function SignupPage() {
         eyebrow="Account created"
         title="Check your inbox."
         description="Confirm the email we just sent, then come back to finish your business setup."
-        sideTitle="A cleaner first-run experience builds trust early."
-        sideDescription="Even the confirmation step should feel like part of the same product, not a blank dead-end between auth and onboarding."
+        sideTitle="One step away from your workspace."
+        sideDescription="Confirm your email and you're in. From there, set up your business profile and start sending quotes straight away."
       >
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-pm-teal-light">
@@ -86,8 +86,8 @@ export default function SignupPage() {
       eyebrow="Create account"
       title="Set up Coatly for your business."
       description="Create your account, then continue into business setup before you start quoting and invoicing."
-      sideTitle="The first form should feel confident, not cramped."
-      sideDescription="Sign up is often the first real interaction with the product. Better spacing, hierarchy, and scale make Coatly feel more credible before the dashboard even loads."
+      sideTitle="Get your painting business organised in minutes."
+      sideDescription="Create your free account, set up your business profile, and start sending professional quotes and invoices the same day."
       footer={
         <>
           Already have an account?{' '}

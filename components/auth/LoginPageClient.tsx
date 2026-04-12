@@ -63,8 +63,8 @@ export default function LoginPageClient({
       eyebrow="Sign in"
       title="Pick up where the workday left off."
       description="Sign in to quotes, invoices, schedule, and customer follow-up without losing the warm Coatly tone."
-      sideTitle="Less admin sprawl, more time on site."
-      sideDescription="Coatly should feel practical and trustworthy from the first screen. The auth flow now shares the same grounded visual language as the rest of the workspace."
+      sideTitle="Less admin. More time on the tools."
+      sideDescription="Every quote, invoice, and customer record in one place — built for Australian painters who want to spend more time painting and less time on paperwork."
       footer={
         <>
           Don&apos;t have an account?{' '}
