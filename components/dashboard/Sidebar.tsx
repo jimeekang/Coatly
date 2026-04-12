@@ -36,6 +36,14 @@ const navItems: NavItem[] = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
+const mobileTabItems: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/quotes', label: 'Quotes', icon: FileText },
+  { href: '/invoices', label: 'Invoices', icon: Receipt },
+  { href: '/customers', label: 'Customers', icon: Users },
+  { href: '/settings', label: 'Settings', icon: Settings },
+];
+
 function isActive(href: string, pathname: string) {
   return pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'));
 }
@@ -152,7 +160,7 @@ export default function DashboardSidebar({
         className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/90 backdrop-blur-md border-t border-outline-variant flex h-20"
         aria-label="Bottom navigation"
       >
-        {navItems.slice(0, 4).map(({ href, label, icon: Icon }) => {
+        {mobileTabItems.map(({ href, label, icon: Icon }) => {
           const active = isActive(href, pathname);
           return (
             <Link
