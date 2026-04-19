@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getCustomer } from '@/app/actions/customers';
+import { getQuotesByCustomer } from '@/app/actions/quotes';
+import { getInvoicesByCustomer } from '@/app/actions/invoices';
 import { CustomerDetail } from '@/components/customers/CustomerDetail';
 
 interface Props {
@@ -16,7 +18,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CustomerDetailPage({ params }: Props) {
   const { id } = await params;
-  const { data: customer, error } = await getCustomer(id);
+  const [{ data: customer, error }, { data: quotes }, { data: invoices }] = await Promise.all([
+    getCustomer(id),
+    getQuotesByCustomer(id),
+    getInvoicesByCustomer(id),
+  ]);
 
   if (!customer || error) notFound();
 
@@ -51,7 +57,7 @@ export default async function CustomerDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <CustomerDetail customer={customer} />
+      <CustomerDetail customer={customer} quotes={quotes} invoices={invoices} />
     </div>
   );
 }

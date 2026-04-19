@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { WorkspaceAssistant } from '@/components/dashboard/WorkspaceAssistant';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
-import { getInvoiceQuoteOptions } from '@/lib/invoices';
+import { getInvoiceQuoteOptions, resolveInvoiceStatus } from '@/lib/invoices';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSubscriptionSnapshotForCurrentUser, requireCurrentUser } from '@/lib/supabase/request-context';
 import { formatAUD } from '@/utils/format';
+import type { InvoiceStatus } from '@/types/invoice';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
@@ -43,7 +44,7 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('invoices')
-      .select('id, status, total_cents, amount_paid_cents, paid_at')
+      .select('id, status, total_cents, amount_paid_cents, paid_at, due_date, paid_date')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
     getInvoiceQuoteOptions(supabase, user.id),
@@ -62,6 +63,15 @@ export default async function DashboardPage() {
     })) ?? [];
 
   const quoteOptions = quoteOptionsResult.data;
+  const invoiceSummaries =
+    invoices?.map((invoice) => ({
+      ...invoice,
+      effective_status: resolveInvoiceStatus(
+        invoice.status as InvoiceStatus,
+        invoice.due_date,
+        invoice.paid_date ?? null
+      ),
+    })) ?? [];
 
   const currentSydneyMonth = getSydneyYearMonth(new Date());
   const activeQuoteCount =
@@ -77,17 +87,21 @@ export default async function DashboardPage() {
     quoteLimit === null ? null : Math.max(quoteLimit - starterQuoteUsageThisMonth, 0);
 
   const pendingInvoiceCount =
-    invoices?.filter((invoice) => ['draft', 'sent', 'overdue'].includes(invoice.status)).length ??
-    0;
+    invoiceSummaries.filter((invoice) =>
+      ['draft', 'sent', 'overdue'].includes(invoice.effective_status)
+    ).length;
+  const overdueInvoiceCount = invoiceSummaries.filter(
+    (invoice) => invoice.effective_status === 'overdue'
+  ).length;
 
   const customerCount = customers?.length ?? 0;
 
   const revenueThisMonthCents =
-    invoices?.reduce((sum, invoice) => {
+    invoiceSummaries.reduce((sum, invoice) => {
       if (!invoice.paid_at) return sum;
       if (getSydneyYearMonth(invoice.paid_at) !== currentSydneyMonth) return sum;
       return sum + (invoice.amount_paid_cents ?? invoice.total_cents ?? 0);
-    }, 0) ?? 0;
+    }, 0);
 
   // KPI: Quote approval rate this month
   const quotesThisMonth =
@@ -100,11 +114,11 @@ export default async function DashboardPage() {
 
   // KPI: Outstanding (unpaid) invoice amount
   const outstandingCents =
-    invoices?.reduce((sum, invoice) => {
-      if (!['sent', 'overdue'].includes(invoice.status)) return sum;
+    invoiceSummaries.reduce((sum, invoice) => {
+      if (!['sent', 'overdue'].includes(invoice.effective_status)) return sum;
       const remaining = (invoice.total_cents ?? 0) - (invoice.amount_paid_cents ?? 0);
       return sum + Math.max(remaining, 0);
-    }, 0) ?? 0;
+    }, 0);
 
   const kpiStats = [
     {
@@ -197,9 +211,9 @@ export default async function DashboardPage() {
               key={stat.label}
               className={`rounded-2xl p-6 transition-colors ${
                 stat.variant === 'positive'
-                  ? 'bg-primary/10 border border-primary/20'
+                  ? 'bg-success-container border border-success/20'
                   : stat.variant === 'warning'
-                    ? 'bg-error/8 border border-error/20'
+                    ? 'bg-warning-container border border-warning/20'
                     : 'bg-surface-container-low hover:bg-surface-container'
               }`}
             >
@@ -209,9 +223,9 @@ export default async function DashboardPage() {
               <div
                 className={`text-3xl font-extrabold tracking-tighter ${
                   stat.variant === 'positive'
-                    ? 'text-primary'
+                    ? 'text-success'
                     : stat.variant === 'warning'
-                      ? 'text-error'
+                      ? 'text-warning'
                       : 'text-on-surface'
                 }`}
               >
@@ -240,8 +254,15 @@ export default async function DashboardPage() {
               <p className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
                 {stat.label}
               </p>
-              <div className="text-3xl font-extrabold tracking-tighter text-on-surface">
-                {stat.value}
+              <div className="flex items-start justify-between gap-3">
+                <div className="text-3xl font-extrabold tracking-tighter text-on-surface">
+                  {stat.value}
+                </div>
+                {stat.label === 'Pending Invoices' && overdueInvoiceCount > 0 && (
+                  <span className="inline-flex min-h-7 items-center rounded-full bg-error/12 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-error">
+                    {overdueInvoiceCount} overdue
+                  </span>
+                )}
               </div>
               <p className="mt-1.5 text-[11px] text-on-surface-variant">{stat.hint}</p>
             </div>

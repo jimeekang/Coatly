@@ -47,6 +47,12 @@ function createEmptyCustomerForm(): CustomerFormData {
     state: '',
     postcode: '',
     properties: [createEmptyProperty()],
+    billing_same_as_site: true,
+    billing_address_line1: '',
+    billing_address_line2: '',
+    billing_city: '',
+    billing_state: '',
+    billing_postcode: '',
     notes: '',
   };
 }
@@ -94,6 +100,12 @@ function mergeCustomerFormDefaults(
     state: properties[0]?.state ?? '',
     postcode: properties[0]?.postcode ?? '',
     properties,
+    billing_same_as_site: defaultValues?.billing_same_as_site ?? true,
+    billing_address_line1: defaultValues?.billing_address_line1 ?? '',
+    billing_address_line2: defaultValues?.billing_address_line2 ?? '',
+    billing_city: defaultValues?.billing_city ?? '',
+    billing_state: defaultValues?.billing_state ?? '',
+    billing_postcode: defaultValues?.billing_postcode ?? '',
   };
 }
 
@@ -415,14 +427,14 @@ export function CustomerForm({
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-            Properties
+            Site Address
           </h3>
           <button
             type="button"
             onClick={addProperty}
             className="min-h-11 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-body"
           >
-            Add Property
+            Add Site
           </button>
         </div>
         <div className="flex flex-col gap-4">
@@ -430,7 +442,7 @@ export function CustomerForm({
             <div key={index} className="rounded-xl border border-pm-border bg-white p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                  {index === 0 ? 'Primary Property' : `Property ${index + 1}`}
+                  {index === 0 ? 'Primary Site' : `Site ${index + 1}`}
                 </p>
                 {form.properties.length > 1 && (
                   <button
@@ -532,6 +544,104 @@ export function CustomerForm({
         </div>
       </section>
 
+      {/* ── Billing Address ── */}
+      <section>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary mb-3">
+          Billing Address
+        </h3>
+        <div className="rounded-xl border border-pm-border bg-white p-4">
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.billing_same_as_site}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, billing_same_as_site: e.target.checked }))
+              }
+              className="w-5 h-5 rounded border-pm-border text-pm-teal focus:ring-pm-teal-mid cursor-pointer"
+            />
+            <span className="text-sm text-pm-body font-medium">Same as site address</span>
+          </label>
+
+          {!form.billing_same_as_site && (
+            <div className="mt-4 flex flex-col gap-4">
+              <div>
+                <label className={LABEL_CLASS}>Street Address{OPTIONAL}</label>
+                <input
+                  type="text"
+                  autoComplete="billing address-line1"
+                  placeholder="e.g. 12 Harbor St"
+                  value={form.billing_address_line1}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, billing_address_line1: e.target.value }))
+                  }
+                  className={FIELD_CLASS}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Unit / Apt{OPTIONAL}</label>
+                <input
+                  type="text"
+                  autoComplete="billing address-line2"
+                  placeholder="e.g. Suite 1"
+                  value={form.billing_address_line2}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, billing_address_line2: e.target.value }))
+                  }
+                  className={FIELD_CLASS}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Suburb{OPTIONAL}</label>
+                <input
+                  type="text"
+                  autoComplete="billing address-level2"
+                  placeholder="e.g. Manly"
+                  value={form.billing_city}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, billing_city: e.target.value }))
+                  }
+                  className={FIELD_CLASS}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL_CLASS}>State{OPTIONAL}</label>
+                  <select
+                    value={form.billing_state}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, billing_state: e.target.value }))
+                    }
+                    className={FIELD_CLASS}
+                  >
+                    <option value="">Select</option>
+                    {AU_STATES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Postcode{OPTIONAL}</label>
+                  <input
+                    type="text"
+                    autoComplete="billing postal-code"
+                    inputMode="numeric"
+                    maxLength={4}
+                    placeholder="e.g. 2095"
+                    value={form.billing_postcode}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, billing_postcode: e.target.value }))
+                    }
+                    className={FIELD_CLASS}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* ── Notes ── */}
       <section>
         <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary mb-3">
@@ -583,7 +693,7 @@ export function CustomerForm({
           <button
             type="submit"
             disabled={loading || !canSubmit}
-            className="flex-[2] h-14 rounded-xl bg-pm-teal text-base font-semibold text-white active:bg-pm-teal-hover disabled:opacity-50 transition-colors"
+            className="flex-2 h-14 rounded-xl bg-pm-teal text-base font-semibold text-white active:bg-pm-teal-hover disabled:opacity-50 transition-colors"
           >
             {loading ? 'Saving…' : submitLabel}
           </button>

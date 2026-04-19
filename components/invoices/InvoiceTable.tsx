@@ -1,24 +1,25 @@
 'use client';
 
-import { useDeferredValue, useState } from 'react';
+import { useDeferredValue, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { markInvoiceAsPaid } from '@/app/actions/invoices';
+import { formatCustomerLocation, getSydneyTodayDateString } from '@/lib/invoices';
 import type { InvoiceListItem, InvoiceStatus } from '@/types/invoice';
-import { formatCustomerLocation } from '@/lib/invoices';
 import { formatAUD, formatDate } from '@/utils/format';
 
 const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
-  draft:     'bg-secondary/10 text-secondary',
+  draft:     'bg-surface-container-highest text-on-surface-variant',
   sent:      'bg-primary/10 text-primary',
-  paid:      'bg-tertiary/10 text-tertiary',
-  overdue:   'bg-error/10 text-error',
-  cancelled: 'bg-surface-container-high text-on-surface-variant',
+  paid:      'bg-success-container text-success',
+  overdue:   'bg-warning-container text-warning',
+  cancelled: 'bg-surface-container-highest text-on-surface-variant',
 };
 
 const INVOICE_LEFT_BORDER: Record<InvoiceStatus, string> = {
-  draft:     'border-l-secondary',
+  draft:     'border-l-outline',
   sent:      'border-l-primary',
-  paid:      'border-l-tertiary',
-  overdue:   'border-l-error',
+  paid:      'border-l-success',
+  overdue:   'border-l-warning',
   cancelled: 'border-l-outline',
 };
 
@@ -91,6 +92,14 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [activePaymentInvoiceId, setActivePaymentInvoiceId] = useState<string | null>(null);
+  const [paidDate, setPaidDate] = useState(getSydneyTodayDateString());
+  const [paymentMethod, setPaymentMethod] = useState<
+    'bank_transfer' | 'cash' | 'card' | 'cheque' | 'other' | ''
+  >('');
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingInvoiceId, setPendingInvoiceId] = useState<string | null>(null);
+  const [isSubmittingPayment, startSubmitPaymentTransition] = useTransition();
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim();
 
@@ -104,6 +113,35 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
   });
 
   const hasActiveFilters = normalizedQuery || status !== 'all' || dateFilter !== 'all';
+
+  function openMarkPaidForm(invoice: InvoiceListItem) {
+    setActionError(null);
+    setActivePaymentInvoiceId(invoice.id);
+    setPaidDate(invoice.paid_date ?? getSydneyTodayDateString());
+    setPaymentMethod(invoice.payment_method ?? '');
+  }
+
+  function closeMarkPaidForm() {
+    setActionError(null);
+    setActivePaymentInvoiceId(null);
+    setPendingInvoiceId(null);
+    setPaymentMethod('');
+  }
+
+  function handleMarkPaid(invoiceId: string) {
+    startSubmitPaymentTransition(async () => {
+      setActionError(null);
+      setPendingInvoiceId(invoiceId);
+      const result = await markInvoiceAsPaid(invoiceId, {
+        paid_date: paidDate,
+        payment_method: paymentMethod as 'bank_transfer' | 'cash' | 'card' | 'cheque' | 'other',
+      });
+      if (result?.error) {
+        setActionError(result.error);
+        setPendingInvoiceId(null);
+      }
+    });
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -204,6 +242,8 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
           <ul className="flex flex-col gap-3">
             {filtered.map((invoice) => {
               const borderClass = INVOICE_LEFT_BORDER[invoice.status] ?? 'border-l-outline';
+              const canQuickMarkPaid = invoice.status === 'sent' || invoice.status === 'overdue';
+              const isPaymentFormOpen = activePaymentInvoiceId === invoice.id;
               return (
                 <li
                   key={invoice.id}
@@ -218,9 +258,16 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                         <h3 className="font-bold text-on-surface text-base leading-tight">
                           {invoice.customer.name}
                         </h3>
-                        <p className="text-on-surface-variant text-sm font-medium mt-0.5 capitalize">
-                          {invoice.invoice_type} invoice
-                        </p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                          <p className="text-on-surface-variant text-sm font-medium capitalize">
+                            {invoice.invoice_type} invoice
+                          </p>
+                          {invoice.quote_stage_label && (
+                            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                              {invoice.quote_stage_label}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <InvoiceStatusBadge status={invoice.status} />
                     </div>
@@ -256,6 +303,92 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                       </div>
                     </div>
                   </Link>
+                  {canQuickMarkPaid && (
+                    <div className="border-t border-outline-variant/40 px-5 py-4">
+                      {!isPaymentFormOpen ? (
+                        <button
+                          type="button"
+                          onClick={() => openMarkPaidForm(invoice)}
+                          className="inline-flex h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90"
+                        >
+                          Mark as Paid
+                        </button>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+                            Record Payment
+                          </p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="space-y-1.5">
+                              <span className="text-xs font-medium text-on-surface-variant">
+                                Paid date
+                              </span>
+                              <input
+                                type="date"
+                                value={paidDate}
+                                onChange={(event) => setPaidDate(event.target.value)}
+                                className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                              />
+                            </label>
+                            <label className="space-y-1.5">
+                              <span className="text-xs font-medium text-on-surface-variant">
+                                Payment method
+                              </span>
+                              <select
+                                value={paymentMethod}
+                                onChange={(event) =>
+                                  setPaymentMethod(
+                                    event.target.value as
+                                      | 'bank_transfer'
+                                      | 'cash'
+                                      | 'card'
+                                      | 'cheque'
+                                      | 'other'
+                                      | ''
+                                  )
+                                }
+                                className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                              >
+                                <option value="">Select method</option>
+                                <option value="bank_transfer">Bank transfer</option>
+                                <option value="cash">Cash</option>
+                                <option value="card">Card</option>
+                                <option value="cheque">Cheque</option>
+                                <option value="other">Other</option>
+                              </select>
+                            </label>
+                          </div>
+                          {actionError && (
+                            <p className="text-sm text-error">{actionError}</p>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleMarkPaid(invoice.id)}
+                              disabled={
+                                isSubmittingPayment ||
+                                pendingInvoiceId === invoice.id ||
+                                !paidDate ||
+                                !paymentMethod
+                              }
+                              className="inline-flex h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-60"
+                            >
+                              {isSubmittingPayment && pendingInvoiceId === invoice.id
+                                ? 'Saving...'
+                                : 'Save Payment'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={closeMarkPaidForm}
+                              className="inline-flex h-11 items-center rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </li>
               );
             })}

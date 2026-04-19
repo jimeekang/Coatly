@@ -12,17 +12,17 @@ import { formatAUD, formatDate } from '@/utils/format';
 import { DuplicateQuoteButton } from '@/components/quotes/DuplicateQuoteButton';
 
 const QUOTE_STATUS_STYLES: Record<QuoteStatus, string> = {
-  draft:    'bg-secondary/10 text-secondary',
+  draft:    'bg-surface-container-highest text-on-surface-variant',
   sent:     'bg-primary/10 text-primary',
-  approved: 'bg-tertiary/10 text-tertiary',
-  rejected: 'bg-error/10 text-error',
-  expired:  'bg-surface-container-high text-on-surface-variant',
+  approved: 'bg-success-container text-success',
+  rejected: 'bg-error-container text-error',
+  expired:  'bg-surface-container-highest text-on-surface-variant',
 };
 
 const QUOTE_LEFT_BORDER: Record<QuoteStatus, string> = {
-  draft:    'border-l-secondary',
+  draft:    'border-l-outline',
   sent:     'border-l-primary',
-  approved: 'border-l-tertiary',
+  approved: 'border-l-success',
   rejected: 'border-l-error',
   expired:  'border-l-outline',
 };

@@ -33,7 +33,7 @@ vi.mock('@/lib/subscription/access', () => ({
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
-import { createCustomer, getCustomers, updateCustomer } from '@/app/actions/customers';
+import { createCustomer, deleteCustomer, getCustomers, updateCustomer } from '@/app/actions/customers';
 
 const BASE_CUSTOMER_INPUT = {
   name: 'Mark Johnson',
@@ -58,6 +58,12 @@ const BASE_CUSTOMER_INPUT = {
       notes: '',
     },
   ],
+  billing_same_as_site: true,
+  billing_address_line1: '',
+  billing_address_line2: '',
+  billing_city: '',
+  billing_state: '',
+  billing_postcode: '',
   notes: '',
 };
 
@@ -183,6 +189,12 @@ describe('customers actions', () => {
       state: null,
       postcode: null,
       properties: [],
+      billing_same_as_site: true,
+      billing_address_line1: null,
+      billing_address_line2: null,
+      billing_city: null,
+      billing_state: null,
+      billing_postcode: null,
       notes: null,
     });
     expect(redirectMock).toHaveBeenCalledWith('/customers');
@@ -190,6 +202,17 @@ describe('customers actions', () => {
 
   it('creates a customer with multiple emails, phones, and properties', async () => {
     const insertMock = vi.fn().mockResolvedValue({ error: null });
+    const fromMock = vi.fn()
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          ilike: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({ insert: insertMock });
 
     createServerClientMock.mockResolvedValue({
       auth: {
@@ -197,9 +220,7 @@ describe('customers actions', () => {
           data: { user: { id: 'user-1', email: 'owner@example.com' } },
         }),
       },
-      from: vi.fn(() => ({
-        insert: insertMock,
-      })),
+      from: fromMock,
     });
 
     const result = await createCustomer({
@@ -302,6 +323,12 @@ describe('customers actions', () => {
       state: null,
       postcode: null,
       properties: [],
+      billing_same_as_site: true,
+      billing_address_line1: null,
+      billing_address_line2: null,
+      billing_city: null,
+      billing_state: null,
+      billing_postcode: null,
       notes: null,
     });
     expect(eqIdMock).toHaveBeenCalledWith('id', 'customer-1');
@@ -318,15 +345,26 @@ describe('customers actions', () => {
       eq: eqIdMock,
     });
 
+    const fromMock = vi.fn()
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          neq: vi.fn().mockReturnThis(),
+          ilike: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({ update: updateMock });
+
     createServerClientMock.mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
           data: { user: { id: 'user-1', email: 'owner@example.com' } },
         }),
       },
-      from: vi.fn(() => ({
-        update: updateMock,
-      })),
+      from: fromMock,
     });
 
     const result = await updateCustomer('customer-1', {
@@ -363,6 +401,171 @@ describe('customers actions', () => {
         properties: expect.any(Array),
       })
     );
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('soft-deletes a customer by setting is_archived to true', async () => {
+    const eqUserMock = vi.fn().mockResolvedValue({ error: null });
+    const eqIdMock = vi.fn().mockReturnValue({ eq: eqUserMock });
+    const updateMock = vi.fn().mockReturnValue({ eq: eqIdMock });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn(() => ({ update: updateMock })),
+    });
+
+    const result = await deleteCustomer('customer-1');
+
+    expect(result).toBeUndefined();
+    expect(updateMock).toHaveBeenCalledWith({ is_archived: true });
+    expect(eqIdMock).toHaveBeenCalledWith('id', 'customer-1');
+    expect(eqUserMock).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(redirectMock).toHaveBeenCalledWith('/customers');
+  });
+
+  it('blocks customer deletion when there is no active subscription', async () => {
+    const updateMock = vi.fn();
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn(() => ({ update: updateMock })),
+    });
+    getSubscriptionSnapshotForUserMock.mockResolvedValue({
+      plan: 'starter',
+      status: 'none',
+      active: false,
+      cancelScheduled: false,
+      features: {
+        ai: false,
+        xeroSync: false,
+        jobCosting: false,
+        prioritySupport: false,
+        unlimitedQuotes: false,
+        activeQuoteLimit: 10,
+      },
+    });
+
+    const result = await deleteCustomer('customer-1');
+
+    expect(result).toEqual({
+      error:
+        'Choose a paid plan to unlock customer management. Finish checkout before using Coatly tools.',
+    });
+    expect(updateMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('returns a duplicate error when a customer with the same name and address already exists', async () => {
+    const insertMock = vi.fn();
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          ilike: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'existing-1' } }),
+          }),
+        }),
+        insert: insertMock,
+      }),
+    });
+
+    const result = await createCustomer({
+      ...BASE_CUSTOMER_INPUT,
+      properties: [
+        {
+          label: 'Primary property',
+          address_line1: '12 Harbor St',
+          address_line2: '',
+          city: 'Manly',
+          state: 'NSW',
+          postcode: '2095',
+          notes: '',
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      error: 'A customer with this name and address already exists.',
+    });
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('skips the duplicate check and saves when no address is provided', async () => {
+    const insertMock = vi.fn().mockResolvedValue({ error: null });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn(() => ({ insert: insertMock })),
+    });
+
+    // BASE_CUSTOMER_INPUT has no address — dup check is skipped
+    const result = await createCustomer(BASE_CUSTOMER_INPUT);
+
+    expect(result).toBeUndefined();
+    expect(insertMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a duplicate error when updating to a name and address that already belongs to another customer', async () => {
+    const updateMock = vi.fn();
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnThis(),
+          neq: vi.fn().mockReturnThis(),
+          ilike: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'other-customer' } }),
+          }),
+        }),
+        update: updateMock,
+      }),
+    });
+
+    const result = await updateCustomer('customer-1', {
+      ...BASE_CUSTOMER_INPUT,
+      properties: [
+        {
+          label: 'Primary property',
+          address_line1: '12 Harbor St',
+          address_line2: '',
+          city: 'Manly',
+          state: 'NSW',
+          postcode: '2095',
+          notes: '',
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      error: 'A customer with this name and address already exists.',
+    });
+    expect(updateMock).not.toHaveBeenCalled();
     expect(redirectMock).not.toHaveBeenCalled();
   });
 

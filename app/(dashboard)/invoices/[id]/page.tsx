@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getInvoice, getInvoiceFormOptions } from '@/app/actions/invoices';
+import {
+  getInvoice,
+  getInvoiceFormOptions,
+  getLinkedInvoicesForQuote,
+} from '@/app/actions/invoices';
 import { InvoiceDetail } from '@/components/invoices/InvoiceDetail';
 
 interface Props {
@@ -25,6 +29,23 @@ export default async function InvoiceDetailPage({ params }: Props) {
   const linkedQuote =
     invoice.quote_id
       ? formOptions.quotes.find((quote) => quote.id === invoice.quote_id) ?? null
+      : null;
+  const linkedInvoiceResult =
+    invoice.quote_id ? await getLinkedInvoicesForQuote(invoice.quote_id) : { data: null, error: null };
+  const linkedInvoiceSummary = linkedInvoiceResult.data?.summary ?? null;
+  const quoteBilling =
+    linkedQuote && linkedInvoiceSummary
+      ? {
+          billed_total_cents: linkedInvoiceSummary.billed_total_cents,
+          remaining_total_cents: Math.max(
+            linkedQuote.total_cents - linkedInvoiceSummary.billed_total_cents,
+            0
+          ),
+          linked_invoice_count: linkedInvoiceSummary.linked_invoice_count,
+          current_stage_label:
+            linkedInvoiceResult.data?.invoices.find((linkedInvoice) => linkedInvoice.id === invoice.id)
+              ?.quote_stage_label ?? invoice.quote_stage_label ?? null,
+        }
       : null;
 
   return (
@@ -59,7 +80,7 @@ export default async function InvoiceDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <InvoiceDetail invoice={invoice} linkedQuote={linkedQuote} />
+      <InvoiceDetail invoice={invoice} linkedQuote={linkedQuote} quoteBilling={quoteBilling} />
     </div>
   );
 }

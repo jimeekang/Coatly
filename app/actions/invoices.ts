@@ -1,11 +1,14 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
-  calculateInvoiceTotals,
+  buildQuoteInvoiceLinkStateMap,
+  buildQuoteInvoiceStageMap,
+  calculateInvoiceLineItemTotals,
   getInvoiceCustomerOptions,
-  getQuoteInvoiceLinkState,
   getInvoiceQuoteOptions,
+  getQuoteInvoiceLinkState,
   mapInvoiceDetail,
   mapInvoiceListItem,
   parseInvoiceCreateInput,
@@ -25,6 +28,7 @@ import type {
   InvoicePaymentMethod,
   InvoiceWithCustomer,
 } from '@/types/invoice';
+import type { QuoteInvoiceLinkState } from '@/lib/invoices';
 
 type InvoiceListRow = {
   id: string;
@@ -99,6 +103,10 @@ type CreateInvoiceActionInput = {
 };
 
 type UpdateInvoiceActionInput = CreateInvoiceActionInput;
+type MarkInvoicePaidInput = {
+  paid_date: string;
+  payment_method: InvoicePaymentMethod;
+};
 
 const MANUAL_INVOICE_STATUSES = new Set<CreateInvoiceActionInput['status']>([
   'draft',
@@ -130,6 +138,13 @@ function resolveInvoiceStatusForSave(
 
 function buildPaidTimestamp(paidDate: string) {
   return new Date(`${paidDate}T12:00:00.000Z`).toISOString();
+}
+
+function isValidIsoDateOnly(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toISOString().slice(0, 10) === value;
 }
 
 function resolveInvoicePaymentTracking(input: {
@@ -266,10 +281,52 @@ export async function getInvoices(): Promise<{
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
+  const rows = (data as InvoiceListRow[] | null) ?? [];
+  const stageByInvoiceId = buildQuoteInvoiceStageMap(
+    rows.map((invoice) => ({
+      id: invoice.id,
+      quote_id: invoice.quote_id,
+      created_at: invoice.created_at,
+    }))
+  );
+
   return {
-    data: ((data as InvoiceListRow[] | null) ?? []).map((invoice) =>
-      mapInvoiceListItem(invoice)
-    ),
+    data: rows.map((invoice) => ({
+      ...mapInvoiceListItem(invoice),
+      quote_stage_label: stageByInvoiceId.get(invoice.id) ?? null,
+    })),
+    error: error?.message ?? null,
+  };
+}
+
+export async function getInvoicesByCustomer(
+  customerId: string
+): Promise<{ data: InvoiceListItem[]; error: string | null }> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(
+      'id, user_id, customer_id, quote_id, invoice_number, status, invoice_type, subtotal_cents, gst_cents, total_cents, amount_paid_cents, business_abn, payment_terms, bank_details, due_date, paid_date, paid_at, payment_method, notes, created_at, updated_at, customer:customers!invoices_customer_user_fk(id, name, email, phone, address_line1, city, state, postcode), line_items:invoice_line_items(id)'
+    )
+    .eq('user_id', user.id)
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false });
+
+  const rows = (data as InvoiceListRow[] | null) ?? [];
+  const stageByInvoiceId = buildQuoteInvoiceStageMap(
+    rows.map((invoice) => ({
+      id: invoice.id,
+      quote_id: invoice.quote_id,
+      created_at: invoice.created_at,
+    }))
+  );
+
+  return {
+    data: rows.map((invoice) => ({
+      ...mapInvoiceListItem(invoice),
+      quote_stage_label: stageByInvoiceId.get(invoice.id) ?? null,
+    })),
     error: error?.message ?? null,
   };
 }
@@ -295,6 +352,7 @@ export async function getInvoiceFormOptions(): Promise<{
       status: string;
       valid_until: string | null;
       billed_subtotal_cents: number;
+      billed_total_cents: number;
       linked_invoice_count: number;
       has_linked_invoices: boolean;
       line_items: Array<{
@@ -466,9 +524,99 @@ export async function getInvoice(id: string): Promise<{
     .eq('user_id', user.id)
     .single();
 
+  let quoteStageLabel: string | null = null;
+
+  if (data?.quote_id) {
+    const { data: linkedInvoices } = await supabase
+      .from('invoices')
+      .select('id, quote_id, created_at')
+      .eq('user_id', user.id)
+      .eq('quote_id', data.quote_id);
+
+    const stageByInvoiceId = buildQuoteInvoiceStageMap(
+      ((linkedInvoices as Array<{ id: string; quote_id: string | null; created_at: string }> | null) ??
+        []).map((invoice) => ({
+        id: invoice.id,
+        quote_id: invoice.quote_id,
+        created_at: invoice.created_at,
+      }))
+    );
+
+    quoteStageLabel = stageByInvoiceId.get(data.id) ?? null;
+  }
+
   return {
-    data: data ? mapInvoiceDetail(data as InvoiceDetailRow) : null,
+    data: data
+      ? {
+          ...mapInvoiceDetail(data as InvoiceDetailRow),
+          quote_stage_label: quoteStageLabel,
+        }
+      : null,
     error: error?.message ?? null,
+  };
+}
+
+export async function getLinkedInvoicesForQuote(quoteId: string): Promise<{
+  data:
+    | {
+        invoices: InvoiceListItem[];
+        summary: QuoteInvoiceLinkState;
+      }
+    | null;
+  error: string | null;
+}> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(
+      'id, user_id, customer_id, quote_id, invoice_number, status, invoice_type, subtotal_cents, gst_cents, total_cents, amount_paid_cents, business_abn, payment_terms, bank_details, due_date, paid_date, paid_at, payment_method, notes, created_at, updated_at, customer:customers!invoices_customer_user_fk(id, name, email, phone, address_line1, city, state, postcode), line_items:invoice_line_items(id)'
+    )
+    .eq('user_id', user.id)
+    .eq('quote_id', quoteId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    return {
+      data: null,
+      error: error.message,
+    };
+  }
+
+  const rows = (data as InvoiceListRow[] | null) ?? [];
+  const stageByInvoiceId = buildQuoteInvoiceStageMap(
+    rows.map((invoice) => ({
+      id: invoice.id,
+      quote_id: invoice.quote_id,
+      created_at: invoice.created_at,
+    }))
+  );
+  const summary =
+    buildQuoteInvoiceLinkStateMap(
+      rows.map((invoice) => ({
+        id: invoice.id,
+        quote_id: invoice.quote_id,
+        subtotal_cents: invoice.subtotal_cents,
+        total_cents: invoice.total_cents,
+        status: invoice.status,
+        created_at: invoice.created_at,
+      }))
+    ).get(quoteId) ?? {
+      linked_invoice_count: 0,
+      has_linked_invoices: false,
+      billed_subtotal_cents: 0,
+      billed_total_cents: 0,
+    };
+
+  return {
+    data: {
+      invoices: rows.map((invoice) => ({
+        ...mapInvoiceListItem(invoice),
+        quote_stage_label: stageByInvoiceId.get(invoice.id) ?? null,
+      })),
+      summary,
+    },
+    error: null,
   };
 }
 
@@ -535,7 +683,7 @@ export async function createInvoice(
     }
   }
 
-  const { subtotal_cents, gst_cents, total_cents } = calculateInvoiceTotals(
+  const { line_items, subtotal_cents, gst_cents, total_cents } = calculateInvoiceLineItemTotals(
     parsed.data.line_items
   );
 
@@ -586,20 +734,15 @@ export async function createInvoice(
     return { error: invoiceError?.message ?? 'Invoice could not be created.' };
   }
 
-  const lineItems = parsed.data.line_items.map((item, index) => {
-    const total_cents = Math.round(item.quantity * item.unit_price_cents);
-    const gst_cents = Math.round(total_cents * 0.1);
-
-    return {
-      invoice_id: invoice.id,
-      description: item.description,
-      quantity: item.quantity,
-      unit_price_cents: item.unit_price_cents,
-      gst_cents,
-      total_cents,
-      sort_order: index,
-    };
-  });
+  const lineItems = line_items.map((item) => ({
+    invoice_id: invoice.id,
+    description: item.description,
+    quantity: item.quantity,
+    unit_price_cents: item.unit_price_cents,
+    gst_cents: item.gst_cents,
+    total_cents: item.total_cents,
+    sort_order: item.sort_order,
+  }));
 
   const { error: lineItemsError } = await supabase
     .from('invoice_line_items')
@@ -612,6 +755,8 @@ export async function createInvoice(
 
   await supabase.rpc('calculate_invoice_totals', { invoice_uuid: invoice.id });
 
+  revalidatePath('/invoices');
+  revalidatePath('/dashboard');
   redirect(`/invoices/${invoice.id}`);
 }
 
@@ -701,7 +846,7 @@ export async function updateInvoice(
     }
   }
 
-  const { subtotal_cents, gst_cents, total_cents } = calculateInvoiceTotals(
+  const { line_items, subtotal_cents, gst_cents, total_cents } = calculateInvoiceLineItemTotals(
     parsed.data.line_items
   );
 
@@ -748,20 +893,15 @@ export async function updateInvoice(
     return { error: deleteLineItemsError.message };
   }
 
-  const lineItems = parsed.data.line_items.map((item, index) => {
-    const total_cents = Math.round(item.quantity * item.unit_price_cents);
-    const gst_cents = Math.round(total_cents * 0.1);
-
-    return {
-      invoice_id: id,
-      description: item.description,
-      quantity: item.quantity,
-      unit_price_cents: item.unit_price_cents,
-      gst_cents,
-      total_cents,
-      sort_order: index,
-    };
-  });
+  const lineItems = line_items.map((item) => ({
+    invoice_id: id,
+    description: item.description,
+    quantity: item.quantity,
+    unit_price_cents: item.unit_price_cents,
+    gst_cents: item.gst_cents,
+    total_cents: item.total_cents,
+    sort_order: item.sort_order,
+  }));
 
   const { error: lineItemsError } = await supabase
     .from('invoice_line_items')
@@ -773,6 +913,9 @@ export async function updateInvoice(
 
   await supabase.rpc('calculate_invoice_totals', { invoice_uuid: id });
 
+  revalidatePath('/invoices');
+  revalidatePath(`/invoices/${id}`);
+  revalidatePath('/dashboard');
   redirect(`/invoices/${id}`);
 }
 
@@ -843,6 +986,89 @@ export async function sendInvoice(id: string): Promise<{ error: string } | void>
     return { error: updateError.message };
   }
 
+  revalidatePath('/invoices');
+  revalidatePath(`/invoices/${id}`);
+  revalidatePath('/dashboard');
+  redirect(`/invoices/${id}`);
+}
+
+export async function markInvoiceAsPaid(
+  id: string,
+  input: MarkInvoicePaidInput
+): Promise<{ error: string } | void> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const subscription = await getSubscriptionSnapshotForUser(supabase, user.id);
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('invoice management') };
+  }
+
+  const paidDate = input.paid_date.trim();
+  if (!paidDate) {
+    return { error: 'Paid date is required.' };
+  }
+  if (!isValidIsoDateOnly(paidDate)) {
+    return { error: 'Paid date must be a valid date.' };
+  }
+
+  if (!input.payment_method) {
+    return { error: 'Payment method is required.' };
+  }
+
+  const { data: invoice, error: invoiceError } = await supabase
+    .from('invoices')
+    .select('id, user_id, quote_id, status, total_cents')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (invoiceError) {
+    return { error: invoiceError.message };
+  }
+
+  if (!invoice) {
+    return { error: 'Invoice not found.' };
+  }
+
+  if (invoice.status === 'draft') {
+    return { error: 'Draft invoices must be sent before they can be marked as paid.' };
+  }
+
+  if (invoice.status === 'paid') {
+    return { error: 'Invoice is already marked as paid.' };
+  }
+
+  if (invoice.status === 'cancelled') {
+    return { error: 'Cancelled invoices cannot be marked as paid.' };
+  }
+
+  const { error: updateError } = await supabase
+    .from('invoices')
+    .update({
+      status: 'paid',
+      amount_paid_cents: invoice.total_cents,
+      paid_date: paidDate,
+      paid_at: buildPaidTimestamp(paidDate),
+      payment_method: input.payment_method,
+    })
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath('/invoices');
+  revalidatePath(`/invoices/${id}`);
+  revalidatePath('/dashboard');
+  if (invoice.quote_id) {
+    revalidatePath(`/quotes/${invoice.quote_id}`);
+  }
+
   redirect(`/invoices/${id}`);
 }
 
@@ -868,5 +1094,7 @@ export async function deleteInvoice(id: string): Promise<{ error: string } | voi
     return { error: error.message };
   }
 
+  revalidatePath('/invoices');
+  revalidatePath('/dashboard');
   redirect('/invoices');
 }

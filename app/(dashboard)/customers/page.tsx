@@ -1,12 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getCustomers } from '@/app/actions/customers';
+import { getCustomers, getRecentJobsPerCustomer } from '@/app/actions/customers';
 import { CustomerTable } from '@/components/customers/CustomerTable';
 
 export const metadata: Metadata = { title: 'Customers' };
 
 export default async function CustomersPage() {
-  const { data: customers, error } = await getCustomers();
+  const [{ data: customers, error }, recentJobs] = await Promise.all([
+    getCustomers(),
+    getRecentJobsPerCustomer(),
+  ]);
 
   return (
     <div>
@@ -30,7 +33,7 @@ export default async function CustomersPage() {
           <p className="text-sm text-pm-coral-dark">{error}</p>
         </div>
       ) : (
-        <CustomerTable customers={customers} />
+        <CustomerTable customers={customers} recentJobs={recentJobs} />
       )}
     </div>
   );

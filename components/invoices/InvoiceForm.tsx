@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { InvoicePaymentMethod } from '@/types/invoice';
+import { getGSTFromExAmount } from '@/utils/gst';
 import { formatAUD, formatDate } from '@/utils/format';
 
 const FIELD_CLASS =
@@ -88,6 +89,7 @@ export type InvoiceFormQuoteOption = {
   status: string;
   valid_until: string | null;
   billed_subtotal_cents: number;
+  billed_total_cents: number;
   linked_invoice_count: number;
   has_linked_invoices: boolean;
   line_items: Array<{
@@ -148,6 +150,11 @@ function createInitialInvoiceForm(
   defaultValues?: InvoiceFormDefaultValues,
   businessDefaults?: InvoiceBusinessDefaults
 ) {
+  const dueDate =
+    defaultValues == null
+      ? buildDefaultDueDate()
+      : (defaultValues.due_date ?? '');
+
   return {
     customer_id: defaultValues?.customer_id ?? '',
     quote_id: defaultValues?.quote_id ?? '',
@@ -156,7 +163,7 @@ function createInitialInvoiceForm(
     business_abn: defaultValues?.business_abn ?? businessDefaults?.business_abn ?? '',
     payment_terms: defaultValues?.payment_terms ?? businessDefaults?.payment_terms ?? '',
     bank_details: defaultValues?.bank_details ?? businessDefaults?.bank_details ?? '',
-    due_date: defaultValues?.due_date ?? buildDefaultDueDate(),
+    due_date: dueDate,
     paid_date: defaultValues?.paid_date ?? '',
     payment_method: defaultValues?.payment_method ?? '',
     notes: defaultValues?.notes ?? '',
@@ -201,10 +208,16 @@ function buildQuoteScopeLabel(quote: InvoiceFormQuoteOption) {
   return quote.title?.trim() ? `${quote.quote_number} - ${quote.title.trim()}` : quote.quote_number;
 }
 
+function normalizeProgressPercent(value: number) {
+  if (!Number.isFinite(value)) return 100;
+  return Math.min(100, Math.max(1, Math.round(value)));
+}
+
 function buildInvoicePreset(
   quote: InvoiceFormQuoteOption,
   invoiceType: InvoiceFormDefaultValues['invoice_type'],
-  existingLinkedQuoteSubtotal = 0
+  existingLinkedQuoteSubtotal = 0,
+  progressPercent = 100
 ): InvoiceLineDraft[] {
   const quoteLabel = buildQuoteScopeLabel(quote);
   const depositSubtotalCents =
@@ -221,6 +234,10 @@ function buildInvoicePreset(
       Math.max(billedBeforeThisInvoice, depositSubtotalCents > 0 ? depositSubtotalCents : 0),
     0
   );
+  const normalizedProgressPercent = normalizeProgressPercent(progressPercent);
+  const progressClaimSubtotalCents = Math.round(
+    (progressSuggestedSubtotalCents * normalizedProgressPercent) / 100
+  );
 
   if (invoiceType === 'full') return buildLineItemsFromQuote(quote);
   if (invoiceType === 'deposit') {
@@ -229,7 +246,10 @@ function buildInvoicePreset(
       : buildLineItemsFromQuote(quote);
   }
   if (invoiceType === 'progress') {
-    return buildSingleAmountLine(`Progress claim for ${quoteLabel}`, progressSuggestedSubtotalCents);
+    return buildSingleAmountLine(
+      `Progress claim (${normalizedProgressPercent}%) for ${quoteLabel}`,
+      progressClaimSubtotalCents
+    );
   }
   return buildSingleAmountLine(`Final balance for ${quoteLabel}`, remainingSubtotalCents);
 }
@@ -261,6 +281,7 @@ export function InvoiceForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(() => createInitialInvoiceForm(defaultValues, businessDefaults));
+  const [progressPercent, setProgressPercent] = useState('100');
   const [lineItems, setLineItems] = useState<InvoiceLineDraft[]>(() =>
     createInitialLineItems(defaultValues)
   );
@@ -296,6 +317,23 @@ export function InvoiceForm({
     );
   }, [defaultValues, mode, selectedQuote]);
 
+  const existingLinkedQuoteTotal = useMemo(() => {
+    if (
+      mode !== 'edit' ||
+      !defaultValues?.quote_id ||
+      defaultValues.quote_id !== selectedQuote?.id
+    ) {
+      return 0;
+    }
+
+    return defaultValues.line_items.reduce((sum, item) => {
+      const lineSubtotal = Math.round(item.quantity * item.unit_price_cents);
+      const lineGst = Math.round(lineSubtotal * 0.1);
+
+      return sum + lineSubtotal + lineGst;
+    }, 0);
+  }, [defaultValues, mode, selectedQuote]);
+
   const summary = useMemo(() => {
     const subtotal = lineItems.reduce((sum, item) => {
       const quantity = Number(item.quantity);
@@ -304,7 +342,7 @@ export function InvoiceForm({
       return sum + Math.round(quantity * unitPrice * 100);
     }, 0);
 
-    const gst = Math.round(subtotal * 0.1);
+    const gst = getGSTFromExAmount(subtotal);
 
     return { subtotal, gst, total: subtotal + gst };
   }, [lineItems]);
@@ -312,20 +350,31 @@ export function InvoiceForm({
   const quoteContext = useMemo(() => {
     if (!selectedQuote) return null;
 
-    const billedBeforeThisInvoice = Math.max(
+    const billedBeforeThisInvoiceSubtotal = Math.max(
       selectedQuote.billed_subtotal_cents - existingLinkedQuoteSubtotal,
       0
     );
-    const billedAfterThisInvoice = billedBeforeThisInvoice + summary.subtotal;
-    const remainingSubtotal = Math.max(selectedQuote.subtotal_cents - billedAfterThisInvoice, 0);
-    const overBilled = billedAfterThisInvoice > selectedQuote.subtotal_cents;
+    const billedBeforeThisInvoiceTotal = Math.max(
+      selectedQuote.billed_total_cents - existingLinkedQuoteTotal,
+      0
+    );
+    const billedAfterThisInvoiceSubtotal = billedBeforeThisInvoiceSubtotal + summary.subtotal;
+    const billedAfterThisInvoiceTotal = billedBeforeThisInvoiceTotal + summary.total;
+    const remainingSubtotal = Math.max(
+      selectedQuote.subtotal_cents - billedAfterThisInvoiceSubtotal,
+      0
+    );
+    const remainingTotal = Math.max(selectedQuote.total_cents - billedAfterThisInvoiceTotal, 0);
+    const overBilled = billedAfterThisInvoiceTotal > selectedQuote.total_cents;
 
     return {
-      billedBeforeThisInvoice,
+      billedBeforeThisInvoiceSubtotal,
+      billedBeforeThisInvoiceTotal,
       remainingSubtotal,
+      remainingTotal,
       overBilled,
     };
-  }, [existingLinkedQuoteSubtotal, selectedQuote, summary.subtotal]);
+  }, [existingLinkedQuoteSubtotal, existingLinkedQuoteTotal, selectedQuote, summary.subtotal, summary.total]);
 
   const statusOptions = useMemo(() => {
     if (form.status === 'sent' || form.status === 'overdue') {
@@ -340,8 +389,7 @@ export function InvoiceForm({
   const canSubmit =
     Boolean(onSubmit) &&
     Boolean(form.customer_id) &&
-    Boolean(form.due_date) &&
-    (form.status !== 'paid' || Boolean(form.paid_date)) &&
+    (form.status !== 'paid' || (Boolean(form.paid_date) && Boolean(form.payment_method))) &&
     summary.total > 0 &&
     lineItems.some(
       (item) =>
@@ -352,9 +400,17 @@ export function InvoiceForm({
 
   function applyQuotePreset(
     quote: InvoiceFormQuoteOption,
-    invoiceType: InvoiceFormDefaultValues['invoice_type']
+    invoiceType: InvoiceFormDefaultValues['invoice_type'],
+    progressPercentValue = 100
   ) {
-    setLineItems(buildInvoicePreset(quote, invoiceType, existingLinkedQuoteSubtotal));
+    setLineItems(
+      buildInvoicePreset(
+        quote,
+        invoiceType,
+        existingLinkedQuoteSubtotal,
+        progressPercentValue
+      )
+    );
   }
 
   function handleFormChange(
@@ -389,11 +445,15 @@ export function InvoiceForm({
 
     if (name === 'quote_id' && value) {
       const matchedQuote = quotes.find((quote) => quote.id === value);
-      if (matchedQuote) applyQuotePreset(matchedQuote, form.invoice_type);
+      if (matchedQuote) applyQuotePreset(matchedQuote, form.invoice_type, Number(progressPercent));
     }
 
     if (name === 'invoice_type' && selectedQuote) {
-      applyQuotePreset(selectedQuote, value as InvoiceFormDefaultValues['invoice_type']);
+      applyQuotePreset(
+        selectedQuote,
+        value as InvoiceFormDefaultValues['invoice_type'],
+        Number(progressPercent)
+      );
     }
 
     setError(null);
@@ -443,7 +503,7 @@ export function InvoiceForm({
         business_abn: form.business_abn.trim() || null,
         payment_terms: form.payment_terms.trim() || null,
         bank_details: form.bank_details.trim() || null,
-        due_date: form.due_date,
+        due_date: form.due_date || null,
         paid_date: form.status === 'paid' ? form.paid_date || null : null,
         payment_method:
           form.status === 'paid'
@@ -457,6 +517,12 @@ export function InvoiceForm({
         setError(result.error);
       }
     });
+  }
+
+  function handleProgressPercentChange(value: string) {
+    setProgressPercent(value);
+    if (!selectedQuote || form.invoice_type !== 'progress') return;
+    applyQuotePreset(selectedQuote, 'progress', Number(value));
   }
 
   return (
@@ -559,12 +625,44 @@ export function InvoiceForm({
                       ? `Deposit invoice uses the ${selectedQuote.deposit_percent}% deposit saved on the linked quote.`
                       : INVOICE_TYPE_COPY[form.invoice_type].hint}
                   </p>
+                  {form.invoice_type === 'progress' && selectedQuote && (
+                    <div className="mt-3 space-y-2 rounded-xl border border-pm-border bg-pm-surface/50 p-3">
+                      <label htmlFor="progress_percent" className="block text-xs font-medium text-pm-secondary">
+                        Progress Percent (%)
+                      </label>
+                      <input
+                        id="progress_percent"
+                        type="number"
+                        min="1"
+                        max="100"
+                        inputMode="numeric"
+                        value={progressPercent}
+                        onChange={(event) => handleProgressPercentChange(event.target.value)}
+                        className={FIELD_CLASS}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        {[25, 50, 75, 100].map((percent) => (
+                          <button
+                            key={percent}
+                            type="button"
+                            onClick={() => handleProgressPercentChange(String(percent))}
+                            className="inline-flex h-10 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-body transition-colors hover:bg-white"
+                          >
+                            {percent}%
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-pm-secondary">
+                        Applies to the remaining staged subtotal for this linked quote.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Due date */}
                 <div>
                   <label htmlFor="due_date" className={LABEL_CLASS}>
-                    Due Date
+                    Due Date <span className="text-xs font-normal text-pm-secondary">(optional)</span>
                   </label>
                   <input
                     id="due_date"
@@ -574,6 +672,31 @@ export function InvoiceForm({
                     onChange={handleFormChange}
                     className={FIELD_CLASS}
                   />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, due_date: buildDefaultDueDate() }));
+                        setError(null);
+                      }}
+                      className="inline-flex h-10 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-body transition-colors hover:bg-pm-surface"
+                    >
+                      Set +14 days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, due_date: '' }));
+                        setError(null);
+                      }}
+                      className="inline-flex h-10 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-secondary transition-colors hover:bg-pm-surface"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-xs text-pm-secondary">
+                    Leave this blank if the invoice does not need a payment deadline yet.
+                  </p>
                 </div>
               </div>
 
@@ -645,7 +768,9 @@ export function InvoiceForm({
                     ))}
                   </select>
                   <p className="mt-1.5 text-xs text-pm-secondary">
-                    Optional, but useful for reconciling paid invoices later.
+                    {form.status === 'paid'
+                      ? 'Required when status is paid.'
+                      : 'Optional, but useful for reconciling paid invoices later.'}
                   </p>
                 </div>
               )}
@@ -670,15 +795,15 @@ export function InvoiceForm({
                     </p>
                   </div>
                   <div className="rounded-xl bg-white px-3 py-2">
-                    <p className="text-xs text-pm-secondary">Already billed</p>
+                    <p className="text-xs text-pm-secondary">Already invoiced</p>
                     <p className="mt-0.5 text-sm font-semibold text-pm-body">
-                      {formatAUD(quoteContext.billedBeforeThisInvoice)}
+                      {formatAUD(quoteContext.billedBeforeThisInvoiceTotal)}
                     </p>
                   </div>
                   <div className="rounded-xl bg-white px-3 py-2">
                     <p className="text-xs text-pm-secondary">Remaining</p>
                     <p className={`mt-0.5 text-sm font-semibold ${quoteContext.overBilled ? 'text-amber-700' : 'text-pm-teal'}`}>
-                      {formatAUD(quoteContext.remainingSubtotal)}
+                      {formatAUD(quoteContext.remainingTotal)}
                     </p>
                   </div>
                 </div>

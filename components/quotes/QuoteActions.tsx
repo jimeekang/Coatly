@@ -36,6 +36,8 @@ export function QuoteActions({
   const [approvePending, startApprove] = useTransition();
   const [jobPending, startJob] = useTransition();
   const [dupPending, startDup] = useTransition();
+  const [menuPending, startMenu] = useTransition();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   function handleApprove() {
     setError(null);
@@ -65,7 +67,37 @@ export function QuoteActions({
     });
   }
 
-  const anyPending = approvePending || jobPending || dupPending;
+  const anyPending = approvePending || jobPending || dupPending || menuPending;
+
+  function handleApproveWithoutSignature() {
+    setError(null);
+    setIsMoreOpen(false);
+    startMenu(async () => {
+      const result = await approveQuote(quoteId);
+      if (result?.error) setError(result.error);
+    });
+  }
+
+  function handleApproveAndConvertToJob() {
+    setError(null);
+    setIsMoreOpen(false);
+    startMenu(async () => {
+      if (status === 'draft' || status === 'sent') {
+        const approveResult = await approveQuote(quoteId);
+        if (approveResult?.error) {
+          setError(approveResult.error);
+          return;
+        }
+      }
+
+      const jobResult = await createJobFromQuote(quoteId);
+      if (jobResult.error) {
+        setError(jobResult.error);
+        return;
+      }
+      router.push('/jobs');
+    });
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -135,7 +167,49 @@ export function QuoteActions({
       )}
 
       {/* Secondary utility row */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-2">
+        {/* More */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsMoreOpen((prev) => !prev)}
+            disabled={anyPending}
+            aria-expanded={isMoreOpen}
+            aria-haspopup="menu"
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container px-2 py-3 text-[11px] font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high disabled:opacity-50"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="1" />
+              <circle cx="19" cy="12" r="1" />
+              <circle cx="5" cy="12" r="1" />
+            </svg>
+            More
+          </button>
+          {isMoreOpen && (
+            <div
+              role="menu"
+              className="absolute left-0 z-20 mt-2 w-64 rounded-xl border border-outline-variant bg-white p-2 shadow-lg"
+            >
+              {(status === 'draft' || status === 'sent') && (
+                <button
+                  type="button"
+                  onClick={handleApproveWithoutSignature}
+                  className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                >
+                  Approve without signature
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleApproveAndConvertToJob}
+                className="mt-1 flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+              >
+                {status === 'approved' ? 'Convert to Job' : 'Approve and convert to job'}
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* PDF */}
         <Link
           href={`/api/pdf/quote?id=${quoteId}`}

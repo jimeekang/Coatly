@@ -61,12 +61,12 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
             aria-current={active ? 'page' : undefined}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
               active
-                ? 'bg-surface-container-high text-on-surface font-bold'
-                : 'text-on-surface-variant hover:bg-surface-container font-medium'
+                ? 'bg-surface-container-high text-on-surface font-bold border border-outline-variant shadow-xs'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-medium border border-transparent'
             }`}
           >
             <Icon
-              className="h-4 w-4 flex-shrink-0"
+              className={`h-4 w-4 flex-shrink-0 ${active ? 'text-primary' : ''}`}
               strokeWidth={active ? 2.5 : 1.75}
             />
             {label}
@@ -106,11 +106,11 @@ export default function DashboardSidebar({
   return (
     <>
       {/* ── Desktop sidebar ── */}
-      <aside className="hidden md:flex w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50">
+      <aside className="hidden md:flex w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50 border-r border-outline-variant">
         {/* Logo */}
-        <div className="mb-10 px-4">
-          <h1 className="text-2xl font-bold tracking-tighter text-on-surface">Coatly</h1>
-          <p className="text-xs font-medium tracking-tight text-on-surface-variant uppercase mt-0.5">
+        <div className="mb-8 px-4 pt-2">
+          <h1 className="text-xl font-extrabold tracking-tight text-on-surface" style={{ letterSpacing: '-0.02em' }}>Coatly</h1>
+          <p className="text-[10px] font-bold tracking-[0.14em] text-on-surface-variant uppercase mt-0.5">
             Painter Workspace
           </p>
         </div>
@@ -119,9 +119,9 @@ export default function DashboardSidebar({
         <LogoutButton />
 
         {/* User card */}
-        <div className="mt-auto px-4 py-4 bg-surface-container rounded-xl">
+        <div className="mt-auto px-4 py-4 bg-surface-container-high rounded-xl border border-outline-variant">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-on-primary text-sm font-bold flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary text-sm font-bold flex-shrink-0">
               {businessName.slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0">

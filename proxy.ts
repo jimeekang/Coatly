@@ -1,4 +1,4 @@
-import { updateSession } from '@/lib/supabase/middleware';
+import { updateSession } from '@/lib/supabase/session';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // In-memory store for public quote rate limiting.
@@ -34,7 +34,7 @@ function isPublicQuoteRateLimited(ip: string): boolean {
   return false;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Rate limit public quote pages (/q/[token])

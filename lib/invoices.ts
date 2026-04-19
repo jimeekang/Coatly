@@ -4,9 +4,11 @@ import { createServerClient } from '@/lib/supabase/server';
 import type {
   InvoiceCustomerSummary,
   InvoiceListItem,
+  InvoiceStatus,
   InvoicePaymentMethod,
   InvoiceWithCustomer,
 } from '@/types/invoice';
+import { getGSTFromExAmount } from '@/utils/gst';
 
 type AppSupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -46,9 +48,12 @@ type QuoteRecord = {
 };
 
 type LinkedInvoiceRecord = {
+  id?: string;
   quote_id: string | null;
   subtotal_cents: number;
+  total_cents?: number;
   status: string;
+  created_at?: string;
 };
 
 type InvoiceRecord = {
@@ -126,13 +131,58 @@ export type QuoteInvoiceLinkState = {
   linked_invoice_count: number;
   has_linked_invoices: boolean;
   billed_subtotal_cents: number;
+  billed_total_cents: number;
 };
 
 const EMPTY_QUOTE_INVOICE_LINK_STATE: QuoteInvoiceLinkState = {
   linked_invoice_count: 0,
   has_linked_invoices: false,
   billed_subtotal_cents: 0,
+  billed_total_cents: 0,
 };
+
+export function buildQuoteInvoiceStageMap(
+  linkedInvoices:
+    | Array<{
+        id: string;
+        quote_id: string | null;
+        created_at: string;
+      }>
+    | null
+    | undefined
+) {
+  const byQuoteId = new Map<string, Array<{ id: string; created_at: string }>>();
+
+  for (const invoice of linkedInvoices ?? []) {
+    if (!invoice.quote_id) continue;
+
+    const group = byQuoteId.get(invoice.quote_id) ?? [];
+    group.push({
+      id: invoice.id,
+      created_at: invoice.created_at,
+    });
+    byQuoteId.set(invoice.quote_id, group);
+  }
+
+  const byInvoiceId = new Map<string, string>();
+
+  for (const invoices of byQuoteId.values()) {
+    invoices.sort((left, right) => {
+      const leftTime = new Date(left.created_at).getTime();
+      const rightTime = new Date(right.created_at).getTime();
+
+      if (leftTime !== rightTime) return leftTime - rightTime;
+      return left.id.localeCompare(right.id);
+    });
+
+    const total = invoices.length;
+    invoices.forEach((invoice, index) => {
+      byInvoiceId.set(invoice.id, `${index + 1}/${total}`);
+    });
+  }
+
+  return byInvoiceId;
+}
 
 function getSingleRelation<T>(relation: T | T[] | null): T | null {
   if (Array.isArray(relation)) {
@@ -201,8 +251,35 @@ function mapCustomerSummary(customer: CustomerRecord | null): InvoiceCustomerSum
   };
 }
 
+export function getSydneyTodayDateString(now: Date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Australia/Sydney',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+export function resolveInvoiceStatus(
+  status: InvoiceStatus,
+  dueDate: string | null,
+  paidDate: string | null,
+  now: Date = new Date()
+): InvoiceStatus {
+  if (status === 'paid' || paidDate) return 'paid';
+  if (status !== 'sent') return status;
+  if (!dueDate) return status;
+
+  return dueDate < getSydneyTodayDateString(now) ? 'overdue' : status;
+}
+
 export function mapInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
   const customer = getSingleRelation(row.customer);
+  const status = resolveInvoiceStatus(
+    row.status as InvoiceStatus,
+    row.due_date,
+    row.paid_date ?? null
+  );
 
   return {
     id: row.id,
@@ -210,7 +287,7 @@ export function mapInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
     customer_id: row.customer_id,
     quote_id: row.quote_id,
     invoice_number: row.invoice_number,
-    status: row.status as InvoiceListItem['status'],
+    status,
     invoice_type: row.invoice_type as InvoiceListItem['invoice_type'],
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
@@ -224,6 +301,7 @@ export function mapInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
     paid_at: row.paid_at,
     payment_method: (row.payment_method as InvoicePaymentMethod | null) ?? null,
     notes: row.notes,
+    quote_stage_label: null,
     created_at: row.created_at,
     updated_at: row.updated_at,
     customer: mapCustomerSummary(customer),
@@ -234,6 +312,11 @@ export function mapInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
 
 export function mapInvoiceDetail(row: InvoiceDetailRow): InvoiceWithCustomer {
   const customer = getSingleRelation(row.customer);
+  const status = resolveInvoiceStatus(
+    row.status as InvoiceStatus,
+    row.due_date,
+    row.paid_date ?? null
+  );
 
   return {
     id: row.id,
@@ -241,7 +324,7 @@ export function mapInvoiceDetail(row: InvoiceDetailRow): InvoiceWithCustomer {
     customer_id: row.customer_id,
     quote_id: row.quote_id,
     invoice_number: row.invoice_number,
-    status: row.status as InvoiceWithCustomer['status'],
+    status,
     invoice_type: row.invoice_type as InvoiceWithCustomer['invoice_type'],
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
@@ -255,6 +338,7 @@ export function mapInvoiceDetail(row: InvoiceDetailRow): InvoiceWithCustomer {
     paid_at: row.paid_at,
     payment_method: (row.payment_method as InvoicePaymentMethod | null) ?? null,
     notes: row.notes,
+    quote_stage_label: null,
     created_at: row.created_at,
     updated_at: row.updated_at,
     customer: mapCustomerSummary(customer),
@@ -265,9 +349,21 @@ export function mapInvoiceDetail(row: InvoiceDetailRow): InvoiceWithCustomer {
 export function calculateInvoiceTotals(
   lineItems: Array<{ description: string; quantity: number; unit_price_cents: number }>
 ) {
+  const { subtotal_cents, gst_cents, total_cents } = calculateInvoiceLineItemTotals(lineItems);
+
+  return {
+    subtotal_cents,
+    gst_cents,
+    total_cents,
+  };
+}
+
+export function calculateInvoiceLineItemTotals(
+  lineItems: Array<{ description: string; quantity: number; unit_price_cents: number }>
+) {
   const calculatedLineItems = lineItems.map((item, index) => {
     const total_cents = Math.round(item.quantity * item.unit_price_cents);
-    const gst_cents = Math.round(total_cents * 0.1);
+    const gst_cents = getGSTFromExAmount(total_cents);
 
     return {
       description: item.description,
@@ -283,6 +379,7 @@ export function calculateInvoiceTotals(
   const gst_cents = calculatedLineItems.reduce((sum, item) => sum + item.gst_cents, 0);
 
   return {
+    line_items: calculatedLineItems,
     subtotal_cents,
     gst_cents,
     total_cents: subtotal_cents + gst_cents,
@@ -307,6 +404,7 @@ export function buildQuoteInvoiceLinkStateMap(
 
     if (invoice.status !== 'cancelled') {
       current.billed_subtotal_cents += invoice.subtotal_cents;
+      current.billed_total_cents += invoice.total_cents ?? invoice.subtotal_cents;
     }
 
     byQuoteId.set(invoice.quote_id, current);
@@ -322,7 +420,7 @@ export async function getQuoteInvoiceLinkState(
 ) {
   const { data, error } = await supabase
     .from('invoices')
-    .select('quote_id, subtotal_cents, status')
+    .select('quote_id, subtotal_cents, total_cents, status')
     .eq('user_id', userId)
     .eq('quote_id', quoteId);
 
@@ -409,7 +507,7 @@ export async function getInvoiceQuoteOptions(supabase: AppSupabaseClient, userId
     .order('created_at', { ascending: false }),
     supabase
       .from('invoices')
-      .select('id, quote_id, subtotal_cents, status')
+      .select('id, quote_id, subtotal_cents, total_cents, status')
       .eq('user_id', userId)
       .not('quote_id', 'is', null),
   ]);
@@ -442,6 +540,7 @@ export async function getInvoiceQuoteOptions(supabase: AppSupabaseClient, userId
           status: quote.status,
           valid_until: quote.valid_until,
           billed_subtotal_cents: quoteInvoiceLinkState.billed_subtotal_cents,
+          billed_total_cents: quoteInvoiceLinkState.billed_total_cents,
           linked_invoice_count: quoteInvoiceLinkState.linked_invoice_count,
           has_linked_invoices: quoteInvoiceLinkState.has_linked_invoices,
           line_items:

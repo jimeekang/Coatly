@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import { deleteInvoice, sendInvoice } from '@/app/actions/invoices';
+import { deleteInvoice, markInvoiceAsPaid, sendInvoice } from '@/app/actions/invoices';
 import type { InvoiceFormQuoteOption } from '@/components/invoices/InvoiceForm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { getSydneyTodayDateString } from '@/lib/invoices';
 import type { InvoiceWithCustomer } from '@/types/invoice';
 import { formatAUD, formatABN, formatDate } from '@/utils/format';
 
@@ -45,23 +46,77 @@ function InfoRow({ label, value }: { label: string; value: string | null }) {
   );
 }
 
+function getDueStateCopy(invoice: InvoiceWithCustomer) {
+  if (!invoice.due_date || !['sent', 'overdue'].includes(invoice.status)) return null;
+
+  const today = new Date(`${getSydneyTodayDateString()}T00:00:00`);
+  const due = new Date(`${invoice.due_date}T00:00:00`);
+  const dayDiff = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (dayDiff < 0) {
+    const overdueDays = Math.abs(dayDiff);
+    return {
+      tone: 'overdue' as const,
+      title: overdueDays === 1 ? '1 day overdue' : `${overdueDays} days overdue`,
+      body: 'Follow up with the customer or record the payment once it lands.',
+    };
+  }
+
+  if (dayDiff === 0) {
+    return {
+      tone: 'due' as const,
+      title: 'Due today',
+      body: 'Keep an eye on this invoice so you can mark it as paid as soon as payment arrives.',
+    };
+  }
+
+  if (dayDiff === 1) {
+    return {
+      tone: 'due' as const,
+      title: 'Due tomorrow',
+      body: 'Payment is due tomorrow. Everything is ready if you need to follow up.',
+    };
+  }
+
+  return {
+    tone: 'due' as const,
+    title: `Due in ${dayDiff} days`,
+    body: 'You can still mark it as paid early if the customer has already settled it.',
+  };
+}
+
 export function InvoiceDetail({
   invoice,
   linkedQuote,
+  quoteBilling,
 }: {
   invoice: InvoiceWithCustomer;
   linkedQuote?: InvoiceFormQuoteOption | null;
+  quoteBilling?: {
+    billed_total_cents: number;
+    remaining_total_cents: number;
+    linked_invoice_count: number;
+    current_stage_label: string | null;
+  } | null;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [isSending, startSendTransition] = useTransition();
+  const [isMarkingPaid, startMarkPaidTransition] = useTransition();
+  const [showMarkPaidForm, setShowMarkPaidForm] = useState(invoice.status === 'overdue');
+  const [paidDate, setPaidDate] = useState(invoice.paid_date ?? getSydneyTodayDateString());
+  const [paymentMethod, setPaymentMethod] = useState<
+    NonNullable<InvoiceWithCustomer['payment_method']> | ''
+  >(invoice.payment_method ?? '');
 
   const balanceCents = Math.max(invoice.total_cents - invoice.amount_paid_cents, 0);
   const linkedQuoteIncludedItems =
     linkedQuote?.line_items.filter((item) => !item.is_optional || item.is_selected) ?? [];
 
   const statusBadge = STATUS_BADGE[invoice.status];
+  const dueStateCopy = getDueStateCopy(invoice);
+  const canMarkPaid = invoice.status === 'sent' || invoice.status === 'overdue';
 
   async function confirmDelete() {
     setOpenDeleteDialog(false);
@@ -77,6 +132,17 @@ export function InvoiceDetail({
     startSendTransition(async () => {
       setError(null);
       const result = await sendInvoice(invoice.id);
+      if (result?.error) setError(result.error);
+    });
+  }
+
+  function handleMarkPaid() {
+    startMarkPaidTransition(async () => {
+      setError(null);
+      const result = await markInvoiceAsPaid(invoice.id, {
+        paid_date: paidDate,
+        payment_method: paymentMethod as NonNullable<InvoiceWithCustomer['payment_method']>,
+      });
       if (result?.error) setError(result.error);
     });
   }
@@ -100,6 +166,11 @@ export function InvoiceDetail({
                 <span className="rounded-full bg-pm-surface px-3 py-1 text-xs font-semibold uppercase tracking-wide text-pm-body">
                   {INVOICE_TYPE_LABEL[invoice.invoice_type]}
                 </span>
+                {quoteBilling?.current_stage_label && (
+                  <span className="rounded-full bg-pm-teal-light px-3 py-1 text-xs font-semibold uppercase tracking-wide text-pm-teal-hover">
+                    {quoteBilling.current_stage_label}
+                  </span>
+                )}
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusBadge.className}`}
                 >
@@ -155,6 +226,15 @@ export function InvoiceDetail({
                 Edit
               </Link>
             )}
+            {canMarkPaid && (
+              <button
+                type="button"
+                onClick={() => setShowMarkPaidForm((prev) => !prev)}
+                className="inline-flex h-11 items-center rounded-xl bg-pm-teal px-5 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
+              >
+                {showMarkPaidForm ? 'Hide Payment Form' : 'Mark as Paid'}
+              </button>
+            )}
             <a
               href={`/api/pdf/invoice?id=${invoice.id}`}
               target="_blank"
@@ -171,6 +251,99 @@ export function InvoiceDetail({
               {deleting ? 'Deleting…' : 'Delete'}
             </button>
           </div>
+
+          {dueStateCopy && (
+            <div
+              className={`mt-4 rounded-2xl border px-4 py-3 ${
+                dueStateCopy.tone === 'overdue'
+                  ? 'border-red-200 bg-red-50'
+                  : 'border-amber-200 bg-amber-50'
+              }`}
+            >
+              <p
+                className={`text-sm font-semibold ${
+                  dueStateCopy.tone === 'overdue' ? 'text-red-700' : 'text-amber-900'
+                }`}
+              >
+                {dueStateCopy.title}
+              </p>
+              <p
+                className={`mt-1 text-sm ${
+                  dueStateCopy.tone === 'overdue' ? 'text-red-700/90' : 'text-amber-900/80'
+                }`}
+              >
+                {dueStateCopy.body}
+              </p>
+            </div>
+          )}
+
+          {canMarkPaid && showMarkPaidForm && (
+            <div className="mt-4 rounded-2xl border border-pm-border bg-pm-surface p-4">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-pm-body">Record payment</p>
+                  <p className="mt-1 text-xs text-pm-secondary">
+                    Save the payment date and method so this invoice moves out of overdue and into
+                    paid history.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-pm-secondary">
+                      Paid Date
+                    </span>
+                    <input
+                      type="date"
+                      value={paidDate}
+                      onChange={(event) => setPaidDate(event.target.value)}
+                      className="h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-sm text-pm-body outline-none transition-colors focus:border-pm-teal"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-pm-secondary">
+                      Payment Method
+                    </span>
+                    <select
+                      value={paymentMethod}
+                      onChange={(event) =>
+                        setPaymentMethod(
+                          event.target.value as NonNullable<InvoiceWithCustomer['payment_method']> | ''
+                        )
+                      }
+                      className="h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-sm text-pm-body outline-none transition-colors focus:border-pm-teal"
+                    >
+                      <option value="">Select payment method</option>
+                      <option value="bank_transfer">Bank transfer</option>
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                      <option value="cheque">Cheque</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleMarkPaid}
+                    disabled={isMarkingPaid || !paidDate || !paymentMethod}
+                    className="inline-flex h-12 items-center rounded-xl bg-pm-teal px-5 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover disabled:opacity-50"
+                  >
+                    {isMarkingPaid ? 'Saving Payment…' : 'Save Payment'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMarkPaidForm(false)}
+                    className="inline-flex h-12 items-center rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {invoice.status === 'draft' && (
             <p className="mt-3 text-xs text-pm-secondary">
@@ -286,17 +459,54 @@ export function InvoiceDetail({
                 {invoice.paid_date && (
                   <InfoRow label="Paid Date" value={formatDate(invoice.paid_date)} />
                 )}
+                {invoice.payment_method && (
+                  <InfoRow
+                    label="Payment Method"
+                    value={PAYMENT_METHOD_LABEL[invoice.payment_method]}
+                  />
+                )}
                 {linkedQuote && (
                   <InfoRow
                     label="Linked Quote"
                     value={`${linkedQuote.quote_number}${linkedQuote.title ? ` · ${linkedQuote.title}` : ''}`}
                   />
                 )}
+                {quoteBilling?.current_stage_label && (
+                  <InfoRow label="Billing Stage" value={quoteBilling.current_stage_label} />
+                )}
                 {invoice.business_abn && (
                   <InfoRow label="ABN" value={formatABN(invoice.business_abn)} />
                 )}
               </div>
             </section>
+
+            {linkedQuote && quoteBilling && (
+              <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
+                <h3 className="mb-4 text-base font-semibold text-pm-body">Quote Billing</h3>
+                <dl className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-pm-secondary">Linked invoices</dt>
+                    <dd className="font-medium text-pm-body">{quoteBilling.linked_invoice_count}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-pm-secondary">Quote total</dt>
+                    <dd className="font-medium text-pm-body">{formatAUD(linkedQuote.total_cents)}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-pm-secondary">Already invoiced</dt>
+                    <dd className="font-medium text-pm-body">
+                      {formatAUD(quoteBilling.billed_total_cents)}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-pm-border pt-3">
+                    <dt className="font-semibold text-pm-body">Remaining on quote</dt>
+                    <dd className="text-base font-semibold text-pm-teal">
+                      {formatAUD(quoteBilling.remaining_total_cents)}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+            )}
 
             {/* Customer */}
             <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">

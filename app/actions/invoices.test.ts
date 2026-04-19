@@ -4,6 +4,9 @@ const { redirectMock, createServerClientMock } = vi.hoisted(() => ({
   redirectMock: vi.fn(),
   createServerClientMock: vi.fn(),
 }));
+const { revalidatePathMock } = vi.hoisted(() => ({
+  revalidatePathMock: vi.fn(),
+}));
 const {
   getActiveSubscriptionRequiredMessageMock,
   getSubscriptionSnapshotForUserMock,
@@ -19,6 +22,10 @@ vi.mock('next/navigation', () => ({
   redirect: redirectMock,
 }));
 
+vi.mock('next/cache', () => ({
+  revalidatePath: revalidatePathMock,
+}));
+
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: createServerClientMock,
 }));
@@ -28,7 +35,12 @@ vi.mock('@/lib/subscription/access', () => ({
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
-import { createInvoice, getInvoiceDraftFromQuote, updateInvoice } from '@/app/actions/invoices';
+import {
+  createInvoice,
+  getInvoiceDraftFromQuote,
+  markInvoiceAsPaid,
+  updateInvoice,
+} from '@/app/actions/invoices';
 
 function createFilterQuery<Result>(result: Result) {
   return {
@@ -272,6 +284,113 @@ describe('createInvoice', () => {
       },
     ]);
     expect(redirectMock).toHaveBeenCalledWith('/invoices/invoice-1');
+  });
+
+  it('allows creating a draft invoice without a due date', async () => {
+    const captured: {
+      invoiceInsert?: Record<string, unknown>;
+    } = {};
+
+    const customersQuery = createFilterQuery({
+      data: { id: 'customer-1' },
+      error: null,
+    });
+
+    const invoiceInsertResult = {
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: { id: 'invoice-no-due-date' },
+          error: null,
+        }),
+      }),
+    };
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customersQuery),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            insert: vi.fn((payload) => {
+              captured.invoiceInsert = payload;
+              return invoiceInsertResult;
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'invoice_line_items') {
+          return {
+            insert: vi.fn(async () => ({ error: null })),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: null,
+                error: null,
+              })
+            ),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'generate_invoice_number') {
+          return { data: 'INV-0009', error: null };
+        }
+
+        if (fn === 'calculate_invoice_totals') {
+          return { data: null, error: null };
+        }
+
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    const result = await createInvoice({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_id: null,
+      invoice_type: 'full',
+      status: 'draft',
+      business_abn: null,
+      payment_terms: null,
+      bank_details: null,
+      due_date: null,
+      paid_date: null,
+      payment_method: null,
+      notes: 'Awaiting scheduling',
+      line_items: [
+        {
+          description: 'Interior repaint',
+          quantity: 1,
+          unit_price_cents: 50000,
+        },
+      ],
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.invoiceInsert).toMatchObject({
+      due_date: null,
+      subtotal_cents: 50000,
+      gst_cents: 5000,
+      total_cents: 55000,
+    });
+    expect(redirectMock).toHaveBeenCalledWith('/invoices/invoice-no-due-date');
   });
 
   it('rejects a quote that does not match the selected customer', async () => {
@@ -715,6 +834,146 @@ describe('createInvoice', () => {
   });
 });
 
+describe('markInvoiceAsPaid', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getSubscriptionSnapshotForUserMock.mockResolvedValue({
+      plan: 'pro',
+      status: 'active',
+      active: true,
+      cancelScheduled: false,
+      features: {
+        ai: true,
+        xeroSync: true,
+        jobCosting: true,
+        prioritySupport: true,
+        unlimitedQuotes: true,
+        activeQuoteLimit: null,
+      },
+    });
+  });
+
+  it('stores payment tracking and redirects back to the invoice detail page', async () => {
+    let invoiceUpdatePayload: Record<string, unknown> | undefined;
+
+    const invoiceQuery = createFilterQuery({
+      data: {
+        id: 'invoice-1',
+        user_id: 'user-1',
+        quote_id: 'quote-1',
+        status: 'sent',
+        total_cents: 27500,
+      },
+      error: null,
+    });
+
+    const updateQuery = {
+      eq: vi.fn().mockReturnThis(),
+    };
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue(invoiceQuery),
+            update: vi.fn((payload) => {
+              invoiceUpdatePayload = payload;
+              return updateQuery;
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await markInvoiceAsPaid('invoice-1', {
+      paid_date: '2026-04-13',
+      payment_method: 'bank_transfer',
+    });
+
+    expect(result).toBeUndefined();
+    expect(invoiceUpdatePayload).toEqual({
+      status: 'paid',
+      amount_paid_cents: 27500,
+      paid_date: '2026-04-13',
+      paid_at: '2026-04-13T12:00:00.000Z',
+      payment_method: 'bank_transfer',
+    });
+    expect(redirectMock).toHaveBeenCalledWith('/invoices/invoice-1');
+  });
+
+  it('rejects draft invoices before updating payment tracking', async () => {
+    const invoiceQuery = createFilterQuery({
+      data: {
+        id: 'invoice-1',
+        user_id: 'user-1',
+        quote_id: null,
+        status: 'draft',
+        total_cents: 27500,
+      },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue(invoiceQuery),
+            update: vi.fn(),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await markInvoiceAsPaid('invoice-1', {
+      paid_date: '2026-04-13',
+      payment_method: 'card',
+    });
+
+    expect(result).toEqual({
+      error: 'Draft invoices must be sent before they can be marked as paid.',
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid paid date values before updating payment tracking', async () => {
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const result = await markInvoiceAsPaid('invoice-1', {
+      paid_date: 'not-a-date',
+      payment_method: 'card',
+    });
+
+    expect(result).toEqual({
+      error: 'Paid date must be a valid date.',
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('updateInvoice', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -781,5 +1040,122 @@ describe('updateInvoice', () => {
 
     expect(result).toEqual({ error: 'Only draft invoices can be edited.' });
     expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('updates a draft invoice and preserves an optional empty due date', async () => {
+    const captured: {
+      invoiceUpdate?: Record<string, unknown>;
+      lineItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    const existingInvoiceQuery = createFilterQuery({
+      data: { id: 'invoice-1', user_id: 'user-1', status: 'draft' },
+      error: null,
+    });
+    const customersQuery = createFilterQuery({
+      data: { id: 'customer-1' },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue(existingInvoiceQuery),
+            update: vi.fn((payload) => {
+              captured.invoiceUpdate = payload;
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customersQuery),
+          };
+        }
+
+        if (table === 'invoice_line_items') {
+          return {
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+            insert: vi.fn(async (payload) => {
+              captured.lineItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: null,
+                error: null,
+              })
+            ),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'calculate_invoice_totals') {
+          return { data: null, error: null };
+        }
+
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    const result = await updateInvoice('invoice-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_id: null,
+      invoice_type: 'progress',
+      status: 'draft',
+      business_abn: null,
+      payment_terms: 'Payment on completion',
+      bank_details: null,
+      due_date: null,
+      paid_date: null,
+      payment_method: null,
+      notes: 'Second stage invoice',
+      line_items: [
+        {
+          description: 'Progress payment',
+          quantity: 1.5,
+          unit_price_cents: 20000,
+        },
+      ],
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.invoiceUpdate).toMatchObject({
+      invoice_type: 'progress',
+      due_date: null,
+      subtotal_cents: 30000,
+      gst_cents: 3000,
+      total_cents: 33000,
+    });
+    expect(captured.lineItemsInsert).toEqual([
+      {
+        invoice_id: 'invoice-1',
+        description: 'Progress payment',
+        quantity: 1.5,
+        unit_price_cents: 20000,
+        gst_cents: 3000,
+        total_cents: 30000,
+        sort_order: 0,
+      },
+    ]);
+    expect(redirectMock).toHaveBeenCalledWith('/invoices/invoice-1');
   });
 });

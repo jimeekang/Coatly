@@ -74,9 +74,16 @@ describe('WorkspaceAssistant', () => {
             customer_id: 'customer-1',
             quote_number: 'QUO-0007',
             title: 'Studio repaint',
+            subtotal_cents: 72450,
             total_cents: 79695,
+            deposit_percent: 30,
             status: 'draft',
             valid_until: '2026-04-10',
+            billed_subtotal_cents: 0,
+            billed_total_cents: 0,
+            linked_invoice_count: 0,
+            has_linked_invoices: false,
+            line_items: [],
           },
         ]}
       />

@@ -40,6 +40,7 @@ export interface Invoice {
   paid_at: string | null;
   payment_method: InvoicePaymentMethod | null;
   notes: string | null;
+  quote_stage_label?: string | null;
   created_at: string;
   updated_at: string;
 }

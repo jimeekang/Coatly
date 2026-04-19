@@ -22,6 +22,12 @@ export interface Customer {
   state: string | null;
   postcode: string | null;
   properties: CustomerProperty[];
+  billing_same_as_site: boolean;
+  billing_address_line1: string | null;
+  billing_address_line2: string | null;
+  billing_city: string | null;
+  billing_state: string | null;
+  billing_postcode: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -50,11 +56,17 @@ export interface CustomerFormData {
   state: string;
   postcode: string;
   properties: CustomerProperty[];
+  billing_same_as_site: boolean;
+  billing_address_line1: string;
+  billing_address_line2: string;
+  billing_city: string;
+  billing_state: string;
+  billing_postcode: string;
   notes: string;
 }
 
 const CUSTOMER_SELECT =
-  'id, name, email, phone, emails, phones, company_name, address_line1, address_line2, city, state, postcode, properties, notes, created_at';
+  'id, name, email, phone, emails, phones, company_name, address_line1, address_line2, city, state, postcode, properties, billing_same_as_site, billing_address_line1, billing_address_line2, billing_city, billing_state, billing_postcode, notes, created_at';
 const CUSTOMER_SELECT_LEGACY =
   'id, name, email, phone, company_name, address_line1, address_line2, city, state, postcode, notes, created_at';
 
@@ -146,6 +158,8 @@ function buildCustomerPayload(data: CustomerFormData) {
   const properties = normalizeProperties(data);
   const primaryProperty = properties[0] ?? null;
 
+  const billingSameAsSite = data.billing_same_as_site !== false;
+
   return {
     name: data.name.trim(),
     email: emails[0] ?? null,
@@ -159,6 +173,12 @@ function buildCustomerPayload(data: CustomerFormData) {
     state: primaryProperty?.state || null,
     postcode: primaryProperty?.postcode || null,
     properties,
+    billing_same_as_site: billingSameAsSite,
+    billing_address_line1: billingSameAsSite ? null : (data.billing_address_line1.trim() || null),
+    billing_address_line2: billingSameAsSite ? null : (data.billing_address_line2.trim() || null),
+    billing_city: billingSameAsSite ? null : (data.billing_city.trim() || null),
+    billing_state: billingSameAsSite ? null : (data.billing_state.trim() || null),
+    billing_postcode: billingSameAsSite ? null : (data.billing_postcode.trim() || null),
     notes: data.notes.trim() || null,
   };
 }
@@ -251,6 +271,7 @@ function normalizeCustomerRecord(customer: Customer): Customer {
     emails,
     phones,
     properties,
+    billing_same_as_site: customer.billing_same_as_site ?? true,
   };
 }
 
@@ -262,7 +283,7 @@ export async function getCustomers(): Promise<{ data: Customer[]; error: string 
     .select(CUSTOMER_SELECT)
     .eq('user_id', user.id)
     .eq('is_archived', false)
-    .order('created_at', { ascending: false });
+    .order('name', { ascending: true });
 
   if (result.error && isMissingCustomerMultiColumnError(result.error.message)) {
     const legacyResult = await supabase
@@ -284,6 +305,79 @@ export async function getCustomers(): Promise<{ data: Customer[]; error: string 
     data: ((result.data as unknown as Customer[] | null) ?? []).map(normalizeCustomerRecord),
     error: result.error?.message ?? null,
   };
+}
+
+export interface CustomerRecentJob {
+  type: 'quote' | 'invoice';
+  id: string;
+  number: string;
+  title: string | null;
+  status: string;
+  created_at: string;
+}
+
+export async function getRecentJobsPerCustomer(): Promise<Record<string, CustomerRecentJob>> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+
+  const [quotesResult, invoicesResult] = await Promise.all([
+    supabase
+      .from('quotes')
+      .select('id, customer_id, quote_number, title, status, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(500),
+    supabase
+      .from('invoices')
+      .select('id, customer_id, invoice_number, status, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(500),
+  ]);
+
+  const map: Record<string, CustomerRecentJob> = {};
+
+  for (const q of (quotesResult.data ?? []) as Array<{
+    id: string;
+    customer_id: string;
+    quote_number: string;
+    title: string | null;
+    status: string;
+    created_at: string;
+  }>) {
+    const existing = map[q.customer_id];
+    if (!existing || q.created_at > existing.created_at) {
+      map[q.customer_id] = {
+        type: 'quote',
+        id: q.id,
+        number: q.quote_number,
+        title: q.title,
+        status: q.status,
+        created_at: q.created_at,
+      };
+    }
+  }
+
+  for (const inv of (invoicesResult.data ?? []) as Array<{
+    id: string;
+    customer_id: string;
+    invoice_number: string;
+    status: string;
+    created_at: string;
+  }>) {
+    const existing = map[inv.customer_id];
+    if (!existing || inv.created_at > existing.created_at) {
+      map[inv.customer_id] = {
+        type: 'invoice',
+        id: inv.id,
+        number: inv.invoice_number,
+        title: null,
+        status: inv.status,
+        created_at: inv.created_at,
+      };
+    }
+  }
+
+  return map;
 }
 
 export async function getCustomer(
@@ -339,6 +433,25 @@ export async function updateCustomer(
   if (validationError) return validationError;
 
   const payload = buildCustomerPayload(data);
+
+  // Duplicate check: same name + same primary address (excluding self)
+  if (payload.address_line1) {
+    const { data: dupData } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('is_archived', false)
+      .neq('id', id)
+      .ilike('name', payload.name)
+      .ilike('address_line1', payload.address_line1)
+      .limit(1)
+      .maybeSingle();
+
+    if (dupData) {
+      return { error: 'A customer with this name and address already exists.' };
+    }
+  }
+
   let { error } = await supabase
     .from('customers')
     .update(payload)
@@ -403,6 +516,24 @@ export async function createCustomer(
   if (validationError) return validationError;
 
   const payload = buildCustomerPayload(data);
+
+  // Duplicate check: same name + same primary address
+  if (payload.address_line1) {
+    const { data: dupData } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('is_archived', false)
+      .ilike('name', payload.name)
+      .ilike('address_line1', payload.address_line1)
+      .limit(1)
+      .maybeSingle();
+
+    if (dupData) {
+      return { error: 'A customer with this name and address already exists.' };
+    }
+  }
+
   let { error } = await supabase.from('customers').insert({
     user_id: user.id,
     ...payload,

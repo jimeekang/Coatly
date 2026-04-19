@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   updateCustomer,
   deleteCustomer,
@@ -9,8 +10,11 @@ import {
   type CustomerFormData,
   type CustomerProperty,
 } from '@/app/actions/customers';
+import type { QuoteListItem } from '@/lib/quotes';
+import type { InvoiceListItem } from '@/types/invoice';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CustomerForm } from '@/components/customers/CustomerForm';
+import { formatAUD, formatDate } from '@/utils/format';
 
 function toFormData(c: Customer): CustomerFormData {
   return {
@@ -38,8 +42,26 @@ function toFormData(c: Customer): CustomerFormData {
             notes: '',
           },
         ],
+    billing_same_as_site: c.billing_same_as_site ?? true,
+    billing_address_line1: c.billing_address_line1 ?? '',
+    billing_address_line2: c.billing_address_line2 ?? '',
+    billing_city: c.billing_city ?? '',
+    billing_state: c.billing_state ?? '',
+    billing_postcode: c.billing_postcode ?? '',
     notes: c.notes ?? '',
   };
+}
+
+function formatBillingAddress(c: Customer): string {
+  return [
+    c.billing_address_line1,
+    c.billing_address_line2,
+    c.billing_city,
+    c.billing_state,
+    c.billing_postcode,
+  ]
+    .filter(Boolean)
+    .join(', ');
 }
 
 function formatPropertyAddress(property: CustomerProperty) {
@@ -65,10 +87,34 @@ function InfoRow({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-function ContactValue({ value, primary }: { value: string; primary: boolean }) {
+function PhoneValue({ value, primary }: { value: string; primary: boolean }) {
+  const tel = value.replace(/\s/g, '');
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      <span className="min-w-0 break-all text-base text-pm-body">{value}</span>
+      <a
+        href={`tel:${tel}`}
+        className="min-w-0 break-all text-base text-pm-teal underline-offset-2 hover:underline active:opacity-70"
+      >
+        {value}
+      </a>
+      {primary && (
+        <span className="shrink-0 rounded-full bg-pm-teal-light px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pm-teal">
+          Primary
+        </span>
+      )}
+    </div>
+  );
+}
+
+function EmailValue({ value, primary }: { value: string; primary: boolean }) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      <a
+        href={`mailto:${value}`}
+        className="min-w-0 break-all text-base text-pm-teal underline-offset-2 hover:underline active:opacity-70"
+      >
+        {value}
+      </a>
       {primary && (
         <span className="shrink-0 rounded-full bg-pm-teal-light px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pm-teal">
           Primary
@@ -84,11 +130,29 @@ function getContactValues(values: string[] | undefined, fallback: string | null)
 
 type DialogType = 'cancel' | 'delete' | null;
 
+const QUOTE_STATUS_STYLE: Record<string, string> = {
+  draft:    'bg-pm-surface text-pm-secondary border border-pm-border',
+  sent:     'bg-blue-50 text-blue-700 border border-blue-200',
+  approved: 'bg-pm-teal-light text-pm-teal border border-pm-teal-pale',
+  declined: 'bg-red-50 text-red-600 border border-red-200',
+  expired:  'bg-orange-50 text-orange-700 border border-orange-200',
+};
+
+const INVOICE_STATUS_STYLE: Record<string, string> = {
+  draft:     'bg-pm-surface text-pm-secondary border border-pm-border',
+  sent:      'bg-blue-50 text-blue-700 border border-blue-200',
+  paid:      'bg-green-50 text-green-700 border border-green-200',
+  overdue:   'bg-red-50 text-red-600 border border-red-200',
+  cancelled: 'bg-pm-surface text-pm-secondary border border-pm-border',
+};
+
 interface Props {
   customer: Customer;
+  quotes?: QuoteListItem[];
+  invoices?: InvoiceListItem[];
 }
 
-export function CustomerDetail({ customer }: Props) {
+export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -178,7 +242,7 @@ export function CustomerDetail({ customer }: Props) {
               <div className="min-w-0 space-y-1">
                 {getContactValues(customer.emails, customer.email).map(
                   (email, index) => (
-                    <ContactValue
+                    <EmailValue
                       key={`${email}-${index}`}
                       value={email}
                       primary={index === 0}
@@ -197,7 +261,7 @@ export function CustomerDetail({ customer }: Props) {
               <div className="min-w-0 space-y-1">
                 {getContactValues(customer.phones, customer.phone).map(
                   (phone, index) => (
-                    <ContactValue
+                    <PhoneValue
                       key={`${phone}-${index}`}
                       value={phone}
                       primary={index === 0}
@@ -215,7 +279,7 @@ export function CustomerDetail({ customer }: Props) {
         <section className="divide-y divide-pm-border rounded-xl border border-pm-border bg-white">
           <div className="rounded-t-xl bg-pm-surface px-5 py-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-              Properties
+              Site Address
             </h3>
           </div>
           <div className="space-y-3 px-5 py-4">
@@ -223,7 +287,7 @@ export function CustomerDetail({ customer }: Props) {
               customer.properties.map((property, index) => (
                 <div key={`${property.label}-${index}`} className="rounded-lg border border-pm-border bg-pm-surface px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-pm-body">{property.label || `Property ${index + 1}`}</p>
+                    <p className="font-medium text-pm-body">{property.label || `Site ${index + 1}`}</p>
                     {index === 0 && (
                       <span className="rounded-full bg-pm-teal-light px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pm-teal">
                         Primary
@@ -244,6 +308,23 @@ export function CustomerDetail({ customer }: Props) {
           </div>
         </section>
 
+        <section className="divide-y divide-pm-border rounded-xl border border-pm-border bg-white">
+          <div className="rounded-t-xl bg-pm-surface px-5 py-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              Billing Address
+            </h3>
+          </div>
+          <div className="px-5 py-4">
+            {customer.billing_same_as_site !== false ? (
+              <p className="text-sm text-pm-secondary">Same as site address</p>
+            ) : (
+              <p className="text-base text-pm-body">
+                {formatBillingAddress(customer) || '-'}
+              </p>
+            )}
+          </div>
+        </section>
+
         {customer.notes && (
           <section className="divide-y divide-pm-border rounded-xl border border-pm-border bg-white">
             <div className="rounded-t-xl bg-pm-surface px-5 py-3">
@@ -256,6 +337,133 @@ export function CustomerDetail({ customer }: Props) {
             </div>
           </section>
         )}
+
+        {/* ── Quotes ── */}
+        <section className="divide-y divide-pm-border rounded-xl border border-pm-border bg-white">
+          <div className="rounded-t-xl bg-pm-surface px-5 py-3 flex items-center justify-between gap-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              Quotes
+              {quotes.length > 0 && (
+                <span className="ml-2 text-pm-body">{quotes.length}</span>
+              )}
+            </h3>
+            <Link
+              href={`/quotes/new?customer_id=${customer.id}`}
+              className="text-xs font-medium text-pm-teal hover:underline"
+            >
+              + New Quote
+            </Link>
+          </div>
+          {quotes.length === 0 ? (
+            <div className="px-5 py-4">
+              <p className="text-sm text-pm-secondary">No quotes yet.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-pm-border">
+              {quotes.map((q) => {
+                const statusClass =
+                  QUOTE_STATUS_STYLE[q.status] ?? QUOTE_STATUS_STYLE.draft;
+                return (
+                  <li key={q.id}>
+                    <Link
+                      href={`/quotes/${q.id}`}
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-pm-surface active:bg-pm-surface transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-pm-body">
+                            {q.quote_number}
+                          </span>
+                          {q.title && (
+                            <span className="truncate text-sm text-pm-secondary">
+                              · {q.title}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-pm-secondary">
+                          {formatDate(q.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusClass}`}>
+                          {q.status}
+                        </span>
+                        <span className="text-sm font-medium text-pm-body">
+                          {formatAUD(q.total_cents)}
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        {/* ── Invoices ── */}
+        <section className="divide-y divide-pm-border rounded-xl border border-pm-border bg-white">
+          <div className="rounded-t-xl bg-pm-surface px-5 py-3 flex items-center justify-between gap-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              Invoices
+              {invoices.length > 0 && (
+                <span className="ml-2 text-pm-body">{invoices.length}</span>
+              )}
+            </h3>
+            <Link
+              href={`/invoices/new?customer_id=${customer.id}`}
+              className="text-xs font-medium text-pm-teal hover:underline"
+            >
+              + New Invoice
+            </Link>
+          </div>
+          {invoices.length === 0 ? (
+            <div className="px-5 py-4">
+              <p className="text-sm text-pm-secondary">No invoices yet.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-pm-border">
+              {invoices.map((inv) => {
+                const statusClass =
+                  INVOICE_STATUS_STYLE[inv.status] ?? INVOICE_STATUS_STYLE.draft;
+                const isOverdue = inv.status === 'overdue';
+                return (
+                  <li key={inv.id}>
+                    <Link
+                      href={`/invoices/${inv.id}`}
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-pm-surface active:bg-pm-surface transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-pm-body">
+                            {inv.invoice_number}
+                          </span>
+                          {inv.quote_stage_label && (
+                            <span className="text-xs text-pm-secondary">
+                              · {inv.quote_stage_label}
+                            </span>
+                          )}
+                        </div>
+                        <p className={`mt-0.5 text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-pm-secondary'}`}>
+                          {inv.due_date
+                            ? `Due ${formatDate(inv.due_date)}`
+                            : formatDate(inv.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusClass}`}>
+                          {inv.status}
+                        </span>
+                        <span className="text-sm font-medium text-pm-body">
+                          {formatAUD(inv.total_cents)}
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </div>
 
       <ConfirmDialog

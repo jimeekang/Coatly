@@ -45,6 +45,9 @@ describe('InvoiceForm', () => {
             status: 'draft',
             valid_until: '2026-04-14',
             billed_subtotal_cents: 0,
+            billed_total_cents: 0,
+            linked_invoice_count: 0,
+            has_linked_invoices: false,
             line_items: [
               {
                 description: 'Interior repaint\nWalls and ceiling',
@@ -68,7 +71,7 @@ describe('InvoiceForm', () => {
 
     await user.selectOptions(screen.getByLabelText('Customer'), 'customer-1');
     await user.selectOptions(screen.getByLabelText(/Linked Quote/), 'quote-1');
-    fireEvent.change(screen.getByLabelText('Due Date'), {
+    fireEvent.change(screen.getByLabelText(/Due Date/), {
       target: { value: '2026-04-03' },
     });
     fireEvent.change(screen.getByLabelText('Description'), {
@@ -183,6 +186,9 @@ describe('InvoiceForm', () => {
             status: 'approved',
             valid_until: '2026-04-14',
             billed_subtotal_cents: 125000,
+            billed_total_cents: 137500,
+            linked_invoice_count: 1,
+            has_linked_invoices: true,
             line_items: [
               {
                 description: 'Interior repaint\nWalls and ceiling',
@@ -208,7 +214,7 @@ describe('InvoiceForm', () => {
 
     expect(screen.getAllByText('Linked Quote').length).toBeGreaterThan(0);
     expect(screen.getByText('Quote total')).toBeInTheDocument();
-    expect(screen.getByText('Already billed')).toBeInTheDocument();
+    expect(screen.getByText('Already invoiced')).toBeInTheDocument();
     expect(screen.getByText('Quote items')).toBeInTheDocument();
     expect(screen.getAllByText(/Walls and ceiling/).length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Description')).toHaveValue('Interior repaint\nWalls and ceiling');
@@ -242,6 +248,9 @@ describe('InvoiceForm', () => {
             status: 'approved',
             valid_until: '2026-04-14',
             billed_subtotal_cents: 110000,
+            billed_total_cents: 121000,
+            linked_invoice_count: 1,
+            has_linked_invoices: true,
             line_items: [
               {
                 description: 'Interior repaint\nWalls and ceiling',
@@ -272,9 +281,17 @@ describe('InvoiceForm', () => {
     await user.selectOptions(screen.getByLabelText('Type'), 'progress');
 
     expect(screen.getByLabelText('Description')).toHaveValue(
-      'Progress claim for QUO-0004 - Cafe repaint'
+      'Progress claim (100%) for QUO-0004 - Cafe repaint'
     );
     expect(screen.getByLabelText('Unit Price (A$)')).toHaveValue(1900);
+
+    await user.clear(screen.getByLabelText('Progress Percent (%)'));
+    await user.type(screen.getByLabelText('Progress Percent (%)'), '50');
+
+    expect(screen.getByLabelText('Description')).toHaveValue(
+      'Progress claim (50%) for QUO-0004 - Cafe repaint'
+    );
+    expect(screen.getByLabelText('Unit Price (A$)')).toHaveValue(950);
   });
 
   it('defaults the due date to 14 days ahead on create', () => {
@@ -283,7 +300,7 @@ describe('InvoiceForm', () => {
 
     render(<InvoiceForm customers={[]} quotes={[]} />);
 
-    expect(screen.getByLabelText('Due Date')).toHaveValue('2026-04-23');
+    expect(screen.getByLabelText(/Due Date/)).toHaveValue('2026-04-23');
   });
 
   it('updates item GST and invoice totals in real time when line items change', () => {
@@ -378,5 +395,76 @@ describe('InvoiceForm', () => {
         payment_method: 'card',
       })
     );
+  });
+
+  it('allows clearing the due date and submits it as null', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <InvoiceForm
+        customers={[
+          {
+            id: 'customer-1',
+            name: 'Sarah Johnson',
+            company_name: 'Harbor Cafe',
+            email: 'sarah@example.com',
+            phone: '0412 555 012',
+            address: '128 Beach Street, Manly, NSW 2095',
+          },
+        ]}
+        quotes={[]}
+        onSubmit={onSubmit}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), 'customer-1');
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Final invoice' },
+    });
+    fireEvent.change(screen.getByLabelText('Unit Price (A$)'), {
+      target: { value: '550' },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save Invoice' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        due_date: null,
+      })
+    );
+  });
+
+  it('keeps an explicitly empty due date blank when default values provide null', () => {
+    render(
+      <InvoiceForm
+        customers={[]}
+        quotes={[]}
+        defaultValues={{
+          customer_id: '',
+          quote_id: null,
+          invoice_type: 'full',
+          status: 'draft',
+          business_abn: null,
+          payment_terms: null,
+          bank_details: null,
+          due_date: null,
+          paid_date: null,
+          payment_method: null,
+          notes: null,
+          line_items: [
+            {
+              description: 'Prep and paint',
+              quantity: 1,
+              unit_price_cents: 42000,
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByLabelText(/Due Date/)).toHaveValue('');
   });
 });

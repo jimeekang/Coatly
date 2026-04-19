@@ -4,6 +4,7 @@ import {
   getQuote,
   setQuoteOptionalLineItemSelection,
 } from '@/app/actions/quotes';
+import { getLinkedInvoicesForQuote } from '@/app/actions/invoices';
 import { APP_URL } from '@/config/constants';
 import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
@@ -30,6 +31,9 @@ export default async function QuoteDetailPage({
     getQuote(id),
     user ? getBusinessRateSettings(supabase, user.id) : Promise.resolve({ data: null, error: null }),
   ]);
+  const linkedInvoiceResult = await getLinkedInvoicesForQuote(id);
+  const linkedInvoices = linkedInvoiceResult.data?.invoices ?? [];
+  const linkedInvoiceSummary = linkedInvoiceResult.data?.summary ?? null;
   const jobError =
     typeof resolvedSearchParams.jobError === 'string' ? resolvedSearchParams.jobError : null;
   const emailDemo = resolvedSearchParams.emailDemo === '1';
@@ -79,6 +83,10 @@ export default async function QuoteDetailPage({
   const publicQuoteUrl = quote?.public_share_token
     ? `${APP_URL}/q/${quote.public_share_token}`
     : null;
+  const remainingLinkedInvoiceTotal =
+    quote && linkedInvoiceSummary
+      ? Math.max(quote.total_cents - linkedInvoiceSummary.billed_total_cents, 0)
+      : 0;
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-4">
@@ -205,6 +213,83 @@ export default async function QuoteDetailPage({
               {quote.customer.address && <p>{quote.customer.address}</p>}
             </div>
           </section>
+
+          {linkedInvoices.length > 0 && (
+            <section className="rounded-xl border border-pm-border bg-white">
+              <div className="rounded-t-xl bg-pm-surface px-5 py-3">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  Billing Progress
+                </h2>
+              </div>
+              <div className="grid gap-3 px-5 py-4 sm:grid-cols-3">
+                <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                    Linked invoices
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-pm-body">
+                    {linkedInvoiceSummary?.linked_invoice_count ?? linkedInvoices.length}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                    Already invoiced
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-pm-body">
+                    {formatAUD(linkedInvoiceSummary?.billed_total_cents ?? 0)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                    Remaining
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-pm-teal">
+                    {formatAUD(remainingLinkedInvoiceTotal)}
+                  </p>
+                </div>
+              </div>
+              <div className="px-5 pb-5">
+                <div className="overflow-hidden rounded-xl border border-pm-border">
+                  <div className="divide-y divide-pm-border">
+                    {linkedInvoices.map((invoice) => (
+                      <Link
+                        key={invoice.id}
+                        href={`/invoices/${invoice.id}`}
+                        className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-pm-surface"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-pm-body">
+                              {invoice.invoice_number}
+                            </p>
+                            {invoice.quote_stage_label && (
+                              <span className="rounded-full bg-pm-teal-light px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pm-teal-hover">
+                                {invoice.quote_stage_label}
+                              </span>
+                            )}
+                            <span className="rounded-full bg-pm-surface px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pm-secondary">
+                              {invoice.invoice_type}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-pm-secondary">
+                            {invoice.status} · Created {formatDate(invoice.created_at)}
+                            {invoice.due_date ? ` · Due ${formatDate(invoice.due_date)}` : ''}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-pm-body">
+                            {formatAUD(invoice.total_cents)}
+                          </p>
+                          <p className="mt-1 text-xs text-pm-secondary">
+                            Balance {formatAUD(invoice.balance_cents)}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
 
           {quote.approved_at && (
             <section className="rounded-xl border border-pm-border bg-white">

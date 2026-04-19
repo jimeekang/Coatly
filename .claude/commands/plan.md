@@ -13,7 +13,9 @@ allowed-tools: Read
 3. 요청을 독립적인 subtask로 분해
 4. 각 subtask마다 어떤 커맨드를 실행해야 하는지 출력
 
-## 현재 Phase 상태 (2026-04-12 기준)
+## 현재 Phase 상태
+
+> 최신 상태는 `docs/PLANS.md` 참조 — 아래는 마지막 확인 기준 스냅샷
 
 **Phase 0 + 1: 완료**
 - Auth, Stripe, Quote Builder/PDF, Invoice System/PDF, Customer CRM

@@ -766,6 +766,48 @@ export async function getQuotes(): Promise<{ data: QuoteListItem[]; error: strin
   };
 }
 
+export async function getQuotesByCustomer(
+  customerId: string
+): Promise<{ data: QuoteListItem[]; error: string | null }> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+
+  const quoteListResult = await supabase
+    .from('quotes')
+    .select(QUOTE_LIST_SELECT)
+    .eq('user_id', user.id)
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false });
+  let data = quoteListResult.data as QuoteListRow[] | null;
+  let error = quoteListResult.error;
+
+  if (error && isMissingQuoteCustomerSnapshotColumnError(error.message)) {
+    const legacyResult = await supabase
+      .from('quotes')
+      .select(QUOTE_LIST_SELECT_LEGACY)
+      .eq('user_id', user.id)
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false });
+
+    data = legacyResult.data as QuoteListRow[] | null;
+    error = legacyResult.error;
+  }
+
+  return {
+    data:
+      ((data as QuoteListRow[] | null) ?? []).map((quote) =>
+        mapQuoteListItem({
+          ...quote,
+          customer: resolveQuoteCustomerSummary({
+            customer: quote.customer,
+            customer_email: quote.customer_email,
+            customer_address: quote.customer_address,
+          }),
+        })
+      ) ?? [],
+    error: error?.message ?? null,
+  };
+}
+
 export async function getQuote(id: string): Promise<{
   data: QuoteDetail | null;
   error: string | null;

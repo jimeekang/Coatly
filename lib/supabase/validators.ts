@@ -181,6 +181,14 @@ export const invoiceCreateSchema = z.object({
       path: ['paid_date'],
     });
   }
+
+  if (value.status === 'paid' && !value.payment_method) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Payment method is required when status is paid',
+      path: ['payment_method'],
+    });
+  }
 });
 
 export type InvoiceLineItemInput = z.input<typeof invoiceLineItemSchema>;
