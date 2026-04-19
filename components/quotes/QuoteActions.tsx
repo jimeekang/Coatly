@@ -167,7 +167,7 @@ export function QuoteActions({
       )}
 
       {/* Secondary utility row */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className={`grid gap-2 ${publicQuoteUrl ? 'grid-cols-5' : 'grid-cols-4'}`}>
         {/* More */}
         <div className="relative">
           <button
@@ -223,8 +223,8 @@ export function QuoteActions({
           PDF
         </Link>
 
-        {/* Client page or empty slot */}
-        {publicQuoteUrl ? (
+        {/* Client page — only shown when URL exists */}
+        {publicQuoteUrl && (
           <Link
             href={publicQuoteUrl}
             target="_blank"
@@ -237,8 +237,6 @@ export function QuoteActions({
             </svg>
             Client
           </Link>
-        ) : (
-          <div className="rounded-xl border border-dashed border-outline-variant bg-transparent px-2 py-3" />
         )}
 
         {/* Duplicate */}

@@ -9,12 +9,19 @@ import { APP_URL } from '@/config/constants';
 import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
 import { ProfitabilityCard } from '@/components/quotes/ProfitabilityCard';
-import { QuoteStatusCard } from '@/components/quotes/QuoteStatusCard';
 import { QuoteActions } from '@/components/quotes/QuoteActions';
 import { getBusinessRateSettings } from '@/lib/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Quote Detail' };
+
+const STATUS_BADGE: Record<string, string> = {
+  draft:    'bg-surface-container-highest text-on-surface-variant',
+  sent:     'bg-primary/10 text-primary',
+  approved: 'bg-success-container text-success',
+  rejected: 'bg-error-container text-error',
+  expired:  'bg-surface-container-highest text-on-surface-variant',
+};
 
 export default async function QuoteDetailPage({
   params,
@@ -39,7 +46,6 @@ export default async function QuoteDetailPage({
   const emailDemo = resolvedSearchParams.emailDemo === '1';
   const editLocked = resolvedSearchParams.editLocked === '1';
 
-  // ── Internal cost breakdown (not shown in PDF) ──────────────────────────
   const hasManualRooms = (quote?.rooms?.length ?? 0) > 0;
   const labourBaseTotal = hasManualRooms
     ? (quote?.rooms ?? []).reduce(
@@ -53,7 +59,6 @@ export default async function QuoteDetailPage({
         0
       )
     : null;
-  // Total pre-markup base: for manual rooms = sum of surfaces, for interior = reverse-calculate
   const baseSubtotalForMarkup = (() => {
     if (labourBaseTotal !== null && materialsBaseTotal !== null) {
       return labourBaseTotal + materialsBaseTotal;
@@ -88,367 +93,216 @@ export default async function QuoteDetailPage({
       ? Math.max(quote.total_cents - linkedInvoiceSummary.billed_total_cents, 0)
       : 0;
 
+  // Flatten all scope rows: rooms→surfaces + included line items
+  const scopeRows = quote
+    ? [
+        ...quote.rooms.flatMap((room) =>
+          room.surfaces.map((surface) => ({
+            key: surface.id,
+            name: `${room.name} — ${QUOTE_SURFACE_LABELS[surface.surface_type]}`,
+            sub: QUOTE_COATING_LABELS[surface.coating_type],
+            notes: surface.notes ?? null,
+            qtyLabel: `${surface.area_m2.toFixed(1)} m²`,
+            rateLabel: `${formatAUD(surface.rate_per_m2_cents)}/m²`,
+            amount: surface.total_cents,
+          }))
+        ),
+        ...includedLineItems.map((item) => ({
+          key: item.id,
+          name: item.name,
+          sub: item.notes ?? null,
+          notes: null as string | null,
+          qtyLabel: `${item.quantity} ${item.unit}`,
+          rateLabel: formatAUD(item.unit_price_cents),
+          amount: item.total_cents,
+        })),
+      ]
+    : [];
+
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4">
-      <div className="mb-6 flex items-center gap-3">
+    <div className="mx-auto max-w-4xl pb-24">
+      {/* Back nav */}
+      <div className="mb-4">
         <Link
           href="/quotes"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors active:bg-pm-border"
-          aria-label="Back to quotes"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
+          All quotes
         </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-pm-body">
-            {quote?.quote_number ?? 'Quote'}
-          </h1>
-          <p className="mt-0.5 text-sm text-pm-secondary">
-            {quote ? QUOTE_STATUS_LABELS[quote.status] : 'Quote not found'}
-          </p>
-        </div>
-        {quote && !quote.has_linked_invoices && (
-          <Link
-            href={`/quotes/${id}/edit`}
-            className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            Edit
-          </Link>
-        )}
       </div>
 
       {error || !quote ? (
-        <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{error ?? 'Quote not found.'}</p>
+        <div className="rounded-lg border border-error/20 bg-error-container px-4 py-3">
+          <p className="text-sm text-on-error-container">{error ?? 'Quote not found.'}</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-6 pb-10">
+        <>
+          {/* Banners */}
           {emailDemo && (
-            <div className="rounded-lg border border-pm-teal-mid bg-pm-teal-pale/20 px-4 py-3">
-              <p className="text-sm text-pm-teal">
+            <div className="mb-4 rounded-lg border border-primary/20 bg-primary/8 px-4 py-3">
+              <p className="text-sm text-primary">
                 Demo only. This quote was marked as sent to {quote.customer.email ?? 'the customer'}.
-                Resend delivery will be connected later.
               </p>
             </div>
           )}
           {jobError && (
-            <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
-              <p className="text-sm text-pm-coral-dark">{jobError}</p>
+            <div className="mb-4 rounded-lg border border-error/20 bg-error-container px-4 py-3">
+              <p className="text-sm text-on-error-container">{jobError}</p>
             </div>
           )}
           {(editLocked || quote.has_linked_invoices) && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-              <p className="text-sm text-amber-900">
-                This quote is locked because at least one linked invoice already exists. Create any
-                needed variations before invoicing a quote.
+            <div className="mb-4 rounded-lg border border-warning/20 bg-warning-container px-4 py-3">
+              <p className="text-sm text-on-warning-container">
+                This quote is locked because at least one linked invoice already exists.
               </p>
             </div>
           )}
 
-          <section className="rounded-xl border border-pm-border bg-white">
-            <div className="rounded-t-xl bg-pm-surface px-5 py-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                Quote Details
-              </h2>
-            </div>
-            <div className="grid gap-4 px-5 py-4 text-sm text-pm-body">
-              <p className="text-lg font-semibold text-pm-body">
-                {quote.title || 'Untitled quote'}
+          {/* ── detail-head ── */}
+          <div className="flex items-end justify-between gap-4 mb-4">
+            <div className="min-w-0">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline font-mono mb-1">
+                {quote.quote_number}
               </p>
-              <QuoteStatusCard status={quote.status} validUntil={quote.valid_until} />
-              <p>Quote number: {quote.quote_number}</p>
-              <p>Valid until: {quote.valid_until ? formatDate(quote.valid_until) : '—'}</p>
-              <p>Total: {formatAUD(quote.total_cents)}</p>
-              <p className="text-xs text-pm-secondary">
-                Last modified: {formatDate(quote.updated_at)}
-              </p>
-              {publicQuoteUrl && (
-                <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Client Link
-                  </p>
-                  <p className="mt-2 break-all text-sm text-pm-body">{publicQuoteUrl}</p>
-                </div>
+              <h1 className="text-[26px] font-extrabold tracking-tight text-on-surface leading-tight mt-1">
+                {quote.customer.company_name || quote.customer.name}
+              </h1>
+              {quote.title && (
+                <p className="text-sm text-on-surface-variant mt-1">{quote.title}</p>
               )}
             </div>
-          </section>
-
-          <section className="rounded-xl border border-pm-border bg-white">
-            <div className="rounded-t-xl bg-pm-surface px-5 py-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                Customer
-              </h2>
+            <div className="flex items-center gap-2 shrink-0">
+              <span
+                className={`inline-flex items-center px-2.5 py-1 rounded text-[10.5px] font-bold uppercase tracking-[0.14em] ${STATUS_BADGE[quote.status] ?? 'bg-surface-container-highest text-on-surface-variant'}`}
+              >
+                {QUOTE_STATUS_LABELS[quote.status]}
+              </span>
+              {!quote.has_linked_invoices && (
+                <Link
+                  href={`/quotes/${id}/edit`}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-on-primary hover:opacity-90 transition-opacity"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  Edit
+                </Link>
+              )}
             </div>
-            <div className="grid gap-2 px-5 py-4 text-sm text-pm-body">
-              <p className="font-medium text-pm-body">
-                {quote.customer.company_name || quote.customer.name}
-              </p>
-              {quote.customer.email && <p>{quote.customer.email}</p>}
-              {quote.customer.phone && <p>{quote.customer.phone}</p>}
-              {quote.customer.address && <p>{quote.customer.address}</p>}
-            </div>
-          </section>
+          </div>
 
-          {linkedInvoices.length > 0 && (
-            <section className="rounded-xl border border-pm-border bg-white">
-              <div className="rounded-t-xl bg-pm-surface px-5 py-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                  Billing Progress
-                </h2>
-              </div>
-              <div className="grid gap-3 px-5 py-4 sm:grid-cols-3">
-                <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Linked invoices
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-pm-body">
-                    {linkedInvoiceSummary?.linked_invoice_count ?? linkedInvoices.length}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Already invoiced
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-pm-body">
-                    {formatAUD(linkedInvoiceSummary?.billed_total_cents ?? 0)}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                    Remaining
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-pm-teal">
-                    {formatAUD(remainingLinkedInvoiceTotal)}
-                  </p>
-                </div>
-              </div>
-              <div className="px-5 pb-5">
-                <div className="overflow-hidden rounded-xl border border-pm-border">
-                  <div className="divide-y divide-pm-border">
-                    {linkedInvoices.map((invoice) => (
-                      <Link
-                        key={invoice.id}
-                        href={`/invoices/${invoice.id}`}
-                        className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-pm-surface"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-pm-body">
-                              {invoice.invoice_number}
-                            </p>
-                            {invoice.quote_stage_label && (
-                              <span className="rounded-full bg-pm-teal-light px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pm-teal-hover">
-                                {invoice.quote_stage_label}
-                              </span>
-                            )}
-                            <span className="rounded-full bg-pm-surface px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-pm-secondary">
-                              {invoice.invoice_type}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-xs text-pm-secondary">
-                            {invoice.status} · Created {formatDate(invoice.created_at)}
-                            {invoice.due_date ? ` · Due ${formatDate(invoice.due_date)}` : ''}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-pm-body">
-                            {formatAUD(invoice.total_cents)}
-                          </p>
-                          <p className="mt-1 text-xs text-pm-secondary">
-                            Balance {formatAUD(invoice.balance_cents)}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
+          {/* ── detail-grid: main card + sidebar ── */}
+          <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
 
-          {quote.approved_at && (
-            <section className="rounded-xl border border-pm-border bg-white">
-              <div className="rounded-t-xl bg-pm-surface px-5 py-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                  Approval
-                </h2>
-              </div>
-              <div className="grid gap-2 px-5 py-4 text-sm text-pm-body">
-                <p>Approved at: {formatDate(quote.approved_at)}</p>
-                {quote.approved_by_name && <p>Approved by: {quote.approved_by_name}</p>}
-                {quote.approved_by_email && <p>Email: {quote.approved_by_email}</p>}
-                {quote.approval_signature && <p>Signature: {quote.approval_signature}</p>}
-              </div>
-            </section>
-          )}
+            {/* ── Main card: Line items + Totals ── */}
+            <div className="self-start bg-white border border-outline-variant rounded-3xl shadow-sm">
+              <div className="p-4">
+                <p className="text-[13px] font-bold text-on-surface mb-3 tracking-[-0.005em]">
+                  Line items
+                </p>
 
-          <section className="rounded-xl border border-pm-border bg-white">
-            <div className="rounded-t-xl bg-pm-surface px-5 py-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                Scope
-              </h2>
-            </div>
-            <div className="flex flex-col gap-4 px-5 py-4">
-              {quote.rooms.map((room) => (
-                <div key={room.id} className="rounded-xl border border-pm-border bg-pm-surface p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-pm-body">{room.name}</p>
-                      <p className="text-sm capitalize text-pm-secondary">{room.room_type}</p>
-                    </div>
-                    <p className="text-sm font-medium text-pm-body">
-                      {formatAUD(room.total_cents)}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 flex flex-col gap-3">
-                    {room.surfaces.map((surface) => (
-                      <div
-                        key={surface.id}
-                        className="rounded-lg border border-pm-border bg-white px-3 py-3 text-sm text-pm-body"
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <p className="font-medium text-pm-body">
-                              {QUOTE_SURFACE_LABELS[surface.surface_type]}
-                            </p>
-                            <p className="text-xs text-pm-secondary">
-                              {QUOTE_COATING_LABELS[surface.coating_type]}
-                            </p>
-                          </div>
-                          <p className="font-medium text-pm-body">
-                            {formatAUD(surface.total_cents)}
-                          </p>
-                        </div>
-                        <div className="mt-2 grid gap-1 text-xs text-pm-secondary">
-                          <p>Area: {surface.area_m2.toFixed(1)} m²</p>
-                          <p>Rate: {formatAUD(surface.rate_per_m2_cents)}/m²</p>
-                          {surface.notes && <p>{surface.notes}</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {(includedLineItems.length > 0 || optionalLineItems.length > 0) && (
-            <section className="rounded-xl border border-pm-border bg-white">
-              <div className="rounded-t-xl bg-pm-surface px-5 py-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                  Materials &amp; Services
-                </h2>
-              </div>
-              <div className="space-y-4 px-5 py-4">
-                {includedLineItems.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-xs font-medium uppercase tracking-wide text-pm-secondary">
-                      Included
-                    </p>
-                    {includedLineItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="font-medium text-pm-body">{item.name}</p>
-                            <p className="mt-1 text-xs text-pm-secondary">
-                              {item.quantity} {item.unit} at {formatAUD(item.unit_price_cents)}
-                            </p>
-                            {item.notes && (
-                              <p className="mt-2 text-sm text-pm-secondary">{item.notes}</p>
-                            )}
-                          </div>
-                          <p className="text-sm font-semibold text-pm-body">
-                            {formatAUD(item.total_cents)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                {/* Table header — md+ only */}
+                {scopeRows.length > 0 && (
+                  <div className="hidden md:grid grid-cols-[1fr_90px_90px_90px] gap-3 pb-2 border-b border-outline-variant text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
+                    <div>Item</div>
+                    <div className="text-right">Qty</div>
+                    <div className="text-right">Rate</div>
+                    <div className="text-right">Amount</div>
                   </div>
                 )}
 
-                {optionalLineItems.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-pm-secondary">
-                          Optional Items
-                        </p>
-                        <p className="mt-1 text-sm text-pm-secondary">
-                          Toggle customer choices to update the saved quote total.
+                {/* Scope rows (rooms + line items flattened) */}
+                {scopeRows.length === 0 ? (
+                  <p className="text-sm text-on-surface-variant py-4 text-center">No line items added yet.</p>
+                ) : (
+                  scopeRows.map((row) => (
+                    <div
+                      key={row.key}
+                      className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_90px_90px_90px] gap-x-3 py-3 border-t border-outline-variant text-sm first:border-t-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-on-surface">{row.name}</p>
+                        {row.sub && (
+                          <p className="text-xs text-outline mt-0.5">{row.sub}</p>
+                        )}
+                        {row.notes && (
+                          <p className="text-xs text-on-surface-variant mt-0.5 italic">{row.notes}</p>
+                        )}
+                        {/* Mobile: qty · rate inline */}
+                        <p className="text-xs text-outline mt-1 md:hidden">
+                          {row.qtyLabel} · {row.rateLabel}
                         </p>
                       </div>
-                      <div className="text-right text-xs text-pm-secondary">
-                        <p>Selected: {formatAUD(optionalSelectedTotal)}</p>
+                      <div className="hidden md:block text-right tabular-nums text-on-surface-variant self-center">
+                        {row.qtyLabel}
+                      </div>
+                      <div className="hidden md:block text-right tabular-nums text-on-surface-variant self-center">
+                        {row.rateLabel}
+                      </div>
+                      <div className="text-right tabular-nums font-bold text-on-surface self-center">
+                        {formatAUD(row.amount)}
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {/* Optional items */}
+                {optionalLineItems.length > 0 && (
+                  <div className="mt-5 pt-5 border-t-2 border-dashed border-outline-variant space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
+                          Optional Items
+                        </p>
+                        <p className="text-xs text-on-surface-variant mt-1">
+                          Toggle customer choices to update the quote total.
+                        </p>
+                      </div>
+                      <div className="text-right text-xs text-on-surface-variant shrink-0">
+                        {optionalSelectedTotal > 0 && (
+                          <p>Selected: {formatAUD(optionalSelectedTotal)}</p>
+                        )}
                         {optionalAvailableTotal > 0 && (
                           <p>Available: {formatAUD(optionalAvailableTotal)}</p>
                         )}
                       </div>
                     </div>
-
                     {optionalLineItems.map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-xl border border-pm-border bg-white px-4 py-4"
+                        className="rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3"
                       >
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-medium text-pm-body">{item.name}</p>
+                              <p className="font-medium text-on-surface text-sm">{item.name}</p>
                               <span
-                                className={[
-                                  'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                                   item.is_selected
-                                    ? 'bg-pm-teal-pale/30 text-pm-teal'
-                                    : 'bg-amber-100 text-amber-700',
-                                ].join(' ')}
+                                    ? 'bg-success-container text-success'
+                                    : 'bg-warning-container text-warning'
+                                }`}
                               >
                                 {item.is_selected ? 'Selected' : 'Optional'}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs text-pm-secondary">
+                            <p className="text-xs text-on-surface-variant mt-1">
                               {item.quantity} {item.unit} at {formatAUD(item.unit_price_cents)}
                             </p>
                             {item.notes && (
-                              <p className="mt-2 text-sm text-pm-secondary">{item.notes}</p>
+                              <p className="text-xs text-on-surface-variant mt-1">{item.notes}</p>
                             )}
                           </div>
-                          <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
-                            <p className="text-sm font-semibold text-pm-body">
+                          <div className="shrink-0 flex flex-col items-end gap-2">
+                            <p className="text-sm font-bold text-on-surface tabular-nums">
                               {formatAUD(item.total_cents)}
                             </p>
                             {quote.has_linked_invoices ? (
-                              <p className="text-xs text-pm-secondary">
-                                Locked after invoice creation
-                              </p>
+                              <p className="text-xs text-on-surface-variant">Locked</p>
                             ) : (
                               <form action={setQuoteOptionalLineItemSelection}>
                                 <input type="hidden" name="quoteId" value={quote.id} />
@@ -460,14 +314,13 @@ export default async function QuoteDetailPage({
                                 />
                                 <button
                                   type="submit"
-                                  className={[
-                                    'inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
+                                  className={`inline-flex min-h-9 items-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
                                     item.is_selected
-                                      ? 'border border-pm-border bg-white text-pm-body hover:bg-pm-surface'
-                                      : 'bg-pm-teal text-white hover:bg-pm-teal-hover',
-                                  ].join(' ')}
+                                      ? 'border border-outline-variant bg-white text-on-surface hover:bg-surface-container-low'
+                                      : 'bg-primary text-on-primary hover:opacity-90'
+                                  }`}
                                 >
-                                  {item.is_selected ? 'Remove from Total' : 'Add to Total'}
+                                  {item.is_selected ? 'Remove' : 'Add to Total'}
                                 </button>
                               </form>
                             )}
@@ -477,144 +330,272 @@ export default async function QuoteDetailPage({
                     ))}
                   </div>
                 )}
-              </div>
-            </section>
-          )}
 
-          {(quote.notes || quote.internal_notes) && (
-            <section className="rounded-xl border border-pm-border bg-white">
-              <div className="rounded-t-xl bg-pm-surface px-5 py-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                  Notes
-                </h2>
-              </div>
-              <div className="grid gap-3 px-5 py-4 text-sm text-pm-body">
-                {quote.notes && (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-pm-secondary">
-                      Client Notes
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap">{quote.notes}</p>
+                {/* Totals */}
+                <div className="mt-5 pt-4 border-t-2 border-outline-variant space-y-2">
+                  <div className="flex justify-between text-sm text-on-surface-variant">
+                    <span>Subtotal (ex GST)</span>
+                    <span className="tabular-nums font-medium text-on-surface">
+                      {formatAUD(quote.subtotal_cents)}
+                    </span>
                   </div>
-                )}
-                {quote.internal_notes && (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-pm-secondary">
-                      Internal Notes
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap">{quote.internal_notes}</p>
+                  <div className="flex justify-between text-sm text-on-surface-variant">
+                    <span>GST (10%)</span>
+                    <span className="tabular-nums font-medium text-on-surface">
+                      {formatAUD(quote.gst_cents)}
+                    </span>
                   </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Internal Cost Breakdown — not shown on PDF */}
-          <ProfitabilityCard
-            quote={quote}
-            targetDailyEarningsCents={rateSettings?.pricing?.target_daily_earnings_cents}
-          />
-
-          {showBreakdown && (
-            <section className="rounded-xl border border-pm-border bg-white">
-              <div className="flex items-center justify-between gap-2 rounded-t-xl bg-amber-50 px-5 py-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-amber-700">
-                  Cost Breakdown
-                </h2>
-                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-700">
-                  Internal
-                </span>
-              </div>
-              <div className="space-y-3 px-5 py-4 text-sm">
-                {/* Per-room subtotals with labour/materials split (manual rooms only) */}
-                {hasManualRooms && quote.rooms.map((room) => {
-                  const roomLabour = room.surfaces.reduce((s, surf) => s + surf.labour_cost_cents, 0);
-                  const roomMaterials = room.surfaces.reduce((s, surf) => s + surf.material_cost_cents, 0);
-                  return (
-                    <div key={room.id} className="rounded-lg border border-pm-border bg-pm-surface px-4 py-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-pm-body">{room.name}</span>
-                        <span className="font-semibold text-pm-body">{formatAUD(room.total_cents)}</span>
-                      </div>
-                      <div className="mt-2 flex gap-4 text-xs text-pm-secondary">
-                        <span>Labour: {formatAUD(roomLabour)}</span>
-                        <span>Materials: {formatAUD(roomMaterials)}</span>
-                      </div>
+                  <div className="flex items-center justify-between border-t border-outline-variant pt-3">
+                    <span className="text-base font-extrabold text-on-surface">Total (inc GST)</span>
+                    <div>
+                      <span className="text-[18px] font-extrabold tracking-tight text-on-surface tabular-nums">
+                        {formatAUD(quote.total_cents)}
+                      </span>
+                      <span className="ml-1 text-[10px] font-bold text-outline">AUD</span>
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                {/* Aggregate markup breakdown */}
-                {(quote.labour_margin_percent > 0 || quote.material_margin_percent > 0) && (
-                  <div className="space-y-2 border-t border-pm-border pt-3">
-                    {labourBaseTotal !== null && materialsBaseTotal !== null && (
-                      <>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-pm-secondary">Labour (base)</span>
-                          <span className="text-pm-body">{formatAUD(labourBaseTotal)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-pm-secondary">Materials (base)</span>
-                          <span className="text-pm-body">{formatAUD(materialsBaseTotal)}</span>
-                        </div>
-                      </>
-                    )}
-                    {quote.labour_margin_percent > 0 && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-pm-secondary">
-                          Labour markup ({quote.labour_margin_percent}%)
-                        </span>
-                        <span className="text-pm-body">+{formatAUD(labourMarkupAmount)}</span>
-                      </div>
-                    )}
-                    {quote.material_margin_percent > 0 && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-pm-secondary">
-                          Materials markup ({quote.material_margin_percent}%)
-                        </span>
-                        <span className="text-pm-body">+{formatAUD(materialsMarkupAmount)}</span>
+            {/* ── Sidebar: meta-boxes ── */}
+            <div className="flex flex-col gap-4">
+
+              {/* Customer meta-box */}
+              <div className="p-4 rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
+                  Customer
+                </p>
+                <p className="text-sm font-semibold text-on-surface">
+                  {quote.customer.company_name || quote.customer.name}
+                </p>
+                {quote.customer.company_name && (
+                  <p className="text-xs text-on-surface-variant mt-0.5">{quote.customer.name}</p>
+                )}
+                {quote.customer.email && (
+                  <p className="text-xs text-on-surface-variant mt-1">{quote.customer.email}</p>
+                )}
+                {quote.customer.phone && (
+                  <p className="text-xs text-on-surface-variant mt-0.5">{quote.customer.phone}</p>
+                )}
+                {quote.customer.address && (
+                  <p className="text-xs text-on-surface-variant mt-1">{quote.customer.address}</p>
+                )}
+              </div>
+
+              {/* Dates meta-box */}
+              <div className="p-4 rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
+                  Dates
+                </p>
+                <p className="text-sm font-semibold text-on-surface">
+                  Created {formatDate(quote.created_at)}
+                </p>
+                <p className="text-xs text-on-surface-variant mt-1">
+                  Valid until {quote.valid_until ? formatDate(quote.valid_until) : '—'}
+                </p>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  Modified {formatDate(quote.updated_at)}
+                </p>
+              </div>
+
+              {/* Client Link meta-box */}
+              {publicQuoteUrl && (
+                <div className="p-4 rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm">
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
+                    Client Link
+                  </p>
+                  <p className="text-xs text-on-surface break-all">{publicQuoteUrl}</p>
+                </div>
+              )}
+
+              {/* Profitability + Cost Breakdown — grouped together */}
+              <div className="flex flex-col gap-4">
+              <ProfitabilityCard
+                quote={quote}
+                targetDailyEarningsCents={rateSettings?.pricing?.target_daily_earnings_cents}
+              />
+
+              {/* Cost Breakdown (internal) — directly below Profitability */}
+              {showBreakdown && (
+                <div className="rounded-3xl border border-warning/20 bg-warning-container overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-warning/20">
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-warning">
+                      Cost Breakdown
+                    </p>
+                    <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-warning">
+                      Internal
+                    </span>
+                  </div>
+                  <div className="px-4 py-3 space-y-2 text-xs">
+                    {hasManualRooms &&
+                      quote.rooms.map((room) => {
+                        const roomLabour = room.surfaces.reduce((s, surf) => s + surf.labour_cost_cents, 0);
+                        const roomMaterials = room.surfaces.reduce((s, surf) => s + surf.material_cost_cents, 0);
+                        return (
+                          <div key={room.id} className="rounded-lg border border-warning/20 bg-white/60 px-3 py-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-on-surface">{room.name}</span>
+                              <span className="font-bold text-on-surface tabular-nums">{formatAUD(room.total_cents)}</span>
+                            </div>
+                            <div className="mt-1 flex gap-3 text-on-surface-variant">
+                              <span>Labour: {formatAUD(roomLabour)}</span>
+                              <span>Materials: {formatAUD(roomMaterials)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {(quote.labour_margin_percent > 0 || quote.material_margin_percent > 0) && (
+                      <div className="space-y-1.5 pt-2 border-t border-warning/20">
+                        {labourBaseTotal !== null && materialsBaseTotal !== null && (
+                          <>
+                            <div className="flex justify-between text-on-surface-variant">
+                              <span>Labour (base)</span>
+                              <span className="tabular-nums text-on-surface">{formatAUD(labourBaseTotal)}</span>
+                            </div>
+                            <div className="flex justify-between text-on-surface-variant">
+                              <span>Materials (base)</span>
+                              <span className="tabular-nums text-on-surface">{formatAUD(materialsBaseTotal)}</span>
+                            </div>
+                          </>
+                        )}
+                        {quote.labour_margin_percent > 0 && (
+                          <div className="flex justify-between text-on-surface-variant">
+                            <span>Labour markup ({quote.labour_margin_percent}%)</span>
+                            <span className="tabular-nums text-on-surface">+{formatAUD(labourMarkupAmount)}</span>
+                          </div>
+                        )}
+                        {quote.material_margin_percent > 0 && (
+                          <div className="flex justify-between text-on-surface-variant">
+                            <span>Materials markup ({quote.material_margin_percent}%)</span>
+                            <span className="tabular-nums text-on-surface">+{formatAUD(materialsMarkupAmount)}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
+                </div>
+              )}
               </div>
-            </section>
-          )}
 
-          <section className="rounded-xl border border-pm-border bg-white">
-            <div className="rounded-t-xl bg-pm-surface px-5 py-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                Totals
-              </h2>
-            </div>
-            <div className="space-y-3 px-5 py-4 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-pm-secondary">Subtotal (ex GST)</span>
-                <span className="font-medium text-pm-body">
-                  {formatAUD(quote.subtotal_cents)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-pm-secondary">GST (10%)</span>
-                <span className="font-medium text-pm-body">{formatAUD(quote.gst_cents)}</span>
-              </div>
-              <div className="flex items-center justify-between border-t border-pm-border pt-3">
-                <span className="font-semibold text-pm-body">Total (inc GST)</span>
-                <span className="text-base font-semibold text-pm-body">
-                  {formatAUD(quote.total_cents)}
-                </span>
-              </div>
-            </div>
-          </section>
+              {/* Approval */}
+              {quote.approved_at && (
+                <div className="p-4 rounded-3xl border border-success/20 bg-success-container shadow-sm">
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-success mb-1.5">
+                    Approved
+                  </p>
+                  <p className="text-sm font-semibold text-on-surface">
+                    {formatDate(quote.approved_at)}
+                  </p>
+                  {quote.approved_by_name && (
+                    <p className="text-xs text-on-surface-variant mt-0.5">by {quote.approved_by_name}</p>
+                  )}
+                  {quote.approved_by_email && (
+                    <p className="text-xs text-on-surface-variant mt-0.5">{quote.approved_by_email}</p>
+                  )}
+                  {quote.approval_signature && (
+                    <p className="text-xs text-on-surface-variant mt-1">Sig: {quote.approval_signature}</p>
+                  )}
+                </div>
+              )}
 
-          <QuoteActions
-            quoteId={quote.id}
-            quoteNumber={quote.quote_number}
-            status={quote.status}
-            publicQuoteUrl={publicQuoteUrl}
-            hasLinkedInvoices={quote.has_linked_invoices}
-          />
-        </div>
+              {/* Notes — directly above Billing Progress */}
+              {(quote.notes || quote.internal_notes) && (
+                <div className="p-4 rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm space-y-3">
+                  {quote.notes && (
+                    <div>
+                      <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
+                        Client Notes
+                      </p>
+                      <p className="text-sm text-on-surface whitespace-pre-wrap">{quote.notes}</p>
+                    </div>
+                  )}
+                  {quote.internal_notes && (
+                    <div>
+                      <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
+                        Internal Notes
+                      </p>
+                      <p className="text-sm text-on-surface whitespace-pre-wrap">{quote.internal_notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Billing Progress — directly below Notes */}
+              {linkedInvoices.length > 0 && (
+                <div className="rounded-3xl border border-outline-variant bg-white shadow-sm overflow-hidden">
+                  <div className="bg-surface-container-low px-4 py-3 border-b border-outline-variant">
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface">
+                      Billing Progress
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 divide-x divide-outline-variant border-b border-outline-variant text-center">
+                    <div className="px-2 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface">Invoices</p>
+                      <p className="text-lg font-extrabold text-on-surface tabular-nums mt-0.5">
+                        {linkedInvoiceSummary?.linked_invoice_count ?? linkedInvoices.length}
+                      </p>
+                    </div>
+                    <div className="px-2 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface">Billed</p>
+                      <p className="text-sm font-bold text-on-surface tabular-nums mt-0.5 break-all leading-tight">
+                        {formatAUD(linkedInvoiceSummary?.billed_total_cents ?? 0)}
+                      </p>
+                    </div>
+                    <div className="px-2 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface">Remaining</p>
+                      <p className="text-sm font-bold text-primary tabular-nums mt-0.5 break-all leading-tight">
+                        {formatAUD(remainingLinkedInvoiceTotal)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-outline-variant">
+                    {linkedInvoices.map((invoice) => (
+                      <Link
+                        key={invoice.id}
+                        href={`/invoices/${invoice.id}`}
+                        className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-container-low transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="text-sm font-semibold text-on-surface">{invoice.invoice_number}</p>
+                            {invoice.quote_stage_label && (
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
+                                {invoice.quote_stage_label}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-on-surface-variant mt-0.5">
+                            {invoice.status} · {formatDate(invoice.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-on-surface tabular-nums">
+                            {formatAUD(invoice.total_cents)}
+                          </p>
+                          <p className="text-xs text-on-surface-variant mt-0.5">
+                            bal {formatAUD(invoice.balance_cents)}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="mt-4">
+            <QuoteActions
+              quoteId={quote.id}
+              quoteNumber={quote.quote_number}
+              status={quote.status}
+              publicQuoteUrl={publicQuoteUrl}
+              hasLinkedInvoices={quote.has_linked_invoices}
+            />
+          </div>
+        </>
       )}
     </div>
   );

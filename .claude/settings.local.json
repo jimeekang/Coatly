@@ -23,7 +23,12 @@
       "mcp__claude_ai_Vercel__list_deployments",
       "WebFetch(domain:api.anthropic.com)",
       "Bash(cp \"/Users/jimee/.claude/projects/-Users-jimee-Desktop-Project-Coatly/7ff96bdc-d719-4dfa-aad0-e74a26fb54cf/tool-results/webfetch-1776570516814-iug8tc.bin\" /tmp/design.gz)",
-      "Bash(gunzip -c /tmp/design.gz)"
+      "Bash(gunzip -c /tmp/design.gz)",
+      "Bash(mkdir -p /tmp/design2)",
+      "Bash(cp \"/Users/jimee/.claude/projects/-Users-jimee-Desktop-Project-Coatly/7ff96bdc-d719-4dfa-aad0-e74a26fb54cf/tool-results/webfetch-1776572695884-xpn1wh.bin\" /tmp/design2/bundle.tar.gz)",
+      "Bash(tar xzf *)",
+      "Bash(gunzip -c bundle.tar.gz)",
+      "Bash(tar x *)"
     ]
   }
 }

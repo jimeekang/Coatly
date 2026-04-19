@@ -184,10 +184,10 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               key={option.value}
               type="button"
               onClick={() => setStatus(option.value)}
-              className={`px-5 py-2 rounded-lg text-sm font-bold tracking-tight whitespace-nowrap transition-colors ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
                 active
-                  ? 'bg-primary text-on-primary shadow-sm'
-                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+                  ? 'bg-primary text-on-primary border-primary'
+                  : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
               }`}
             >
               {option.label}
@@ -205,10 +205,10 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               key={option.value}
               type="button"
               onClick={() => setDateFilter(option.value)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-tight whitespace-nowrap transition-colors border ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
                 active
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-outline-variant bg-transparent text-on-surface-variant hover:bg-surface-container-high'
+                  ? 'bg-primary text-on-primary border-primary'
+                  : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
               }`}
             >
               {option.label}

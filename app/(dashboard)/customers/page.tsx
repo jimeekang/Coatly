@@ -12,25 +12,25 @@ export default async function CustomersPage() {
   ]);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[28px] font-bold text-pm-body">Customers</h1>
+          <h1 className="text-[28px] font-extrabold tracking-tight text-on-surface">Customers</h1>
           {customers.length > 0 && (
-            <p className="text-sm text-pm-secondary mt-0.5">{customers.length} total</p>
+            <p className="text-sm text-on-surface-variant mt-0.5">{customers.length} total</p>
           )}
         </div>
         <Link
           href="/customers/new"
-          className="rounded-lg bg-pm-teal px-4 py-2.5 text-sm text-white font-medium hover:bg-pm-teal-hover transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm text-on-primary font-semibold hover:opacity-90 transition-opacity"
         >
           + Add Customer
         </Link>
       </div>
 
       {error ? (
-        <div className="rounded-lg bg-pm-coral-light border border-pm-coral px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{error}</p>
+        <div className="rounded-lg bg-error-container border border-error/20 px-4 py-3">
+          <p className="text-sm text-on-error-container">{error}</p>
         </div>
       ) : (
         <CustomerTable customers={customers} recentJobs={recentJobs} />
