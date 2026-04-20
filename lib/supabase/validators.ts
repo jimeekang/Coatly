@@ -795,6 +795,22 @@ export const MATERIAL_ITEM_CATEGORY_LABELS: Record<MaterialItemCategory, string>
   other: 'Other',
 };
 
+const googleCalendarIdSchema = z
+  .string()
+  .trim()
+  .min(1, 'Choose a calendar')
+  .max(255, 'Calendar id is too long');
+
+export const googleCalendarSettingsSchema = z.object({
+  display_calendar_id: googleCalendarIdSchema,
+  availability_calendar_id: googleCalendarIdSchema,
+  event_destination_calendar_id: googleCalendarIdSchema,
+  timezone: z.string().trim().min(1, 'Timezone is required').max(100),
+});
+
+export type GoogleCalendarSettingsInput = z.input<typeof googleCalendarSettingsSchema>;
+export type GoogleCalendarSettings = z.output<typeof googleCalendarSettingsSchema>;
+
 export const materialItemUpsertSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or less'),
   category: z.enum(MATERIAL_ITEM_CATEGORIES).default('other'),

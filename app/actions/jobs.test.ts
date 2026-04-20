@@ -8,6 +8,8 @@ const {
   requireCurrentUserMock,
   getActiveSubscriptionRequiredMessageMock,
   getSubscriptionSnapshotForUserMock,
+  getGoogleBusyDatesForUserMock,
+  syncBookedJobToGoogleCalendarMock,
 } = vi.hoisted(() => ({
   redirectMock: vi.fn(),
   revalidatePathMock: vi.fn(),
@@ -19,6 +21,8 @@ const {
       `Choose a paid plan to unlock ${actionName}. Finish checkout before using Coatly tools.`,
   ),
   getSubscriptionSnapshotForUserMock: vi.fn(),
+  getGoogleBusyDatesForUserMock: vi.fn(),
+  syncBookedJobToGoogleCalendarMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -44,6 +48,11 @@ vi.mock('@/lib/supabase/request-context', () => ({
 vi.mock('@/lib/subscription/access', () => ({
   getActiveSubscriptionRequiredMessage: getActiveSubscriptionRequiredMessageMock,
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
+}));
+
+vi.mock('@/lib/google-calendar/service', () => ({
+  getGoogleBusyDatesForUser: getGoogleBusyDatesForUserMock,
+  syncBookedJobToGoogleCalendar: syncBookedJobToGoogleCalendarMock,
 }));
 
 import {
@@ -87,6 +96,14 @@ describe('jobs actions', () => {
         unlimitedQuotes: true,
         activeQuoteLimit: null,
       },
+    });
+    getGoogleBusyDatesForUserMock.mockResolvedValue({
+      blockedDates: [],
+      error: null,
+    });
+    syncBookedJobToGoogleCalendarMock.mockResolvedValue({
+      synced: false,
+      error: null,
     });
   });
 
@@ -635,6 +652,16 @@ describe('jobs actions', () => {
 describe('bookJobFromPublicQuote', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
+    getGoogleBusyDatesForUserMock.mockResolvedValue({
+      blockedDates: [],
+      error: null,
+    });
+    syncBookedJobToGoogleCalendarMock.mockResolvedValue({
+      synced: false,
+      error: null,
+    });
   });
 
   function makeQuoteTokenQuery(quote: Record<string, unknown> | null) {
@@ -771,6 +798,51 @@ describe('bookJobFromPublicQuote', () => {
     expect(insertPayload.start_date).toBe('2026-04-15');
     expect(insertPayload.end_date).toBe('2026-04-17');
   });
+
+  it('syncs booked jobs to Google Calendar after job creation', async () => {
+    const insertMock = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: 'job-google-1' }, error: null }),
+      }),
+    });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              makeQuoteTokenQuery({
+                id: 'quote-google-1',
+                status: 'approved',
+                working_days: 2,
+                user_id: 'uid-1',
+                customer_id: 'customer-1',
+                title: 'Interior repaint',
+                quote_number: 'Q-100',
+              })
+            ),
+          };
+        }
+        if (table === 'jobs') return { insert: insertMock };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('token-google-sync', '2026-04-15');
+
+    expect(result.error).toBeNull();
+    expect(syncBookedJobToGoogleCalendarMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'uid-1',
+        jobId: 'job-google-1',
+        quoteId: 'quote-google-1',
+        quoteNumber: 'Q-100',
+        startDate: '2026-04-15',
+        endDate: '2026-04-16',
+      })
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -780,6 +852,10 @@ describe('bookJobFromPublicQuote', () => {
 describe('getAvailableDatesForToken', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getGoogleBusyDatesForUserMock.mockResolvedValue({
+      blockedDates: [],
+      error: null,
+    });
   });
 
   function makeQuoteTokenQuery(quote: Record<string, unknown> | null) {
@@ -803,6 +879,41 @@ describe('getAvailableDatesForToken', () => {
     expect(result.error).toBeNull();
     expect(result.blockedDates).toEqual(['2026-04-20']);
     expect(result.workingDays).toBe(3);
+  });
+
+  it('merges Google busy dates with Coatly blocked dates', async () => {
+    getGoogleBusyDatesForUserMock.mockResolvedValue({
+      blockedDates: ['2026-04-21', '2026-04-22'],
+      error: null,
+    });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              makeQuoteTokenQuery({
+                id: 'quote-merge-1',
+                status: 'approved',
+                working_days: 2,
+                user_id: 'uid-1',
+              })
+            ),
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ blocked_date: '2026-04-20' }, { blocked_date: '2026-04-21' }],
+        error: null,
+      }),
+    });
+
+    const result = await getAvailableDatesForToken('token-google-busy');
+
+    expect(result.error).toBeNull();
+    expect(result.blockedDates).toEqual(['2026-04-20', '2026-04-21', '2026-04-22']);
+    expect(getGoogleBusyDatesForUserMock).toHaveBeenCalled();
   });
 
   it('returns error for unapproved quote', async () => {

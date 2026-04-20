@@ -2,6 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import {
+  getGoogleBusyDatesForUser,
+  syncBookedJobToGoogleCalendar,
+} from '@/lib/google-calendar/service';
 import { buildQuoteCustomerAddress } from '@/lib/quotes';
 import type { JobCustomerOption, JobListItem, JobQuoteOption } from '@/lib/jobs';
 import {
@@ -75,6 +79,11 @@ function buildJobTitleFromQuote(quote: QuoteCreateJobRow): string {
 
 function getTodayDateValue(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysToDateValue(dateValue: string, days: number): string {
+  const [year, month, day] = dateValue.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
 async function validateJobLinks(
@@ -573,6 +582,18 @@ export async function bookJobFromPublicQuote(
     return { error: insertError.message, jobId: null };
   }
 
+  await syncBookedJobToGoogleCalendar({
+    supabase,
+    userId: quote.user_id,
+    jobId: insertedJob.id,
+    quoteId: quote.id,
+    quoteNumber: quote.quote_number,
+    quoteTitle: quote.title,
+    customerId: quote.customer_id,
+    startDate,
+    endDate,
+  });
+
   revalidatePath('/jobs');
   revalidatePath('/schedule');
   revalidatePath(`/quotes/${quote.id}`);
@@ -627,6 +648,16 @@ export async function getAvailableDatesForToken(
   const blockedDates = (blockedRows ?? []).map(
     (row: { blocked_date: string }) => row.blocked_date,
   );
+  const today = getTodayDateValue();
 
-  return { blockedDates, workingDays, error: null };
+  const googleBusy = await getGoogleBusyDatesForUser({
+    supabase,
+    userId: quote.user_id,
+    timeMin: `${today}T00:00:00.000Z`,
+    timeMax: `${addDaysToDateValue(today, 365)}T23:59:59.999Z`,
+  });
+
+  const mergedBlockedDates = [...new Set([...blockedDates, ...googleBusy.blockedDates])].sort();
+
+  return { blockedDates: mergedBlockedDates, workingDays, error: null };
 }
