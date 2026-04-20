@@ -28,6 +28,7 @@ import {
   type QuoteSurfaceType,
 } from '@/lib/quotes';
 import { calculateInteriorEstimate } from '@/lib/interior-estimates';
+import { calculateExteriorEstimate } from '@/lib/exterior-estimates';
 import { getBusinessDocumentBranding, getBusinessRateSettings } from '@/lib/businesses';
 import { sendQuoteApprovalNotification } from '@/lib/email/resend';
 import { DEFAULT_RATE_SETTINGS } from '@/lib/rate-settings';
@@ -1033,6 +1034,9 @@ export async function createQuote(
   const interiorEstimate = parsed.data.interior_estimate
     ? calculateInteriorEstimate(parsed.data.interior_estimate, effectiveRates)
     : null;
+  const exteriorEstimateResult = parsed.data.exterior_estimate
+    ? calculateExteriorEstimate(parsed.data.exterior_estimate as Parameters<typeof calculateExteriorEstimate>[0], effectiveRates)
+    : null;
   const adjustmentCents = parsed.data.manual_adjustment_cents ?? 0;
   const discountCents = parsed.data.discount_cents ?? 0;
   const depositPercent = parsed.data.deposit_percent ?? 0;
@@ -1090,6 +1094,17 @@ export async function createQuote(
       base_subtotal_cents: result.subtotal_cents,
       ...totals,
     };
+  } else if (exteriorEstimateResult) {
+    // hybrid with exterior estimate
+    const base = exteriorEstimateResult.subtotal_cents;
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: base,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'hybrid', inputs: null };
+    preview = { rooms: [], base_subtotal_cents: base, ...totals };
   } else if (interiorEstimate) {
     // hybrid / sqm_rate with interior estimate
     const base = interiorEstimate.subtotal_cents;
@@ -1145,11 +1160,11 @@ export async function createQuote(
     manual_adjustment_cents: adjustmentCents,
     discount_cents: discountCents,
     deposit_percent: depositPercent,
-    estimate_category: interiorEstimate ? 'interior' : 'manual',
+    estimate_category: interiorEstimate ? 'interior' : exteriorEstimateResult ? 'exterior' : 'manual',
     property_type: parsed.data.interior_estimate?.property_type ?? null,
     estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
-    estimate_context: parsed.data.interior_estimate ?? {},
-    pricing_snapshot: interiorEstimate?.snapshot ?? {},
+    estimate_context: parsed.data.interior_estimate ?? parsed.data.exterior_estimate ?? {},
+    pricing_snapshot: interiorEstimate?.snapshot ?? exteriorEstimateResult?.snapshot ?? {},
     pricing_method: pricingMethod,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     pricing_method_inputs: resolvedPricingInputs as any,
@@ -1867,6 +1882,9 @@ export async function updateQuote(
   const interiorEstimate = parsed.data.interior_estimate
     ? calculateInteriorEstimate(parsed.data.interior_estimate, effectiveRates)
     : null;
+  const exteriorEstimateResult = parsed.data.exterior_estimate
+    ? calculateExteriorEstimate(parsed.data.exterior_estimate as Parameters<typeof calculateExteriorEstimate>[0], effectiveRates)
+    : null;
   const adjustmentCents = parsed.data.manual_adjustment_cents ?? 0;
   const discountCents = parsed.data.discount_cents ?? 0;
   const depositPercent = parsed.data.deposit_percent ?? 0;
@@ -1895,6 +1913,11 @@ export async function updateQuote(
     const totals = composeQuoteTotals({ base_subtotal_cents: result.subtotal_cents, adjustment_cents: adjustmentCents, discount_cents: discountCents, line_items: lineItems });
     resolvedPricingInputs = { method: 'manual', inputs };
     preview = { rooms: [], base_subtotal_cents: result.subtotal_cents, ...totals };
+  } else if (exteriorEstimateResult) {
+    const base = exteriorEstimateResult.subtotal_cents;
+    const totals = composeQuoteTotals({ base_subtotal_cents: base, adjustment_cents: adjustmentCents, discount_cents: discountCents, line_items: lineItems });
+    resolvedPricingInputs = { method: 'hybrid', inputs: null };
+    preview = { rooms: [], base_subtotal_cents: base, ...totals };
   } else if (interiorEstimate) {
     const base = interiorEstimate.subtotal_cents;
     const labourMarkup = Math.round(base * (parsed.data.labour_margin_percent / 100));
@@ -1959,11 +1982,11 @@ export async function updateQuote(
     manual_adjustment_cents: adjustmentCents,
     discount_cents: discountCents,
     deposit_percent: depositPercent,
-    estimate_category: interiorEstimate ? 'interior' : 'manual',
+    estimate_category: interiorEstimate ? 'interior' : exteriorEstimateResult ? 'exterior' : 'manual',
     property_type: parsed.data.interior_estimate?.property_type ?? null,
     estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
-    estimate_context: parsed.data.interior_estimate ?? {},
-    pricing_snapshot: interiorEstimate?.snapshot ?? {},
+    estimate_context: parsed.data.interior_estimate ?? parsed.data.exterior_estimate ?? {},
+    pricing_snapshot: interiorEstimate?.snapshot ?? exteriorEstimateResult?.snapshot ?? {},
     pricing_method: pricingMethod,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     pricing_method_inputs: resolvedPricingInputs as any,

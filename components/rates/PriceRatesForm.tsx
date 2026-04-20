@@ -11,6 +11,11 @@ import {
   COATING_LABELS,
   DOOR_SCOPE_LABELS,
   DOOR_SCOPES,
+  EXTERIOR_COATING_LABELS,
+  EXTERIOR_COATING_TYPES,
+  EXTERIOR_SURFACE_LABELS,
+  EXTERIOR_SURFACE_UNITS,
+  EXTERIOR_SURFACES,
   PRICING_METHOD_LABELS,
   PRICING_METHODS,
   RATE_DOOR_TYPE_LABELS,
@@ -25,6 +30,9 @@ import {
   WINDOW_TYPE_LABELS,
   WINDOW_TYPES,
   type DoorScope,
+  type ExteriorCoatingType,
+  type ExteriorRateSettings,
+  type ExteriorSurface,
   type MaterialCostMethod,
   type PricingMethodSettings,
   type RateDoorType,
@@ -746,6 +754,79 @@ function ManualTab() {
   );
 }
 
+// ─── Exterior rates ───────────────────────────────────────────────────────────
+
+function ExteriorRatesSection({
+  rates,
+  onChange,
+}: {
+  rates: ExteriorRateSettings;
+  onChange: (surface: ExteriorSurface, coating: ExteriorCoatingType, v: string) => void;
+}) {
+  return (
+    <section>
+      <SectionHeading
+        title="Exterior Surface Rates"
+        subtitle="Default rates for exterior surfaces. Walls and eaves are per sqm; fascia and gutters are per lm."
+      />
+      <div className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
+        <table className="w-full min-w-[560px] text-sm">
+          <thead>
+            <tr className="border-b border-pm-border bg-pm-surface">
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                Surface
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                Unit
+              </th>
+              {EXTERIOR_COATING_TYPES.map((c) => (
+                <th key={c} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                  {EXTERIOR_COATING_LABELS[c]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {EXTERIOR_SURFACES.map((surface, i) => (
+              <tr key={surface} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
+                <td className="px-4 py-3 font-medium text-pm-body">
+                  {EXTERIOR_SURFACE_LABELS[surface]}
+                </td>
+                <td className="px-4 py-3 text-center text-xs text-pm-secondary">
+                  {EXTERIOR_SURFACE_UNITS[surface]}
+                </td>
+                {EXTERIOR_COATING_TYPES.map((coating) => (
+                  <td key={coating} className="px-4 py-2 text-center">
+                    <PriceInput
+                      value={rates[surface][coating]}
+                      unit={EXTERIOR_SURFACE_UNITS[surface]}
+                      onChange={(v) => onChange(surface, coating, v)}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function ExteriorTab({
+  rates,
+  onChange,
+}: {
+  rates: ExteriorRateSettings;
+  onChange: (surface: ExteriorSurface, coating: ExteriorCoatingType, v: string) => void;
+}) {
+  return (
+    <div className="space-y-10">
+      <ExteriorRatesSection rates={rates} onChange={onChange} />
+    </div>
+  );
+}
+
 // ─── Method tab icons ─────────────────────────────────────────────────────────
 
 /** Pricing methods shown in the settings UI. sqm_rate is normalized to hybrid. */
@@ -774,6 +855,7 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
   const [activeTab, setActiveTab] = useState<PricingMethod>(
     normalizeStoredPreferredPricingMethod(defaultRates.pricing.preferred_pricing_method)
   );
+  const [activeScope, setActiveScope] = useState<'interior' | 'exterior'>('interior');
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -853,30 +935,39 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
     }));
   }
 
-  // ── Room rate preset handlers ────────────────────────────────────────────────
+  // ── Room rate preset handlers (auto-save to DB) ──────────────────────────────
   function handleRoomPresetAdd(preset: RoomRatePreset) {
-    setSaved(false);
-    setRates((prev) => ({
-      ...prev,
-      room_rate_presets: [...prev.room_rate_presets, preset],
-    }));
+    const nextRates = { ...rates, room_rate_presets: [...rates.room_rate_presets, preset] };
+    setRates(nextRates);
+    persistRates(nextRates);
   }
 
   function handleRoomPresetUpdate(id: string, patch: Omit<RoomRatePreset, 'id'>) {
-    setSaved(false);
-    setRates((prev) => ({
-      ...prev,
-      room_rate_presets: prev.room_rate_presets.map((p) =>
-        p.id === id ? { id, ...patch } : p
-      ),
-    }));
+    const nextRates = {
+      ...rates,
+      room_rate_presets: rates.room_rate_presets.map((p) => (p.id === id ? { id, ...patch } : p)),
+    };
+    setRates(nextRates);
+    persistRates(nextRates);
   }
 
   function handleRoomPresetDelete(id: string) {
+    const nextRates = {
+      ...rates,
+      room_rate_presets: rates.room_rate_presets.filter((p) => p.id !== id),
+    };
+    setRates(nextRates);
+    persistRates(nextRates);
+  }
+
+  // ── Exterior rate handler ────────────────────────────────────────────────────
+  function handleExteriorChange(surface: ExteriorSurface, coating: ExteriorCoatingType, value: string) {
     setSaved(false);
+    const cents = displayToCents(value);
+    if (cents === null) return;
     setRates((prev) => ({
       ...prev,
-      room_rate_presets: prev.room_rate_presets.filter((p) => p.id !== id),
+      exterior: { ...prev.exterior, [surface]: { ...prev.exterior[surface], [coating]: cents } },
     }));
   }
 
@@ -897,11 +988,20 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
     });
   }
 
+  // ── Persist helper (shared by auto-save and submit) ─────────────────────────
+  function persistRates(nextRates: UserRateSettings) {
+    setSaved(false);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateRateSettingsAction(nextRates);
+      if (result.error) setError(result.error);
+      else setSaved(true);
+    });
+  }
+
   // ── Submit ───────────────────────────────────────────────────────────────────
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaved(false);
-    setError(null);
     const nextRates: UserRateSettings = {
       ...rates,
       pricing: {
@@ -909,11 +1009,7 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
         preferred_pricing_method: normalizeStoredPreferredPricingMethod(activeTab),
       },
     };
-    startTransition(async () => {
-      const result = await updateRateSettingsAction(nextRates);
-      if (result.error) setError(result.error);
-      else setSaved(true);
-    });
+    persistRates(nextRates);
   }
 
   return (
@@ -966,33 +1062,12 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
         </div>
       </section>
 
-      {/* ── Tab content ─────────────────────────────────────────────────────── */}
-
-      {/* Detailed Estimate: show surface, door, window rate tables */}
-      {activeTab === 'hybrid' && (
-        <div className="space-y-10">
-          <WallCeilingRatesSection rates={rates} onSurfaceChange={handleSurfaceChange} />
-          <TrimRatesSection rates={rates} onSurfaceChange={handleSurfaceChange} />
-          <DoorRatesSection
-            rates={rates}
-            onDoorRateChange={handleDoorRateChange}
-            onDoorTypeToggle={handleDoorTypeToggle}
-            onDoorScopeToggle={handleDoorScopeToggle}
-          />
-          <WindowRatesSection
-            rates={rates}
-            onWindowRateChange={handleWindowRateChange}
-            onWindowTypeToggle={handleWindowTypeToggle}
-          />
-        </div>
-      )}
-
-      {/* Day Rate: daily rate + material cost settings */}
+      {/* ── Day Rate: no scope distinction ──────────────────────────────────── */}
       {activeTab === 'day_rate' && (
         <DayRateTab pricing={rates.pricing} onChange={handlePricingChange} />
       )}
 
-      {/* Room Rate: preset manager */}
+      {/* ── Room Rate: interior only ─────────────────────────────────────────── */}
       {activeTab === 'room_rate' && (
         <RoomRateTab
           rates={rates}
@@ -1002,8 +1077,60 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
         />
       )}
 
-      {/* Manual: informational */}
+      {/* ── Manual: no scope distinction ─────────────────────────────────────── */}
       {activeTab === 'manual' && <ManualTab />}
+
+      {/* ── Detailed Estimate: Interior / Exterior scope toggle ─────────────── */}
+      {activeTab === 'hybrid' && (
+        <>
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              Job Scope
+            </p>
+            <div className="inline-flex rounded-xl border border-pm-border bg-pm-surface p-1 gap-1">
+              {(['interior', 'exterior'] as const).map((scope) => {
+                const isActive = activeScope === scope;
+                return (
+                  <button
+                    key={scope}
+                    type="button"
+                    onClick={() => setActiveScope(scope)}
+                    className={`rounded-lg px-5 py-2 text-sm font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-white text-pm-teal shadow-sm'
+                        : 'text-pm-secondary hover:text-pm-body'
+                    }`}
+                  >
+                    {scope === 'interior' ? 'Interior' : 'Exterior'}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {activeScope === 'interior' && (
+            <div className="space-y-10">
+              <WallCeilingRatesSection rates={rates} onSurfaceChange={handleSurfaceChange} />
+              <TrimRatesSection rates={rates} onSurfaceChange={handleSurfaceChange} />
+              <DoorRatesSection
+                rates={rates}
+                onDoorRateChange={handleDoorRateChange}
+                onDoorTypeToggle={handleDoorTypeToggle}
+                onDoorScopeToggle={handleDoorScopeToggle}
+              />
+              <WindowRatesSection
+                rates={rates}
+                onWindowRateChange={handleWindowRateChange}
+                onWindowTypeToggle={handleWindowTypeToggle}
+              />
+            </div>
+          )}
+
+          {activeScope === 'exterior' && (
+            <ExteriorTab rates={rates.exterior} onChange={handleExteriorChange} />
+          )}
+        </>
+      )}
 
       {/* ── Status messages ─────────────────────────────────────────────────── */}
       {error && (
