@@ -128,6 +128,11 @@ type JobRow = {
   start_date: string | null;
   end_date: string | null;
   duration_days: number | null;
+  google_calendar_event_id: string | null;
+  google_calendar_id: string | null;
+  schedule_source: 'manual' | 'google_booking_sync';
+  google_sync_status: 'not_synced' | 'synced' | 'failed';
+  google_sync_error: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -144,12 +149,67 @@ type JobInsert = {
   start_date?: string | null;
   end_date?: string | null;
   duration_days?: number | null;
+  google_calendar_event_id?: string | null;
+  google_calendar_id?: string | null;
+  schedule_source?: 'manual' | 'google_booking_sync';
+  google_sync_status?: 'not_synced' | 'synced' | 'failed';
+  google_sync_error?: string | null;
   notes?: string | null;
   created_at?: string;
   updated_at?: string;
 };
 
 type JobUpdate = Partial<Omit<JobInsert, 'user_id'>>;
+
+type GoogleCalendarConnectionRow = {
+  user_id: string;
+  google_account_email: string;
+  google_account_subject: string;
+  encrypted_refresh_token: string;
+  granted_scopes: string[];
+  is_active: boolean;
+  last_sync_at: string | null;
+  last_sync_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type GoogleCalendarConnectionInsert = {
+  user_id: string;
+  google_account_email: string;
+  google_account_subject: string;
+  encrypted_refresh_token: string;
+  granted_scopes?: string[];
+  is_active?: boolean;
+  last_sync_at?: string | null;
+  last_sync_error?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type GoogleCalendarConnectionUpdate = Partial<GoogleCalendarConnectionInsert>;
+
+type GoogleCalendarSettingsRow = {
+  user_id: string;
+  display_calendar_id: string;
+  availability_calendar_id: string;
+  event_destination_calendar_id: string;
+  timezone: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type GoogleCalendarSettingsInsert = {
+  user_id: string;
+  display_calendar_id?: string;
+  availability_calendar_id?: string;
+  event_destination_calendar_id?: string;
+  timezone?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type GoogleCalendarSettingsUpdate = Partial<Omit<GoogleCalendarSettingsInsert, 'user_id'>>;
 
 export type AppDatabase = Omit<BaseDatabase, 'public'> & {
   public: Omit<BaseDatabase['public'], 'Tables'> & {
@@ -197,6 +257,18 @@ export type AppDatabase = Omit<BaseDatabase, 'public'> & {
             referencedColumns: ['id'];
           },
         ];
+      };
+      google_calendar_connections: {
+        Row: GoogleCalendarConnectionRow;
+        Insert: GoogleCalendarConnectionInsert;
+        Update: GoogleCalendarConnectionUpdate;
+        Relationships: [];
+      };
+      google_calendar_settings: {
+        Row: GoogleCalendarSettingsRow;
+        Insert: GoogleCalendarSettingsInsert;
+        Update: GoogleCalendarSettingsUpdate;
+        Relationships: [];
       };
     };
   };

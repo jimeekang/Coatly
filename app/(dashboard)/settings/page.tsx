@@ -2,12 +2,18 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import BusinessProfileForm from '@/components/settings/BusinessProfileForm';
+import GoogleCalendarCard from '@/components/settings/GoogleCalendarCard';
+import { getGoogleCalendarIntegrationSummary } from '@/lib/google-calendar/service';
 import { getBusinessProfile } from '@/lib/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Settings' };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -15,7 +21,16 @@ export default async function SettingsPage() {
 
   if (!user) redirect('/login');
 
-  const { data: business, error } = await getBusinessProfile(supabase, user.id, user.email ?? null);
+  const params = searchParams ? await searchParams : undefined;
+  const { data: business, error } = await getBusinessProfile(
+    supabase,
+    user.id,
+    user.email ?? null
+  );
+  const googleCalendar = await getGoogleCalendarIntegrationSummary(supabase, user.id);
+  const calendarError = typeof params?.calendar_error === 'string' ? params.calendar_error : null;
+  const calendarSuccess =
+    params?.calendar_success === 'connected' ? 'Google Calendar connected.' : null;
 
   if (error || !business) {
     return (
@@ -35,6 +50,14 @@ export default async function SettingsPage() {
       </div>
 
       <BusinessProfileForm defaultValues={business} />
+
+      <hr className="border-pm-border" />
+
+      <GoogleCalendarCard
+        integration={googleCalendar}
+        errorMessage={calendarError}
+        successMessage={calendarSuccess}
+      />
 
       <hr className="border-pm-border" />
 

@@ -14,6 +14,12 @@ export type Update<T extends keyof Database['public']['Tables']> =
 
 export type Business = Tables<'businesses'>;
 export type Customer = Tables<'customers'>;
+export type GoogleCalendarConnection = Tables<'google_calendar_connections'>;
+export type GoogleCalendarConnectionInsert = Insert<'google_calendar_connections'>;
+export type GoogleCalendarConnectionUpdate = Update<'google_calendar_connections'>;
+export type GoogleCalendarSettings = Tables<'google_calendar_settings'>;
+export type GoogleCalendarSettingsInsert = Insert<'google_calendar_settings'>;
+export type GoogleCalendarSettingsUpdate = Update<'google_calendar_settings'>;
 export type Invoice = Tables<'invoices'>;
 export type InvoiceLineItem = Tables<'invoice_line_items'>;
 export type Job = Tables<'jobs'>;
