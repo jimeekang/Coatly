@@ -19,7 +19,7 @@
 ## 2. 왜 Option B인가
 
 현재 Coatly는 단순 일정 보기 앱이 아니라 아래 흐름을 이미 가지고 있다.
-
+ㅐ
 - quote 승인 후 고객이 날짜 선택
 - blocked dates 계산
 - `jobs`를 통한 상태 관리
