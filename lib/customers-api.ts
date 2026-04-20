@@ -11,6 +11,24 @@ import type { AppDatabase } from '@/types/app-database';
 type CustomerRow = AppDatabase['public']['Tables']['customers']['Row'];
 type CustomerInsertRow = AppDatabase['public']['Tables']['customers']['Insert'];
 type CustomerUpdateRow = AppDatabase['public']['Tables']['customers']['Update'];
+type CustomerCreatePayload = Omit<CustomerInsertRow, 'user_id'>;
+type SerializedCustomerRow = Pick<
+  CustomerRow,
+  | 'id'
+  | 'user_id'
+  | 'name'
+  | 'email'
+  | 'phone'
+  | 'address_line1'
+  | 'address_line2'
+  | 'city'
+  | 'state'
+  | 'postcode'
+  | 'notes'
+  | 'is_archived'
+  | 'created_at'
+  | 'updated_at'
+>;
 
 export const CUSTOMER_API_SELECT =
   'id, user_id, name, email, phone, address_line1, address_line2, city, state, postcode, notes, is_archived, created_at, updated_at';
@@ -77,7 +95,7 @@ export function parseCustomerUpdateInput(input: unknown): {
   return { data: result.data, error: null };
 }
 
-export function serializeCustomer(row: CustomerRow): Customer {
+export function serializeCustomer(row: SerializedCustomerRow): Customer {
   return {
     id: row.id,
     user_id: row.user_id,
@@ -92,7 +110,7 @@ export function serializeCustomer(row: CustomerRow): Customer {
   };
 }
 
-export function buildCreateCustomerPayload(input: CustomerCreateInput): CustomerInsertRow {
+export function buildCreateCustomerPayload(input: CustomerCreateInput): CustomerCreatePayload {
   return {
     name: input.name.trim(),
     email: normalizeOptionalEmail(input.email),
@@ -164,7 +182,7 @@ export async function findDuplicateCustomer(
   }
 
   const duplicate = (result.data ?? []).find((row) => {
-    const current = row as CustomerRow;
+    const current = row as SerializedCustomerRow;
 
     return (
       normalizeComparisonValue(current.name) === normalizedName &&
@@ -173,7 +191,7 @@ export async function findDuplicateCustomer(
   });
 
   return {
-    data: duplicate ? serializeCustomer(duplicate as CustomerRow) : null,
+    data: duplicate ? serializeCustomer(duplicate as SerializedCustomerRow) : null,
     error: null,
   };
 }

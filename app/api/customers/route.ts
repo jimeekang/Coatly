@@ -88,8 +88,8 @@ export async function POST(request: Request) {
   const result = await supabase
     .from('customers')
     .insert({
-      user_id: user.id,
       ...payload,
+      user_id: user.id,
     })
     .select(CUSTOMER_API_SELECT)
     .single();
