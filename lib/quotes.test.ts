@@ -95,6 +95,7 @@ describe('lib/quotes', () => {
         pricing_method: 'hybrid',
         pricing_method_inputs: null,
         interior_estimate: null,
+        exterior_estimate: null,
         line_items: [],
         rooms: [
           {
@@ -293,7 +294,6 @@ describe('lib/quotes', () => {
         internal_notes: 'Internal note',
         pricing_method: 'hybrid',
         pricing_method_inputs: null,
-        line_items: [],
         interior_estimate: {
           property_type: 'apartment',
           estimate_mode: 'specific_areas',
@@ -341,6 +341,8 @@ describe('lib/quotes', () => {
             },
           ],
         },
+        exterior_estimate: null,
+        line_items: [],
         rooms: [],
       },
     });

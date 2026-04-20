@@ -45,7 +45,7 @@ describe('CustomerForm', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Add Property' }));
+    await user.click(screen.getByRole('button', { name: 'Add Site' }));
     await user.clear(screen.getAllByPlaceholderText('e.g. Home, Rental, Beach house')[1]);
     await user.type(screen.getAllByPlaceholderText('e.g. Home, Rental, Beach house')[1], 'Rental');
     await user.type(screen.getAllByPlaceholderText('e.g. 12 Harbor St')[1], '8 Beach Rd');

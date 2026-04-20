@@ -1266,7 +1266,7 @@ describe('public quote access', () => {
           id: 'quote-public-1',
           user_id: 'user-1',
           customer_id: 'customer-1',
-          public_share_token: 'public-token-1',
+          public_share_token: '11111111-1111-1111-1111-111111111111',
           approved_at: null,
           approved_by_name: null,
           approved_by_email: null,
@@ -1412,7 +1412,7 @@ describe('public quote access', () => {
       }),
     });
 
-    const result = await getPublicQuoteByToken('public-token-1');
+    const result = await getPublicQuoteByToken('11111111-1111-1111-1111-111111111111');
 
     expect(quoteSelectMock).toHaveBeenCalledWith(
       expect.not.stringContaining('public_share_token')
@@ -1515,7 +1515,7 @@ describe('public quote access', () => {
     });
 
     const formData = new FormData();
-    formData.set('quoteToken', 'public-token-1');
+    formData.set('quoteToken', '11111111-1111-1111-1111-111111111111');
     formData.set('lineItemId', 'line-1');
     formData.set('isSelected', 'true');
 
@@ -1546,7 +1546,7 @@ describe('public quote access', () => {
                   id: 'quote-public-1',
                   user_id: 'user-1',
                   customer_id: 'customer-1',
-                  public_share_token: 'public-token-1',
+                  public_share_token: '11111111-1111-1111-1111-111111111111',
                   approved_at: null,
                   approved_by_name: null,
                   approved_by_email: null,
@@ -1635,7 +1635,7 @@ describe('public quote access', () => {
     });
 
     const formData = new FormData();
-    formData.set('quoteToken', 'public-token-1');
+    formData.set('quoteToken', '11111111-1111-1111-1111-111111111111');
     formData.set('approvedByName', 'Alex Harper');
     formData.set('approvedByEmail', 'alex@example.com');
     formData.set('approvalSignature', 'Alex Harper');
@@ -1677,7 +1677,7 @@ describe('public quote access', () => {
                   id: 'quote-public-1',
                   user_id: 'user-1',
                   customer_id: 'customer-1',
-                  public_share_token: 'public-token-1',
+                  public_share_token: '11111111-1111-1111-1111-111111111111',
                   approved_at: null,
                   approved_by_name: null,
                   approved_by_email: null,
@@ -1735,7 +1735,7 @@ describe('public quote access', () => {
     });
 
     const formData = new FormData();
-    formData.set('quoteToken', 'public-token-1');
+    formData.set('quoteToken', '11111111-1111-1111-1111-111111111111');
     formData.set('rejectedByName', 'Alex Harper');
     formData.set('rejectedByEmail', 'alex@example.com');
 

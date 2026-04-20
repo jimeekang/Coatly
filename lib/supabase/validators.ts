@@ -13,7 +13,7 @@ import {
   INTERIOR_WINDOW_TYPES,
   normalizeInteriorWallPaintSystem,
 } from '@/lib/interior-estimates';
-import { ratePresetSchema } from '@/lib/rate-settings';
+import { ratePresetSchema, EXTERIOR_COATING_TYPES } from '@/lib/rate-settings';
 import { isValidStorageReference } from '@/lib/supabase/storage';
 
 const optionalTrimmedString = z
@@ -605,6 +605,21 @@ export const quoteCreateSchema = z.object({
     .default(0),
   rooms: z.array(quoteRoomSchema).default([]),
   interior_estimate: interiorEstimateSchema.optional(),
+  exterior_estimate: z.object({
+    coating: z.enum(EXTERIOR_COATING_TYPES),
+    surfaces: z.object({
+      ext_walls: z.number().min(0).optional(),
+      eaves: z.number().min(0).optional(),
+      fascia: z.number().min(0).optional(),
+      gutters: z.number().min(0).optional(),
+    }).optional(),
+    custom_labels: z.object({
+      ext_walls: z.string().optional(),
+      eaves: z.string().optional(),
+      fascia: z.string().optional(),
+      gutters: z.string().optional(),
+    }).optional(),
+  }).optional(),
   line_items: z.array(
     z.object({
       material_item_id: z.string().uuid().nullable().optional(),
@@ -678,7 +693,7 @@ export const quoteCreateSchema = z.object({
 
   // day_rate / room_rate / manual methods don't need rooms or interior_estimate
   const methodNeedsRooms = ['sqm_rate', 'hybrid'].includes(value.pricing_method);
-  if (methodNeedsRooms && !value.interior_estimate && value.rooms.length === 0) {
+  if (methodNeedsRooms && !value.interior_estimate && !value.exterior_estimate && value.rooms.length === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Add at least one room',
@@ -782,19 +797,6 @@ export type JobUpdate = z.output<typeof jobUpdateSchema>;
 export type JobUpsertInput = z.input<typeof jobUpsertSchema>;
 export type JobUpsert = z.output<typeof jobUpsertSchema>;
 
-// ─── Material Items ───────────────────────────────────────────────────────────
-
-export const MATERIAL_ITEM_CATEGORIES = ['paint', 'primer', 'supply', 'service', 'other'] as const;
-export type MaterialItemCategory = (typeof MATERIAL_ITEM_CATEGORIES)[number];
-
-export const MATERIAL_ITEM_CATEGORY_LABELS: Record<MaterialItemCategory, string> = {
-  paint: 'Paint',
-  primer: 'Primer',
-  supply: 'Supply',
-  service: 'Service',
-  other: 'Other',
-};
-
 const googleCalendarIdSchema = z
   .string()
   .trim()
@@ -810,6 +812,19 @@ export const googleCalendarSettingsSchema = z.object({
 
 export type GoogleCalendarSettingsInput = z.input<typeof googleCalendarSettingsSchema>;
 export type GoogleCalendarSettings = z.output<typeof googleCalendarSettingsSchema>;
+
+// ─── Material Items ───────────────────────────────────────────────────────────
+
+export const MATERIAL_ITEM_CATEGORIES = ['paint', 'primer', 'supply', 'service', 'other'] as const;
+export type MaterialItemCategory = (typeof MATERIAL_ITEM_CATEGORIES)[number];
+
+export const MATERIAL_ITEM_CATEGORY_LABELS: Record<MaterialItemCategory, string> = {
+  paint: 'Paint',
+  primer: 'Primer',
+  supply: 'Supply',
+  service: 'Service',
+  other: 'Other',
+};
 
 export const materialItemUpsertSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or less'),

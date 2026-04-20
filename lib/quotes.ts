@@ -718,6 +718,7 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       pricing_method: parsed.data.pricing_method,
       pricing_method_inputs: parsed.data.pricing_method_inputs ?? null,
       interior_estimate: normalizeInteriorEstimate(parsed.data.interior_estimate),
+      exterior_estimate: parsed.data.exterior_estimate ?? null,
       line_items: (parsed.data.line_items ?? []).map((item) => {
         const is_optional = item.is_optional ?? false;
 

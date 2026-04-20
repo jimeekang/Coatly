@@ -51,6 +51,13 @@ import {
   calculateQuickQuotePreview,
   type QuickQuoteBuilderState,
 } from '@/components/quotes/QuickQuoteBuilder';
+import {
+  ExteriorEstimateBuilder,
+  createEmptyExteriorEstimateState,
+  buildExteriorEstimatePayload,
+  type ExteriorEstimateFormState,
+} from '@/components/quotes/ExteriorEstimateBuilder';
+import { calculateExteriorEstimate } from '@/lib/exterior-estimates';
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -750,6 +757,9 @@ export function QuoteForm({
     customerPropertyOptions[Number(selectedPropertyIndex)] ?? customerPropertyOptions[0] ?? null;
   const canSendQuote = customerEmailOptions.length > 0;
 
+  // Interior / exterior scope (only affects hybrid method)
+  const [quoteScope, setQuoteScope] = useState<'interior' | 'exterior'>('interior');
+
   // Quick mode state
   const [quickState, setQuickState] = useState<QuickQuoteBuilderState>(
     createEmptyQuickQuoteState
@@ -760,6 +770,11 @@ export function QuoteForm({
     buildInitialAdvancedEstimate(defaultValues)
   );
 
+  // Exterior estimate state
+  const [exteriorEstimate, setExteriorEstimate] = useState<ExteriorEstimateFormState>(
+    createEmptyExteriorEstimateState
+  );
+
   // Live preview totals
   const quickPreview = useMemo(
     () => calculateQuickQuotePreview(quickState, rateSettings),
@@ -767,21 +782,28 @@ export function QuoteForm({
   );
 
   const advancedPreview = useMemo(() => {
-    if (pricingStrategy !== 'hybrid' || estimateMode !== 'advanced') return null;
+    if (pricingStrategy !== 'hybrid' || estimateMode !== 'advanced' || quoteScope !== 'interior') return null;
     return calculateInteriorEstimate(
       buildAdvancedEstimatePayload(advancedEstimate),
       rateSettings
     );
-  }, [advancedEstimate, estimateMode, pricingStrategy, rateSettings]);
+  }, [advancedEstimate, estimateMode, pricingStrategy, quoteScope, rateSettings]);
+
+  const exteriorPreview = useMemo(() => {
+    if (pricingStrategy !== 'hybrid' || quoteScope !== 'exterior') return null;
+    return calculateExteriorEstimate(buildExteriorEstimatePayload(exteriorEstimate), rateSettings);
+  }, [exteriorEstimate, pricingStrategy, quoteScope, rateSettings]);
 
   // Markup calculations (applied on top of base estimate)
   const labourMarkupPct = intVal(form.labour_markup, 0);
   const materialMarkupPct = intVal(form.material_markup, 0);
   const hybridBaseSubtotal =
     pricingStrategy === 'hybrid'
-      ? estimateMode === 'quick'
-        ? quickPreview.subtotal_cents
-        : advancedPreview?.subtotal_cents ?? 0
+      ? quoteScope === 'exterior'
+        ? exteriorPreview?.subtotal_cents ?? 0
+        : estimateMode === 'quick'
+          ? quickPreview.subtotal_cents
+          : advancedPreview?.subtotal_cents ?? 0
       : 0;
   const labourMarkupCents = Math.round(hybridBaseSubtotal * labourMarkupPct / 100);
   const materialMarkupCents = Math.round(hybridBaseSubtotal * materialMarkupPct / 100);
@@ -914,7 +936,11 @@ export function QuoteForm({
       (pricingStrategy === 'day_rate' ||
         pricingStrategy === 'manual' ||
         (pricingStrategy === 'room_rate' && roomRateItems.length > 0) ||
-        (pricingStrategy === 'hybrid' && (estimateMode === 'advanced' || quickState.rooms.length > 0)))
+        (pricingStrategy === 'hybrid' && (
+          quoteScope === 'exterior'
+            ? (exteriorPreview?.subtotal_cents ?? 0) > 0
+            : estimateMode === 'advanced' || quickState.rooms.length > 0
+        )))
   );
 
   function handleDiscountInputChange(value: string) {
@@ -1016,8 +1042,26 @@ export function QuoteForm({
         pricing_method: 'manual',
         pricing_method_inputs: { method: 'manual' as const, inputs: manualInputs },
       };
+    } else if (quoteScope === 'exterior') {
+      payload = {
+        customer_id: form.customer_id,
+        customer_address,
+        title: form.title.trim(),
+        status: form.status,
+        valid_until: form.valid_until,
+        complexity: 'standard',
+        labour_margin_percent: labourMarkupPct,
+        material_margin_percent: materialMarkupPct,
+        manual_adjustment_cents: 0,
+        notes: form.notes,
+        internal_notes: form.internal_notes,
+        rooms: [],
+        line_items: allLineItems,
+        exterior_estimate: buildExteriorEstimatePayload(exteriorEstimate),
+        pricing_method: 'hybrid',
+      };
     } else {
-      // hybrid / sqm_rate — use existing interior estimate builder
+      // hybrid / sqm_rate — interior estimate builder
       let interior_estimate: InteriorEstimateInput;
       if (estimateMode === 'quick') {
         interior_estimate = mapQuickQuoteToInteriorEstimate({
@@ -1322,6 +1366,31 @@ export function QuoteForm({
         </div>
       </section>
 
+      {/* Interior / Exterior scope toggle — only for detailed estimate */}
+      {pricingStrategy === 'hybrid' && (
+        <section className="rounded-2xl border border-pm-border bg-white p-4">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+            Job Scope
+          </h3>
+          <div className="inline-flex rounded-xl border border-pm-border bg-pm-surface p-1 gap-1">
+            {(['interior', 'exterior'] as const).map((scope) => (
+              <button
+                key={scope}
+                type="button"
+                onClick={() => setQuoteScope(scope)}
+                className={`rounded-lg px-6 py-2 text-sm font-semibold transition-colors ${
+                  quoteScope === scope
+                    ? 'bg-white text-pm-teal shadow-sm'
+                    : 'text-pm-secondary hover:text-pm-body'
+                }`}
+              >
+                {scope === 'interior' ? 'Interior' : 'Exterior'}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Day rate inputs */}
       {pricingStrategy === 'day_rate' && (
         <section className="rounded-2xl border border-pm-border bg-white p-4">
@@ -1569,7 +1638,7 @@ export function QuoteForm({
       )}
 
       {/* Estimate builder — only shown for hybrid method */}
-      {pricingStrategy === 'hybrid' && (
+      {pricingStrategy === 'hybrid' && quoteScope === 'interior' && (
         <>
           {/* Mode toggle — Quick vs Advanced */}
           <div className="flex overflow-hidden rounded-xl border border-pm-border bg-white">
@@ -1615,6 +1684,15 @@ export function QuoteForm({
             />
           )}
         </>
+      )}
+
+      {/* Exterior estimate builder */}
+      {pricingStrategy === 'hybrid' && quoteScope === 'exterior' && (
+        <ExteriorEstimateBuilder
+          value={exteriorEstimate}
+          onChange={(next) => { setExteriorEstimate(next); setError(null); }}
+          rateSettings={rateSettings}
+        />
       )}
 
       {/* Materials & Services line items */}

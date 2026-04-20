@@ -154,6 +154,46 @@ export const PRICING_METHOD_LABELS: Record<PricingMethod, string> = {
   hybrid: 'Detailed Estimate',
 };
 
+// ─── Exterior rate types ──────────────────────────────────────────────────────
+
+export const EXTERIOR_COATING_TYPES = ['refresh_1coat', 'repaint_2coat', 'full_system'] as const;
+export type ExteriorCoatingType = (typeof EXTERIOR_COATING_TYPES)[number];
+
+export const EXTERIOR_SURFACES = ['ext_walls', 'eaves', 'fascia', 'gutters'] as const;
+export type ExteriorSurface = (typeof EXTERIOR_SURFACES)[number];
+
+export type ExteriorSurfaceRates = Record<ExteriorCoatingType, number>;
+export type ExteriorRateSettings = Record<ExteriorSurface, ExteriorSurfaceRates>;
+
+export const EXTERIOR_COATING_LABELS: Record<ExteriorCoatingType, string> = {
+  refresh_1coat: 'Refresh (1 coat)',
+  repaint_2coat: 'Repaint (2 coats)',
+  full_system: 'Full System (3 coats)',
+};
+
+export const EXTERIOR_SURFACE_LABELS: Record<ExteriorSurface, string> = {
+  ext_walls: 'Exterior Walls',
+  eaves: 'Eaves / Soffits',
+  fascia: 'Fascia / Barge Boards',
+  gutters: 'Gutters',
+};
+
+export const EXTERIOR_SURFACE_UNITS: Record<ExteriorSurface, string> = {
+  ext_walls: '/sqm',
+  eaves: '/sqm',
+  fascia: '/lm',
+  gutters: '/lm',
+};
+
+export function buildDefaultExteriorRates(): ExteriorRateSettings {
+  return {
+    ext_walls: { refresh_1coat: 1800, repaint_2coat: 2500, full_system: 3500 },
+    eaves:     { refresh_1coat: 1500, repaint_2coat: 2200, full_system: 3000 },
+    fascia:    { refresh_1coat: 1000, repaint_2coat: 1500, full_system: 2000 },
+    gutters:   { refresh_1coat:  800, repaint_2coat: 1200, full_system: 1600 },
+  };
+}
+
 export const MATERIAL_COST_METHODS = ['percentage', 'flat'] as const;
 export type MaterialCostMethod = (typeof MATERIAL_COST_METHODS)[number];
 
@@ -191,6 +231,7 @@ export type UserRateSettings = {
   enabled_window_types: WindowType[];
   room_rate_presets: RoomRatePreset[];
   pricing: PricingMethodSettings;
+  exterior: ExteriorRateSettings;
 };
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
@@ -258,6 +299,19 @@ const roomRatePresetSchema = z.object({
   rate_cents: z.number().int().min(0),
 });
 
+const exteriorSurfaceRatesSchema = z.object({
+  refresh_1coat: z.number().int().min(0),
+  repaint_2coat: z.number().int().min(0),
+  full_system: z.number().int().min(0),
+});
+
+const exteriorRateSettingsSchema = z.object({
+  ext_walls: exteriorSurfaceRatesSchema,
+  eaves: exteriorSurfaceRatesSchema,
+  fascia: exteriorSurfaceRatesSchema,
+  gutters: exteriorSurfaceRatesSchema,
+});
+
 export const ratePresetSchema = z.object({
   walls: ratePresetSurfaceSchema,
   ceiling: ratePresetSurfaceSchema,
@@ -271,6 +325,7 @@ export const ratePresetSchema = z.object({
   enabled_window_types: z.array(z.enum(WINDOW_TYPES)).optional(),
   room_rate_presets: z.array(roomRatePresetSchema).optional(),
   pricing: pricingMethodSettingsSchema.optional(),
+  exterior: exteriorRateSettingsSchema.optional(),
 });
 
 const partialRatePresetSchema = z
@@ -287,6 +342,7 @@ const partialRatePresetSchema = z
     enabled_window_types: z.array(z.enum(WINDOW_TYPES)).optional(),
     room_rate_presets: z.array(roomRatePresetSchema).optional(),
     pricing: pricingMethodSettingsSchema.optional(),
+    exterior: exteriorRateSettingsSchema.optional(),
   })
   .partial();
 
@@ -324,6 +380,7 @@ export function buildDefaultRateSettings(): UserRateSettings {
   settings.enabled_window_types = [...WINDOW_TYPES];
   settings.room_rate_presets = [];
   settings.pricing = { ...DEFAULT_PRICING_METHOD_SETTINGS };
+  settings.exterior = buildDefaultExteriorRates();
   return settings;
 }
 
@@ -413,6 +470,21 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
     if (p.material_cost_percent != null) result.pricing.material_cost_percent = p.material_cost_percent;
     if ('target_daily_earnings_cents' in p) {
       result.pricing.target_daily_earnings_cents = p.target_daily_earnings_cents ?? null;
+    }
+  }
+
+  // Exterior surface rates
+  if (parsed.data.exterior) {
+    const ext = parsed.data.exterior;
+    for (const surface of EXTERIOR_SURFACES) {
+      const surfaceRates = ext[surface];
+      if (!surfaceRates) continue;
+      for (const coating of EXTERIOR_COATING_TYPES) {
+        const rate = surfaceRates[coating];
+        if (typeof rate === 'number' && Number.isInteger(rate) && rate >= 0) {
+          result.exterior[surface][coating] = rate;
+        }
+      }
     }
   }
 
