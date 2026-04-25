@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: 'New Invoice' };
 export default async function NewInvoicePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ quoteId?: string }>;
+  searchParams?: Promise<{ quoteId?: string; customer_id?: string; customerId?: string }>;
 }) {
   const supabase = await createServerClient();
   const {
@@ -19,6 +19,12 @@ export default async function NewInvoicePage({
   const resolvedSearchParams = (await searchParams) ?? {};
   const requestedQuoteId =
     typeof resolvedSearchParams.quoteId === 'string' ? resolvedSearchParams.quoteId : null;
+  const requestedCustomerId =
+    typeof resolvedSearchParams.customer_id === 'string'
+      ? resolvedSearchParams.customer_id
+      : typeof resolvedSearchParams.customerId === 'string'
+        ? resolvedSearchParams.customerId
+        : null;
   const subscription = user
     ? await getLiveSubscriptionSnapshotForUser(user.id)
     : null;
@@ -83,6 +89,11 @@ export default async function NewInvoicePage({
           quotes={quotes}
           businessDefaults={data.businessDefaults}
           initialDefaultValues={quoteDraftResult.data ?? undefined}
+          initialCustomerId={
+            requestedCustomerId && customers.some((customer) => customer.id === requestedCustomerId)
+              ? requestedCustomerId
+              : undefined
+          }
           canUseAI={subscription?.features.ai ?? false}
         />
       )}

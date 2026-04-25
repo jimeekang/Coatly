@@ -9,12 +9,23 @@ import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server
 
 export const metadata: Metadata = { title: 'New Quote' };
 
-export default async function NewQuotePage() {
+export default async function NewQuotePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ customer_id?: string; customerId?: string }>;
+}) {
   const [{ data, error }, { data: libraryItems }, { data: templates }] = await Promise.all([
     getQuoteFormOptions(),
     getMaterialItemsForPicker(),
     listQuoteTemplates(),
   ]);
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const requestedCustomerId =
+    typeof resolvedSearchParams.customer_id === 'string'
+      ? resolvedSearchParams.customer_id
+      : typeof resolvedSearchParams.customerId === 'string'
+        ? resolvedSearchParams.customerId
+        : null;
   const customers = data.customers;
   const supabase = await createServerClient();
   const {
@@ -96,6 +107,11 @@ export default async function NewQuotePage() {
           rateSettings={data.userRates}
           libraryItems={libraryItems}
           templates={templates}
+          initialCustomerId={
+            requestedCustomerId && customers.some((customer) => customer.id === requestedCustomerId)
+              ? requestedCustomerId
+              : undefined
+          }
         />
       )}
     </div>

@@ -1710,7 +1710,7 @@ export async function duplicateQuote(quoteId: string): Promise<{ error: string }
     estimate_context: (sourceQuote.estimate_context ?? {}) as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     pricing_snapshot: (sourceQuote.pricing_snapshot ?? {}) as any,
-    pricing_method: sourceQuote.pricing_method,
+    pricing_method: sourceQuote.pricing_method ?? undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     pricing_method_inputs: sourceQuote.pricing_method_inputs as any,
   };

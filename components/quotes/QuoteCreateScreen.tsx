@@ -23,6 +23,7 @@ export function QuoteCreateScreen({
   rateSettings,
   libraryItems = [],
   templates = [],
+  initialCustomerId,
 }: {
   customers: QuoteCustomerOption[];
   canUseAI: boolean;
@@ -30,6 +31,7 @@ export function QuoteCreateScreen({
   rateSettings?: UserRateSettings | null;
   libraryItems?: MaterialItem[];
   templates?: QuoteTemplate[];
+  initialCustomerId?: string;
 }) {
   const [prompt, setPrompt] = useState('');
   const [draft, setDraft] = useState<AIQuoteDraft | null>(null);
@@ -118,7 +120,7 @@ export function QuoteCreateScreen({
   const formDefaultValues =
     draft
       ? {
-          customer_id: draft.customer_id ?? '',
+          customer_id: draft.customer_id ?? initialCustomerId ?? '',
           title: draft.title,
           status: draft.status,
           valid_until: draft.valid_until,
@@ -131,7 +133,7 @@ export function QuoteCreateScreen({
         }
       : templateDefault
         ? {
-            customer_id: '',
+            customer_id: initialCustomerId ?? '',
             title: templateDefault.title ?? '',
             status: 'draft' as const,
             valid_until: '',
@@ -142,7 +144,17 @@ export function QuoteCreateScreen({
             internal_notes: templateDefault.internal_notes ?? '',
             rooms: [],
           }
-        : undefined;
+        : initialCustomerId
+          ? {
+              customer_id: initialCustomerId,
+              title: '',
+              status: 'draft' as const,
+              valid_until: '',
+              notes: '',
+              internal_notes: '',
+              rooms: [],
+            }
+          : undefined;
 
   return (
     <>

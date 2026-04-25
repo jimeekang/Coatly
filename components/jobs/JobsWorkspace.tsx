@@ -1,8 +1,9 @@
 'use client';
 
 import { useDeferredValue, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createJob, deleteJob, updateJob } from '@/app/actions/jobs';
+import { createJob } from '@/app/actions/jobs';
 import {
   JOB_STATUS_LABELS,
   type JobCustomerOption,
@@ -31,11 +32,18 @@ const STATUS_FILTER_OPTIONS: Array<{ value: JobFilterStatus; label: string }> = 
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
-const STATUS_STYLES: Record<JobStatus, string> = {
-  scheduled: 'bg-sky-50 text-sky-700 border-sky-200',
-  in_progress: 'bg-amber-50 text-amber-700 border-amber-200',
-  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
+const STATUS_BADGE_STYLES: Record<JobStatus, string> = {
+  scheduled: 'bg-sky-50 text-sky-700',
+  in_progress: 'bg-amber-50 text-amber-700',
+  completed: 'bg-emerald-50 text-emerald-700',
+  cancelled: 'bg-surface-container-highest text-on-surface-variant',
+};
+
+const JOB_LEFT_BORDER: Record<JobStatus, string> = {
+  scheduled: 'border-l-sky-400',
+  in_progress: 'border-l-amber-400',
+  completed: 'border-l-emerald-500',
+  cancelled: 'border-l-outline',
 };
 
 function buildInitialFormState(
@@ -43,8 +51,7 @@ function buildInitialFormState(
   quoteId?: string | null,
   customerId?: string | null,
 ): JobFormState {
-  const matchedQuote = quoteId ? quotes.find((quote) => quote.id === quoteId) : null;
-
+  const matchedQuote = quoteId ? quotes.find((q) => q.id === quoteId) : null;
   return {
     title: '',
     customer_id: matchedQuote?.customer_id ?? customerId ?? '',
@@ -55,39 +62,14 @@ function buildInitialFormState(
   };
 }
 
-function buildEditFormState(job: JobListItem): JobFormState {
-  return {
-    title: job.title,
-    customer_id: job.customer_id,
-    quote_id: job.quote_id ?? '',
-    status: job.status,
-    scheduled_date: job.scheduled_date,
-    notes: job.notes ?? '',
-  };
-}
-
-function JobStatusBadge({ status }: { status: JobStatus }) {
-  return (
-    <span
-      className={`inline-flex min-h-8 items-center rounded-full border px-3 text-[11px] font-semibold uppercase tracking-wider ${STATUS_STYLES[status]}`}
-    >
-      {JOB_STATUS_LABELS[status]}
-    </span>
-  );
-}
-
 function getCustomerLabel(customer: JobCustomerOption) {
   return customer.company_name || customer.name;
 }
 
 function isPastScheduled(job: JobListItem) {
-  if (job.status === 'completed' || job.status === 'cancelled') {
-    return false;
-  }
-
+  if (job.status === 'completed' || job.status === 'cancelled') return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   const scheduled = new Date(`${job.scheduled_date}T00:00:00`);
   return scheduled < today;
 }
@@ -111,7 +93,6 @@ export function JobsWorkspace({
   const [formOpen, setFormOpen] = useState(
     Boolean(initialQuoteId || initialCustomerId || jobs.length === 0),
   );
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [form, setForm] = useState<JobFormState>(() =>
     buildInitialFormState(quotes, initialQuoteId, initialCustomerId),
   );
@@ -119,25 +100,18 @@ export function JobsWorkspace({
   const [isPending, startTransition] = useTransition();
   const deferredQuery = useDeferredValue(query);
 
-  const filteredQuotes = quotes.filter((quote) =>
-    form.customer_id ? quote.customer_id === form.customer_id : true,
+  const filteredQuotes = quotes.filter((q) =>
+    form.customer_id ? q.customer_id === form.customer_id : true,
   );
 
   const normalizedQuery = deferredQuery.trim().toLowerCase();
   const filteredJobs = jobs.filter((job) => {
     const matchesStatus = statusFilter === 'all' ? true : job.status === statusFilter;
     const matchesQuery = normalizedQuery
-      ? [
-          job.title,
-          job.customer.name,
-          job.customer.company_name,
-          job.quote?.quote_number,
-          job.quote?.title,
-        ]
+      ? [job.title, job.customer.name, job.customer.company_name, job.quote?.quote_number, job.quote?.title]
           .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(normalizedQuery))
+          .some((v) => v?.toLowerCase().includes(normalizedQuery))
       : true;
-
     return matchesStatus && matchesQuery;
   });
 
@@ -147,105 +121,44 @@ export function JobsWorkspace({
     }
   }
 
-  function resetCreateForm(closeForm: boolean) {
-    setEditingJobId(null);
-    setFormError(null);
-    setForm(buildInitialFormState(quotes, null, null));
-    setFormOpen(!closeForm);
-  }
-
-  function openCreateForm() {
-    setEditingJobId(null);
-    setFormError(null);
-    setForm(buildInitialFormState(quotes, initialQuoteId, initialCustomerId));
-    setFormOpen(true);
-  }
-
-  function openEditForm(job: JobListItem) {
-    setEditingJobId(job.id);
-    setFormError(null);
-    setForm(buildEditFormState(job));
-    setFormOpen(true);
-  }
-
   function handleCustomerChange(customerId: string) {
-    setForm((current) => {
-      const selectedQuote = quotes.find((quote) => quote.id === current.quote_id);
+    setForm((cur) => {
+      const selectedQuote = quotes.find((q) => q.id === cur.quote_id);
       const nextQuoteId =
-        selectedQuote && selectedQuote.customer_id === customerId ? current.quote_id : '';
-
-      return {
-        ...current,
-        customer_id: customerId,
-        quote_id: nextQuoteId,
-      };
+        selectedQuote && selectedQuote.customer_id === customerId ? cur.quote_id : '';
+      return { ...cur, customer_id: customerId, quote_id: nextQuoteId };
     });
   }
 
   function handleQuoteChange(quoteId: string) {
-    const selectedQuote = quotes.find((quote) => quote.id === quoteId);
-
-    setForm((current) => ({
-      ...current,
+    const selectedQuote = quotes.find((q) => q.id === quoteId);
+    setForm((cur) => ({
+      ...cur,
       quote_id: quoteId,
-      customer_id: selectedQuote?.customer_id ?? current.customer_id,
+      customer_id: selectedQuote?.customer_id ?? cur.customer_id,
     }));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
-
     startTransition(() => {
       void (async () => {
-        const payload = {
+        const result = await createJob({
           customer_id: form.customer_id,
           quote_id: form.quote_id || null,
           title: form.title,
           status: form.status,
           scheduled_date: form.scheduled_date,
           notes: form.notes,
-        };
-
-        const result = editingJobId
-          ? await updateJob(editingJobId, payload)
-          : await createJob(payload);
-
+        });
         if (result.error) {
           setFormError(result.error);
           return;
         }
-
         clearPrefillRoute();
-        resetCreateForm(true);
-        router.refresh();
-      })();
-    });
-  }
-
-  function handleDelete(job: JobListItem) {
-    const confirmed = window.confirm(
-      `Delete "${job.title}"? This action cannot be undone.`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setFormError(null);
-
-    startTransition(() => {
-      void (async () => {
-        const result = await deleteJob(job.id);
-        if (result.error) {
-          setFormError(result.error);
-          return;
-        }
-
-        if (editingJobId === job.id) {
-          resetCreateForm(true);
-        }
-
+        setFormOpen(false);
+        setForm(buildInitialFormState(quotes, null, null));
         router.refresh();
       })();
     });
@@ -253,36 +166,53 @@ export function JobsWorkspace({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 rounded-2xl border border-pm-border bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pm-secondary">
-              Live Jobs
-            </p>
-            <p className="mt-1 text-sm text-pm-secondary">
-              Create, update, and track site work without leaving the workspace.
-            </p>
-          </div>
+      {/* Header row with New Job button */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
+          {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'}
+        </p>
+        {!formOpen && (
           <button
             type="button"
-            onClick={openCreateForm}
-            className="inline-flex min-h-12 items-center justify-center rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
+            onClick={() => setFormOpen(true)}
+            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90"
           >
-            {editingJobId ? 'New Job' : 'Create Job'}
+            New Job
           </button>
-        </div>
+        )}
+      </div>
 
+      {/* Search + filters */}
+      <div className="flex flex-col gap-3">
         <div className="relative">
+          <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+          </span>
           <input
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search jobs, customers, or quotes..."
-            className="h-12 w-full rounded-xl border border-pm-border bg-pm-surface px-4 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+            className="w-full bg-surface-container border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
           />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="absolute inset-y-0 right-4 flex items-center text-outline hover:text-on-surface"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {STATUS_FILTER_OPTIONS.map((option) => {
             const active = statusFilter === option.value;
             return (
@@ -290,10 +220,10 @@ export function JobsWorkspace({
                 key={option.value}
                 type="button"
                 onClick={() => setStatusFilter(option.value)}
-                className={`min-h-11 rounded-full px-4 text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
                   active
-                    ? 'bg-pm-body text-white'
-                    : 'bg-pm-surface text-pm-secondary hover:bg-pm-border'
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
                 }`}
               >
                 {option.label}
@@ -303,119 +233,99 @@ export function JobsWorkspace({
         </div>
       </div>
 
+      {/* Create form */}
       {formOpen && (
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-2xl border border-pm-border bg-white p-4 shadow-sm"
+          className="flex flex-col gap-4 rounded-2xl border border-outline-variant bg-white p-5 shadow-sm"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-pm-body">
-                {editingJobId ? 'Edit Job' : 'Create Job'}
-              </h2>
-              <p className="mt-1 text-sm text-pm-secondary">
-                Keep the next site visit, prep day, or handover visible for the team.
+              <h2 className="text-lg font-bold text-on-surface">Create Job</h2>
+              <p className="mt-0.5 text-sm text-on-surface-variant">
+                Keep the next site visit, prep day, or handover visible.
               </p>
             </div>
             <button
               type="button"
-              onClick={() => {
-                clearPrefillRoute();
-                resetCreateForm(true);
-              }}
-              className="min-h-11 rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
+              onClick={() => { clearPrefillRoute(); setFormOpen(false); }}
+              className="min-h-10 rounded-lg border border-outline-variant px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
             >
               Cancel
             </button>
           </div>
 
-          {initialQuoteId && !editingJobId && (
-            <div className="rounded-xl border border-pm-teal/20 bg-pm-teal/5 px-4 py-3 text-sm text-pm-body">
-              Quote pre-selected from the quote detail page. Choose a date and save to add
-              it to the job list.
+          {initialQuoteId && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-on-surface">
+              Quote pre-selected. Choose a date and save to add it to the job list.
             </div>
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-pm-body">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-on-surface">
               Job Title
               <input
                 type="text"
                 value={form.title}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, title: event.target.value }))
-                }
+                onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
                 placeholder="e.g. Harbour kitchen repaint"
-                className="h-12 rounded-xl border border-pm-border bg-white px-4 text-sm font-normal text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                className="h-11 rounded-lg border border-outline-variant bg-white px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
             </label>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-pm-body">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-on-surface">
               Scheduled Date
               <input
                 type="date"
                 value={form.scheduled_date}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    scheduled_date: event.target.value,
-                  }))
-                }
-                className="h-12 rounded-xl border border-pm-border bg-white px-4 text-sm font-normal text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                onChange={(e) => setForm((c) => ({ ...c, scheduled_date: e.target.value }))}
+                className="h-11 rounded-lg border border-outline-variant bg-white px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
             </label>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-pm-body">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-on-surface">
               Customer
               <select
                 value={form.customer_id}
-                onChange={(event) => handleCustomerChange(event.target.value)}
-                className="h-12 rounded-xl border border-pm-border bg-white px-4 text-sm font-normal text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                onChange={(e) => handleCustomerChange(e.target.value)}
+                className="h-11 rounded-lg border border-outline-variant bg-white px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               >
                 <option value="">Select a customer</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {getCustomerLabel(customer)}
-                  </option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{getCustomerLabel(c)}</option>
                 ))}
               </select>
             </label>
 
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-pm-body">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-on-surface">
               Linked Quote
               <select
                 value={form.quote_id}
-                onChange={(event) => handleQuoteChange(event.target.value)}
-                className="h-12 rounded-xl border border-pm-border bg-white px-4 text-sm font-normal text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                onChange={(e) => handleQuoteChange(e.target.value)}
+                className="h-11 rounded-lg border border-outline-variant bg-white px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               >
                 <option value="">No linked quote</option>
-                {filteredQuotes.map((quote) => (
-                  <option key={quote.id} value={quote.id}>
-                    {quote.quote_number}
-                    {quote.title ? ` · ${quote.title}` : ''}
+                {filteredQuotes.map((q) => (
+                  <option key={q.id} value={q.id}>
+                    {q.quote_number}{q.title ? ` · ${q.title}` : ''}
                   </option>
                 ))}
               </select>
             </label>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {(Object.keys(JOB_STATUS_LABELS) as JobStatus[]).map((status) => {
               const active = form.status === status;
               return (
                 <button
                   key={status}
                   type="button"
-                  onClick={() =>
-                    setForm((current) => ({
-                      ...current,
-                      status,
-                    }))
-                  }
-                  className={`min-h-11 rounded-full border px-4 text-sm font-semibold whitespace-nowrap transition-colors ${
+                  onClick={() => setForm((c) => ({ ...c, status }))}
+                  className={`min-h-10 rounded-full border px-4 text-xs font-semibold whitespace-nowrap transition-colors ${
                     active
-                      ? 'border-pm-teal bg-pm-teal/10 text-pm-teal'
-                      : 'border-pm-border bg-white text-pm-secondary hover:bg-pm-surface'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-low'
                   }`}
                 >
                   {JOB_STATUS_LABELS[status]}
@@ -424,144 +334,133 @@ export function JobsWorkspace({
             })}
           </div>
 
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-pm-body">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-on-surface">
             Notes
             <textarea
               value={form.notes}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, notes: event.target.value }))
-              }
-              rows={4}
+              onChange={(e) => setForm((c) => ({ ...c, notes: e.target.value }))}
+              rows={3}
               placeholder="Site access, paint spec, or handover notes"
-              className="rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-normal text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+              className="rounded-lg border border-outline-variant bg-white px-3 py-2.5 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
             />
           </label>
 
           {formError && (
-            <div className="rounded-xl border border-pm-coral bg-pm-coral-light px-4 py-3">
-              <p className="text-sm text-pm-coral-dark">{formError}</p>
+            <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3">
+              <p className="text-sm text-on-error-container">{formError}</p>
             </div>
           )}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <div className="flex justify-end">
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-pm-body px-5 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-50"
             >
-              {isPending ? 'Saving...' : editingJobId ? 'Save Changes' : 'Save Job'}
+              {isPending ? 'Saving...' : 'Save Job'}
             </button>
           </div>
         </form>
       )}
 
+      {/* List */}
       {jobs.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-pm-border bg-white px-6 py-12 text-center shadow-sm">
-          <p className="text-base font-semibold text-pm-body">No jobs yet.</p>
-          <p className="mt-2 text-sm text-pm-secondary">
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-16 text-center">
+          <p className="text-base text-on-surface-variant">No jobs yet.</p>
+          <p className="mt-1 text-sm text-on-surface-variant opacity-70">
             Create your first scheduled job to track site work from quote to completion.
           </p>
-          <button
-            type="button"
-            onClick={openCreateForm}
-            className="mt-4 inline-flex min-h-12 items-center justify-center rounded-xl bg-pm-teal px-5 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
-          >
-            Create First Job
-          </button>
+          {!formOpen && (
+            <button
+              type="button"
+              onClick={() => setFormOpen(true)}
+              className="mt-4 inline-flex h-11 items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-on-primary transition-colors hover:opacity-90"
+            >
+              Create First Job
+            </button>
+          )}
         </div>
       ) : filteredJobs.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-pm-border bg-white px-6 py-10 text-center shadow-sm">
-          <p className="text-base font-semibold text-pm-body">No jobs match this filter.</p>
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-12 text-center">
+          <p className="text-base text-on-surface-variant">No jobs match this filter.</p>
           <button
             type="button"
-            onClick={() => {
-              setQuery('');
-              setStatusFilter('all');
-            }}
-            className="mt-3 text-sm font-medium text-pm-teal hover:underline"
+            onClick={() => { setQuery(''); setStatusFilter('all'); }}
+            className="mt-2 text-sm text-primary hover:underline"
           >
             Clear search and filters
           </button>
         </div>
       ) : (
-        <ul className="grid gap-4 lg:grid-cols-2">
-          {filteredJobs.map((job) => (
-            <li
-              key={job.id}
-              className="rounded-2xl border border-pm-border bg-white p-5 shadow-sm"
-            >
-              <div className="flex flex-col gap-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-pm-secondary">
-                      {job.quote?.quote_number ?? 'Standalone Job'}
-                    </p>
-                    <h3 className="mt-1 text-lg font-semibold text-pm-body">{job.title}</h3>
-                    <p className="mt-1 text-sm text-pm-secondary">
-                      {getCustomerLabel(job.customer)}
-                    </p>
-                  </div>
-                  <JobStatusBadge status={job.status} />
-                </div>
-
-                <div className="grid gap-3 rounded-xl bg-pm-surface p-4 text-sm text-pm-body">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-pm-secondary">Scheduled</span>
-                    <span className="font-medium">{formatDate(job.scheduled_date)}</span>
-                  </div>
-
-                  {job.quote && (
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-pm-secondary">Quote</span>
-                      <span className="text-right font-medium">
-                        {job.quote.quote_number}
-                        {job.quote.title ? ` · ${job.quote.title}` : ''}
-                      </span>
+        <>
+          <ul className="flex flex-col gap-3">
+            {filteredJobs.map((job) => (
+              <li
+                key={job.id}
+                className={`relative bg-surface-container-lowest rounded-lg shadow-sm border border-black/5 border-l-4 ${JOB_LEFT_BORDER[job.status]} hover:shadow-md transition-shadow`}
+              >
+                <Link href={`/jobs/${job.id}`} className="block p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+                        {job.quote?.quote_number ?? 'Standalone Job'}
+                      </p>
+                      <h3 className="font-bold text-on-surface text-base leading-tight mt-0.5">
+                        {job.title}
+                      </h3>
+                      <p className="text-on-surface-variant text-sm font-medium mt-0.5">
+                        {getCustomerLabel(job.customer)}
+                      </p>
                     </div>
-                  )}
-
-                  {job.customer.address && (
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-pm-secondary">Address</span>
-                      <span className="max-w-[70%] text-right font-medium">
-                        {job.customer.address}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {isPastScheduled(job) && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    This job is scheduled in the past and still open.
+                    <span className={`inline-flex rounded px-3 py-1 text-[10px] font-bold uppercase tracking-widest shrink-0 ml-3 ${STATUS_BADGE_STYLES[job.status]}`}>
+                      {JOB_STATUS_LABELS[job.status]}
+                    </span>
                   </div>
-                )}
 
-                {job.notes && (
-                  <p className="rounded-xl border border-pm-border bg-white px-4 py-3 text-sm text-pm-secondary">
-                    {job.notes}
-                  </p>
-                )}
+                  <div className="flex justify-between items-end">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                          <line x1="16" y1="2" x2="16" y2="6"/>
+                          <line x1="8" y1="2" x2="8" y2="6"/>
+                          <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Scheduled {formatDate(job.scheduled_date)}
+                      </div>
+                      {job.start_date && job.end_date && (
+                        <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          {formatDate(job.start_date)} → {formatDate(job.end_date)}
+                          {job.duration_days ? ` (${job.duration_days}d)` : ''}
+                        </div>
+                      )}
+                      {job.customer.address && (
+                        <p className="text-xs text-outline mt-0.5 truncate max-w-[240px]">
+                          {job.customer.address}
+                        </p>
+                      )}
+                    </div>
+                    {isPastScheduled(job) && (
+                      <span className="rounded-full bg-warning-container px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning shrink-0">
+                        Overdue
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => openEditForm(job)}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(job)}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-600 px-4 text-sm font-medium text-white transition-colors hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+          {(normalizedQuery || statusFilter !== 'all') && (
+            <p className="text-xs text-on-surface-variant text-right">
+              {filteredJobs.length} of {jobs.length} jobs
+            </p>
+          )}
+        </>
       )}
     </div>
   );

@@ -12,39 +12,12 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       businesses: {
         Row: {
           abn: string | null
           address: string | null
-          address_line1: string | null
-          city: string | null
           created_at: string
           default_rates: Json
           email: string | null
@@ -53,16 +26,12 @@ export type Database = {
           logo_url: string | null
           name: string
           phone: string | null
-          postcode: string | null
-          state: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           abn?: string | null
           address?: string | null
-          address_line1?: string | null
-          city?: string | null
           created_at?: string
           default_rates?: Json
           email?: string | null
@@ -71,16 +40,12 @@ export type Database = {
           logo_url?: string | null
           name: string
           phone?: string | null
-          postcode?: string | null
-          state?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           abn?: string | null
           address?: string | null
-          address_line1?: string | null
-          city?: string | null
           created_at?: string
           default_rates?: Json
           email?: string | null
@@ -89,8 +54,6 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
-          postcode?: string | null
-          state?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -100,6 +63,12 @@ export type Database = {
         Row: {
           address_line1: string | null
           address_line2: string | null
+          billing_address_line1: string | null
+          billing_address_line2: string | null
+          billing_city: string | null
+          billing_postcode: string | null
+          billing_same_as_site: boolean
+          billing_state: string | null
           city: string | null
           company_name: string | null
           created_at: string
@@ -120,6 +89,12 @@ export type Database = {
         Insert: {
           address_line1?: string | null
           address_line2?: string | null
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_postcode?: string | null
+          billing_same_as_site?: boolean
+          billing_state?: string | null
           city?: string | null
           company_name?: string | null
           created_at?: string
@@ -140,6 +115,12 @@ export type Database = {
         Update: {
           address_line1?: string | null
           address_line2?: string | null
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_postcode?: string | null
+          billing_same_as_site?: boolean
+          billing_state?: string | null
           city?: string | null
           company_name?: string | null
           created_at?: string
@@ -154,6 +135,75 @@ export type Database = {
           postcode?: string | null
           properties?: Json
           state?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      google_calendar_connections: {
+        Row: {
+          created_at: string
+          encrypted_refresh_token: string
+          google_account_email: string
+          google_account_subject: string
+          granted_scopes: string[]
+          is_active: boolean
+          last_sync_at: string | null
+          last_sync_error: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          encrypted_refresh_token: string
+          google_account_email: string
+          google_account_subject: string
+          granted_scopes?: string[]
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          encrypted_refresh_token?: string
+          google_account_email?: string
+          google_account_subject?: string
+          granted_scopes?: string[]
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      google_calendar_settings: {
+        Row: {
+          availability_calendar_id: string
+          created_at: string
+          display_calendar_id: string
+          event_destination_calendar_id: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          availability_calendar_id?: string
+          created_at?: string
+          display_calendar_id?: string
+          event_destination_calendar_id?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          availability_calendar_id?: string
+          created_at?: string
+          display_calendar_id?: string
+          event_destination_calendar_id?: string
+          timezone?: string
           updated_at?: string
           user_id?: string
         }
@@ -215,12 +265,12 @@ export type Database = {
           customer_id: string
           due_date: string | null
           due_reminder_sent_at: string | null
-          overdue_reminder_sent_at: string | null
           gst_cents: number
           id: string
           invoice_number: string
           invoice_type: string
           notes: string | null
+          overdue_reminder_sent_at: string | null
           paid_at: string | null
           paid_date: string | null
           payment_method: string | null
@@ -240,12 +290,12 @@ export type Database = {
           customer_id: string
           due_date?: string | null
           due_reminder_sent_at?: string | null
-          overdue_reminder_sent_at?: string | null
           gst_cents?: number
           id?: string
           invoice_number: string
           invoice_type?: string
           notes?: string | null
+          overdue_reminder_sent_at?: string | null
           paid_at?: string | null
           paid_date?: string | null
           payment_method?: string | null
@@ -265,12 +315,12 @@ export type Database = {
           customer_id?: string
           due_date?: string | null
           due_reminder_sent_at?: string | null
-          overdue_reminder_sent_at?: string | null
           gst_cents?: number
           id?: string
           invoice_number?: string
           invoice_type?: string
           notes?: string | null
+          overdue_reminder_sent_at?: string | null
           paid_at?: string | null
           paid_date?: string | null
           payment_method?: string | null
@@ -298,6 +348,176 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      job_variations: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          name: string
+          notes: string | null
+          quantity: number
+          sort_order: number
+          total_cents: number
+          unit_price_cents: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          name: string
+          notes?: string | null
+          quantity?: number
+          sort_order?: number
+          total_cents?: number
+          unit_price_cents?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          name?: string
+          notes?: string | null
+          quantity?: number
+          sort_order?: number
+          total_cents?: number
+          unit_price_cents?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_variations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          created_at: string
+          customer_id: string
+          duration_days: number | null
+          end_date: string | null
+          google_calendar_event_id: string | null
+          google_calendar_id: string | null
+          google_sync_error: string | null
+          google_sync_status: string
+          id: string
+          notes: string | null
+          quote_id: string | null
+          schedule_source: string
+          scheduled_date: string
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          duration_days?: number | null
+          end_date?: string | null
+          google_calendar_event_id?: string | null
+          google_calendar_id?: string | null
+          google_sync_error?: string | null
+          google_sync_status?: string
+          id?: string
+          notes?: string | null
+          quote_id?: string | null
+          schedule_source?: string
+          scheduled_date: string
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          duration_days?: number | null
+          end_date?: string | null
+          google_calendar_event_id?: string | null
+          google_calendar_id?: string | null
+          google_sync_error?: string | null
+          google_sync_status?: string
+          id?: string
+          notes?: string | null
+          quote_id?: string | null
+          schedule_source?: string
+          scheduled_date?: string
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_customer_user_fk"
+            columns: ["customer_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "jobs_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_items: {
+        Row: {
+          category: Database["public"]["Enums"]["material_item_category"]
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          sort_order: number
+          unit: string
+          unit_price_cents: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["material_item_category"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          sort_order?: number
+          unit?: string
+          unit_price_cents?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["material_item_category"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          sort_order?: number
+          unit?: string
+          unit_price_cents?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -362,6 +582,128 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_estimate_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          label: string
+          metadata: Json
+          quantity: number
+          quote_id: string
+          sort_order: number
+          total_cents: number
+          unit: string
+          unit_price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          label: string
+          metadata?: Json
+          quantity?: number
+          quote_id: string
+          sort_order?: number
+          total_cents?: number
+          unit?: string
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string
+          metadata?: Json
+          quantity?: number
+          quote_id?: string
+          sort_order?: number
+          total_cents?: number
+          unit?: string
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_estimate_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_line_items: {
+        Row: {
+          category: Database["public"]["Enums"]["material_item_category"]
+          created_at: string
+          id: string
+          is_optional: boolean
+          is_selected: boolean
+          material_item_id: string | null
+          name: string
+          notes: string | null
+          quantity: number
+          quote_id: string
+          sort_order: number
+          total_cents: number
+          unit: string
+          unit_price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["material_item_category"]
+          created_at?: string
+          id?: string
+          is_optional?: boolean
+          is_selected?: boolean
+          material_item_id?: string | null
+          name: string
+          notes?: string | null
+          quantity?: number
+          quote_id: string
+          sort_order?: number
+          total_cents?: number
+          unit?: string
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["material_item_category"]
+          created_at?: string
+          id?: string
+          is_optional?: boolean
+          is_selected?: boolean
+          material_item_id?: string | null
+          name?: string
+          notes?: string | null
+          quantity?: number
+          quote_id?: string
+          sort_order?: number
+          total_cents?: number
+          unit?: string
+          unit_price_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_material_item_id_fkey"
+            columns: ["material_item_id"]
+            isOneToOne: false
+            referencedRelation: "material_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_room_surfaces: {
         Row: {
           area_m2: number
@@ -418,59 +760,6 @@ export type Database = {
           },
         ]
       }
-      quote_estimate_items: {
-        Row: {
-          category: string
-          created_at: string
-          id: string
-          label: string
-          metadata: Json
-          quantity: number
-          quote_id: string
-          sort_order: number
-          total_cents: number
-          unit: string
-          unit_price_cents: number
-          updated_at: string
-        }
-        Insert: {
-          category: string
-          created_at?: string
-          id?: string
-          label: string
-          metadata?: Json
-          quantity?: number
-          quote_id: string
-          sort_order?: number
-          total_cents: number
-          unit: string
-          unit_price_cents: number
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          id?: string
-          label?: string
-          metadata?: Json
-          quantity?: number
-          quote_id?: string
-          sort_order?: number
-          total_cents?: number
-          unit?: string
-          unit_price_cents?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quote_estimate_items_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       quote_rooms: {
         Row: {
           created_at: string
@@ -518,6 +807,33 @@ export type Database = {
           },
         ]
       }
+      quote_templates: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          payload: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          payload?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          payload?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       quotes: {
         Row: {
           approval_signature: string | null
@@ -525,9 +841,9 @@ export type Database = {
           approved_by_email: string | null
           approved_by_name: string | null
           created_at: string
-          customer_address: string | null
-          customer_email: string | null
           customer_id: string
+          deposit_percent: number
+          discount_cents: number
           estimate_category: string
           estimate_context: Json
           estimate_mode: string | null
@@ -535,14 +851,14 @@ export type Database = {
           id: string
           internal_notes: string | null
           labour_margin_percent: number
-          manual_adjustment_cents: number | null
+          manual_adjustment_cents: number
           material_margin_percent: number
           notes: string | null
-          public_share_token: string
-          pricing_method: string | null
+          pricing_method: string
           pricing_method_inputs: Json | null
           pricing_snapshot: Json
           property_type: string | null
+          public_share_token: string
           quote_number: string
           status: string
           subtotal_cents: number
@@ -560,9 +876,9 @@ export type Database = {
           approved_by_email?: string | null
           approved_by_name?: string | null
           created_at?: string
-          customer_address?: string | null
-          customer_email?: string | null
           customer_id: string
+          deposit_percent?: number
+          discount_cents?: number
           estimate_category?: string
           estimate_context?: Json
           estimate_mode?: string | null
@@ -570,16 +886,15 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           labour_margin_percent?: number
-          manual_adjustment_cents?: number | null
+          manual_adjustment_cents?: number
           material_margin_percent?: number
           notes?: string | null
-          public_share_token?: string
-          pricing_method?: string | null
+          pricing_method?: string
           pricing_method_inputs?: Json | null
           pricing_snapshot?: Json
           property_type?: string | null
+          public_share_token?: string
           quote_number: string
-          working_days?: number | null
           status?: string
           subtotal_cents?: number
           tier?: string | null
@@ -588,6 +903,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valid_until?: string | null
+          working_days?: number | null
         }
         Update: {
           approval_signature?: string | null
@@ -595,9 +911,9 @@ export type Database = {
           approved_by_email?: string | null
           approved_by_name?: string | null
           created_at?: string
-          customer_address?: string | null
-          customer_email?: string | null
           customer_id?: string
+          deposit_percent?: number
+          discount_cents?: number
           estimate_category?: string
           estimate_context?: Json
           estimate_mode?: string | null
@@ -605,14 +921,14 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           labour_margin_percent?: number
-          manual_adjustment_cents?: number | null
+          manual_adjustment_cents?: number
           material_margin_percent?: number
           notes?: string | null
-          public_share_token?: string
-          pricing_method?: string | null
+          pricing_method?: string
           pricing_method_inputs?: Json | null
           pricing_snapshot?: Json
           property_type?: string | null
+          public_share_token?: string
           quote_number?: string
           status?: string
           subtotal_cents?: number
@@ -622,6 +938,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valid_until?: string | null
+          working_days?: number | null
         }
         Relationships: [
           {
@@ -633,8 +950,52 @@ export type Database = {
           },
         ]
       }
+      schedule_events: {
+        Row: {
+          created_at: string
+          date: string
+          end_time: string | null
+          id: string
+          is_all_day: boolean
+          location: string | null
+          notes: string | null
+          start_time: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          end_time?: string | null
+          id?: string
+          is_all_day?: boolean
+          location?: string | null
+          notes?: string | null
+          start_time?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          end_time?: string | null
+          id?: string
+          is_all_day?: boolean
+          location?: string | null
+          notes?: string | null
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
+          cancel_at: string | null
+          cancel_at_period_end: boolean
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
@@ -647,6 +1008,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cancel_at?: string | null
+          cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -659,6 +1022,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cancel_at?: string | null
+          cancel_at_period_end?: boolean
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -688,22 +1053,20 @@ export type Database = {
       }
       check_job_date_overlap: {
         Args: {
-          p_user_id: string
-          p_start_date: string
           p_end_date: string
-          p_exclude_job_id?: string | null
+          p_exclude_job_id?: string
+          p_start_date: string
+          p_user_id: string
         }
         Returns: boolean
       }
       generate_invoice_number: { Args: { user_uuid: string }; Returns: string }
       generate_quote_number: { Args: { user_uuid: string }; Returns: string }
       get_blocked_dates_for_user: {
-        Args: {
-          p_user_id: string
-          p_from_date?: string
-          p_to_date?: string
-        }
-        Returns: Array<{ blocked_date: string }>
+        Args: { p_from_date?: string; p_to_date?: string; p_user_id: string }
+        Returns: {
+          blocked_date: string
+        }[]
       }
       get_user_active_quote_count: {
         Args: { user_uuid: string }
@@ -711,7 +1074,12 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      material_item_category:
+        | "paint"
+        | "primer"
+        | "supply"
+        | "service"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -837,10 +1205,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
-    Enums: {},
+    Enums: {
+      material_item_category: ["paint", "primer", "supply", "service", "other"],
+    },
   },
 } as const

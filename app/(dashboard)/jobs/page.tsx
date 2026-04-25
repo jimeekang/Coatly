@@ -24,21 +24,21 @@ export default async function JobsPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-[28px] font-bold text-pm-body">Jobs</h1>
-        <p className="mt-1 text-sm text-pm-secondary">
+        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface">Jobs</h1>
+        <p className="mt-1 text-sm text-on-surface-variant font-medium">
           Track active work, site progress, and quote handover from one place.
         </p>
       </div>
 
       {jobsResult.error && (
-        <div className="rounded-xl border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{jobsResult.error}</p>
+        <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3">
+          <p className="text-sm text-on-error-container">{jobsResult.error}</p>
         </div>
       )}
 
       {optionsResult.error && (
-        <div className="rounded-xl border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{optionsResult.error}</p>
+        <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3">
+          <p className="text-sm text-on-error-container">{optionsResult.error}</p>
         </div>
       )}
 

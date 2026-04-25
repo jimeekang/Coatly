@@ -1,5 +1,40 @@
 import type { JobUpsertInput } from '@/lib/supabase/validators';
 
+export type JobVariation = {
+  id: string;
+  job_id: string;
+  name: string;
+  quantity: number;
+  unit_price_cents: number;
+  total_cents: number;
+  notes: string | null;
+  sort_order: number;
+};
+
+export type JobQuoteLineItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit_price_cents: number;
+  total_cents: number;
+  is_optional: boolean;
+  is_selected: boolean;
+  sort_order: number;
+};
+
+export type JobInvoiceSummary = {
+  id: string;
+  invoice_number: string;
+  status: string;
+  total_cents: number;
+};
+
+export type JobDetail = JobListItem & {
+  quoteLineItems: JobQuoteLineItem[];
+  variations: JobVariation[];
+  invoice: JobInvoiceSummary | null;
+};
+
 export const JOB_STATUS_LABELS = {
   scheduled: 'Scheduled',
   in_progress: 'In Progress',

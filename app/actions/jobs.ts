@@ -7,7 +7,13 @@ import {
   syncBookedJobToGoogleCalendar,
 } from '@/lib/google-calendar/service';
 import { buildQuoteCustomerAddress } from '@/lib/quotes';
-import type { JobCustomerOption, JobListItem, JobQuoteOption } from '@/lib/jobs';
+import type {
+  JobCustomerOption,
+  JobDetail,
+  JobListItem,
+  JobQuoteOption,
+  JobVariation,
+} from '@/lib/jobs';
 import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
@@ -247,6 +253,49 @@ export async function getJobFormOptions(): Promise<{
         })) ?? [],
     },
     error,
+  };
+}
+
+export async function getJob(id: string): Promise<{ data: JobListItem | null; error: string | null }> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+
+  const { data, error } = await supabase
+    .from('jobs')
+    .select(
+      'id, customer_id, quote_id, title, status, scheduled_date, start_date, end_date, duration_days, notes, created_at, updated_at, customer:customers!jobs_customer_user_fk(id, name, company_name, email, address_line1, city, state, postcode), quote:quotes!jobs_quote_id_fkey(id, quote_number, title, status, customer_id)'
+    )
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error) return { data: null, error: error.message };
+  if (!data) return { data: null, error: null };
+
+  const row = data as JobListRow;
+  const customer = firstRelation(row.customer);
+  if (!customer) return { data: null, error: null };
+  const quote = firstRelation(row.quote);
+
+  return {
+    data: {
+      id: row.id,
+      customer_id: row.customer_id,
+      quote_id: row.quote_id,
+      title: row.title,
+      status: row.status,
+      scheduled_date: row.scheduled_date,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      duration_days: row.duration_days,
+      notes: row.notes,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      customer: buildCustomerOption(customer),
+      quote: quote
+        ? { id: quote.id, quote_number: quote.quote_number, title: quote.title, status: quote.status }
+        : null,
+    },
+    error: null,
   };
 }
 
@@ -660,4 +709,160 @@ export async function getAvailableDatesForToken(
   const mergedBlockedDates = [...new Set([...blockedDates, ...googleBusy.blockedDates])].sort();
 
   return { blockedDates: mergedBlockedDates, workingDays, error: null };
+}
+
+export async function getJobDetail(id: string): Promise<{ data: JobDetail | null; error: string | null }> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+
+  const { data, error } = await supabase
+    .from('jobs')
+    .select(
+      'id, customer_id, quote_id, title, status, scheduled_date, start_date, end_date, duration_days, notes, created_at, updated_at, customer:customers!jobs_customer_user_fk(id, name, company_name, email, address_line1, city, state, postcode), quote:quotes!jobs_quote_id_fkey(id, quote_number, title, status, customer_id)'
+    )
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error) return { data: null, error: error.message };
+  if (!data) return { data: null, error: null };
+
+  const row = data as JobListRow;
+  const customer = firstRelation(row.customer);
+  if (!customer) return { data: null, error: null };
+  const quote = firstRelation(row.quote);
+
+  const base: JobListItem = {
+    id: row.id,
+    customer_id: row.customer_id,
+    quote_id: row.quote_id,
+    title: row.title,
+    status: row.status,
+    scheduled_date: row.scheduled_date,
+    start_date: row.start_date,
+    end_date: row.end_date,
+    duration_days: row.duration_days,
+    notes: row.notes,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    customer: buildCustomerOption(customer),
+    quote: quote
+      ? { id: quote.id, quote_number: quote.quote_number, title: quote.title, status: quote.status }
+      : null,
+  };
+
+  const [lineItemsResult, variationsResult, invoiceResult] = await Promise.all([
+    row.quote_id
+      ? supabase
+          .from('quote_line_items')
+          .select('id, name, quantity, unit_price_cents, total_cents, is_optional, is_selected, sort_order')
+          .eq('quote_id', row.quote_id)
+          .order('sort_order', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from('job_variations')
+      .select('id, job_id, name, quantity, unit_price_cents, total_cents, notes, sort_order')
+      .eq('job_id', row.id)
+      .eq('user_id', user.id)
+      .order('sort_order', { ascending: true }),
+    row.quote_id
+      ? supabase
+          .from('invoices')
+          .select('id, invoice_number, status, total_cents')
+          .eq('quote_id', row.quote_id)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  return {
+    data: {
+      ...base,
+      quoteLineItems: (lineItemsResult.data ?? []).map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: Number(item.quantity),
+        unit_price_cents: item.unit_price_cents,
+        total_cents: item.total_cents,
+        is_optional: item.is_optional ?? false,
+        is_selected: item.is_selected ?? true,
+        sort_order: item.sort_order,
+      })),
+      variations: (variationsResult.data ?? []).map((v) => ({
+        id: v.id,
+        job_id: v.job_id,
+        name: v.name,
+        quantity: Number(v.quantity),
+        unit_price_cents: v.unit_price_cents,
+        total_cents: v.total_cents,
+        notes: v.notes,
+        sort_order: v.sort_order,
+      })),
+      invoice: invoiceResult.data
+        ? {
+            id: invoiceResult.data.id,
+            invoice_number: invoiceResult.data.invoice_number,
+            status: invoiceResult.data.status,
+            total_cents: invoiceResult.data.total_cents,
+          }
+        : null,
+    },
+    error: null,
+  };
+}
+
+export type JobVariationInput = {
+  name: string;
+  quantity: number;
+  unit_price_cents: number;
+  notes?: string | null;
+};
+
+export async function saveJobVariations(
+  jobId: string,
+  variations: JobVariationInput[],
+): Promise<{ error: string | null }> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: existingJob } = await supabase
+    .from('jobs')
+    .select('id')
+    .eq('id', jobId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!existingJob) return { error: 'Job not found.' };
+
+  const { error: deleteError } = await supabase
+    .from('job_variations')
+    .delete()
+    .eq('job_id', jobId)
+    .eq('user_id', user.id);
+
+  if (deleteError) return { error: deleteError.message };
+
+  if (variations.length > 0) {
+    const rows = variations.map((v, i) => ({
+      job_id: jobId,
+      user_id: user.id,
+      name: v.name.trim(),
+      quantity: v.quantity,
+      unit_price_cents: v.unit_price_cents,
+      total_cents: Math.round(v.quantity * v.unit_price_cents),
+      notes: v.notes?.trim() || null,
+      sort_order: i,
+    }));
+
+    const { error: insertError } = await supabase.from('job_variations').insert(rows);
+    if (insertError) return { error: insertError.message };
+  }
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath(`/jobs/${jobId}/edit`);
+  return { error: null };
 }

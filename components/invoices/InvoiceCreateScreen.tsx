@@ -19,12 +19,14 @@ export function InvoiceCreateScreen({
   quotes,
   businessDefaults,
   initialDefaultValues,
+  initialCustomerId,
   canUseAI,
 }: {
   customers: InvoiceFormCustomerOption[];
   quotes: InvoiceFormQuoteOption[];
   businessDefaults: InvoiceBusinessDefaults;
   initialDefaultValues?: InvoiceFormDefaultValues;
+  initialCustomerId?: string;
   canUseAI: boolean;
 }) {
   const [prompt, setPrompt] = useState('');
@@ -102,7 +104,8 @@ export function InvoiceCreateScreen({
         defaultValues={
           draft
             ? {
-                customer_id: draft.customer_id ?? initialDefaultValues?.customer_id ?? '',
+                customer_id:
+                  draft.customer_id ?? initialDefaultValues?.customer_id ?? initialCustomerId ?? '',
                 quote_id: draft.quote_id ?? initialDefaultValues?.quote_id ?? null,
                 invoice_type: draft.invoice_type,
                 status: draftStatus ?? 'draft',
@@ -122,6 +125,26 @@ export function InvoiceCreateScreen({
                     : initialDefaultValues?.line_items ?? [],
               }
             : initialDefaultValues
+              ? {
+                  ...initialDefaultValues,
+                  customer_id: initialDefaultValues.customer_id || initialCustomerId || '',
+                }
+              : initialCustomerId
+                ? {
+                    customer_id: initialCustomerId,
+                    quote_id: null,
+                    invoice_type: 'full',
+                    status: 'draft',
+                    business_abn: null,
+                    payment_terms: null,
+                    bank_details: null,
+                    due_date: null,
+                    paid_date: null,
+                    payment_method: null,
+                    notes: null,
+                    line_items: [],
+                  }
+                : undefined
         }
         onSubmit={createInvoice}
       />
