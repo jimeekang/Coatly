@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { deleteJob, updateJob } from '@/app/actions/jobs';
+import { deleteJob, retryJobGoogleCalendarSync, updateJob } from '@/app/actions/jobs';
 import { JOB_STATUS_LABELS, type JobDetail, type JobStatus } from '@/lib/jobs';
 import { formatAUD, formatDate } from '@/utils/format';
 
@@ -85,7 +85,9 @@ export function JobDetail({ job }: { job: JobDetail }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isCompleting, startCompleteTransition] = useTransition();
+  const [isRetryingGoogleSync, startGoogleSyncTransition] = useTransition();
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [googleSyncError, setGoogleSyncError] = useState<string | null>(null);
 
   const quoteLineItems = job.quoteLineItems ?? [];
   const variations = job.variations ?? [];
@@ -124,6 +126,18 @@ export function JobDetail({ job }: { job: JobDetail }) {
         return;
       }
       setShowCompleteDialog(true);
+      router.refresh();
+    });
+  }
+
+  function handleRetryGoogleSync() {
+    setGoogleSyncError(null);
+    startGoogleSyncTransition(async () => {
+      const result = await retryJobGoogleCalendarSync(job.id);
+      if (result.error) {
+        setGoogleSyncError(result.error);
+        return;
+      }
       router.refresh();
     });
   }
@@ -228,6 +242,38 @@ export function JobDetail({ job }: { job: JobDetail }) {
                     </span>
                   </div>
                 )}
+                <div className="border-t border-outline-variant pt-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="text-on-surface-variant">Google Calendar</span>
+                      {job.google_calendar_id && (
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          Calendar: {job.google_calendar_id}
+                        </p>
+                      )}
+                    </div>
+                    <span className="shrink-0 rounded-full bg-surface-container px-2.5 py-1 text-xs font-semibold capitalize text-on-surface-variant">
+                      {job.google_sync_status.replaceAll('_', ' ')}
+                    </span>
+                  </div>
+                  {(job.google_sync_error || googleSyncError) && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+                      <p className="text-xs text-red-700">
+                        {googleSyncError ?? job.google_sync_error}
+                      </p>
+                      {job.quote_id && (
+                        <button
+                          type="button"
+                          onClick={handleRetryGoogleSync}
+                          disabled={isRetryingGoogleSync}
+                          className="mt-2 inline-flex h-8 items-center rounded-lg bg-white px-3 text-xs font-semibold text-red-700 ring-1 ring-red-200 transition-colors hover:bg-red-100 disabled:opacity-60"
+                        >
+                          {isRetryingGoogleSync ? 'Retrying...' : 'Retry sync'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

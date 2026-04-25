@@ -44,9 +44,9 @@ Quote (견적서)
 ## 상태 워크플로우
 
 ```
-draft → sent → accepted
+draft → sent → approved
                  ↓
-              declined
+              rejected
                  ↓
               expired (valid_until 지나면 자동)
 ```

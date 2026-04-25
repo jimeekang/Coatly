@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useTransition, useCallback } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import { bookJobFromPublicQuote, getAvailableDatesForToken } from '@/app/actions/jobs';
 
 interface PublicDatePickerStepProps {
   token: string;
   workingDays: number;
   customerName: string;
+  initialBlockedDates?: string[];
+  initialWorkingDays?: number;
+  initialLoadError?: string | null;
 }
 
 function formatDateYMD(date: Date): string {
@@ -66,16 +69,21 @@ export function PublicDatePickerStep({
   token,
   workingDays,
   customerName,
+  initialBlockedDates = [],
+  initialWorkingDays = workingDays,
+  initialLoadError = null,
 }: PublicDatePickerStepProps) {
   const today = formatDateYMD(new Date());
 
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   const [selectedStart, setSelectedStart] = useState<string | null>(null);
-  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
-  const [resolvedWorkingDays, setResolvedWorkingDays] = useState(workingDays);
-  const [isLoadingDates, setIsLoadingDates] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [blockedDates, setBlockedDates] = useState<Set<string>>(
+    () => new Set(initialBlockedDates),
+  );
+  const [resolvedWorkingDays, setResolvedWorkingDays] = useState(initialWorkingDays);
+  const [isLoadingDates, setIsLoadingDates] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(initialLoadError);
   const [isBooking, startBookingTransition] = useTransition();
   const [bookError, setBookError] = useState<string | null>(null);
   const [bookedResult, setBookedResult] = useState<{ startDate: string; endDate: string } | null>(null);
@@ -92,10 +100,6 @@ export function PublicDatePickerStep({
     }
     setIsLoadingDates(false);
   }, [token, workingDays]);
-
-  useEffect(() => {
-    void loadAvailableDates();
-  }, [loadAvailableDates]);
 
   // Compute highlight range from selected start
   const highlightRange = useCallback((): Set<string> => {
@@ -308,6 +312,9 @@ export function PublicDatePickerStep({
                   <button
                     key={dateStr}
                     type="button"
+                    data-testid={`date-${dateStr}`}
+                    data-selected={isStart ? 'true' : undefined}
+                    data-in-range={isInRange ? 'true' : undefined}
                     disabled={isDisabled}
                     onClick={() => handleDayClick(dateStr)}
                     aria-label={`${day} ${MONTH_NAMES[viewMonth]}${isBlocked ? ' (unavailable)' : ''}`}

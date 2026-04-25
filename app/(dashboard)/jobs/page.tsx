@@ -24,7 +24,7 @@ export default async function JobsPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface">Jobs</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-on-surface">Jobs</h1>
         <p className="mt-1 text-sm text-on-surface-variant font-medium">
           Track active work, site progress, and quote handover from one place.
         </p>

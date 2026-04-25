@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JobDetail } from '@/components/jobs/JobDetail';
 import type { JobDetail as JobDetailData } from '@/lib/jobs';
 
-const { pushMock, refreshMock, deleteJobMock, updateJobMock } = vi.hoisted(() => ({
-  pushMock: vi.fn(),
-  refreshMock: vi.fn(),
-  deleteJobMock: vi.fn(),
-  updateJobMock: vi.fn(),
-}));
+const { pushMock, refreshMock, deleteJobMock, retryJobGoogleCalendarSyncMock, updateJobMock } =
+  vi.hoisted(() => ({
+    pushMock: vi.fn(),
+    refreshMock: vi.fn(),
+    deleteJobMock: vi.fn(),
+    retryJobGoogleCalendarSyncMock: vi.fn(),
+    updateJobMock: vi.fn(),
+  }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -19,6 +21,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/app/actions/jobs', () => ({
   deleteJob: deleteJobMock,
+  retryJobGoogleCalendarSync: retryJobGoogleCalendarSyncMock,
   updateJob: updateJobMock,
 }));
 
@@ -41,6 +44,10 @@ describe('JobDetail', () => {
       notes: null,
       created_at: '2026-04-20T00:00:00.000Z',
       updated_at: '2026-04-21T00:00:00.000Z',
+      google_calendar_event_id: null,
+      google_calendar_id: null,
+      google_sync_status: 'not_synced',
+      google_sync_error: null,
       customer: {
         id: 'customer-1',
         name: 'Harbor Cafe',

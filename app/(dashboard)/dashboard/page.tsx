@@ -147,6 +147,21 @@ export default async function DashboardPage() {
     },
   ];
 
+  const quotePipelineStats = [
+    { label: 'Draft', status: 'draft' },
+    { label: 'Sent', status: 'sent' },
+    { label: 'Approved', status: 'approved' },
+    { label: 'Rejected', status: 'rejected' },
+    { label: 'Expired', status: 'expired' },
+  ].map((item) => {
+    const matchingQuotes = quotes?.filter((quote) => quote.status === item.status) ?? [];
+    return {
+      label: item.label,
+      count: matchingQuotes.length,
+      totalCents: matchingQuotes.reduce((sum, quote) => sum + (quote.total_cents ?? 0), 0),
+    };
+  });
+
   const overviewStats = [
     {
       label: 'Active Quotes',
@@ -172,7 +187,7 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       {/* Welcome header */}
       <div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-on-surface leading-tight">
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-on-surface leading-tight">
           G&apos;day, <span className="text-primary">{businessName}</span>
         </h1>
         <p className="mt-2 text-on-surface-variant font-medium">
@@ -237,6 +252,31 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {/* Quote pipeline */}
+      <section aria-labelledby="pipeline-heading">
+        <h2
+          id="pipeline-heading"
+          className="mb-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant"
+        >
+          Quote Pipeline
+        </h2>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+          {quotePipelineStats.map((stat) => (
+            <div key={stat.label} className="rounded-2xl border border-outline-variant bg-white p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                {stat.label}
+              </p>
+              <p className="mt-2 text-2xl font-extrabold tracking-tight text-on-surface">
+                {stat.count}
+              </p>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                {formatAUD(stat.totalCents)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Overview stats */}
       <section aria-labelledby="overview-heading">
         <h2
@@ -245,7 +285,7 @@ export default async function DashboardPage() {
         >
           Overview
         </h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {overviewStats.map((stat) => (
             <div
               key={stat.label}

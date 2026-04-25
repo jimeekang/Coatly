@@ -32,6 +32,12 @@ export default async function QuotesPage() {
 | 브라우저 API (localStorage) | auth 체크 |
 | 애니메이션/인터랙션 | 페이지 레이아웃 |
 
+### React 19 lint 제약
+
+- 초기 데이터는 Server Component나 route loader에서 가져와 Client Component props로 전달한다.
+- Client Component의 `useEffect`에서 mount 직후 `setState`를 연쇄 호출하는 패턴은 피한다.
+- 공개 견적 날짜 선택처럼 재시도가 필요한 UI는 서버에서 받은 초기값을 먼저 렌더링하고, 사용자가 누른 retry/action에서만 비동기 state 전환을 수행한다.
+
 ## Form Pattern (Server Actions)
 
 ```tsx

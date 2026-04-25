@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
-import { handleStripeWebhook } from '@/lib/stripe/webhook-handler';
+import { NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
-  return handleStripeWebhook(request);
+  return NextResponse.redirect(new URL('/api/webhooks/stripe', request.url), 308);
 }

@@ -20,6 +20,11 @@ interface PublicQuoteClientProps {
   token: string;
   quote: PublicQuoteDetail;
   business: Business | null;
+  bookingAvailability?: {
+    blockedDates: string[];
+    workingDays: number;
+    error: string | null;
+  } | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -115,7 +120,12 @@ function SectionHeader({ label, description }: { label: string; description?: st
   );
 }
 
-export function PublicQuoteClient({ token, quote, business }: PublicQuoteClientProps) {
+export function PublicQuoteClient({
+  token,
+  quote,
+  business,
+  bookingAvailability = null,
+}: PublicQuoteClientProps) {
   const includedLineItems = quote.line_items.filter((item) => !item.is_optional);
   const optionalLineItems = quote.line_items.filter((item) => item.is_optional);
 
@@ -375,6 +385,9 @@ export function PublicQuoteClient({ token, quote, business }: PublicQuoteClientP
                   token={token}
                   workingDays={quote.working_days ?? 1}
                   customerName={quote.customer.name}
+                  initialBlockedDates={bookingAvailability?.blockedDates ?? []}
+                  initialWorkingDays={bookingAvailability?.workingDays ?? quote.working_days ?? 1}
+                  initialLoadError={bookingAvailability?.error ?? null}
                 />
               </div>
             </SectionCard>

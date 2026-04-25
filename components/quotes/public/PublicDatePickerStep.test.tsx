@@ -26,6 +26,9 @@ interface PublicDatePickerStepProps {
   token: string;
   workingDays: number;
   customerName: string;
+  initialBlockedDates?: string[];
+  initialWorkingDays?: number;
+  initialLoadError?: string | null;
 }
 
 function renderStep(props: PublicDatePickerStepProps = { token: 'test-token', workingDays: 1, customerName: 'Test Customer' }) {
@@ -40,45 +43,36 @@ describe('PublicDatePickerStep', () => {
     vi.clearAllMocks();
   });
 
-  it('shows loading state while fetching available dates', async () => {
-    // Never resolves during this test — keep the component in loading state
-    getAvailableDatesForTokenMock.mockReturnValue(new Promise(() => {}));
+  it('renders from server-loaded availability without fetching on mount', async () => {
+    renderStep({
+      token: 'test-token',
+      workingDays: 1,
+      customerName: 'Test Customer',
+      initialBlockedDates: [],
+      initialWorkingDays: 2,
+    });
 
-    renderStep();
-
-    // A loading indicator should be present before data arrives
-    const loadingEl =
-      screen.queryByRole('status') ??
-      screen.queryByText(/loading/i) ??
-      screen.queryByTestId('loading');
-    expect(loadingEl).not.toBeNull();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByText(/2 days/i)).toBeInTheDocument();
+    expect(getAvailableDatesForTokenMock).not.toHaveBeenCalled();
   });
 
   it('renders calendar with current month after data loads', async () => {
-    getAvailableDatesForTokenMock.mockResolvedValue({
-      blockedDates: [],
-      workingDays: 3,
-      error: null,
+    renderStep({
+      token: 'test-token',
+      workingDays: 1,
+      customerName: 'Test Customer',
+      initialBlockedDates: [],
+      initialWorkingDays: 3,
     });
 
-    renderStep();
-
-    // Wait for the calendar to appear (month name should be visible)
-    await waitFor(() => {
-      const now = new Date();
-      const monthName = now.toLocaleString('default', { month: 'long' });
-      expect(screen.getByText(new RegExp(monthName, 'i'))).toBeInTheDocument();
-    });
+    const now = new Date();
+    const monthName = now.toLocaleString('default', { month: 'long' });
+    expect(screen.getByText(new RegExp(monthName, 'i'))).toBeInTheDocument();
   });
 
   it('disables past dates', async () => {
-    getAvailableDatesForTokenMock.mockResolvedValue({
-      blockedDates: [],
-      workingDays: 2,
-      error: null,
-    });
-
-    renderStep();
+    renderStep({ token: 'test-token', workingDays: 2, customerName: 'Test Customer' });
 
     await waitFor(() => {
       // All disabled date buttons should be past dates
@@ -100,13 +94,12 @@ describe('PublicDatePickerStep', () => {
     const day = String(futureDay).padStart(2, '0');
     const blockedDate = `${year}-${month}-${day}`;
 
-    getAvailableDatesForTokenMock.mockResolvedValue({
-      blockedDates: [blockedDate],
+    renderStep({
+      token: 'test-token',
       workingDays: 1,
-      error: null,
+      customerName: 'Test Customer',
+      initialBlockedDates: [blockedDate],
     });
-
-    renderStep();
 
     await waitFor(() => {
       // The blocked date cell should exist and be disabled
@@ -125,13 +118,12 @@ describe('PublicDatePickerStep', () => {
   });
 
   it('highlights date range when a date is selected', async () => {
-    getAvailableDatesForTokenMock.mockResolvedValue({
-      blockedDates: [],
-      workingDays: 3,
-      error: null,
+    renderStep({
+      token: 'test-token',
+      workingDays: 1,
+      customerName: 'Test Customer',
+      initialWorkingDays: 3,
     });
-
-    renderStep();
 
     // Wait for calendar to render
     await waitFor(() => {
@@ -166,11 +158,6 @@ describe('PublicDatePickerStep', () => {
   });
 
   it('shows success message after booking', async () => {
-    getAvailableDatesForTokenMock.mockResolvedValue({
-      blockedDates: [],
-      workingDays: 1,
-      error: null,
-    });
     bookJobFromPublicQuoteMock.mockResolvedValue({ error: null, jobId: 'job-1' });
 
     renderStep();
@@ -203,18 +190,13 @@ describe('PublicDatePickerStep', () => {
 
       await waitFor(() => {
         expect(
-          screen.queryByText(/예약이 완료|booked|confirmed|success/i),
-        ).toBeInTheDocument();
+          screen.queryAllByText(/예약이 완료|booked|confirmed|success/i).length,
+        ).toBeGreaterThan(0);
       });
     }
   });
 
   it('shows error message when booking fails', async () => {
-    getAvailableDatesForTokenMock.mockResolvedValue({
-      blockedDates: [],
-      workingDays: 1,
-      error: null,
-    });
     bookJobFromPublicQuoteMock.mockResolvedValue({
       error: '이미 예약된 날짜입니다',
       jobId: null,

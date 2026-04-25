@@ -8,7 +8,7 @@
 
 ## Flow
 
-1. 견적 accepted → "Create Invoice" 버튼
+1. 견적 approved → "Create Invoice" 버튼
 2. 또는 `/invoices/new` → 독립 청구서 생성
 3. Line item 입력/수정
 4. 저장 (draft) → PDF 미리보기 → 발송 (sent)

@@ -9,7 +9,7 @@ Manage customers, build room-by-room quotes, generate PDFs, issue invoices, and 
 
 | Area | Technology |
 |------|------------|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Language | TypeScript 5 (strict) |
 | Styling | Tailwind CSS 4 |
 | UI Components | shadcn/ui |
@@ -86,7 +86,7 @@ npm run dev
 **Using a local Supabase instance** (requires Docker):
 ```bash
 supabase start        # start local instance
-supabase db push      # apply all 13 migrations
+supabase db push      # apply all versioned migrations
 ```
 
 ### 4. Start the dev server
@@ -168,7 +168,7 @@ For architecture details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 | 영역 | 기술 |
 |------|------|
-| 프레임워크 | Next.js 15 (App Router) |
+| 프레임워크 | Next.js 16 (App Router) |
 | 언어 | TypeScript 5 (strict) |
 | 스타일 | Tailwind CSS 4 |
 | UI 컴포넌트 | shadcn/ui |
@@ -245,7 +245,7 @@ npm run dev
 **로컬 Supabase 사용 시** (Docker 필요):
 ```bash
 supabase start          # 로컬 인스턴스 시작
-supabase db push        # 마이그레이션 13개 적용
+supabase db push        # 버전 관리된 마이그레이션 전체 적용
 ```
 
 ### 4. 개발 서버 실행

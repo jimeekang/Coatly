@@ -57,6 +57,10 @@ export type JobListItem = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  google_calendar_event_id: string | null;
+  google_calendar_id: string | null;
+  google_sync_status: string;
+  google_sync_error: string | null;
   customer: {
     id: string;
     name: string;

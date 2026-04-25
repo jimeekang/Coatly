@@ -76,6 +76,11 @@ export async function GET(request: NextRequest) {
       .lte('due_date', overdueEnd.toISOString().slice(0, 10)),
   ]);
 
+  const queryError = dueSoonResult.error?.message ?? overdueResult.error?.message ?? null;
+  if (queryError) {
+    return NextResponse.json({ ok: false, error: queryError }, { status: 500 });
+  }
+
   const allInvoices = [
     ...(dueSoonResult.data ?? []),
     ...(overdueResult.data ?? []),
@@ -97,6 +102,12 @@ export async function GET(request: NextRequest) {
   const results = {
     due_soon: { sent: 0, skipped: 0, errors: 0 },
     overdue: { sent: 0, skipped: 0, errors: 0 },
+    error_samples: [] as Array<{
+      invoice_id: string;
+      invoice_number: string;
+      reminder_type: 'due_soon' | 'overdue';
+      error: string;
+    }>,
   };
 
   // Process due-soon reminders
@@ -114,12 +125,32 @@ export async function GET(request: NextRequest) {
       reminderType: 'due_soon',
     });
 
-    if (error) { results.due_soon.errors++; continue; }
+    if (error) {
+      results.due_soon.errors++;
+      results.error_samples.push({
+        invoice_id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        reminder_type: 'due_soon',
+        error,
+      });
+      continue;
+    }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('invoices')
       .update({ due_reminder_sent_at: now.toISOString() })
       .eq('id', invoice.id);
+
+    if (updateError) {
+      results.due_soon.errors++;
+      results.error_samples.push({
+        invoice_id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        reminder_type: 'due_soon',
+        error: updateError.message,
+      });
+      continue;
+    }
 
     results.due_soon.sent++;
   }
@@ -139,12 +170,32 @@ export async function GET(request: NextRequest) {
       reminderType: 'overdue',
     });
 
-    if (error) { results.overdue.errors++; continue; }
+    if (error) {
+      results.overdue.errors++;
+      results.error_samples.push({
+        invoice_id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        reminder_type: 'overdue',
+        error,
+      });
+      continue;
+    }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('invoices')
       .update({ overdue_reminder_sent_at: now.toISOString() })
       .eq('id', invoice.id);
+
+    if (updateError) {
+      results.overdue.errors++;
+      results.error_samples.push({
+        invoice_id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        reminder_type: 'overdue',
+        error: updateError.message,
+      });
+      continue;
+    }
 
     results.overdue.sent++;
   }

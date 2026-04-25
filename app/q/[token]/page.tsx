@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getAvailableDatesForToken } from '@/app/actions/jobs';
 import { getPublicQuoteByToken } from '@/app/actions/quotes';
 import { PublicQuoteClient } from '@/components/quotes/public/PublicQuoteClient';
 
@@ -31,9 +32,18 @@ export default async function PublicQuotePage({
     );
   }
 
+  const bookingAvailability = data.quote.approved_at
+    ? await getAvailableDatesForToken(token)
+    : null;
+
   return (
     <main className="min-h-screen bg-[#f6f3ee]">
-      <PublicQuoteClient token={token} quote={data.quote} business={data.business} />
+      <PublicQuoteClient
+        token={token}
+        quote={data.quote}
+        business={data.business}
+        bookingAvailability={bookingAvailability}
+      />
     </main>
   );
 }

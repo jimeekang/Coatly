@@ -1,7 +1,7 @@
 # Generated: DB Schema Summary
 
 > ⚠️ 이 파일은 참조용 스냅샷입니다. 정확한 스키마는 `supabase/migrations/`와 `types/database.ts`를 확인하세요.
-> 마지막 업데이트: 2026-04-04 (migration 023 기준)
+> 마지막 업데이트: 2026-04-25 (migration 036 기준)
 
 ## Tables
 
@@ -29,8 +29,29 @@
 ### invoice_line_items
 `id(PK) | invoice_id(FK) | description | quantity | unit_price_cents | gst_cents | total_cents | sort_order`
 
+### jobs
+`id(PK) | user_id(FK) | customer_id(FK) | quote_id(FK,nullable) | title | status | scheduled_date | start_date | end_date | duration_days | schedule_source | google_sync_status | notes`
+
+### job_variations
+`id(PK) | user_id(FK) | job_id(FK) | name | quantity | unit_price_cents | total_cents | notes | sort_order`
+
+### schedule_events
+`id(PK) | user_id(FK) | title | date | start_time | end_time | is_all_day | location | notes`
+
+### material_items
+`id(PK) | user_id(FK) | category | name | unit | unit_price_cents | is_active | sort_order | notes`
+
+### quote_line_items
+`id(PK) | quote_id(FK) | material_item_id(FK,nullable) | name | category | unit | quantity | unit_price_cents | total_cents | is_optional | is_selected | sort_order`
+
 ### subscriptions
 `id(PK) | user_id(FK,UNIQUE) | stripe_customer_id | stripe_subscription_id | plan | status | period_start/end | cancel_at | cancel_at_period_end`
+
+### google_calendar_connections
+`user_id(PK/FK) | google_account_email | encrypted_refresh_token | granted_scopes | is_active | last_sync_at | last_sync_error`
+
+### google_calendar_settings
+`user_id(PK/FK) | display_calendar_id | availability_calendar_id | event_destination_calendar_id | timezone`
 
 ## Storage Buckets
 
@@ -39,6 +60,6 @@
 | logos | Private (per user) | 비즈니스 로고 |
 | photos | Private (per user) | 현장 사진 |
 
-## Migrations (001–023)
+## Migrations (001–036)
 
-총 23개 마이그레이션. 상세 내용은 `supabase/migrations/` 디렉토리 참조.
+총 36개 마이그레이션. 상세 내용은 `supabase/migrations/` 디렉토리 참조.

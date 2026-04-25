@@ -1,7 +1,7 @@
 # Coatly — Project Context
 
 ## Stack
-Next.js 15 (App Router) · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS + Storage) · Stripe · React-PDF · Resend · Vercel
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS + Storage) · Stripe · React-PDF · Resend · Vercel
 
 ## Key Constraints
 - Mobile-first PWA — 터치 타겟 44px+, 핵심 액션 화면 하단 배치

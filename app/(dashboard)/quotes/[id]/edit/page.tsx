@@ -12,7 +12,6 @@ import type { QuoteStatus } from '@/lib/quotes';
 import {
   isInteriorEstimateInput,
   normalizeInteriorWallPaintSystem,
-  type InteriorEstimateInput,
 } from '@/lib/interior-estimates';
 import type { QuoteLineItemFormInput } from '@/lib/supabase/validators';
 import type { PricingMethod } from '@/types/quote';

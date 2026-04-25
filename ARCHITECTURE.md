@@ -100,7 +100,7 @@ coatly/
 ├── scripts/
 │   └── seed-demo-data.ts         # Demo data seed script (dev/demo only)
 └── supabase/
-    └── migrations/               # SQL migration files (001 – 015)
+    └── migrations/               # Versioned SQL migration files (001 – 036+)
 ```
 
 ---
@@ -174,7 +174,7 @@ Business profile. 1:1 with `auth.users`. `user_id` is the PK.
 | customer_id | uuid FK | |
 | quote_number | text | `QUO-0001` format, UNIQUE per (user_id, quote_number) |
 | title | text | Job title |
-| status | text | `draft` \| `sent` \| `accepted` \| `declined` \| `expired` |
+| status | text | `draft` \| `sent` \| `approved` \| `rejected` \| `expired` |
 | tier | text | `good` \| `better` \| `best` — currently selected pricing tier |
 | labour_margin_percent | integer | Labour margin (%) |
 | material_margin_percent | integer | Material margin (%) |
@@ -434,7 +434,7 @@ Display with `/100`; GST = `Math.round(subtotal * 0.1)`.
 - No `any` usage; strict mode enabled
 
 ### 5. Migration management
-Migrations are managed as numbered files in `supabase/migrations/`.
+Migrations are managed as numbered files in `supabase/migrations/`; the repo currently tracks `001` through `036`.
 When adding columns or tables, always create a new migration file and apply it through the remote Supabase MCP flow. Local Supabase CLI/Docker is not part of the workflow.
 
 1. Check existing schema with `execute_sql` or `list_tables`
@@ -547,7 +547,7 @@ coatly/
 ├── scripts/
 │   └── seed-demo-data.ts         # 개발/데모 환경 테스트 데이터 시드
 └── supabase/
-    └── migrations/               # SQL 마이그레이션 파일 (001 ~ 015)
+    └── migrations/               # 버전 관리된 SQL 마이그레이션 파일 (001 ~ 036+)
 ```
 
 ---
@@ -621,7 +621,7 @@ auth.users (Supabase 관리)
 | customer_id | uuid FK | |
 | quote_number | text | `QUO-0001` 형식, (user_id, quote_number) UNIQUE |
 | title | text | 작업 제목 |
-| status | text | `draft` \| `sent` \| `accepted` \| `declined` \| `expired` |
+| status | text | `draft` \| `sent` \| `approved` \| `rejected` \| `expired` |
 | tier | text | `good` \| `better` \| `best` — 현재 선택 티어 |
 | labour_margin_percent | integer | 인건비 마진 (%) |
 | material_margin_percent | integer | 자재비 마진 (%) |
@@ -882,7 +882,7 @@ const { data } = await supabase.from('quotes').select('*');
 - `any` 사용 금지, strict 모드 활성화
 
 ### 5. 마이그레이션 관리
-`supabase/migrations/` 에 순번 파일로 관리합니다.
+`supabase/migrations/` 에 순번 파일로 관리합니다. 현재 repo는 `001`부터 `036`까지 추적합니다.
 새 컬럼/테이블 추가 시 반드시 새 마이그레이션 파일을 만들고, 로컬 Supabase CLI가 아니라 원격 MCP 흐름으로 적용합니다.
 
 1. `execute_sql` 또는 `list_tables`로 현재 schema 확인

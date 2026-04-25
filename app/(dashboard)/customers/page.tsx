@@ -13,7 +13,7 @@ export default async function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-3">
         <div>
           <h1 className="text-[28px] font-extrabold tracking-tight text-on-surface">Customers</h1>
           {customers.length > 0 && (

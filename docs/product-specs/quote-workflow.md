@@ -13,7 +13,7 @@
 3. 자동 가격 계산 (단가 × 면적 + 마진)
 4. Good/Better/Best 티어 비교
 5. 저장 (draft) → PDF 미리보기 → 발송 (sent)
-6. 고객 응답: accepted | declined | expired
+6. 고객 응답: approved | rejected | expired
 
 ## Acceptance Criteria
 

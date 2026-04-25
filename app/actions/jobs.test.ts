@@ -61,6 +61,8 @@ import {
   createJobFromQuote,
   deleteJob,
   getAvailableDatesForToken,
+  getJob,
+  getJobDetail,
   getJobFormOptions,
   getJobs,
   updateJob,
@@ -69,9 +71,17 @@ import {
 function createFilterQuery<Result>(result: Result) {
   return {
     eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockResolvedValue(result),
     maybeSingle: vi.fn().mockResolvedValue(result),
     single: vi.fn().mockResolvedValue(result),
     order: vi.fn().mockResolvedValue(result),
+  };
+}
+
+function createEqInQuery<Result>(result: Result) {
+  return {
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockResolvedValue(result),
   };
 }
 
@@ -120,26 +130,12 @@ describe('jobs actions', () => {
               title: 'Prep living room',
               status: 'scheduled',
               scheduled_date: '2026-04-05',
+              start_date: null,
+              end_date: null,
+              duration_days: null,
               notes: 'Rear gate access',
               created_at: '2026-04-01T00:00:00.000Z',
               updated_at: '2026-04-01T00:00:00.000Z',
-              customer: {
-                id: 'customer-1',
-                name: 'Olivia Brown',
-                company_name: 'Brown Projects',
-                email: 'olivia@example.com',
-                address_line1: '12 Beach St',
-                city: 'Manly',
-                state: 'NSW',
-                postcode: '2095',
-              },
-              quote: {
-                id: 'quote-1',
-                quote_number: 'QUO-0012',
-                title: 'Living room repaint',
-                status: 'approved',
-                customer_id: 'customer-1',
-              },
             },
           ],
           error: null,
@@ -152,6 +148,47 @@ describe('jobs actions', () => {
         if (table === 'jobs') {
           return {
             select: vi.fn().mockReturnValue(jobsQuery),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createEqInQuery({
+                data: [
+                  {
+                    id: 'customer-1',
+                    name: 'Olivia Brown',
+                    company_name: 'Brown Projects',
+                    email: 'olivia@example.com',
+                    address_line1: '12 Beach St',
+                    city: 'Manly',
+                    state: 'NSW',
+                    postcode: '2095',
+                  },
+                ],
+                error: null,
+              }),
+            ),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createEqInQuery({
+                data: [
+                  {
+                    id: 'quote-1',
+                    quote_number: 'QUO-0012',
+                    title: 'Living room repaint',
+                    status: 'approved',
+                    customer_id: 'customer-1',
+                  },
+                ],
+                error: null,
+              }),
+            ),
           };
         }
 
@@ -176,6 +213,200 @@ describe('jobs actions', () => {
         }),
       }),
     ]);
+  });
+
+  it('loads a single job with explicit customer and quote mapping', async () => {
+    const jobQuery = createFilterQuery({
+      data: {
+        id: 'job-1',
+        customer_id: 'customer-1',
+        quote_id: 'quote-1',
+        title: 'Prep living room',
+        status: 'scheduled',
+        scheduled_date: '2026-04-05',
+        start_date: null,
+        end_date: null,
+        duration_days: null,
+        notes: null,
+        created_at: '2026-04-01T00:00:00.000Z',
+        updated_at: '2026-04-01T00:00:00.000Z',
+      },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') return { select: vi.fn().mockReturnValue(jobQuery) };
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createEqInQuery({
+                data: [
+                  {
+                    id: 'customer-1',
+                    name: 'Olivia Brown',
+                    company_name: null,
+                    email: 'olivia@example.com',
+                    address_line1: null,
+                    city: null,
+                    state: null,
+                    postcode: null,
+                  },
+                ],
+                error: null,
+              }),
+            ),
+          };
+        }
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createEqInQuery({
+                data: [
+                  {
+                    id: 'quote-1',
+                    quote_number: 'QUO-0012',
+                    title: 'Living room repaint',
+                    status: 'approved',
+                    customer_id: 'customer-1',
+                  },
+                ],
+                error: null,
+              }),
+            ),
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await getJob('job-1');
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual(
+      expect.objectContaining({
+        id: 'job-1',
+        customer: expect.objectContaining({ name: 'Olivia Brown' }),
+        quote: expect.objectContaining({ quote_number: 'QUO-0012' }),
+      }),
+    );
+  });
+
+  it('loads job detail after explicit job hydration', async () => {
+    const jobQuery = createFilterQuery({
+      data: {
+        id: 'job-1',
+        customer_id: 'customer-1',
+        quote_id: 'quote-1',
+        title: 'Prep living room',
+        status: 'scheduled',
+        scheduled_date: '2026-04-05',
+        start_date: null,
+        end_date: null,
+        duration_days: null,
+        notes: null,
+        created_at: '2026-04-01T00:00:00.000Z',
+        updated_at: '2026-04-01T00:00:00.000Z',
+      },
+      error: null,
+    });
+    const lineItemsQuery = {
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'line-1',
+            name: 'Walls',
+            quantity: 2,
+            unit_price_cents: 50000,
+            total_cents: 100000,
+            is_optional: false,
+            is_selected: true,
+            sort_order: 0,
+          },
+        ],
+        error: null,
+      }),
+    };
+    const variationsQuery = {
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    };
+    const invoiceQuery = {
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            id: 'invoice-1',
+            invoice_number: 'INV-0001',
+            status: 'draft',
+            total_cents: 100000,
+          },
+          error: null,
+        }),
+      }),
+    };
+
+    createServerClientMock.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') return { select: vi.fn().mockReturnValue(jobQuery) };
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createEqInQuery({
+                data: [
+                  {
+                    id: 'customer-1',
+                    name: 'Olivia Brown',
+                    company_name: null,
+                    email: 'olivia@example.com',
+                    address_line1: null,
+                    city: null,
+                    state: null,
+                    postcode: null,
+                  },
+                ],
+                error: null,
+              }),
+            ),
+          };
+        }
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createEqInQuery({
+                data: [
+                  {
+                    id: 'quote-1',
+                    quote_number: 'QUO-0012',
+                    title: 'Living room repaint',
+                    status: 'approved',
+                    customer_id: 'customer-1',
+                  },
+                ],
+                error: null,
+              }),
+            ),
+          };
+        }
+        if (table === 'quote_line_items') return { select: vi.fn().mockReturnValue(lineItemsQuery) };
+        if (table === 'job_variations') return { select: vi.fn().mockReturnValue(variationsQuery) };
+        if (table === 'invoices') return { select: vi.fn().mockReturnValue(invoiceQuery) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await getJobDetail('job-1');
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual(
+      expect.objectContaining({
+        id: 'job-1',
+        quoteLineItems: [expect.objectContaining({ name: 'Walls' })],
+        invoice: expect.objectContaining({ invoice_number: 'INV-0001' }),
+      }),
+    );
   });
 
   it('loads job form options for customers and quotes', async () => {

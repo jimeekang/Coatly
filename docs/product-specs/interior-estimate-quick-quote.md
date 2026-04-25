@@ -58,7 +58,7 @@
 - [ ] 상태(condition)에 따른 가격 보정 (poor → 높은 단가)
 - [ ] GST 10% 자동 계산
 - [ ] 계산 결과를 Quote로 저장 가능
-- [ ] 저장된 Quote는 기존 Quote 워크플로우(draft → sent → accepted)를 따름
+- [ ] 저장된 Quote는 기존 Quote 워크플로우(draft → sent → approved)를 따름
 - [ ] 단가 미설정 시 config/paint-rates.ts 기본값 사용
 - [ ] Pro 플랜 전용 기능 여부 표시
 
