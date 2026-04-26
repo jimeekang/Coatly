@@ -2070,11 +2070,29 @@ export async function updateQuote(
     pricing_method_inputs: resolvedPricingInputs as any,
   };
 
-  const { error: updateError } = await supabase
+  let { error: updateError } = await supabase
     .from('quotes')
     .update(quoteUpdatePayload)
     .eq('id', quoteId)
     .eq('user_id', user.id);
+
+  if (updateError && isMissingQuoteCustomerSnapshotColumnError(updateError.message)) {
+    const {
+      customer_email: _customerEmail,
+      customer_address: _customerAddress,
+      ...legacyQuoteUpdatePayload
+    } = quoteUpdatePayload;
+    void _customerEmail;
+    void _customerAddress;
+
+    const legacyUpdateResult = await supabase
+      .from('quotes')
+      .update(legacyQuoteUpdatePayload)
+      .eq('id', quoteId)
+      .eq('user_id', user.id);
+
+    updateError = legacyUpdateResult.error;
+  }
 
   if (updateError) {
     return { error: updateError.message };

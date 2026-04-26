@@ -1178,6 +1178,176 @@ describe('updateQuote', () => {
     vi.clearAllMocks();
   });
 
+  it('falls back when the quotes customer snapshot columns are missing during edit save', async () => {
+    const captured: {
+      firstQuoteUpdate?: Record<string, unknown>;
+      fallbackQuoteUpdate?: Record<string, unknown>;
+    } = {};
+    let quoteUpdateCalls = 0;
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-1',
+                  quote_number: 'QUO-0009',
+                  customer_id: 'customer-1',
+                },
+                error: null,
+              }),
+            })),
+            update: vi.fn((payload) => {
+              quoteUpdateCalls += 1;
+              if (quoteUpdateCalls === 1) {
+                captured.firstQuoteUpdate = payload;
+                return {
+                  error: {
+                    message:
+                      "Could not find the 'customer_address' column of 'quotes' in the schema cache",
+                  },
+                  eq: vi.fn().mockReturnThis(),
+                };
+              }
+
+              captured.fallbackQuoteUpdate = payload;
+              return {
+                error: null,
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => ({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            })),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: {
+                  id: 'customer-1',
+                  email: 'client@example.com',
+                  emails: ['client@example.com'],
+                  address_line1: '128 Beach Street',
+                  address_line2: null,
+                  city: 'Manly',
+                  state: 'NSW',
+                  postcode: '2095',
+                  properties: [],
+                },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+            insert: vi.fn(() => ({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: { id: 'room-1' },
+                  error: null,
+                }),
+              }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_room_surfaces') {
+          return {
+            insert: vi.fn().mockResolvedValue({ error: null }),
+          };
+        }
+
+        if (table === 'quote_estimate_items' || table === 'quote_line_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      customer_email: 'client@example.com',
+      customer_address: '128 Beach Street, Manly, NSW, 2095',
+      title: 'Apartment repaint',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: 'Client note',
+      internal_notes: 'Internal note',
+      rooms: [
+        {
+          name: 'Living Room',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              coating_type: 'repaint_2coat',
+              area_m2: 35,
+              rate_per_m2_cents: 1800,
+              notes: '',
+            },
+          ],
+        },
+      ],
+      line_items: [],
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.firstQuoteUpdate).toMatchObject({
+      customer_email: 'client@example.com',
+      customer_address: '128 Beach Street, Manly, NSW, 2095',
+    });
+    expect(captured.fallbackQuoteUpdate).not.toHaveProperty('customer_email');
+    expect(captured.fallbackQuoteUpdate).not.toHaveProperty('customer_address');
+    expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-1');
+  });
+
   it('blocks quote edits once any linked invoice exists', async () => {
     const existingQuoteQuery = createFilterQuery({
       data: {
