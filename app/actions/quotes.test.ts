@@ -2206,6 +2206,133 @@ describe('getQuote', () => {
     ]);
   });
 
+  it('keeps the public share token when falling back for missing customer snapshot columns', async () => {
+    const quoteSelectMock = vi
+      .fn()
+      .mockReturnValueOnce(
+        createFilterQuery({
+          data: null,
+          error: {
+            message: "Could not find the 'customer_address' column of 'quotes' in the schema cache",
+          },
+        })
+      )
+      .mockReturnValueOnce(
+        createFilterQuery({
+          data: {
+            id: 'quote-token-1',
+            user_id: 'user-1',
+            customer_id: 'customer-1',
+            public_share_token: '22222222-2222-4222-8222-222222222222',
+            approved_at: null,
+            approved_by_name: null,
+            approved_by_email: null,
+            approval_signature: null,
+            manual_adjustment_cents: 0,
+            discount_cents: 0,
+            deposit_percent: 0,
+            quote_number: 'QUO-0012',
+            title: 'Token fallback quote',
+            status: 'draft',
+            valid_until: '2026-04-10',
+            tier: 'standard',
+            notes: null,
+            internal_notes: null,
+            labour_margin_percent: 0,
+            material_margin_percent: 0,
+            subtotal_cents: 250000,
+            gst_cents: 25000,
+            total_cents: 275000,
+            estimate_category: 'manual',
+            property_type: null,
+            estimate_mode: null,
+            estimate_context: {},
+            pricing_snapshot: {},
+            pricing_method: 'hybrid',
+            pricing_method_inputs: null,
+            created_at: '2026-04-01T00:00:00.000Z',
+            updated_at: '2026-04-01T00:00:00.000Z',
+            customer: {
+              id: 'customer-1',
+              name: 'Harbor Cafe',
+              company_name: null,
+              email: 'owner@example.com',
+              phone: null,
+              address_line1: '128 Beach Street',
+              address_line2: null,
+              city: 'Manly',
+              state: 'NSW',
+              postcode: '2095',
+            },
+          },
+          error: null,
+        })
+      );
+
+    createServerClientMock.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return { select: quoteSelectMock };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: [],
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await getQuote('quote-token-1');
+
+    expect(quoteSelectMock).toHaveBeenCalledTimes(2);
+    expect(quoteSelectMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('public_share_token')
+    );
+    expect(quoteSelectMock).toHaveBeenNthCalledWith(
+      2,
+      expect.not.stringContaining('customer_address')
+    );
+    expect(result.error).toBeNull();
+    expect(result.data?.public_share_token).toBe('22222222-2222-4222-8222-222222222222');
+  });
+
   it('falls back to legacy quote selects when snapshot columns are missing', async () => {
     const quotesSelectMock = vi
       .fn()

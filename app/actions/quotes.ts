@@ -163,6 +163,8 @@ const QUOTE_LIST_SELECT_LEGACY =
   `id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT =
   `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT =
+  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT_LEGACY =
   `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
@@ -286,6 +288,14 @@ async function sendQuoteDocumentEmail(input: {
     })
   );
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.coatly.com.au';
+  const publicShareToken = quoteDetailResult.data.public_share_token.trim();
+
+  if (!publicShareToken) {
+    return {
+      error:
+        'Quote email could not be sent because the public approval link is missing. Apply the public quote sharing database migration and try again.',
+    };
+  }
 
   return sendQuoteEmail({
     to: input.to,
@@ -297,7 +307,7 @@ async function sendQuoteDocumentEmail(input: {
     validUntil: quoteDetailResult.data.valid_until
       ? formatDate(quoteDetailResult.data.valid_until)
       : null,
-    approvalUrl: `${appUrl}/q/${quoteDetailResult.data.public_share_token}`,
+    approvalUrl: `${appUrl.replace(/\/$/, '')}/q/${publicShareToken}`,
     pdfAttachment: Buffer.from(pdfBuffer),
   });
 }
@@ -878,7 +888,29 @@ export async function getQuote(id: string): Promise<{
   let quote = quoteResult.data as QuoteDetailRow | null;
   let quoteError = quoteResult.error;
 
-  if (quoteError && isMissingQuoteSelectColumnError(quoteError.message)) {
+  if (quoteError && isMissingQuoteCustomerSnapshotColumnError(quoteError.message)) {
+    const snapshotLegacyResult = await supabase
+      .from('quotes')
+      .select(QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    quote = snapshotLegacyResult.data as QuoteDetailRow | null;
+    quoteError = snapshotLegacyResult.error;
+
+    if (quoteError && isMissingPublicShareTokenColumnError(quoteError.message)) {
+      const legacyResult = await supabase
+        .from('quotes')
+        .select(QUOTE_DETAIL_SELECT_LEGACY)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+
+      quote = legacyResult.data as QuoteDetailRow | null;
+      quoteError = legacyResult.error;
+    }
+  } else if (quoteError && isMissingPublicShareTokenColumnError(quoteError.message)) {
     const legacyResult = await supabase
       .from('quotes')
       .select(QUOTE_DETAIL_SELECT_LEGACY)
@@ -924,8 +956,14 @@ function isMissingQuoteSelectColumnError(message: string | null | undefined) {
 
   return (
     isMissingQuoteCustomerSnapshotColumnError(message) ||
-    (message.includes('quotes.public_share_token') && message.includes('does not exist'))
+    isMissingPublicShareTokenColumnError(message)
   );
+}
+
+function isMissingPublicShareTokenColumnError(message: string | null | undefined) {
+  if (!message) return false;
+
+  return message.includes('quotes.public_share_token') && message.includes('does not exist');
 }
 
 export async function getPublicQuoteByToken(token: string): Promise<{
