@@ -144,7 +144,7 @@ export default async function QuoteDetailPage({
           {emailDemo && (
             <div className="mb-4 rounded-lg border border-primary/20 bg-primary/8 px-4 py-3">
               <p className="text-sm text-primary">
-                Demo only. This quote was marked as sent to {quote.customer.email ?? 'the customer'}.
+                Quote email sent to {quote.customer.email ?? 'the customer'}.
               </p>
             </div>
           )}

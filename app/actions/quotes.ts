@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { renderToBuffer } from '@react-pdf/renderer';
 import {
   buildQuoteCustomerAddress,
   calculateQuoteLineItemsSubtotal,
@@ -30,7 +31,8 @@ import {
 import { calculateInteriorEstimate } from '@/lib/interior-estimates';
 import { calculateExteriorEstimate } from '@/lib/exterior-estimates';
 import { getBusinessDocumentBranding, getBusinessRateSettings } from '@/lib/businesses';
-import { sendQuoteApprovalNotification } from '@/lib/email/resend';
+import { sendQuoteApprovalNotification, sendQuoteEmail } from '@/lib/email/resend';
+import { QuoteTemplate } from '@/lib/pdf/quote-template';
 import { DEFAULT_RATE_SETTINGS } from '@/lib/rate-settings';
 import type { UserRateSettings } from '@/lib/rate-settings';
 import {
@@ -47,6 +49,7 @@ import {
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
+import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import type { QuoteCreateInput } from '@/lib/supabase/validators';
 import { formatAUD, formatDate } from '@/utils/format';
 
@@ -247,6 +250,57 @@ type PublicQuoteApprovalRow = {
 type CreateQuoteOptions = {
   submitIntent?: 'save' | 'send_email';
 };
+
+async function sendQuoteDocumentEmail(input: {
+  supabase: QuoteDataClient;
+  userId: string;
+  userEmail: string | null;
+  quoteId: string;
+  to: string;
+}) {
+  const [quoteDetailResult, businessBrandingResult] = await Promise.all([
+    getQuote(input.quoteId),
+    getBusinessDocumentBranding(input.supabase, input.userId, input.userEmail),
+  ]);
+
+  if (quoteDetailResult.error || !quoteDetailResult.data) {
+    return {
+      error: quoteDetailResult.error ?? 'Quote email could not be prepared.',
+    };
+  }
+
+  const businessBranding = businessBrandingResult.data;
+  const businessName = businessBranding?.name || 'My Painting Business';
+  const logoUrl = await createStorageObjectDataUrl(
+    input.supabase,
+    businessBranding?.logoPath ?? null
+  );
+  const pdfBuffer = await renderToBuffer(
+    QuoteTemplate({
+      quote: quoteDetailResult.data,
+      businessName,
+      abn: businessBranding?.abn ?? null,
+      phone: businessBranding?.phone ?? null,
+      email: businessBranding?.email ?? input.userEmail,
+      logoUrl,
+    })
+  );
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.coatly.com.au';
+
+  return sendQuoteEmail({
+    to: input.to,
+    customerName: quoteDetailResult.data.customer.name,
+    businessName,
+    quoteNumber: quoteDetailResult.data.quote_number,
+    quoteTitle: quoteDetailResult.data.title,
+    totalFormatted: formatAUD(quoteDetailResult.data.total_cents),
+    validUntil: quoteDetailResult.data.valid_until
+      ? formatDate(quoteDetailResult.data.valid_until)
+      : null,
+    approvalUrl: `${appUrl}/q/${quoteDetailResult.data.public_share_token}`,
+    pdfAttachment: Buffer.from(pdfBuffer),
+  });
+}
 
 function parseBooleanFormValue(value: FormDataEntryValue | null) {
   return typeof value === 'string' && value === 'true';
@@ -1147,7 +1201,7 @@ export async function createQuote(
     customer_address: selectedCustomerAddress,
     quote_number: quoteNumber,
     title: parsed.data.title,
-    status: shouldSendEmail ? 'sent' : parsed.data.status,
+    status: parsed.data.status,
     valid_until: parsed.data.valid_until,
     tier: parsed.data.complexity,
     notes: parsed.data.notes,
@@ -1281,8 +1335,32 @@ export async function createQuote(
     }
   }
 
+  if (shouldSendEmail) {
+    const { error: emailError } = await sendQuoteDocumentEmail({
+      supabase,
+      userId: user.id,
+      userEmail: user.email ?? null,
+      quoteId: quote.id,
+      to: selectedCustomerEmail ?? '',
+    });
+
+    if (emailError) {
+      return { error: emailError };
+    }
+
+    const { error: sentStatusError } = await supabase
+      .from('quotes')
+      .update({ status: 'sent' })
+      .eq('id', quote.id)
+      .eq('user_id', user.id);
+
+    if (sentStatusError) {
+      return { error: sentStatusError.message };
+    }
+  }
+
   revalidatePath('/quotes');
-  redirect(shouldSendEmail ? `/quotes/${quote.id}?emailDemo=1` : `/quotes/${quote.id}`);
+  redirect(shouldSendEmail ? `/quotes/${quote.id}?emailSent=1` : `/quotes/${quote.id}`);
 }
 
 export async function setQuoteOptionalLineItemSelection(
@@ -1969,7 +2047,7 @@ export async function updateQuote(
     customer_address: selectedCustomerAddress,
     quote_number: resolvedQuoteNumber,
     title: parsed.data.title,
-    status: shouldSendEmail ? 'sent' : parsed.data.status,
+    status: parsed.data.status,
     valid_until: parsed.data.valid_until,
     tier: parsed.data.complexity,
     notes: parsed.data.notes,
@@ -2066,9 +2144,33 @@ export async function updateQuote(
     if (lineItemsError) return { error: lineItemsError.message };
   }
 
+  if (shouldSendEmail) {
+    const { error: emailError } = await sendQuoteDocumentEmail({
+      supabase,
+      userId: user.id,
+      userEmail: user.email ?? null,
+      quoteId,
+      to: selectedCustomerEmail ?? '',
+    });
+
+    if (emailError) {
+      return { error: emailError };
+    }
+
+    const { error: sentStatusError } = await supabase
+      .from('quotes')
+      .update({ status: 'sent' })
+      .eq('id', quoteId)
+      .eq('user_id', user.id);
+
+    if (sentStatusError) {
+      return { error: sentStatusError.message };
+    }
+  }
+
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quoteId}`);
-  redirect(`/quotes/${quoteId}`);
+  redirect(shouldSendEmail ? `/quotes/${quoteId}?emailSent=1` : `/quotes/${quoteId}`);
 }
 
 export async function approveQuote(quoteId: string): Promise<{ error: string } | void> {

@@ -5,6 +5,8 @@ const {
   createServerClientMock,
   createAdminClientMock,
   sendQuoteApprovalNotificationMock,
+  sendQuoteEmailMock,
+  renderToBufferMock,
   getActiveSubscriptionRequiredMessageMock,
   getMonthlyActiveQuoteUsageForUserMock,
   getSubscriptionSnapshotForUserMock,
@@ -14,6 +16,8 @@ const {
   createServerClientMock: vi.fn(),
   createAdminClientMock: vi.fn(),
   sendQuoteApprovalNotificationMock: vi.fn(),
+  sendQuoteEmailMock: vi.fn(),
+  renderToBufferMock: vi.fn(),
   getActiveSubscriptionRequiredMessageMock: vi.fn(
     (actionName: string) =>
       `Choose a paid plan to unlock ${actionName}. Finish checkout before using Coatly tools.`
@@ -51,7 +55,19 @@ vi.mock('@/lib/subscription/access', () => ({
 
 vi.mock('@/lib/email/resend', () => ({
   sendQuoteApprovalNotification: sendQuoteApprovalNotificationMock,
+  sendQuoteEmail: sendQuoteEmailMock,
 }));
+
+vi.mock('@react-pdf/renderer', async () => {
+  const actual = await vi.importActual<typeof import('@react-pdf/renderer')>(
+    '@react-pdf/renderer'
+  );
+
+  return {
+    ...actual,
+    renderToBuffer: renderToBufferMock,
+  };
+});
 
 import {
   approvePublicQuote,
@@ -77,6 +93,8 @@ function createFilterQuery<Result>(result: Result) {
 describe('createQuote', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    renderToBufferMock.mockResolvedValue(Buffer.from('pdf'));
+    sendQuoteEmailMock.mockResolvedValue({ error: null });
     requireCurrentUserMock.mockResolvedValue({
       id: 'user-1',
       email: 'owner@example.com',
@@ -348,7 +366,56 @@ describe('createQuote', () => {
   it('marks the quote as sent and redirects with a demo email flag when send_email is used', async () => {
     const captured: {
       quoteInsert?: Record<string, unknown>;
+      quoteSentUpdate?: Record<string, unknown>;
     } = {};
+    const quoteDetailRow = {
+      id: 'quote-send-1',
+      user_id: 'user-1',
+      customer_id: 'customer-1',
+      public_share_token: '11111111-1111-1111-1111-111111111111',
+      approved_at: null,
+      approved_by_name: null,
+      approved_by_email: null,
+      approval_signature: null,
+      manual_adjustment_cents: 0,
+      discount_cents: 0,
+      deposit_percent: 0,
+      customer_email: 'accounts@harborcafe.com.au',
+      customer_address: '9 Storage Lane, Unit 4, Brookvale, NSW, 2100',
+      quote_number: 'QUO-0010',
+      title: 'Harbor Cafe repaint',
+      status: 'sent',
+      valid_until: '2026-04-10',
+      tier: 'standard',
+      notes: 'Client note',
+      internal_notes: 'Internal note',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      subtotal_cents: 100000,
+      gst_cents: 10000,
+      total_cents: 110000,
+      estimate_category: 'interior',
+      property_type: 'apartment',
+      estimate_mode: 'specific_areas',
+      estimate_context: {},
+      pricing_snapshot: {},
+      pricing_method: 'hybrid',
+      pricing_method_inputs: null,
+      created_at: '2026-04-01T00:00:00.000Z',
+      updated_at: '2026-04-01T00:00:00.000Z',
+      customer: {
+        id: 'customer-1',
+        name: 'Harbor Cafe',
+        company_name: null,
+        email: 'site@harborcafe.com.au',
+        phone: null,
+        address_line1: '128 Beach Street',
+        address_line2: 'Suite 4',
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+      },
+    };
 
     const customerQuery = createFilterQuery({
       data: {
@@ -406,8 +473,27 @@ describe('createQuote', () => {
           };
         }
 
+        if (table === 'profiles') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { business_name: 'Harbor Painting' },
+                error: null,
+              }),
+            }),
+          };
+        }
+
         if (table === 'quotes') {
           return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: quoteDetailRow,
+                error: null,
+              }),
+            }),
             insert: vi.fn((payload) => {
               captured.quoteInsert = payload;
               return {
@@ -419,6 +505,12 @@ describe('createQuote', () => {
                 }),
               };
             }),
+            update: vi.fn((payload) => {
+              captured.quoteSentUpdate = payload;
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
             delete: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
             }),
@@ -427,13 +519,39 @@ describe('createQuote', () => {
 
         if (table === 'quote_estimate_items') {
           return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
             insert: vi.fn(async () => ({ error: null })),
           };
         }
 
         if (table === 'quote_line_items') {
           return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
             insert: vi.fn(async () => ({ error: null })),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              then: vi.fn((resolve) => resolve({ count: 0, error: null })),
+            })),
           };
         }
 
@@ -490,11 +608,19 @@ describe('createQuote', () => {
 
     expect(result).toBeUndefined();
     expect(captured.quoteInsert).toMatchObject({
-      status: 'sent',
+      status: 'draft',
       customer_email: 'accounts@harborcafe.com.au',
       customer_address: '9 Storage Lane, Unit 4, Brookvale, NSW, 2100',
     });
-    expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-send-1?emailDemo=1');
+    expect(captured.quoteSentUpdate).toEqual({ status: 'sent' });
+    expect(sendQuoteEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'accounts@harborcafe.com.au',
+        approvalUrl: 'https://app.coatly.com.au/q/11111111-1111-1111-1111-111111111111',
+        pdfAttachment: expect.any(Buffer),
+      })
+    );
+    expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-send-1?emailSent=1');
   });
 
   it('returns an error when send_email is used without a customer email', async () => {

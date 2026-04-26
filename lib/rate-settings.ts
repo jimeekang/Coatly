@@ -162,8 +162,17 @@ export type ExteriorCoatingType = (typeof EXTERIOR_COATING_TYPES)[number];
 export const EXTERIOR_SURFACES = ['ext_walls', 'eaves', 'fascia', 'gutters'] as const;
 export type ExteriorSurface = (typeof EXTERIOR_SURFACES)[number];
 
+export const EXTERIOR_RATE_UNITS = ['/sqm', '/lm'] as const;
+export type ExteriorRateUnit = (typeof EXTERIOR_RATE_UNITS)[number];
+
 export type ExteriorSurfaceRates = Record<ExteriorCoatingType, number>;
 export type ExteriorRateSettings = Record<ExteriorSurface, ExteriorSurfaceRates>;
+export type CustomExteriorSurfaceRate = {
+  id: string;
+  label: string;
+  unit: ExteriorRateUnit;
+  rates: ExteriorSurfaceRates;
+};
 
 export const EXTERIOR_COATING_LABELS: Record<ExteriorCoatingType, string> = {
   refresh_1coat: 'Refresh (1 coat)',
@@ -226,9 +235,12 @@ export type UserRateSettings = {
 } & {
   door_unit_rates: DoorUnitRates;
   window_unit_rates: WindowUnitRates;
+  enabled_surface_types: SqmSurfaceType[];
   enabled_door_types: RateDoorType[];
   enabled_door_scopes: DoorScope[];
   enabled_window_types: WindowType[];
+  enabled_exterior_surfaces: ExteriorSurface[];
+  custom_exterior_surfaces: CustomExteriorSurfaceRate[];
   room_rate_presets: RoomRatePreset[];
   pricing: PricingMethodSettings;
   exterior: ExteriorRateSettings;
@@ -312,6 +324,13 @@ const exteriorRateSettingsSchema = z.object({
   gutters: exteriorSurfaceRatesSchema,
 });
 
+const customExteriorSurfaceRateSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().trim(),
+  unit: z.enum(EXTERIOR_RATE_UNITS),
+  rates: exteriorSurfaceRatesSchema,
+});
+
 export const ratePresetSchema = z.object({
   walls: ratePresetSurfaceSchema,
   ceiling: ratePresetSurfaceSchema,
@@ -320,9 +339,12 @@ export const ratePresetSchema = z.object({
   windows: ratePresetSurfaceSchema,
   door_unit_rates: doorUnitRatesSchema.optional(),
   window_unit_rates: windowUnitRatesSchema.optional(),
+  enabled_surface_types: z.array(z.enum(SQM_SURFACE_TYPES)).optional(),
   enabled_door_types: z.array(z.enum(RATE_DOOR_TYPES)).optional(),
   enabled_door_scopes: z.array(z.enum(DOOR_SCOPES)).optional(),
   enabled_window_types: z.array(z.enum(WINDOW_TYPES)).optional(),
+  enabled_exterior_surfaces: z.array(z.enum(EXTERIOR_SURFACES)).optional(),
+  custom_exterior_surfaces: z.array(customExteriorSurfaceRateSchema).optional(),
   room_rate_presets: z.array(roomRatePresetSchema).optional(),
   pricing: pricingMethodSettingsSchema.optional(),
   exterior: exteriorRateSettingsSchema.optional(),
@@ -337,9 +359,12 @@ const partialRatePresetSchema = z
     windows: partialRatePresetSurfaceSchema,
     door_unit_rates: doorUnitRatesSchema.optional(),
     window_unit_rates: windowUnitRatesSchema.optional(),
+    enabled_surface_types: z.array(z.enum(SQM_SURFACE_TYPES)).optional(),
     enabled_door_types: z.array(z.enum(RATE_DOOR_TYPES)).optional(),
     enabled_door_scopes: z.array(z.enum(DOOR_SCOPES)).optional(),
     enabled_window_types: z.array(z.enum(WINDOW_TYPES)).optional(),
+    enabled_exterior_surfaces: z.array(z.enum(EXTERIOR_SURFACES)).optional(),
+    custom_exterior_surfaces: z.array(customExteriorSurfaceRateSchema).optional(),
     room_rate_presets: z.array(roomRatePresetSchema).optional(),
     pricing: pricingMethodSettingsSchema.optional(),
     exterior: exteriorRateSettingsSchema.optional(),
@@ -375,9 +400,12 @@ export function buildDefaultRateSettings(): UserRateSettings {
   }
   settings.door_unit_rates = DEFAULT_DOOR_UNIT_RATES;
   settings.window_unit_rates = DEFAULT_WINDOW_UNIT_RATES;
+  settings.enabled_surface_types = [...SQM_SURFACE_TYPES];
   settings.enabled_door_types = [...RATE_DOOR_TYPES];
   settings.enabled_door_scopes = [...DOOR_SCOPES];
   settings.enabled_window_types = [...WINDOW_TYPES];
+  settings.enabled_exterior_surfaces = [...EXTERIOR_SURFACES];
+  settings.custom_exterior_surfaces = [];
   settings.room_rate_presets = [];
   settings.pricing = { ...DEFAULT_PRICING_METHOD_SETTINGS };
   settings.exterior = buildDefaultExteriorRates();
@@ -449,11 +477,23 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
   if (parsed.data.enabled_door_types) {
     result.enabled_door_types = parsed.data.enabled_door_types as RateDoorType[];
   }
+  if (parsed.data.enabled_surface_types) {
+    result.enabled_surface_types = parsed.data.enabled_surface_types as SqmSurfaceType[];
+  }
   if (parsed.data.enabled_door_scopes) {
     result.enabled_door_scopes = parsed.data.enabled_door_scopes as DoorScope[];
   }
   if (parsed.data.enabled_window_types) {
     result.enabled_window_types = parsed.data.enabled_window_types as WindowType[];
+  }
+  if (parsed.data.enabled_exterior_surfaces) {
+    result.enabled_exterior_surfaces = parsed.data.enabled_exterior_surfaces as ExteriorSurface[];
+  }
+  if (parsed.data.custom_exterior_surfaces) {
+    result.custom_exterior_surfaces = parsed.data.custom_exterior_surfaces.map((surface) => ({
+      ...surface,
+      label: surface.label || 'Custom Surface',
+    }));
   }
 
   // Room rate presets

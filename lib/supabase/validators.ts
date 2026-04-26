@@ -613,6 +613,7 @@ export const quoteCreateSchema = z.object({
       fascia: z.number().min(0).optional(),
       gutters: z.number().min(0).optional(),
     }).optional(),
+    custom_surfaces: z.record(z.string(), z.number().min(0)).optional(),
     custom_labels: z.object({
       ext_walls: z.string().optional(),
       eaves: z.string().optional(),

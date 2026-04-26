@@ -19,16 +19,20 @@ import { formatAUD } from '@/utils/format';
 export type ExteriorEstimateFormState = {
   coating: ExteriorCoatingType;
   surfaces: Partial<Record<ExteriorSurface, string>>;
+  customSurfaces: Record<string, string>;
   customLabels: Partial<Record<ExteriorSurface, string>>;
   hiddenSurfaces: ExteriorSurface[];
+  hiddenCustomSurfaceIds: string[];
 };
 
 export function createEmptyExteriorEstimateState(): ExteriorEstimateFormState {
   return {
     coating: 'repaint_2coat',
     surfaces: {},
+    customSurfaces: {},
     customLabels: {},
     hiddenSurfaces: [],
+    hiddenCustomSurfaceIds: [],
   };
 }
 
@@ -40,6 +44,12 @@ export function buildExteriorEstimatePayload(state: ExteriorEstimateFormState) {
     const qty = raw ? parseFloat(raw) : NaN;
     if (Number.isFinite(qty) && qty > 0) surfaces[surface] = qty;
   }
+  const custom_surfaces: Record<string, number> = {};
+  for (const [id, raw] of Object.entries(state.customSurfaces)) {
+    if (state.hiddenCustomSurfaceIds.includes(id)) continue;
+    const qty = raw ? parseFloat(raw) : NaN;
+    if (Number.isFinite(qty) && qty > 0) custom_surfaces[id] = qty;
+  }
   const custom_labels: Partial<Record<ExteriorSurface, string>> = {};
   for (const surface of EXTERIOR_SURFACES) {
     const label = state.customLabels[surface];
@@ -48,11 +58,16 @@ export function buildExteriorEstimatePayload(state: ExteriorEstimateFormState) {
   return {
     coating: state.coating,
     surfaces,
+    ...(Object.keys(custom_surfaces).length > 0 ? { custom_surfaces } : {}),
     ...(Object.keys(custom_labels).length > 0 ? { custom_labels } : {}),
   };
 }
 
 const LABEL = 'mb-1.5 block text-sm font-medium text-pm-body';
+
+function rateUnitToQuantityUnit(unit: string) {
+  return unit.replace(/^\//, '');
+}
 
 export function ExteriorEstimateBuilder({
   value,
@@ -72,6 +87,7 @@ export function ExteriorEstimateBuilder({
     fascia:    { refresh_1coat: 1000, repaint_2coat: 1500, full_system: 2000 },
     gutters:   { refresh_1coat:  800, repaint_2coat: 1200, full_system: 1600 },
   };
+  const customRateSurfaces = rateSettings?.custom_exterior_surfaces ?? [];
 
   const preview = calculateExteriorEstimate(buildExteriorEstimatePayload(value), rateSettings);
 
@@ -108,8 +124,26 @@ export function ExteriorEstimateBuilder({
     });
   }
 
+  function deleteCustomSurface(id: string) {
+    onChange({
+      ...value,
+      hiddenCustomSurfaceIds: [...value.hiddenCustomSurfaceIds, id],
+      customSurfaces: { ...value.customSurfaces, [id]: '' },
+    });
+  }
+
+  function restoreCustomSurface(id: string) {
+    onChange({
+      ...value,
+      hiddenCustomSurfaceIds: value.hiddenCustomSurfaceIds.filter((surfaceId) => surfaceId !== id),
+    });
+  }
+
   const visibleSurfaces = EXTERIOR_SURFACES.filter((s) => !value.hiddenSurfaces.includes(s));
   const hiddenSurfaces = EXTERIOR_SURFACES.filter((s) => value.hiddenSurfaces.includes(s));
+  const visibleCustomSurfaces = customRateSurfaces.filter((surface) => !value.hiddenCustomSurfaceIds.includes(surface.id));
+  const hiddenCustomSurfaces = customRateSurfaces.filter((surface) => value.hiddenCustomSurfaceIds.includes(surface.id));
+  const visibleRowCount = visibleSurfaces.length + visibleCustomSurfaces.length;
 
   return (
     <section className="space-y-4 rounded-2xl border border-pm-border bg-white p-4">
@@ -158,14 +192,15 @@ export function ExteriorEstimateBuilder({
               </tr>
             </thead>
             <tbody>
-              {visibleSurfaces.length === 0 ? (
+              {visibleRowCount === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-sm text-pm-secondary">
                     No surfaces — restore one below.
                   </td>
                 </tr>
               ) : (
-                visibleSurfaces.map((surface, i) => {
+                <>
+                {visibleSurfaces.map((surface, i) => {
                   const unit = EXTERIOR_UNIT_LABELS[surface];
                   const rate = rates[surface][value.coating];
                   const rawQty = value.surfaces[surface];
@@ -239,7 +274,57 @@ export function ExteriorEstimateBuilder({
                       </td>
                     </tr>
                   );
-                })
+                })}
+                {visibleCustomSurfaces.map((surface, index) => {
+                  const unit = rateUnitToQuantityUnit(surface.unit);
+                  const rate = surface.rates[value.coating];
+                  const rawQty = value.customSurfaces[surface.id];
+                  const qty = rawQty ? parseFloat(rawQty) : NaN;
+                  const lineTotal = Number.isFinite(qty) && qty > 0 ? Math.round(qty * rate) : 0;
+
+                  return (
+                    <tr key={surface.id} className={(visibleSurfaces.length + index) % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
+                      <td className="px-4 py-2.5 font-medium text-pm-body">
+                        {surface.label}
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <div className="inline-flex items-center gap-1.5">
+                          <NumericInput
+                            inputMode="decimal"
+                            value={value.customSurfaces[surface.id] ?? ''}
+                            sanitize={sanitizeDecimalInput}
+                            onValueChange={(v) =>
+                              onChange({
+                                ...value,
+                                customSurfaces: { ...value.customSurfaces, [surface.id]: v },
+                              })
+                            }
+                            placeholder="0"
+                            className="w-24 rounded-lg border border-pm-border bg-white py-2 px-3 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                          />
+                          <span className="text-xs text-pm-secondary">{unit}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-center text-xs text-pm-secondary">
+                        {formatAUD(rate)}/{unit}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-medium text-pm-body">
+                        {lineTotal > 0 ? formatAUD(lineTotal) : '—'}
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => deleteCustomSurface(surface.id)}
+                          className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg border border-pm-border bg-white text-pm-secondary hover:border-pm-coral/50 hover:text-pm-coral transition-colors"
+                          title="Remove surface"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                </>
               )}
             </tbody>
           </table>
@@ -247,7 +332,7 @@ export function ExteriorEstimateBuilder({
       </div>
 
       {/* Restore hidden surfaces */}
-      {hiddenSurfaces.length > 0 && (
+      {(hiddenSurfaces.length > 0 || hiddenCustomSurfaces.length > 0) && (
         <div className="rounded-xl border border-dashed border-pm-border p-3">
           <p className="mb-2 text-xs font-medium text-pm-secondary">Removed — tap to restore</p>
           <div className="flex flex-wrap gap-2">
@@ -260,6 +345,17 @@ export function ExteriorEstimateBuilder({
               >
                 <RotateCcw size={11} />
                 {value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface]}
+              </button>
+            ))}
+            {hiddenCustomSurfaces.map((surface) => (
+              <button
+                key={surface.id}
+                type="button"
+                onClick={() => restoreCustomSurface(surface.id)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-pm-border bg-white px-3 py-1.5 text-xs font-medium text-pm-secondary hover:border-pm-teal hover:text-pm-teal transition-colors"
+              >
+                <RotateCcw size={11} />
+                {surface.label}
               </button>
             ))}
           </div>

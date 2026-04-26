@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { renderToBuffer } from '@react-pdf/renderer';
 import {
   buildQuoteInvoiceLinkStateMap,
   buildQuoteInvoiceStageMap,
@@ -13,14 +14,16 @@ import {
   mapInvoiceListItem,
   parseInvoiceCreateInput,
 } from '@/lib/invoices';
-import { getBusinessInvoiceDefaults } from '@/lib/businesses';
+import { getBusinessDocumentBranding, getBusinessInvoiceDefaults } from '@/lib/businesses';
 import { isQuoteLineItemIncluded } from '@/lib/quotes';
+import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
 import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
 } from '@/lib/subscription/access';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
+import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import { sendInvoiceEmail } from '@/lib/email/resend';
 import { formatAUD, formatDate } from '@/utils/format';
 import type {
@@ -929,7 +932,7 @@ export async function sendInvoice(id: string): Promise<{ error: string } | void>
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
     .select(
-      'id, invoice_number, invoice_type, status, total_cents, due_date, notes, customer_id, user_id, customers!invoices_customer_user_fk(name, email)'
+      '*, customer:customers!invoices_customer_user_fk(*), line_items:invoice_line_items(*)'
     )
     .eq('id', id)
     .eq('user_id', user.id)
@@ -943,33 +946,50 @@ export async function sendInvoice(id: string): Promise<{ error: string } | void>
     return { error: 'Only draft invoices can be sent.' };
   }
 
-  const customer = Array.isArray(invoice.customers)
-    ? invoice.customers[0]
-    : invoice.customers;
+  const invoiceDetail = mapInvoiceDetail(
+    invoice as Parameters<typeof mapInvoiceDetail>[0]
+  );
+  const customer = invoiceDetail.customer;
 
   if (!customer?.email) {
     return { error: 'Customer email is required to send an invoice.' };
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('business_name')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  const businessName = profile?.business_name ?? 'Your contractor';
+  const { data: businessBranding } = await getBusinessDocumentBranding(
+    supabase,
+    user.id,
+    user.email ?? null
+  );
+  const businessName = businessBranding?.name || 'My Painting Business';
+  const logoUrl = await createStorageObjectDataUrl(
+    supabase,
+    businessBranding?.logoPath ?? null
+  );
+  const pdfBuffer = await renderToBuffer(
+    InvoiceTemplate({
+      invoice: invoiceDetail,
+      businessName,
+      abn: invoiceDetail.business_abn ?? businessBranding?.abn ?? null,
+      phone: businessBranding?.phone ?? null,
+      email: businessBranding?.email ?? user.email ?? null,
+      paymentTerms: invoiceDetail.payment_terms,
+      bankDetails: invoiceDetail.bank_details,
+      logoUrl,
+    })
+  );
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.coatly.com.au';
 
   const { error: emailError } = await sendInvoiceEmail({
     to: customer.email,
     customerName: customer.name,
     businessName,
-    invoiceNumber: invoice.invoice_number,
-    invoiceType: invoice.invoice_type,
-    totalFormatted: formatAUD(invoice.total_cents),
-    dueDate: invoice.due_date ? formatDate(invoice.due_date) : null,
-    notes: invoice.notes,
-    pdfUrl: `${appUrl}/api/pdf/invoice?id=${invoice.id}`,
+    invoiceNumber: invoiceDetail.invoice_number,
+    invoiceType: invoiceDetail.invoice_type,
+    totalFormatted: formatAUD(invoiceDetail.total_cents),
+    dueDate: invoiceDetail.due_date ? formatDate(invoiceDetail.due_date) : null,
+    notes: invoiceDetail.notes,
+    pdfUrl: `${appUrl}/api/pdf/invoice?id=${invoiceDetail.id}`,
+    pdfAttachment: Buffer.from(pdfBuffer),
   });
 
   if (emailError) {

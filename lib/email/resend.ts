@@ -7,8 +7,24 @@ function getResendClient(): Resend {
   return new Resend(apiKey);
 }
 
-const FROM_ADDRESS =
-  process.env.RESEND_FROM_ADDRESS ?? 'Coatly <noreply@coatly.com.au>';
+function getEmailConfig(): { resend: Resend; from: string } | { error: string } {
+  const from = process.env.RESEND_FROM_ADDRESS?.trim();
+  if (!from) {
+    return {
+      error:
+        'RESEND_FROM_ADDRESS is not set. Add a verified Resend sender address before sending customer emails.',
+    };
+  }
+
+  try {
+    return { resend: getResendClient(), from };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : 'Email provider could not be configured.',
+    };
+  }
+}
 
 export type InvoiceReminderType = 'due_soon' | 'overdue';
 
@@ -33,6 +49,7 @@ export interface SendInvoiceEmailParams {
   dueDate: string | null;
   notes: string | null;
   pdfUrl: string;
+  pdfAttachment?: Buffer;
 }
 
 export interface SendInvoiceReminderParams {
@@ -57,6 +74,18 @@ export interface SendQuoteApprovalNotificationParams {
   approvedAt: string;
   totalFormatted: string;
   signature: string;
+}
+
+export interface SendQuoteEmailParams {
+  to: string;
+  customerName: string;
+  businessName: string;
+  quoteNumber: string;
+  quoteTitle: string | null;
+  totalFormatted: string;
+  validUntil: string | null;
+  approvalUrl: string;
+  pdfAttachment?: Buffer;
 }
 
 function buildDueSoonHtml(p: SendInvoiceReminderParams): string {
@@ -168,16 +197,81 @@ function buildInvoiceEmailHtml(p: SendInvoiceEmailParams): string {
 </html>`;
 }
 
+function buildQuoteEmailHtml(p: SendQuoteEmailParams): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px">
+  <h2 style="margin-bottom:4px">Quote ${escapeHtml(p.quoteNumber)}</h2>
+  <p style="color:#666;margin-top:0">From ${escapeHtml(p.businessName)}</p>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
+  <p>Hi ${escapeHtml(p.customerName)},</p>
+  <p>Please review your quote using the secure link below. A PDF copy is attached for your records.</p>
+  <table style="border-collapse:collapse;width:100%;margin:16px 0">
+    <tr>
+      <td style="padding:8px 0;color:#666">Quote</td>
+      <td style="padding:8px 0;text-align:right;font-weight:600">${escapeHtml(p.quoteNumber)}</td>
+    </tr>
+    ${p.quoteTitle ? `<tr><td style="padding:8px 0;color:#666">Job</td><td style="padding:8px 0;text-align:right;font-weight:600">${escapeHtml(p.quoteTitle)}</td></tr>` : ''}
+    <tr>
+      <td style="padding:8px 0;color:#666">Total</td>
+      <td style="padding:8px 0;text-align:right;font-weight:600;font-size:18px">${escapeHtml(p.totalFormatted)}</td>
+    </tr>
+    ${p.validUntil ? `<tr><td style="padding:8px 0;color:#666">Valid until</td><td style="padding:8px 0;text-align:right;font-weight:600">${escapeHtml(p.validUntil)}</td></tr>` : ''}
+  </table>
+  <a href="${escapeHtml(p.approvalUrl)}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;margin:8px 0">Review and approve quote</a>
+  <p style="margin-top:32px">Thanks,<br>${escapeHtml(p.businessName)}</p>
+</body>
+</html>`;
+}
+
 export async function sendInvoiceEmail(
   params: SendInvoiceEmailParams,
 ): Promise<{ error: string | null }> {
-  const resend = getResendClient();
+  const config = getEmailConfig();
+  if ('error' in config) return { error: config.error };
 
-  const { error } = await resend.emails.send({
-    from: FROM_ADDRESS,
+  const { error } = await config.resend.emails.send({
+    from: config.from,
     to: params.to,
     subject: `${invoiceTypeLabel(params.invoiceType)} ${params.invoiceNumber} from ${params.businessName} — ${params.totalFormatted}${params.dueDate ? ` due ${params.dueDate}` : ''}`,
     html: buildInvoiceEmailHtml(params),
+    attachments: params.pdfAttachment
+      ? [
+          {
+            filename: `invoice-${params.invoiceNumber}.pdf`,
+            content: params.pdfAttachment,
+            contentType: 'application/pdf',
+          },
+        ]
+      : undefined,
+  });
+
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+export async function sendQuoteEmail(
+  params: SendQuoteEmailParams
+): Promise<{ error: string | null }> {
+  const config = getEmailConfig();
+  if ('error' in config) return { error: config.error };
+
+  const { error } = await config.resend.emails.send({
+    from: config.from,
+    to: params.to,
+    subject: `Quote ${params.quoteNumber} from ${params.businessName} — ${params.totalFormatted}`,
+    html: buildQuoteEmailHtml(params),
+    attachments: params.pdfAttachment
+      ? [
+          {
+            filename: `quote-${params.quoteNumber}.pdf`,
+            content: params.pdfAttachment,
+            contentType: 'application/pdf',
+          },
+        ]
+      : undefined,
   });
 
   if (error) return { error: error.message };
@@ -187,7 +281,8 @@ export async function sendInvoiceEmail(
 export async function sendInvoiceReminder(
   params: SendInvoiceReminderParams,
 ): Promise<{ error: string | null }> {
-  const resend = getResendClient();
+  const config = getEmailConfig();
+  if ('error' in config) return { error: config.error };
 
   const subject =
     params.reminderType === 'due_soon'
@@ -199,8 +294,8 @@ export async function sendInvoiceReminder(
       ? buildDueSoonHtml(params)
       : buildOverdueHtml(params);
 
-  const { error } = await resend.emails.send({
-    from: FROM_ADDRESS,
+  const { error } = await config.resend.emails.send({
+    from: config.from,
     to: params.to,
     subject,
     html,
@@ -214,9 +309,11 @@ export async function sendQuoteApprovalNotification(
   params: SendQuoteApprovalNotificationParams
 ): Promise<{ error: string | null }> {
   try {
-    const resend = getResendClient();
-    const { error } = await resend.emails.send({
-      from: FROM_ADDRESS,
+    const config = getEmailConfig();
+    if ('error' in config) return { error: config.error };
+
+    const { error } = await config.resend.emails.send({
+      from: config.from,
       to: params.to,
       subject: `Quote approved: ${params.quoteNumber}`,
       html: buildQuoteApprovalHtml(params),

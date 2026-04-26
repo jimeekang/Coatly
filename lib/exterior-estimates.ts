@@ -3,6 +3,7 @@ import {
   EXTERIOR_SURFACE_LABELS,
   EXTERIOR_SURFACES,
   buildDefaultExteriorRates,
+  type CustomExteriorSurfaceRate,
   type ExteriorCoatingType,
   type ExteriorRateSettings,
   type ExteriorSurface,
@@ -12,11 +13,12 @@ import {
 export type ExteriorEstimateInput = {
   coating: ExteriorCoatingType;
   surfaces: Partial<Record<ExteriorSurface, number>>;
+  custom_surfaces?: Record<string, number>;
   custom_labels?: Partial<Record<ExteriorSurface, string>>;
 };
 
 export type ExteriorPricingItem = {
-  surface: ExteriorSurface;
+  surface: ExteriorSurface | string;
   label: string;
   quantity: number;
   unit: string;
@@ -32,6 +34,7 @@ export type ExteriorPricingSnapshot = {
   snapshot: {
     coating: ExteriorCoatingType;
     rates_used: ExteriorRateSettings;
+    custom_rates_used: CustomExteriorSurfaceRate[];
   };
 };
 
@@ -41,6 +44,10 @@ export const EXTERIOR_UNIT_LABELS: Record<ExteriorSurface, string> = {
   fascia: 'lm',
   gutters: 'lm',
 };
+
+function rateUnitToQuantityUnit(unit: string) {
+  return unit.replace(/^\//, '');
+}
 
 export function isExteriorEstimateInput(value: unknown): value is ExteriorEstimateInput {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -55,6 +62,7 @@ export function calculateExteriorEstimate(
   userRates?: UserRateSettings | null
 ): ExteriorPricingSnapshot {
   const rates = userRates?.exterior ?? buildDefaultExteriorRates();
+  const customRates = userRates?.custom_exterior_surfaces ?? [];
   const pricing_items: ExteriorPricingItem[] = [];
   let subtotal_cents = 0;
 
@@ -75,12 +83,28 @@ export function calculateExteriorEstimate(
     });
   }
 
+  for (const surface of customRates) {
+    const qty = input.custom_surfaces?.[surface.id];
+    if (!qty || qty <= 0) continue;
+    const unit_price_cents = surface.rates[input.coating];
+    const total_cents = Math.round(qty * unit_price_cents);
+    subtotal_cents += total_cents;
+    pricing_items.push({
+      surface: surface.id,
+      label: surface.label,
+      quantity: qty,
+      unit: rateUnitToQuantityUnit(surface.unit),
+      unit_price_cents,
+      total_cents,
+    });
+  }
+
   const gst_cents = Math.round(subtotal_cents * 0.1);
   return {
     subtotal_cents,
     gst_cents,
     total_cents: subtotal_cents + gst_cents,
     pricing_items,
-    snapshot: { coating: input.coating, rates_used: rates },
+    snapshot: { coating: input.coating, rates_used: rates, custom_rates_used: customRates },
   };
 }

@@ -10,6 +10,8 @@ import {
   DOOR_SCOPES,
   WINDOW_TYPES,
   WINDOW_SCOPES,
+  SQM_SURFACE_TYPES,
+  EXTERIOR_SURFACES,
   TRIM_PAINT_SYSTEMS,
 } from '@/lib/rate-settings';
 
@@ -64,11 +66,14 @@ describe('buildDefaultRateSettings', () => {
     }
   });
 
-  it('enables all door types, door scopes, and window types by default', () => {
+  it('enables all detailed estimate items by default', () => {
     const settings = buildDefaultRateSettings();
+    expect(settings.enabled_surface_types).toEqual(expect.arrayContaining([...SQM_SURFACE_TYPES]));
     expect(settings.enabled_door_types).toEqual(expect.arrayContaining([...RATE_DOOR_TYPES]));
     expect(settings.enabled_door_scopes).toEqual(expect.arrayContaining([...DOOR_SCOPES]));
     expect(settings.enabled_window_types).toEqual(expect.arrayContaining([...WINDOW_TYPES]));
+    expect(settings.enabled_exterior_surfaces).toEqual(expect.arrayContaining([...EXTERIOR_SURFACES]));
+    expect(settings.custom_exterior_surfaces).toEqual([]);
   });
 
   it('standard door oil_2coat door_and_frame matches anchor price', () => {
@@ -137,6 +142,13 @@ describe('parseUserRateSettings', () => {
     expect(parsed.enabled_door_types).toEqual(['standard', 'flush']);
   });
 
+  it('persists enabled_surface_types override', () => {
+    const parsed = parseUserRateSettings({
+      enabled_surface_types: ['walls', 'trim'],
+    });
+    expect(parsed.enabled_surface_types).toEqual(['walls', 'trim']);
+  });
+
   it('persists enabled_door_scopes override', () => {
     const parsed = parseUserRateSettings({
       enabled_door_scopes: ['door_and_frame'],
@@ -151,18 +163,72 @@ describe('parseUserRateSettings', () => {
     expect(parsed.enabled_window_types).toEqual(['normal', 'awning']);
   });
 
+  it('persists enabled_exterior_surfaces override', () => {
+    const parsed = parseUserRateSettings({
+      enabled_exterior_surfaces: ['ext_walls', 'gutters'],
+    });
+    expect(parsed.enabled_exterior_surfaces).toEqual(['ext_walls', 'gutters']);
+  });
+
+  it('persists custom exterior surface rates', () => {
+    const parsed = parseUserRateSettings({
+      custom_exterior_surfaces: [
+        {
+          id: 'rendered-blockwork',
+          label: 'Rendered Blockwork',
+          unit: '/sqm',
+          rates: {
+            refresh_1coat: 1900,
+            repaint_2coat: 2700,
+            full_system: 3900,
+          },
+        },
+      ],
+    });
+
+    expect(parsed.custom_exterior_surfaces).toEqual([
+      {
+        id: 'rendered-blockwork',
+        label: 'Rendered Blockwork',
+        unit: '/sqm',
+        rates: {
+          refresh_1coat: 1900,
+          repaint_2coat: 2700,
+          full_system: 3900,
+        },
+      },
+    ]);
+  });
+
   it('round-trips through JSON serialisation without data loss', () => {
     const original = buildDefaultRateSettings();
     original.door_unit_rates.oil_2coat.bi_fold.frame_only = 9999;
     original.window_unit_rates.water_3coat_white_finish.double_hung.window_only = 33333;
     original.enabled_door_types = ['standard', 'panelled'];
+    original.enabled_surface_types = ['walls', 'trim'];
     original.enabled_window_types = ['awning'];
+    original.enabled_exterior_surfaces = ['eaves', 'gutters'];
+    original.custom_exterior_surfaces = [
+      {
+        id: 'pergola',
+        label: 'Pergola',
+        unit: '/lm',
+        rates: {
+          refresh_1coat: 1200,
+          repaint_2coat: 1800,
+          full_system: 2400,
+        },
+      },
+    ];
 
     const roundTripped = parseUserRateSettings(JSON.parse(JSON.stringify(original)));
 
     expect(roundTripped.door_unit_rates.oil_2coat.bi_fold.frame_only).toBe(9999);
     expect(roundTripped.window_unit_rates.water_3coat_white_finish.double_hung.window_only).toBe(33333);
     expect(roundTripped.enabled_door_types).toEqual(['standard', 'panelled']);
+    expect(roundTripped.enabled_surface_types).toEqual(['walls', 'trim']);
     expect(roundTripped.enabled_window_types).toEqual(['awning']);
+    expect(roundTripped.enabled_exterior_surfaces).toEqual(['eaves', 'gutters']);
+    expect(roundTripped.custom_exterior_surfaces).toEqual(original.custom_exterior_surfaces);
   });
 });
