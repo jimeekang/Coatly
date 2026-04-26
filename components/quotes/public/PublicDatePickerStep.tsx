@@ -114,6 +114,17 @@ export function PublicDatePickerStep({
 
   const rangeSet = highlightRange();
 
+  function rangeHasBlockedDate(startDate: string) {
+    const start = parseLocalDate(startDate);
+    for (let i = 0; i < resolvedWorkingDays; i += 1) {
+      if (blockedDates.has(formatDateYMD(addDays(start, i)))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   // Calendar grid computation
   const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -138,7 +149,7 @@ export function PublicDatePickerStep({
 
   function handleDayClick(dateStr: string) {
     if (dateStr < today) return;
-    if (blockedDates.has(dateStr)) return;
+    if (blockedDates.has(dateStr) || rangeHasBlockedDate(dateStr)) return;
     setSelectedStart(dateStr);
     setBookError(null);
   }
@@ -284,10 +295,11 @@ export function PublicDatePickerStep({
                 const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const isPast = dateStr < today;
                 const isBlocked = blockedDates.has(dateStr);
+                const hasBlockedRange = !isBlocked && !isPast && rangeHasBlockedDate(dateStr);
                 const isToday = dateStr === today;
                 const isStart = dateStr === selectedStart;
                 const isInRange = rangeSet.has(dateStr) && !isStart;
-                const isDisabled = isPast || isBlocked;
+                const isDisabled = isPast || isBlocked || hasBlockedRange;
 
                 let cellClass =
                   'relative flex min-h-11 items-center justify-center rounded-xl text-sm font-medium transition-all select-none ';
@@ -296,6 +308,8 @@ export function PublicDatePickerStep({
                   cellClass += 'cursor-not-allowed text-pm-secondary/40 bg-pm-surface/60';
                 } else if (isBlocked) {
                   cellClass += 'cursor-not-allowed bg-pm-coral/20 text-pm-coral-dark';
+                } else if (hasBlockedRange) {
+                  cellClass += 'cursor-not-allowed bg-pm-coral/10 text-pm-coral-dark/70';
                 } else if (isStart) {
                   cellClass += 'cursor-pointer bg-pm-teal text-white font-bold shadow-sm active:scale-95';
                 } else if (isInRange) {
@@ -317,12 +331,12 @@ export function PublicDatePickerStep({
                     data-in-range={isInRange ? 'true' : undefined}
                     disabled={isDisabled}
                     onClick={() => handleDayClick(dateStr)}
-                    aria-label={`${day} ${MONTH_NAMES[viewMonth]}${isBlocked ? ' (unavailable)' : ''}`}
+                    aria-label={`${day} ${MONTH_NAMES[viewMonth]}${isDisabled ? ' (unavailable)' : ''}`}
                     aria-pressed={isStart}
                     className={cellClass}
                   >
                     {day}
-                    {isBlocked && (
+                    {(isBlocked || hasBlockedRange) && (
                       <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-pm-coral" />
                     )}
                   </button>

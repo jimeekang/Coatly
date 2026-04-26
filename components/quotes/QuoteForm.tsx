@@ -106,6 +106,7 @@ export type QuoteFormDefaultValues = {
   notes: string;
   internal_notes: string;
   rooms: LegacyRoomDefault[];
+  working_days?: number | null;
   // Pricing method pre-fill (for edit/duplicate)
   pricing_method?: PricingMethod | null;
   pricing_method_inputs?: Record<string, unknown> | null;
@@ -155,6 +156,24 @@ function defaultValidUntil() {
   const date = new Date();
   date.setDate(date.getDate() + 30);
   return date.toISOString().slice(0, 10);
+}
+
+function normalizeWorkingDays(value: number | null | undefined) {
+  if (!Number.isFinite(value) || value == null) return 1;
+  return Math.min(30, Math.max(1, Math.round(value)));
+}
+
+function getInitialWorkingDays(defaultValues?: QuoteFormDefaultValues) {
+  if (defaultValues?.working_days != null) {
+    return normalizeWorkingDays(defaultValues.working_days);
+  }
+
+  const savedInputs = defaultValues?.pricing_method_inputs;
+  if (savedInputs?.method === 'day_rate') {
+    return normalizeWorkingDays((savedInputs.inputs as DayRateInputs).days);
+  }
+
+  return 1;
 }
 
 function inferAnchorRoomType(name: string): InteriorRoomType {
@@ -736,6 +755,7 @@ export function QuoteForm({
     title: defaultValues?.title ?? '',
     status: defaultValues?.status ?? ('draft' as const),
     valid_until: defaultValues?.valid_until ?? defaultValidUntil(),
+    working_days: String(getInitialWorkingDays(defaultValues)),
     notes: defaultValues?.notes ?? '',
     internal_notes: defaultValues?.internal_notes ?? '',
     labour_markup: String(defaultValues?.labour_margin_percent ?? 0),
@@ -990,6 +1010,7 @@ export function QuoteForm({
   function buildPayload(): QuoteCreateInput {
     let payload: QuoteCreateInput;
     const customer_address = selectedProperty?.address ?? undefined;
+    const working_days = normalizeWorkingDays(intVal(form.working_days, 1));
 
     if (pricingStrategy === 'day_rate') {
       payload = {
@@ -998,6 +1019,7 @@ export function QuoteForm({
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
+        working_days,
         complexity: 'standard',
         labour_margin_percent: 0,
         material_margin_percent: 0,
@@ -1015,6 +1037,7 @@ export function QuoteForm({
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
+        working_days,
         complexity: 'standard',
         labour_margin_percent: 0,
         material_margin_percent: 0,
@@ -1032,6 +1055,7 @@ export function QuoteForm({
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
+        working_days,
         complexity: 'standard',
         labour_margin_percent: 0,
         material_margin_percent: 0,
@@ -1049,6 +1073,7 @@ export function QuoteForm({
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
+        working_days,
         complexity: 'standard',
         labour_margin_percent: labourMarkupPct,
         material_margin_percent: materialMarkupPct,
@@ -1077,6 +1102,7 @@ export function QuoteForm({
         title: form.title.trim(),
         status: form.status,
         valid_until: form.valid_until,
+        working_days,
         complexity: 'standard',
         labour_margin_percent: labourMarkupPct,
         material_margin_percent: materialMarkupPct,
@@ -1325,6 +1351,40 @@ export function QuoteForm({
               onChange={handleChange}
               className={FIELD}
             />
+          </div>
+          <div>
+            <label htmlFor="working_days" className={LABEL}>
+              Booking Duration
+            </label>
+            <div className="relative">
+              <NumericInput
+                id="working_days"
+                name="working_days"
+                inputMode="numeric"
+                min={1}
+                max={30}
+                value={form.working_days}
+                sanitize={sanitizeIntegerInput}
+                onValueChange={(value) => {
+                  setForm((current) => ({ ...current, working_days: value }));
+                  setError(null);
+                }}
+                onBlur={() => {
+                  setForm((current) => ({
+                    ...current,
+                    working_days: String(normalizeWorkingDays(intVal(current.working_days, 1))),
+                  }));
+                }}
+                aria-describedby="working_days_help"
+                className="h-12 w-full rounded-xl border border-pm-border bg-white pl-4 pr-16 text-base text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-pm-secondary">
+                days
+              </span>
+            </div>
+            <p id="working_days_help" className="mt-1 text-xs text-pm-secondary">
+              Used after approval when the client chooses their booking start date.
+            </p>
           </div>
         </div>
       </section>
@@ -1907,6 +1967,10 @@ export function QuoteForm({
                 <p className="mt-1 font-medium text-pm-body">{sendDialog.payload.title}</p>
                 <p className="mt-1 text-sm text-pm-secondary">
                   Valid until {sendDialog.payload.valid_until}
+                </p>
+                <p className="mt-1 text-sm text-pm-secondary">
+                  Booking duration: {sendDialog.payload.working_days ?? 1} day
+                  {(sendDialog.payload.working_days ?? 1) !== 1 ? 's' : ''}
                 </p>
                 {sendDialog.payload.notes && (
                   <p className="mt-3 whitespace-pre-wrap rounded-lg bg-pm-surface px-3 py-2 text-sm text-pm-body">

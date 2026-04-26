@@ -63,6 +63,7 @@ type QuoteListRow = {
   title: string | null;
   status: string;
   valid_until: string | null;
+  working_days?: number | null;
   tier: string | null;
   subtotal_cents: number;
   gst_cents: number;
@@ -128,6 +129,7 @@ type QuoteDetailRow = {
   title: string | null;
   status: string;
   valid_until: string | null;
+  working_days?: number | null;
   tier: string | null;
   notes: string | null;
   internal_notes?: string | null;
@@ -162,17 +164,17 @@ const QUOTE_LIST_SELECT =
 const QUOTE_LIST_SELECT_LEGACY =
   `id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT =
-  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT =
-  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT_LEGACY =
-  `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
 const PUBLIC_QUOTE_DETAIL_SELECT =
-  `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, notes, subtotal_cents, gst_cents, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
 const PUBLIC_QUOTE_DETAIL_SELECT_LEGACY =
-  `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, quote_number, title, status, valid_until, notes, subtotal_cents, gst_cents, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
+  `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
 const PUBLIC_QUOTE_APPROVAL_SELECT =
   `id, user_id, customer_email, customer_address, quote_number, title, status, valid_until, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
@@ -223,6 +225,7 @@ type PublicQuoteRow = {
   title: string | null;
   status: string;
   valid_until: string | null;
+  working_days?: number | null;
   notes: string | null;
   subtotal_cents: number;
   gst_cents: number;
@@ -1241,6 +1244,7 @@ export async function createQuote(
     title: parsed.data.title,
     status: parsed.data.status,
     valid_until: parsed.data.valid_until,
+    working_days: parsed.data.working_days,
     tier: parsed.data.complexity,
     notes: parsed.data.notes,
     internal_notes: parsed.data.internal_notes,
@@ -1808,6 +1812,7 @@ export async function duplicateQuote(quoteId: string): Promise<{ error: string }
     title: sourceQuote.title ? `${sourceQuote.title} (Copy)` : 'Copy',
     status: 'draft' as const,
     valid_until: null,
+    working_days: sourceQuote.working_days ?? null,
     tier: sourceQuote.tier,
     notes: sourceQuote.notes,
     internal_notes: sourceQuote.internal_notes,
@@ -2087,6 +2092,7 @@ export async function updateQuote(
     title: parsed.data.title,
     status: parsed.data.status,
     valid_until: parsed.data.valid_until,
+    working_days: parsed.data.working_days,
     tier: parsed.data.complexity,
     notes: parsed.data.notes,
     internal_notes: parsed.data.internal_notes,

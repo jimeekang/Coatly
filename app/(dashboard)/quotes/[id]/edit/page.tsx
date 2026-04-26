@@ -82,6 +82,7 @@ export default async function EditQuotePage({
     title: quote.title ?? '',
     status: quote.status as QuoteStatus,
     valid_until: quote.valid_until ?? '',
+    working_days: quote.working_days ?? 1,
     complexity: (quote.complexity as 'standard' | 'moderate' | 'complex') ?? undefined,
     labour_margin_percent: quote.labour_margin_percent,
     material_margin_percent: quote.material_margin_percent,

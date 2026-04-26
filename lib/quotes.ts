@@ -243,6 +243,7 @@ export type QuoteDetail = {
   status: QuoteStatus;
   valid_until: string | null;
   complexity: QuoteComplexity | null;
+  working_days: number | null;
   notes: string | null;
   internal_notes: string | null;
   labour_margin_percent: number;
@@ -709,6 +710,7 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       title: parsed.data.title.trim(),
       status: parsed.data.status,
       valid_until: parsed.data.valid_until,
+      working_days: parsed.data.working_days ?? 1,
       complexity: parsed.data.complexity,
       labour_margin_percent: parsed.data.labour_margin_percent,
       material_margin_percent: parsed.data.material_margin_percent,
@@ -764,6 +766,7 @@ export function mapQuoteListItem(row: {
   title: string | null;
   status: string;
   valid_until: string | null;
+  working_days?: number | null;
   tier: string | null;
   subtotal_cents: number;
   gst_cents: number;
@@ -820,6 +823,7 @@ export function mapQuoteDetail(row: {
   title: string | null;
   status: string;
   valid_until: string | null;
+  working_days?: number | null;
   tier: string | null;
   notes: string | null;
   internal_notes: string | null;
@@ -881,6 +885,7 @@ export function mapQuoteDetail(row: {
       valid_until: row.valid_until,
     }),
     valid_until: row.valid_until,
+    working_days: row.working_days ?? null,
     complexity: (row.tier as QuoteComplexity | null) ?? null,
     notes: row.notes,
     internal_notes: row.internal_notes,

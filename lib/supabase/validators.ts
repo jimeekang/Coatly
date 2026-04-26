@@ -274,6 +274,7 @@ export const quoteInsertSchema = z.object({
   quote_number: z.string().trim().min(1, 'Quote number is required'),
   title: z.string().trim().min(1).nullable().optional(),
   status: quoteStatusSchema.optional(),
+  working_days: z.number().int().min(1).max(30).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
   internal_notes: z.string().trim().max(2000).nullable().optional(),
   labour_margin_percent: nonNegativeIntegerSchema.optional(),
@@ -566,6 +567,12 @@ export const quoteCreateSchema = z.object({
   title: z.string().trim().min(1, 'Quote title is required'),
   status: z.enum(['draft', 'sent', 'approved', 'rejected', 'expired']).default('draft'),
   valid_until: optionalIsoDateString,
+  working_days: z
+    .number()
+    .int('Booking duration must be a whole number of days')
+    .min(1, 'Booking duration must be at least 1 day')
+    .max(30, 'Booking duration cannot exceed 30 days')
+    .default(1),
   complexity: z.enum(['standard', 'moderate', 'complex']).default('standard'),
   labour_margin_percent: z
     .number()

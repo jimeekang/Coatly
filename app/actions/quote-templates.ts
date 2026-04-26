@@ -18,6 +18,7 @@ export type QuoteTemplatePayload = Pick<
   | 'material_margin_percent'
   | 'notes'
   | 'internal_notes'
+  | 'working_days'
   | 'rooms'
   | 'line_items'
 >;

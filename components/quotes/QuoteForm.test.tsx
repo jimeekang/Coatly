@@ -141,6 +141,29 @@ describe('QuoteForm', () => {
     expect(typeof payload.manual_adjustment_cents).toBe('number');
   });
 
+  it('submits the configured booking duration for client date booking', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(<QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} />);
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Four-day repaint');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
+    await user.clear(screen.getByLabelText('Booking Duration'));
+    await user.type(screen.getByLabelText('Booking Duration'), '4');
+    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        working_days: 4,
+      })
+    );
+  });
+
   it('opens a send confirmation dialog and passes the selected email', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
