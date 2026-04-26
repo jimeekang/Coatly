@@ -9,9 +9,18 @@ import {
   resolveQuoteStatus,
   serializeLegacyQuoteCoatingType,
   serializeQuoteCoatingType,
+  isMissingQuoteCustomerSnapshotColumnError,
 } from '@/lib/quotes';
 
 describe('lib/quotes', () => {
+  it('detects Supabase schema-cache errors for missing quote customer snapshot columns', () => {
+    expect(
+      isMissingQuoteCustomerSnapshotColumnError(
+        "Could not find the 'customer_address' column of 'quotes' in the schema cache"
+      )
+    ).toBe(true);
+  });
+
   it('calculates quoted totals from rooms, surfaces, and margins', () => {
     const preview = calculateQuotePreview({
       complexity: 'standard',

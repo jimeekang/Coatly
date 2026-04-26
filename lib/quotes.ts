@@ -553,6 +553,8 @@ export function isMissingQuoteCustomerSnapshotColumnError(message: string | null
   return (
     message.includes('quotes.customer_email') ||
     message.includes('quotes.customer_address') ||
+    (message.includes('schema cache') &&
+      (message.includes("'customer_email'") || message.includes("'customer_address'"))) ||
     ((message.includes('customer_email') || message.includes('customer_address')) &&
       message.includes('quotes'))
   );
