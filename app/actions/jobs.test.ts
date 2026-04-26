@@ -988,6 +988,52 @@ describe('bookJobFromPublicQuote', () => {
     expect(result.jobId).toBeNull();
   });
 
+  it('blocks NSW weekend and public holiday starts unless the client opts in', async () => {
+    const rpcMock = vi.fn().mockResolvedValue({ data: false, error: null });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-weekend', status: 'approved', working_days: 2, user_id: 'uid-1', customer_id: 'customer-1', title: 'Weekend job', quote_number: 'Q-007' })) };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: rpcMock,
+    });
+
+    const result = await bookJobFromPublicQuote('token-weekend', '2026-04-04');
+
+    expect(result.error).toMatch(/weekends and nsw public holidays/i);
+    expect(result.jobId).toBeNull();
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('allows weekend and NSW public holiday dates when the client opts in', async () => {
+    const insertMock = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: 'job-weekend' }, error: null }),
+      }),
+    });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-weekend-ok', status: 'approved', working_days: 2, user_id: 'uid-1', customer_id: 'customer-1', title: 'Weekend job', quote_number: 'Q-008' })) };
+        if (table === 'jobs') return { insert: insertMock };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('token-weekend-ok', '2026-04-04', {
+      includeNonWorkingDates: true,
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.jobId).toBe('job-weekend');
+    const insertPayload = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(insertPayload.start_date).toBe('2026-04-04');
+    expect(insertPayload.end_date).toBe('2026-04-05');
+    expect(insertPayload.duration_days).toBe(2);
+  });
+
   it('uses 1 day when working_days is null', async () => {
     const insertedJob = { id: 'job-2' };
     const insertSelectSingleMock = vi.fn().mockResolvedValue({ data: insertedJob, error: null });

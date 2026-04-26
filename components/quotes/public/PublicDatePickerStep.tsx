@@ -2,6 +2,11 @@
 
 import { useCallback, useState, useTransition } from 'react';
 import { bookJobFromPublicQuote, getAvailableDatesForToken } from '@/app/actions/jobs';
+import {
+  buildBookingRange,
+  getNonWorkingDateReason,
+  isNswNonWorkingDate,
+} from '@/lib/calendar/nsw-public-holidays';
 
 interface PublicDatePickerStepProps {
   token: string;
@@ -30,12 +35,6 @@ function formatDisplayDate(ymd: string): string {
     month: 'long',
     year: 'numeric',
   });
-}
-
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
 }
 
 const MONTH_NAMES = [
@@ -78,6 +77,7 @@ export function PublicDatePickerStep({
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   const [selectedStart, setSelectedStart] = useState<string | null>(null);
+  const [allowNonWorkingDates, setAllowNonWorkingDates] = useState(false);
   const [blockedDates, setBlockedDates] = useState<Set<string>>(
     () => new Set(initialBlockedDates),
   );
@@ -104,20 +104,23 @@ export function PublicDatePickerStep({
   // Compute highlight range from selected start
   const highlightRange = useCallback((): Set<string> => {
     if (!selectedStart) return new Set();
-    const set = new Set<string>();
-    const start = parseLocalDate(selectedStart);
-    for (let i = 0; i < resolvedWorkingDays; i++) {
-      set.add(formatDateYMD(addDays(start, i)));
-    }
-    return set;
-  }, [selectedStart, resolvedWorkingDays]);
+    return new Set(
+      buildBookingRange(selectedStart, resolvedWorkingDays, allowNonWorkingDates)
+        .scheduledDates,
+    );
+  }, [selectedStart, resolvedWorkingDays, allowNonWorkingDates]);
 
   const rangeSet = highlightRange();
 
   function rangeHasBlockedDate(startDate: string) {
-    const start = parseLocalDate(startDate);
-    for (let i = 0; i < resolvedWorkingDays; i += 1) {
-      if (blockedDates.has(formatDateYMD(addDays(start, i)))) {
+    const bookingRange = buildBookingRange(
+      startDate,
+      resolvedWorkingDays,
+      allowNonWorkingDates,
+    );
+
+    for (const date of bookingRange.spanDates) {
+      if (blockedDates.has(date)) {
         return true;
       }
     }
@@ -149,9 +152,23 @@ export function PublicDatePickerStep({
 
   function handleDayClick(dateStr: string) {
     if (dateStr < today) return;
+    if (!allowNonWorkingDates && isNswNonWorkingDate(dateStr)) return;
     if (blockedDates.has(dateStr) || rangeHasBlockedDate(dateStr)) return;
     setSelectedStart(dateStr);
     setBookError(null);
+  }
+
+  function handleNonWorkingToggle(checked: boolean) {
+    setAllowNonWorkingDates(checked);
+    setBookError(null);
+
+    if (
+      selectedStart &&
+      !checked &&
+      (isNswNonWorkingDate(selectedStart) || rangeHasBlockedDate(selectedStart))
+    ) {
+      setSelectedStart(null);
+    }
   }
 
   function handleBook() {
@@ -159,13 +176,19 @@ export function PublicDatePickerStep({
     setBookError(null);
 
     startBookingTransition(async () => {
-      const result = await bookJobFromPublicQuote(token, selectedStart);
+      const result = await bookJobFromPublicQuote(token, selectedStart, {
+        includeNonWorkingDates: allowNonWorkingDates,
+      });
       if (result.error) {
         setBookError(result.error);
         return;
       }
       // Compute end date for success display
-      const endDate = formatDateYMD(addDays(parseLocalDate(selectedStart), resolvedWorkingDays - 1));
+      const endDate = buildBookingRange(
+        selectedStart,
+        resolvedWorkingDays,
+        allowNonWorkingDates,
+      ).endDate;
       setBookedResult({ startDate: selectedStart, endDate });
     });
   }
@@ -213,7 +236,7 @@ export function PublicDatePickerStep({
   }
 
   const selectedEndDate = selectedStart
-    ? formatDateYMD(addDays(parseLocalDate(selectedStart), resolvedWorkingDays - 1))
+    ? buildBookingRange(selectedStart, resolvedWorkingDays, allowNonWorkingDates).endDate
     : null;
 
   // ── Date picker UI ──
@@ -226,9 +249,26 @@ export function PublicDatePickerStep({
           painting job.
         </p>
         <p className="mt-1 text-xs text-pm-secondary">
-          Tap a date to select it. The full job duration will be highlighted automatically.
+          Weekends and NSW public holidays are skipped by default.
         </p>
       </div>
+
+      <label className="flex items-start gap-3 rounded-xl border border-pm-border bg-white px-4 py-3 shadow-sm">
+        <input
+          type="checkbox"
+          checked={allowNonWorkingDates}
+          onChange={(event) => handleNonWorkingToggle(event.target.checked)}
+          className="mt-1 h-5 w-5 rounded border-pm-border text-pm-teal focus:ring-pm-teal-pale"
+        />
+        <span>
+          <span className="block text-sm font-semibold text-pm-body">
+            I can include weekends and NSW public holidays
+          </span>
+          <span className="mt-0.5 block text-xs text-pm-secondary">
+            Turn this on if your painter has agreed these dates can be part of the booking.
+          </span>
+        </span>
+      </label>
 
       {/* Calendar */}
       <div className="rounded-2xl border border-pm-border bg-white p-4 shadow-sm">
@@ -295,11 +335,14 @@ export function PublicDatePickerStep({
                 const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const isPast = dateStr < today;
                 const isBlocked = blockedDates.has(dateStr);
+                const nonWorkingReason = getNonWorkingDateReason(dateStr);
+                const isNonWorking = nonWorkingReason != null;
+                const isNonWorkingDisabled = isNonWorking && !allowNonWorkingDates;
                 const hasBlockedRange = !isBlocked && !isPast && rangeHasBlockedDate(dateStr);
                 const isToday = dateStr === today;
                 const isStart = dateStr === selectedStart;
                 const isInRange = rangeSet.has(dateStr) && !isStart;
-                const isDisabled = isPast || isBlocked || hasBlockedRange;
+                const isDisabled = isPast || isBlocked || isNonWorkingDisabled || hasBlockedRange;
 
                 let cellClass =
                   'relative flex min-h-11 items-center justify-center rounded-xl text-sm font-medium transition-all select-none ';
@@ -308,6 +351,8 @@ export function PublicDatePickerStep({
                   cellClass += 'cursor-not-allowed text-pm-secondary/40 bg-pm-surface/60';
                 } else if (isBlocked) {
                   cellClass += 'cursor-not-allowed bg-pm-coral/20 text-pm-coral-dark';
+                } else if (isNonWorkingDisabled) {
+                  cellClass += 'cursor-not-allowed bg-pm-surface text-pm-secondary/60';
                 } else if (hasBlockedRange) {
                   cellClass += 'cursor-not-allowed bg-pm-coral/10 text-pm-coral-dark/70';
                 } else if (isStart) {
@@ -331,13 +376,24 @@ export function PublicDatePickerStep({
                     data-in-range={isInRange ? 'true' : undefined}
                     disabled={isDisabled}
                     onClick={() => handleDayClick(dateStr)}
-                    aria-label={`${day} ${MONTH_NAMES[viewMonth]}${isDisabled ? ' (unavailable)' : ''}`}
+                    aria-label={`${day} ${MONTH_NAMES[viewMonth]}${
+                      isNonWorkingDisabled
+                        ? nonWorkingReason === 'nsw_public_holiday'
+                          ? ' (NSW public holiday)'
+                          : ' (weekend)'
+                        : isDisabled
+                          ? ' (unavailable)'
+                          : ''
+                    }`}
                     aria-pressed={isStart}
                     className={cellClass}
                   >
                     {day}
                     {(isBlocked || hasBlockedRange) && (
                       <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-pm-coral" />
+                    )}
+                    {isNonWorkingDisabled && !isBlocked && !hasBlockedRange && (
+                      <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-pm-secondary/50" />
                     )}
                   </button>
                 );
@@ -354,6 +410,12 @@ export function PublicDatePickerStep({
                 <span className="h-3 w-3 rounded-sm bg-pm-coral/20" />
                 Unavailable
               </span>
+              {!allowNonWorkingDates && (
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-sm bg-pm-surface border border-pm-border" />
+                  Weekend / NSW public holiday
+                </span>
+              )}
             </div>
           </>
         )}
@@ -373,6 +435,7 @@ export function PublicDatePickerStep({
             </p>
             <p className="mt-0.5 text-sm text-pm-secondary">
               {resolvedWorkingDays} working day{resolvedWorkingDays !== 1 ? 's' : ''}
+              {allowNonWorkingDates ? ', including weekends or NSW public holidays if selected' : ', excluding weekends and NSW public holidays'}
             </p>
           </div>
 

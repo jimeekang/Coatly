@@ -6,6 +6,10 @@ import {
   getGoogleBusyDatesForUser,
   syncBookedJobToGoogleCalendar,
 } from '@/lib/google-calendar/service';
+import {
+  buildBookingRange,
+  isNswNonWorkingDate,
+} from '@/lib/calendar/nsw-public-holidays';
 import { buildQuoteCustomerAddress } from '@/lib/quotes';
 import type {
   JobCustomerOption,
@@ -589,6 +593,7 @@ export async function deleteJob(id: string): Promise<{ error: string | null }> {
 export async function bookJobFromPublicQuote(
   token: string,
   startDate: string,
+  options: { includeNonWorkingDates?: boolean } = {},
 ): Promise<{ error: string | null; jobId: string | null }> {
   const trimmedToken = token.trim();
   if (!trimmedToken) {
@@ -625,12 +630,17 @@ export async function bookJobFromPublicQuote(
   }
 
   const workingDays = quote.working_days ?? 1;
+  const includeNonWorkingDates = options.includeNonWorkingDates === true;
 
-  // Use UTC to avoid timezone-shift issues when converting back to ISO date string
-  const [sy, sm, sd] = startDate.split('-').map(Number) as [number, number, number];
-  const endDate = new Date(Date.UTC(sy, sm - 1, sd + workingDays - 1))
-    .toISOString()
-    .slice(0, 10);
+  if (!includeNonWorkingDates && isNswNonWorkingDate(startDate)) {
+    return {
+      error: 'Weekends and NSW public holidays are unavailable unless you choose to include them.',
+      jobId: null,
+    };
+  }
+
+  const bookingRange = buildBookingRange(startDate, workingDays, includeNonWorkingDates);
+  const endDate = bookingRange.endDate;
 
   const { data: overlapResult, error: overlapError } = await supabase.rpc(
     'check_job_date_overlap',
