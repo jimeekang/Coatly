@@ -6,6 +6,7 @@ import { listQuoteTemplates } from '@/app/actions/quote-templates';
 import { QuoteCreateScreen } from '@/components/quotes/QuoteCreateScreen';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata: Metadata = { title: 'New Quote' };
 
@@ -39,33 +40,12 @@ export default async function NewQuotePage({
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-7xl">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          href="/quotes"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors active:bg-pm-border"
-          aria-label="Back to quotes"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-pm-body">New Quote</h1>
-          <p className="mt-0.5 text-sm text-pm-secondary">
-            Build a quote manually{subscription?.features.ai ? ' or let AI prepare a draft first.' : '.'}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="New Quote"
+        description={`Build a quote manually${subscription?.features.ai ? ' or let AI prepare a draft first.' : '.'}`}
+        backHref="/quotes"
+        backLabel="Back to quotes"
+      />
 
       {quoteUsage && (
         <div className="mb-6 rounded-2xl border border-pm-border bg-white px-4 py-4 shadow-sm">

@@ -175,7 +175,7 @@ export function JobsWorkspace({
           <button
             type="button"
             onClick={() => setFormOpen(true)}
-            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90"
+            className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90"
           >
             New Job
           </button>

@@ -207,14 +207,14 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setEditing(true)}
-            className="h-10 rounded-lg border border-pm-border bg-white px-5 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
+            className="min-h-11 rounded-lg border border-pm-border bg-white px-5 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
           >
             Edit
           </button>
           <button
             onClick={() => setDialog('delete')}
             disabled={deleting}
-            className="h-10 rounded-lg bg-red-600 px-5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+            className="min-h-11 rounded-lg bg-red-600 px-5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </button>

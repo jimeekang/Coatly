@@ -47,17 +47,17 @@ type DayEvent =
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_DOT: Record<JobStatus, string> = {
-  scheduled: 'bg-pm-teal',
-  in_progress: 'bg-amber-400',
-  completed: 'bg-emerald-500',
-  cancelled: 'bg-rose-400',
+  scheduled: 'bg-primary',
+  in_progress: 'bg-warning',
+  completed: 'bg-success',
+  cancelled: 'bg-error',
 };
 
 const STATUS_BADGE: Record<JobStatus, string> = {
-  scheduled: 'bg-pm-teal/10 text-pm-teal border-pm-teal/20',
-  in_progress: 'bg-amber-50 text-amber-700 border-amber-200',
-  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
+  scheduled: 'bg-primary/10 text-primary border-primary/20',
+  completed: 'bg-success-container text-success border-success/20',
+  in_progress: 'bg-warning-container text-on-warning-container border-warning/20',
+  cancelled: 'bg-error-container text-error border-error/20',
 };
 
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -561,7 +561,7 @@ export function ScheduleCalendar({
         <button
           onClick={prevMonth}
           aria-label="Previous month"
-          className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
+          className="flex min-h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
         >
           <svg className="h-5 w-5 text-pm-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -574,7 +574,7 @@ export function ScheduleCalendar({
           {showNativeFeature && (
             <button
               onClick={openAddEvent}
-              className="flex h-10 items-center gap-1.5 rounded-full bg-pm-teal px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              className="flex min-h-11 items-center gap-1.5 rounded-full bg-pm-teal px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12h14" />
@@ -585,7 +585,7 @@ export function ScheduleCalendar({
           <button
             onClick={nextMonth}
             aria-label="Next month"
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
+            className="flex min-h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
           >
             <svg className="h-5 w-5 text-pm-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -654,10 +654,10 @@ export function ScheduleCalendar({
                       <span key={idx} className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[e.job.status]}`} />
                     ))}
                     {gEvts.slice(0, 1).map((_, idx) => (
-                      <span key={`g${idx}`} className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                      <span key={`g${idx}`} className="h-1.5 w-1.5 rounded-full bg-tertiary" />
                     ))}
                     {nEvts.slice(0, 2).map((_, idx) => (
-                      <span key={`n${idx}`} className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                      <span key={`n${idx}`} className="h-1.5 w-1.5 rounded-full bg-secondary" />
                     ))}
                     {dayEvents.length > 5 && (
                       <span className="text-[8px] leading-tight text-pm-secondary">
@@ -674,11 +674,11 @@ export function ScheduleCalendar({
 
       {/* Legend */}
       <div className="flex flex-wrap gap-x-4 gap-y-2 px-1">
-        <LegendDot color="bg-pm-teal" label="Scheduled" />
-        <LegendDot color="bg-amber-400" label="In Progress" />
-        <LegendDot color="bg-emerald-500" label="Completed" />
-        {googleConnected && <LegendDot color="bg-blue-500" label="Google Calendar" />}
-        {showNativeFeature && <LegendDot color="bg-violet-500" label="My Events" />}
+        <LegendDot color="bg-primary" label="Scheduled" />
+        <LegendDot color="bg-warning" label="In Progress" />
+        <LegendDot color="bg-success" label="Completed" />
+        {googleConnected && <LegendDot color="bg-tertiary" label="Google Calendar" />}
+        {showNativeFeature && <LegendDot color="bg-secondary" label="My Events" />}
       </div>
 
       {/* Google error notice */}

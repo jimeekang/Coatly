@@ -8,6 +8,7 @@ import {
   type CalendarJob,
   type CalendarGoogleEvent,
 } from '@/components/schedule/ScheduleCalendar';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata: Metadata = { title: 'Schedule' };
 
@@ -62,12 +63,10 @@ export default async function SchedulePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-[28px] font-bold text-pm-body">Schedule</h1>
-        <p className="mt-1 text-sm text-pm-secondary">
-          Your jobs and calendar events at a glance.
-        </p>
-      </div>
+      <PageHeader
+        title="Schedule"
+        description="Your jobs and calendar events at a glance."
+      />
 
       <ScheduleCalendar
         jobs={calendarJobs}

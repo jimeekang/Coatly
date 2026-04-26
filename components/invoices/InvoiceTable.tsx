@@ -6,22 +6,8 @@ import { markInvoiceAsPaid } from '@/app/actions/invoices';
 import { formatCustomerLocation, getSydneyTodayDateString } from '@/lib/invoices';
 import type { InvoiceListItem, InvoiceStatus } from '@/types/invoice';
 import { formatAUD, formatDate } from '@/utils/format';
-
-const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
-  draft:     'bg-surface-container-highest text-on-surface-variant',
-  sent:      'bg-primary/10 text-primary',
-  paid:      'bg-success-container text-success',
-  overdue:   'bg-warning-container text-warning',
-  cancelled: 'bg-surface-container-highest text-on-surface-variant',
-};
-
-const INVOICE_LEFT_BORDER: Record<InvoiceStatus, string> = {
-  draft:     'border-l-outline',
-  sent:      'border-l-primary',
-  paid:      'border-l-success',
-  overdue:   'border-l-warning',
-  cancelled: 'border-l-outline',
-};
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { INVOICE_STATUS_TONE, STATUS_TONE_BORDER } from '@/lib/constants/status-colors';
 
 const STATUS_LABELS: Record<InvoiceStatus, string> = {
   draft:     'Draft',
@@ -68,12 +54,7 @@ function getDateFilterCutoff(filter: DateFilter): Date | null {
 }
 
 function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
-  const style = INVOICE_STATUS_STYLES[status] ?? 'bg-surface-container-high text-on-surface-variant';
-  return (
-    <span className={`inline-flex rounded px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${style}`}>
-      {STATUS_LABELS[status]}
-    </span>
-  );
+  return <StatusBadge tone={INVOICE_STATUS_TONE[status] ?? 'neutral'} label={STATUS_LABELS[status]} />;
 }
 
 function matchesQuery(invoice: InvoiceListItem, query: string) {
@@ -241,7 +222,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
           {/* Card list */}
           <ul className="flex flex-col gap-3">
             {filtered.map((invoice) => {
-              const borderClass = INVOICE_LEFT_BORDER[invoice.status] ?? 'border-l-outline';
+              const borderClass = STATUS_TONE_BORDER[INVOICE_STATUS_TONE[invoice.status] ?? 'neutral'];
               const canQuickMarkPaid = invoice.status === 'sent' || invoice.status === 'overdue';
               const isPaymentFormOpen = activePaymentInvoiceId === invoice.id;
               return (

@@ -10,22 +10,8 @@ import {
 } from '@/lib/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
 import { DuplicateQuoteButton } from '@/components/quotes/DuplicateQuoteButton';
-
-const QUOTE_STATUS_STYLES: Record<QuoteStatus, string> = {
-  draft:    'bg-surface-container-highest text-on-surface-variant',
-  sent:     'bg-primary/10 text-primary',
-  approved: 'bg-success-container text-success',
-  rejected: 'bg-error-container text-error',
-  expired:  'bg-surface-container-highest text-on-surface-variant',
-};
-
-const QUOTE_LEFT_BORDER: Record<QuoteStatus, string> = {
-  draft:    'border-l-outline',
-  sent:     'border-l-primary',
-  approved: 'border-l-success',
-  rejected: 'border-l-error',
-  expired:  'border-l-outline',
-};
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { QUOTE_STATUS_TONE, STATUS_TONE_BORDER } from '@/lib/constants/status-colors';
 
 const STATUS_OPTIONS: Array<{ value: 'all' | QuoteStatus; label: string }> = [
   { value: 'all',      label: 'All' },
@@ -64,14 +50,7 @@ function getDateFilterCutoff(filter: DateFilter): Date | null {
 }
 
 function QuoteStatusBadge({ status }: { status: QuoteStatus }) {
-  const style = QUOTE_STATUS_STYLES[status] ?? 'bg-surface-container-high text-on-surface-variant';
-  return (
-    <span
-      className={`inline-flex rounded px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${style}`}
-    >
-      {QUOTE_STATUS_LABELS[status]}
-    </span>
-  );
+  return <StatusBadge tone={QUOTE_STATUS_TONE[status] ?? 'neutral'} label={QUOTE_STATUS_LABELS[status]} />;
 }
 
 function matchesQuery(quote: QuoteListItem, query: string) {
@@ -200,7 +179,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
           {/* Card list */}
           <ul className="flex flex-col gap-3">
             {filtered.map((quote) => {
-              const borderClass = QUOTE_LEFT_BORDER[quote.status] ?? 'border-l-outline';
+              const borderClass = STATUS_TONE_BORDER[QUOTE_STATUS_TONE[quote.status] ?? 'neutral'];
               const expired = isQuoteExpired(quote.valid_until);
               return (
                 <li

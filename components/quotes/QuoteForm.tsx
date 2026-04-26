@@ -553,7 +553,7 @@ function PricingSummaryPanel({
                   value={discountInput}
                   onChange={(e) => onDiscountInputChange(e.target.value)}
                   placeholder="0.00"
-                  className="h-10 flex-1 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-coral focus:outline-none focus:ring-2 focus:ring-pm-coral/20"
+                  className="min-h-11 flex-1 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-coral focus:outline-none focus:ring-2 focus:ring-pm-coral/20"
                 />
                 {discountCents > 0 && (
                   <span className="text-sm font-medium text-pm-coral-mid">
@@ -595,7 +595,7 @@ function PricingSummaryPanel({
                   value={depositInput}
                   onChange={(e) => onDepositInputChange(e.target.value)}
                   placeholder="50"
-                  className="h-10 w-20 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                  className="min-h-11 w-20 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
                 />
                 <span className="text-sm text-pm-secondary">% of total</span>
                 {depositPercent > 0 && (
@@ -1856,7 +1856,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="h-10 rounded-lg border border-pm-border px-3 text-sm font-medium text-pm-secondary disabled:opacity-50"
+                className="min-h-11 rounded-lg border border-pm-border px-3 text-sm font-medium text-pm-secondary disabled:opacity-50"
               >
                 Close
               </button>

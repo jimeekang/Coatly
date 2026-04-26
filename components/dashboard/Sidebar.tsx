@@ -109,7 +109,7 @@ export default function DashboardSidebar({
       <aside className="hidden md:flex w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50 border-r border-outline-variant">
         {/* Logo */}
         <div className="mb-8 px-4 pt-2">
-          <h1 className="text-xl font-extrabold tracking-tight text-on-surface" style={{ letterSpacing: '-0.02em' }}>Coatly</h1>
+          <h1 className="text-xl font-extrabold tracking-tight text-on-surface">Coatly</h1>
           <p className="text-[10px] font-bold tracking-[0.14em] text-on-surface-variant uppercase mt-0.5">
             Painter Workspace
           </p>

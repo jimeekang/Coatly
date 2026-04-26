@@ -150,7 +150,7 @@ function RateRowActions({
       <button
         type="button"
         onClick={onEditToggle}
-        className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-pm-border bg-white px-3 text-xs font-medium text-pm-body hover:border-pm-teal-mid hover:text-pm-teal"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-pm-border bg-white px-3 text-xs font-medium text-pm-body hover:border-pm-teal-mid hover:text-pm-teal"
       >
         {isEditing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
         {isEditing ? 'Done' : 'Edit'}
@@ -159,7 +159,7 @@ function RateRowActions({
         type="button"
         aria-label={deleteLabel}
         onClick={onDelete}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-pm-coral/30 bg-white text-pm-coral hover:bg-pm-coral-light"
+        className="inline-flex min-h-11 w-11 items-center justify-center rounded-xl border border-pm-coral/30 bg-white text-pm-coral hover:bg-pm-coral-light"
       >
         <Trash2 className="h-4 w-4" />
       </button>
@@ -936,7 +936,7 @@ function RoomRateTab({
         <button
           type="button"
           onClick={() => { setIsAdding(true); setEditingId(null); }}
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-pm-teal/50 bg-white px-4 text-sm font-medium text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-dashed border-pm-teal/50 bg-white px-4 text-sm font-medium text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10"
         >
           <Plus className="h-4 w-4" />
           Add Room
@@ -1149,7 +1149,7 @@ function ExteriorRatesSection({
               key={surface}
               type="button"
               onClick={() => onSurfaceToggle(surface, true)}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-dashed border-pm-teal/50 bg-white px-3 text-xs font-medium text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-dashed border-pm-teal/50 bg-white px-3 text-xs font-medium text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10"
             >
               <Plus className="h-3.5 w-3.5" />
               Restore {EXTERIOR_SURFACE_LABELS[surface]}
@@ -1523,7 +1523,7 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
                 }`}
               >
                 <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                  className={`flex min-h-11 w-11 items-center justify-center rounded-xl ${
                     isActive ? 'bg-pm-teal text-white' : 'bg-pm-surface text-pm-secondary'
                   }`}
                 >

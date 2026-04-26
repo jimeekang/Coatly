@@ -4,6 +4,7 @@ import { getQuotes } from '@/app/actions/quotes';
 import { QuoteTable } from '@/components/quotes/QuoteTable';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import { getMonthlyActiveQuoteUsageForCurrentUser } from '@/lib/supabase/request-context';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata: Metadata = { title: 'Quotes' };
 
@@ -13,24 +14,22 @@ export default async function QuotesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-on-surface">Quotes</h1>
-          <p className="mt-1 text-sm text-on-surface-variant font-medium">
-            Save and review customer quotes from your workspace.
-          </p>
-        </div>
-        <Link
-          href="/quotes/new"
-          className={`rounded-lg px-5 py-2.5 text-sm font-bold tracking-tight transition-colors shadow-sm ${
-            quoteUsage?.reached
-              ? 'border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high'
-              : 'bg-primary text-on-primary hover:opacity-90'
-          }`}
-        >
-          {quoteUsage?.reached ? 'View Starter Limit' : 'New Quote'}
-        </Link>
-      </div>
+      <PageHeader
+        title="Quotes"
+        description="Save and review customer quotes from your workspace."
+        action={
+          <Link
+            href="/quotes/new"
+            className={`inline-flex min-h-11 items-center rounded-lg px-5 text-sm font-bold tracking-tight shadow-sm transition-colors ${
+              quoteUsage?.reached
+                ? 'border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high'
+                : 'bg-primary text-on-primary hover:opacity-90'
+            }`}
+          >
+            {quoteUsage?.reached ? 'View Starter Limit' : 'New Quote'}
+          </Link>
+        }
+      />
 
       {quoteUsage && quoteUsage.limit !== null && (
         quoteUsage.reached ? (
