@@ -21,10 +21,20 @@ import {
 } from '@/lib/supabase/validators';
 import type { PricingMethod, PricingMethodInputs } from '@/types/quote';
 
-export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
+export type QuoteStatus =
+  | 'draft'
+  | 'sent'
+  | 'approved'
+  | 'rejected'
+  | 'expired';
 export type QuoteComplexity = 'standard' | 'moderate' | 'complex';
 export type QuoteRoomType = 'interior' | 'exterior';
-export type QuoteSurfaceType = 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
+export type QuoteSurfaceType =
+  | 'walls'
+  | 'ceiling'
+  | 'trim'
+  | 'doors'
+  | 'windows';
 export type QuoteEstimateCategory = 'manual' | 'interior';
 export type QuoteEstimateItemCategory =
   | 'entire_property'
@@ -39,9 +49,7 @@ export type QuoteCoatingType =
   | 'new_plaster_3coat'
   | 'stain'
   | 'specialty';
-export type QuoteCoatingTypeDb =
-  | 'touch_up_1coat'
-  | QuoteCoatingType;
+export type QuoteCoatingTypeDb = 'touch_up_1coat' | QuoteCoatingType;
 
 export type QuoteCustomerOption = {
   id: string;
@@ -145,10 +153,58 @@ export type QuoteLineItemRecord = {
   updated_at: string;
 };
 
+const QUOTE_LINE_ITEM_CATEGORY_ORDER = [
+  'paint',
+  'primer',
+  'supply',
+  'service',
+  'other',
+] as const;
+
+export const QUOTE_LINE_ITEM_CATEGORY_LABELS: Record<string, string> = {
+  paint: 'Paint',
+  primer: 'Primer',
+  supply: 'Supplies',
+  service: 'Services',
+  other: 'Other',
+};
+
+function normalizeQuoteLineItemCategory(category: string | null | undefined) {
+  return QUOTE_LINE_ITEM_CATEGORY_ORDER.includes(
+    category as (typeof QUOTE_LINE_ITEM_CATEGORY_ORDER)[number]
+  )
+    ? (category as (typeof QUOTE_LINE_ITEM_CATEGORY_ORDER)[number])
+    : 'other';
+}
+
+export function getQuoteLineItemCategoryLabel(
+  category: string | null | undefined
+) {
+  return QUOTE_LINE_ITEM_CATEGORY_LABELS[
+    normalizeQuoteLineItemCategory(category)
+  ];
+}
+
+export function groupQuoteLineItemsByCategory<
+  T extends { category: string | null | undefined },
+>(items: T[]) {
+  return QUOTE_LINE_ITEM_CATEGORY_ORDER.map((category) => ({
+    category,
+    label: QUOTE_LINE_ITEM_CATEGORY_LABELS[category],
+    items: items.filter(
+      (item) => normalizeQuoteLineItemCategory(item.category) === category
+    ),
+  })).filter((group) => group.items.length > 0);
+}
+
 type QuotePricedLineItem =
   | Pick<
       QuoteLineItemRecord,
-      'quantity' | 'unit_price_cents' | 'total_cents' | 'is_optional' | 'is_selected'
+      | 'quantity'
+      | 'unit_price_cents'
+      | 'total_cents'
+      | 'is_optional'
+      | 'is_selected'
     >
   | Pick<
       QuoteLineItemFormInput,
@@ -170,7 +226,9 @@ export function calculateQuoteLineItemTotalCents(item: QuotePricedLineItem) {
   return Math.round(item.quantity * item.unit_price_cents);
 }
 
-export function calculateQuoteLineItemsSubtotal(items: QuotePricedLineItem[] = []) {
+export function calculateQuoteLineItemsSubtotal(
+  items: QuotePricedLineItem[] = []
+) {
   return items.reduce((sum, item) => {
     if (!isQuoteLineItemIncluded(item)) {
       return sum;
@@ -193,7 +251,10 @@ export function composeQuoteTotals({
 }) {
   const line_items_subtotal_cents = calculateQuoteLineItemsSubtotal(line_items);
   const subtotal_cents = base_subtotal_cents + line_items_subtotal_cents;
-  const discounted_subtotal_cents = Math.max(0, subtotal_cents - discount_cents);
+  const discounted_subtotal_cents = Math.max(
+    0,
+    subtotal_cents - discount_cents
+  );
   const gst_cents = Math.round(discounted_subtotal_cents * 0.1);
 
   return {
@@ -204,9 +265,12 @@ export function composeQuoteTotals({
   };
 }
 
-export function calculateDepositCents(total_cents: number, deposit_percent: number) {
+export function calculateDepositCents(
+  total_cents: number,
+  deposit_percent: number
+) {
   if (deposit_percent <= 0) return 0;
-  return Math.round(total_cents * deposit_percent / 100);
+  return Math.round((total_cents * deposit_percent) / 100);
 }
 
 export type QuoteListItem = {
@@ -272,7 +336,13 @@ export type QuoteDetail = {
 
 export type PublicQuoteSurface = Pick<
   QuoteSurfaceDraft,
-  'id' | 'surface_type' | 'area_m2' | 'coating_type' | 'rate_per_m2_cents' | 'notes' | 'total_cents'
+  | 'id'
+  | 'surface_type'
+  | 'area_m2'
+  | 'coating_type'
+  | 'rate_per_m2_cents'
+  | 'notes'
+  | 'total_cents'
 >;
 
 export type PublicQuoteRoom = Pick<
@@ -284,12 +354,27 @@ export type PublicQuoteRoom = Pick<
 
 export type PublicQuoteEstimateItem = Pick<
   QuoteEstimateItemDraft,
-  'id' | 'category' | 'label' | 'quantity' | 'unit' | 'unit_price_cents' | 'total_cents'
+  | 'id'
+  | 'category'
+  | 'label'
+  | 'quantity'
+  | 'unit'
+  | 'unit_price_cents'
+  | 'total_cents'
 >;
 
 export type PublicQuoteLineItem = Pick<
   QuoteLineItemRecord,
-  'id' | 'name' | 'category' | 'unit' | 'quantity' | 'unit_price_cents' | 'total_cents' | 'notes' | 'is_optional' | 'is_selected'
+  | 'id'
+  | 'name'
+  | 'category'
+  | 'unit'
+  | 'quantity'
+  | 'unit_price_cents'
+  | 'total_cents'
+  | 'notes'
+  | 'is_optional'
+  | 'is_selected'
 >;
 
 export type PublicQuoteDetail = {
@@ -332,10 +417,12 @@ export function formatQuoteCustomerPropertyAddress({
   QuoteCustomerPropertyOption,
   'address_line1' | 'address_line2' | 'city' | 'state' | 'postcode'
 >) {
-  return [address_line1, address_line2, city, state, postcode]
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join(', ') || null;
+  return (
+    [address_line1, address_line2, city, state, postcode]
+      .map((part) => part?.trim())
+      .filter(Boolean)
+      .join(', ') || null
+  );
 }
 
 function getSydneyIsoDate(now = new Date()) {
@@ -353,7 +440,10 @@ function getSydneyIsoDate(now = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-export function isQuoteExpired(validUntil: string | null | undefined, now = new Date()) {
+export function isQuoteExpired(
+  validUntil: string | null | undefined,
+  now = new Date()
+) {
   if (!validUntil) return false;
 
   const normalizedValidUntil = validUntil.slice(0, 10);
@@ -378,7 +468,10 @@ function normalizeQuoteStatus(status: QuoteStatus | string): QuoteStatus {
 }
 
 export function resolveQuoteStatus(
-  quote: Pick<{ status: QuoteStatus | string; valid_until: string | null }, 'status' | 'valid_until'>,
+  quote: Pick<
+    { status: QuoteStatus | string; valid_until: string | null },
+    'status' | 'valid_until'
+  >,
   now = new Date()
 ): QuoteStatus {
   const status = normalizeQuoteStatus(quote.status);
@@ -436,7 +529,8 @@ function normalizeInteriorEstimate(
     condition: estimate.condition,
     scope: estimate.scope,
     wall_paint_system:
-      normalizeInteriorWallPaintSystem(estimate.wall_paint_system) ?? 'repaint_2coat',
+      normalizeInteriorWallPaintSystem(estimate.wall_paint_system) ??
+      'repaint_2coat',
     property_details: {
       apartment_type: estimate.property_details.apartment_type ?? null,
       sqm: estimate.property_details.sqm ?? null,
@@ -474,7 +568,9 @@ function normalizeInteriorEstimate(
   };
 }
 
-function mapRateSurfaceType(surfaceType: QuoteSurfaceType): RatePresetSurfaceType {
+function mapRateSurfaceType(
+  surfaceType: QuoteSurfaceType
+): RatePresetSurfaceType {
   switch (surfaceType) {
     case 'walls':
     case 'ceiling':
@@ -523,14 +619,16 @@ function roundToOneDecimal(value: number) {
   return Math.round(value * 10) / 10;
 }
 
-export function buildQuoteCustomerAddress(customer: {
-  address_line1?: string | null;
-  address_line2?: string | null;
-  city?: string | null;
-  state?: string | null;
-  postcode?: string | null;
-  address?: string | null;
-} | null) {
+export function buildQuoteCustomerAddress(
+  customer: {
+    address_line1?: string | null;
+    address_line2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postcode?: string | null;
+    address?: string | null;
+  } | null
+) {
   if (!customer) return null;
   if ('address' in customer && customer.address) return customer.address;
 
@@ -548,15 +646,19 @@ export function buildQuoteCustomerAddress(customer: {
   return address || null;
 }
 
-export function isMissingQuoteCustomerSnapshotColumnError(message: string | null | undefined) {
+export function isMissingQuoteCustomerSnapshotColumnError(
+  message: string | null | undefined
+) {
   if (!message) return false;
 
   return (
     message.includes('quotes.customer_email') ||
     message.includes('quotes.customer_address') ||
     (message.includes('schema cache') &&
-      (message.includes("'customer_email'") || message.includes("'customer_address'"))) ||
-    ((message.includes('customer_email') || message.includes('customer_address')) &&
+      (message.includes("'customer_email'") ||
+        message.includes("'customer_address'"))) ||
+    ((message.includes('customer_email') ||
+      message.includes('customer_address')) &&
       message.includes('quotes'))
   );
 }
@@ -658,9 +760,12 @@ export function calculateQuotePreview(input: {
   }>;
 }) {
   const rooms = input.rooms.map((room) => {
-    const surfaces = room.surfaces.map((surface) => calculateQuoteSurface(surface));
+    const surfaces = room.surfaces.map((surface) =>
+      calculateQuoteSurface(surface)
+    );
     const total_cents = surfaces.reduce(
-      (sum, surface) => sum + surface.material_cost_cents + surface.labour_cost_cents,
+      (sum, surface) =>
+        sum + surface.material_cost_cents + surface.labour_cost_cents,
       0
     );
 
@@ -671,7 +776,10 @@ export function calculateQuotePreview(input: {
     };
   });
 
-  const base_subtotal_cents = rooms.reduce((sum, room) => sum + room.total_cents, 0);
+  const base_subtotal_cents = rooms.reduce(
+    (sum, room) => sum + room.total_cents,
+    0
+  );
   const labour_margin_cents = Math.round(
     base_subtotal_cents * (input.labour_margin_percent / 100)
   );
@@ -679,7 +787,8 @@ export function calculateQuotePreview(input: {
     base_subtotal_cents * (input.material_margin_percent / 100)
   );
   const totals = composeQuoteTotals({
-    base_subtotal_cents: base_subtotal_cents + labour_margin_cents + material_margin_cents,
+    base_subtotal_cents:
+      base_subtotal_cents + labour_margin_cents + material_margin_cents,
     line_items: input.line_items ?? [],
   });
 
@@ -696,7 +805,9 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
   if (!parsed.success) {
     return {
       success: false as const,
-      error: parsed.error.issues[0]?.message ?? 'Quote details could not be validated.',
+      error:
+        parsed.error.issues[0]?.message ??
+        'Quote details could not be validated.',
     };
   }
 
@@ -721,7 +832,9 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       internal_notes: parsed.data.internal_notes?.trim() || null,
       pricing_method: parsed.data.pricing_method,
       pricing_method_inputs: parsed.data.pricing_method_inputs ?? null,
-      interior_estimate: normalizeInteriorEstimate(parsed.data.interior_estimate),
+      interior_estimate: normalizeInteriorEstimate(
+        parsed.data.interior_estimate
+      ),
       exterior_estimate: parsed.data.exterior_estimate ?? null,
       line_items: (parsed.data.line_items ?? []).map((item) => {
         const is_optional = item.is_optional ?? false;
@@ -734,7 +847,7 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
           quantity: item.quantity,
           unit_price_cents: item.unit_price_cents,
           is_optional,
-          is_selected: is_optional ? item.is_selected ?? false : true,
+          is_selected: is_optional ? (item.is_selected ?? false) : true,
           notes: item.notes?.trim() || undefined,
         };
       }),
@@ -799,7 +912,8 @@ export function mapQuoteListItem(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
-    estimate_category: (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
+    estimate_category:
+      (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
     created_at: row.created_at,
     updated_at: row.updated_at,
     customer,
@@ -894,13 +1008,15 @@ export function mapQuoteDetail(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
-    estimate_category: (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
+    estimate_category:
+      (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
     property_type: (row.property_type as QuoteDetail['property_type']) ?? null,
     estimate_mode: (row.estimate_mode as QuoteDetail['estimate_mode']) ?? null,
     estimate_context: row.estimate_context ?? {},
     pricing_snapshot: row.pricing_snapshot ?? {},
     pricing_method: (row.pricing_method as PricingMethod | null) ?? 'hybrid',
-    pricing_method_inputs: (row.pricing_method_inputs as PricingMethodInputs | null) ?? null,
+    pricing_method_inputs:
+      (row.pricing_method_inputs as PricingMethodInputs | null) ?? null,
     discount_cents: row.discount_cents ?? 0,
     deposit_percent: row.deposit_percent ?? 0,
     linked_invoice_count: row.linked_invoice_count ?? 0,
@@ -931,7 +1047,10 @@ export function mapQuoteDetail(row: {
         length_m: room.length_m,
         width_m: room.width_m,
         height_m: room.height_m,
-        total_cents: surfaces.reduce((sum, surface) => sum + surface.total_cents, 0),
+        total_cents: surfaces.reduce(
+          (sum, surface) => sum + surface.total_cents,
+          0
+        ),
         surfaces,
       };
     }),
@@ -939,7 +1058,7 @@ export function mapQuoteDetail(row: {
     line_items: (row.line_items ?? []).map((item) => ({
       ...item,
       is_optional: item.is_optional ?? false,
-      is_selected: item.is_optional ? item.is_selected ?? false : true,
+      is_selected: item.is_optional ? (item.is_selected ?? false) : true,
     })),
   };
 }
@@ -958,7 +1077,9 @@ export function toPublicQuoteDetail(quote: QuoteDetail): PublicQuoteDetail {
     subtotal_cents: quote.subtotal_cents,
     gst_cents: quote.gst_cents,
     total_cents: quote.total_cents,
-    working_days: (quote as unknown as { working_days?: number | null }).working_days ?? null,
+    working_days:
+      (quote as unknown as { working_days?: number | null }).working_days ??
+      null,
     customer: quote.customer,
     rooms: quote.rooms.map((room) => ({
       id: room.id,
@@ -1049,7 +1170,8 @@ export function mapPublicQuoteDetail(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
-    working_days: (row as { working_days?: number | null }).working_days ?? null,
+    working_days:
+      (row as { working_days?: number | null }).working_days ?? null,
     customer: resolveQuoteCustomerSummary(row),
     rooms: row.rooms.map((room) => {
       const surfaces = room.surfaces.map((surface) => ({
@@ -1066,7 +1188,10 @@ export function mapPublicQuoteDetail(row: {
         id: room.id,
         name: room.name,
         room_type: room.room_type as QuoteRoomType,
-        total_cents: surfaces.reduce((sum, surface) => sum + surface.total_cents, 0),
+        total_cents: surfaces.reduce(
+          (sum, surface) => sum + surface.total_cents,
+          0
+        ),
         surfaces,
       };
     }),
@@ -1089,7 +1214,7 @@ export function mapPublicQuoteDetail(row: {
       total_cents: item.total_cents,
       notes: item.notes,
       is_optional: item.is_optional ?? false,
-      is_selected: item.is_optional ? item.is_selected ?? false : true,
+      is_selected: item.is_optional ? (item.is_selected ?? false) : true,
     })),
   };
 }

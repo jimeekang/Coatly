@@ -1,10 +1,10 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
-  BriefcaseBusiness,
   CalendarDays,
   FileText,
   Boxes,
@@ -27,9 +27,8 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/customers', label: 'Customers', icon: Users },
-  { href: '/schedule', label: 'Schedule', icon: CalendarDays },
+  { href: '/schedule', label: 'Schedule & Jobs', icon: CalendarDays },
   { href: '/quotes', label: 'Quotes', icon: FileText },
-  { href: '/jobs', label: 'Jobs', icon: BriefcaseBusiness },
   { href: '/invoices', label: 'Invoices', icon: Receipt },
   { href: '/materials-service', label: 'Material / Service', icon: Boxes },
   { href: '/price-rates', label: 'Price Rates', icon: DollarSign },
@@ -38,11 +37,16 @@ const navItems: NavItem[] = [
 
 const mobileTabItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/quotes', label: 'Quotes', icon: FileText },
   { href: '/invoices', label: 'Invoices', icon: Receipt },
   { href: '/customers', label: 'Customers', icon: Users },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
+
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 function isActive(href: string, pathname: string) {
   return pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'));
@@ -100,8 +104,10 @@ export default function DashboardSidebar({
   subscription: SubscriptionSnapshot;
 }) {
   const pathname = usePathname();
+  const hasHydrated = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
   const planLabel = formatPlanName(subscription.plan);
   const isPro = subscription.plan === 'pro';
+  const activePathname = hasHydrated ? pathname : '';
 
   return (
     <>
@@ -115,7 +121,7 @@ export default function DashboardSidebar({
           </p>
         </div>
 
-        <NavLinks pathname={pathname} />
+        <NavLinks pathname={activePathname} />
         <LogoutButton />
 
         {/* User card */}
@@ -157,28 +163,28 @@ export default function DashboardSidebar({
 
       {/* ── Mobile bottom tab bar ── */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/90 backdrop-blur-md border-t border-outline-variant flex h-20"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/90 backdrop-blur-md border-t border-outline-variant flex h-16"
         aria-label="Bottom navigation"
       >
         {mobileTabItems.map(({ href, label, icon: Icon }) => {
-          const active = isActive(href, pathname);
+          const active = isActive(href, activePathname);
           return (
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-semibold uppercase tracking-wider transition-colors active:scale-90 duration-150 ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 text-[9px] font-semibold uppercase transition-colors active:scale-95 duration-150 ${
                 active
-                  ? 'text-primary bg-primary/10 rounded-lg mx-1'
+                  ? 'text-primary bg-primary/10 rounded-lg mx-0.5'
                   : 'text-on-surface-variant hover:text-primary'
               }`}
               aria-current={active ? 'page' : undefined}
             >
               <Icon
-                className={`h-5 w-5 ${active ? 'text-primary' : 'text-on-surface-variant'}`}
+                className={`h-[18px] w-[18px] ${active ? 'text-primary' : 'text-on-surface-variant'}`}
                 strokeWidth={active ? 2.5 : 1.75}
                 aria-hidden="true"
               />
-              {label}
+              <span className="max-w-full truncate">{label}</span>
             </Link>
           );
         })}

@@ -94,6 +94,24 @@ type ViewMode = 'calendar' | 'list';
 type SourceFilter = 'all' | 'jobs' | 'schedule' | 'google';
 type StatusFilter = 'all' | JobStatus;
 
+function isViewMode(value: string | undefined): value is ViewMode {
+  return value === 'calendar' || value === 'list';
+}
+
+function isSourceFilter(value: string | undefined): value is SourceFilter {
+  return value === 'all' || value === 'jobs' || value === 'schedule' || value === 'google';
+}
+
+function isStatusFilter(value: string | undefined): value is StatusFilter {
+  return (
+    value === 'all' ||
+    value === 'scheduled' ||
+    value === 'in_progress' ||
+    value === 'completed' ||
+    value === 'cancelled'
+  );
+}
+
 const DATE_SHORT_FORMATTER = new Intl.DateTimeFormat('en-AU', {
   timeZone: 'UTC',
   day: 'numeric',
@@ -226,6 +244,17 @@ function formatIsoTime(iso: string): string {
   }
 
   return SYDNEY_TIME_FORMATTER.format(new Date(iso));
+}
+
+function getSourceFilterLabel(source: SourceFilter): string {
+  if (source === 'all') return 'All sources';
+  if (source === 'jobs') return 'Jobs';
+  if (source === 'schedule') return 'My events';
+  return 'Google Calendar';
+}
+
+function getStatusFilterLabel(status: StatusFilter): string {
+  return status === 'all' ? 'All job status' : JOB_STATUS_LABELS[status];
 }
 
 function googleEventRange(ev: CalendarGoogleEvent): { start: string; end: string } | null {
@@ -837,49 +866,58 @@ function JobEventCard({
         e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className={`flex flex-col gap-3 rounded-2xl border border-pm-border bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${
+      className={`flex flex-col gap-2 rounded-xl border border-pm-border bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:gap-3 sm:rounded-2xl sm:p-4 ${
         dragPayload ? 'cursor-grab active:cursor-grabbing' : ''
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           {job.quoteNumber && (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-pm-secondary">
+            <p className="text-[10px] font-semibold uppercase text-pm-secondary">
               {job.quoteNumber}
             </p>
           )}
-          <p className="text-sm font-semibold text-pm-body">{job.customerName}</p>
+          <p className="truncate text-sm font-semibold text-pm-body">{job.customerName}</p>
           {job.title && <p className="line-clamp-1 text-xs text-pm-secondary">{job.title}</p>}
           {job.address && <p className="line-clamp-1 text-xs text-pm-secondary">{job.address}</p>}
         </div>
         <span
-          className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${STATUS_BADGE[job.status]}`}
+          className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_BADGE[job.status]}`}
         >
           {JOB_STATUS_LABELS[job.status]}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-pm-secondary">
-        <span>{scheduleSummary.dateLabel}</span>
-        <span>{scheduleSummary.countLabel}</span>
+      <div className="flex flex-wrap gap-2">
+        <span className="max-w-full truncate rounded-full bg-pm-surface px-2.5 py-1 text-[11px] font-medium text-pm-secondary sm:text-xs">
+          {scheduleSummary.dateLabel}
+        </span>
+        <span className="rounded-full bg-pm-surface px-2.5 py-1 text-[11px] font-medium text-pm-secondary sm:text-xs">
+          {scheduleSummary.countLabel}
+        </span>
       </div>
       {job.notes && <p className="line-clamp-2 text-xs text-pm-secondary">{job.notes}</p>}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => onEditSchedule(job)}
-          className="flex h-10 items-center gap-1.5 rounded-xl border border-pm-border px-3 text-xs font-semibold text-pm-body transition-colors hover:bg-pm-surface"
+          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-pm-border px-3 text-xs font-semibold text-pm-body transition-colors hover:bg-pm-surface"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit dates
         </button>
         <Link
-          href={`/jobs?jobId=${job.id}`}
-          className="flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-pm-teal transition-colors hover:bg-pm-teal/5"
+          href={`/jobs/${job.id}`}
+          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-pm-teal/15 px-3 text-xs font-semibold text-pm-teal transition-colors hover:bg-pm-teal/5"
         >
           View job
           <ExternalLink className="h-3.5 w-3.5" />
         </Link>
-        {dragPayload && <GripHorizontal className="ml-auto h-4 w-4 text-pm-secondary" aria-label="Drag to move" />}
+        {dragPayload && (
+          <span className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-pm-surface px-3 py-2 text-[11px] font-medium text-pm-secondary sm:ml-auto sm:bg-transparent sm:px-0 sm:py-0">
+            <GripHorizontal className="h-4 w-4" aria-label="Drag to move" />
+            Drag day
+          </span>
+        )}
       </div>
     </div>
   );
@@ -887,13 +925,13 @@ function JobEventCard({
 
 function GoogleEventCard({ event }: { event: CalendarGoogleEvent }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-xl border border-blue-100 bg-blue-50/40 p-3 shadow-sm sm:rounded-2xl sm:p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-500">
+          <p className="text-[10px] font-semibold uppercase text-blue-500">
             Google Calendar
           </p>
-          <p className="text-sm font-semibold text-pm-body">{event.title}</p>
+          <p className="truncate text-sm font-semibold text-pm-body">{event.title}</p>
           {event.location && <p className="line-clamp-1 text-xs text-pm-secondary">{event.location}</p>}
           {!event.isAllDay && event.startDateTime && (
             <p className="text-xs text-pm-secondary">
@@ -902,7 +940,7 @@ function GoogleEventCard({ event }: { event: CalendarGoogleEvent }) {
             </p>
           )}
         </div>
-        <span className="inline-flex shrink-0 items-center rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-600">
+        <span className="inline-flex shrink-0 items-center rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-blue-600">
           {event.isAllDay ? 'All Day' : 'Timed'}
         </span>
       </div>
@@ -938,14 +976,14 @@ function NativeEventCard({
         e.dataTransfer.effectAllowed = 'move';
       }}
       onClick={() => onEdit(event)}
-      className="flex w-full flex-col gap-2 rounded-2xl border border-violet-100 bg-violet-50/40 p-4 text-left shadow-sm transition-shadow hover:shadow-md active:scale-[0.99]"
+      className="flex w-full flex-col gap-2 rounded-xl border border-violet-100 bg-violet-50/40 p-3 text-left shadow-sm transition-shadow hover:shadow-md active:scale-[0.99] sm:rounded-2xl sm:p-4"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-500">
+          <p className="text-[10px] font-semibold uppercase text-violet-500">
             Event
           </p>
-          <p className="text-sm font-semibold text-pm-body">{event.title}</p>
+          <p className="truncate text-sm font-semibold text-pm-body">{event.title}</p>
           {event.location && <p className="line-clamp-1 text-xs text-pm-secondary">{event.location}</p>}
           {!event.isAllDay && event.startTime && (
             <p className="text-xs text-pm-secondary">
@@ -955,7 +993,7 @@ function NativeEventCard({
           )}
           {event.notes && <p className="mt-1 line-clamp-2 text-xs text-pm-secondary">{event.notes}</p>}
         </div>
-        <span className="inline-flex shrink-0 items-center rounded-full border border-violet-200 bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-600">
+        <span className="inline-flex shrink-0 items-center rounded-full border border-violet-200 bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-violet-600">
           {event.isAllDay ? 'All Day' : 'Timed'}
         </span>
       </div>
@@ -974,6 +1012,10 @@ type Props = {
   googleConnected: boolean;
   googleError: boolean;
   today?: string;
+  initialView?: string;
+  initialSource?: string;
+  initialStatus?: string;
+  initialSearch?: string;
 };
 
 export function ScheduleCalendar({
@@ -983,6 +1025,10 @@ export function ScheduleCalendar({
   googleConnected,
   googleError,
   today,
+  initialView,
+  initialSource,
+  initialStatus,
+  initialSearch,
 }: Props) {
   const router = useRouter();
   const toast = useToast();
@@ -990,10 +1036,14 @@ export function ScheduleCalendar({
   const [year, setYear] = useState(() => Number(resolvedToday.slice(0, 4)));
   const [month, setMonth] = useState(() => Number(resolvedToday.slice(5, 7)) - 1);
   const [selected, setSelected] = useState<string | null>(resolvedToday);
-  const [view, setView] = useState<ViewMode>('calendar');
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [view, setView] = useState<ViewMode>(() => (isViewMode(initialView) ? initialView : 'calendar'));
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
+    isSourceFilter(initialSource) ? initialSource : 'all',
+  );
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
+    isStatusFilter(initialStatus) ? initialStatus : 'all',
+  );
+  const [searchQuery, setSearchQuery] = useState(initialSearch ?? '');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [editingJob, setEditingJob] = useState<CalendarJob | null>(null);
@@ -1037,6 +1087,8 @@ export function ScheduleCalendar({
   const selectedLabel = selected
     ? DATE_LONG_FORMATTER.format(parseYmdUtc(selected))
     : null;
+  const activeFilterCount =
+    Number(sourceFilter !== 'all') + Number(statusFilter !== 'all') + Number(searchQuery.trim().length > 0);
 
   function prevMonth() {
     if (month === 0) {
@@ -1056,6 +1108,12 @@ export function ScheduleCalendar({
       setMonth((m) => m + 1);
     }
     setSelected(null);
+  }
+
+  function goToToday() {
+    setYear(Number(resolvedToday.slice(0, 4)));
+    setMonth(Number(resolvedToday.slice(5, 7)) - 1);
+    setSelected(resolvedToday);
   }
 
   function openAddEvent(date = selected ?? resolvedToday) {
@@ -1114,20 +1172,30 @@ export function ScheduleCalendar({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 rounded-2xl border border-pm-border bg-white p-3 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
+      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-pm-border bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
+        <div className="flex flex-col gap-3">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pm-secondary" />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search jobs, customers, addresses..."
-              className="h-11 w-full rounded-xl border border-pm-border bg-white pl-9 pr-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+              placeholder="Search jobs, quotes, addresses..."
+              className="h-11 w-full rounded-xl border border-pm-border bg-white pl-9 pr-10 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-pm-secondary transition-colors hover:bg-pm-surface hover:text-pm-body"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex">
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
             <SegmentButton active={view === 'calendar'} onClick={() => setView('calendar')}>
               <CalendarDays className="h-4 w-4" />
               Calendar
@@ -1139,58 +1207,114 @@ export function ScheduleCalendar({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {(['all', 'jobs', 'schedule', 'google'] as SourceFilter[]).map((source) => (
-              <FilterButton
-                key={source}
-                active={sourceFilter === source}
-                onClick={() => setSourceFilter(source)}
-              >
-                {source === 'all' ? 'All' : source === 'jobs' ? 'Jobs' : source === 'schedule' ? 'Event' : 'Google'}
-              </FilterButton>
-            ))}
+        <div className="rounded-xl border border-pm-border bg-pm-surface/30 p-2.5 sm:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase text-pm-secondary">Now showing</p>
+              <p className="mt-1 text-sm font-semibold text-pm-body">
+                {filteredEvents.length} result{filteredEvents.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            {activeFilterCount > 0 && (
+              <span className="rounded-full border border-pm-teal/20 bg-pm-teal/10 px-2.5 py-1 text-xs font-semibold text-pm-teal">
+                {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'}
+              </span>
+            )}
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {(['all', 'scheduled', 'in_progress', 'completed', 'cancelled'] as StatusFilter[]).map((status) => (
-              <FilterButton
-                key={status}
-                active={statusFilter === status}
-                onClick={() => setStatusFilter(status)}
-              >
-                {status === 'all' ? 'All jobs' : JOB_STATUS_LABELS[status]}
-              </FilterButton>
-            ))}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <SummaryChip>{view === 'calendar' ? 'Calendar view' : 'List view'}</SummaryChip>
+            <SummaryChip>{getSourceFilterLabel(sourceFilter)}</SummaryChip>
+            <SummaryChip>{getStatusFilterLabel(statusFilter)}</SummaryChip>
+          </div>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <p className="px-1 text-xs font-semibold uppercase text-pm-secondary">Show</p>
+            <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
+              {(['all', 'jobs', 'schedule', 'google'] as SourceFilter[]).map((source) => (
+                <FilterButton
+                  key={source}
+                  active={sourceFilter === source}
+                  onClick={() => setSourceFilter(source)}
+                >
+                  {source === 'all' ? 'All' : source === 'jobs' ? 'Jobs' : source === 'schedule' ? 'Event' : 'Google'}
+                </FilterButton>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="px-1 text-xs font-semibold uppercase text-pm-secondary">Job status</p>
+            <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
+              {(['all', 'scheduled', 'in_progress', 'completed', 'cancelled'] as StatusFilter[]).map((status) => (
+                <FilterButton
+                  key={status}
+                  active={statusFilter === status}
+                  onClick={() => setStatusFilter(status)}
+                >
+                  {status === 'all' ? 'All jobs' : JOB_STATUS_LABELS[status]}
+                </FilterButton>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <button
-          onClick={prevMonth}
-          aria-label="Previous month"
-          className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
-        >
-          <ChevronLeft className="h-5 w-5 text-pm-secondary" />
-        </button>
-        <h2 className="text-lg font-bold text-pm-body">{monthLabel}</h2>
-        <div className="flex items-center gap-2">
+      {view === 'calendar' ? (
+        <div className="rounded-xl border border-pm-border bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase text-pm-secondary">Calendar month</p>
+              <h2 className="mt-1 text-lg font-bold text-pm-body">{monthLabel}</h2>
+            </div>
+            <button
+              onClick={goToToday}
+              className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-pm-border px-3 text-sm font-semibold text-pm-body transition-colors hover:bg-pm-surface"
+            >
+              Today
+            </button>
+          </div>
+          <div className="mt-3 grid grid-cols-[44px,minmax(0,1fr),44px] gap-2 sm:flex sm:items-center sm:justify-between">
+            <button
+              onClick={prevMonth}
+              aria-label="Previous month"
+              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
+            >
+              <ChevronLeft className="h-5 w-5 text-pm-secondary" />
+            </button>
+            <button
+              onClick={() => openAddEvent()}
+              className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-pm-teal px-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:min-w-[140px] sm:px-4"
+            >
+              <Plus className="h-4 w-4" />
+              Add event
+            </button>
+            <button
+              onClick={nextMonth}
+              aria-label="Next month"
+              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
+            >
+              <ChevronRight className="h-5 w-5 text-pm-secondary" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 rounded-xl border border-pm-border bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:rounded-2xl sm:p-4">
+          <div>
+            <p className="text-xs font-semibold uppercase text-pm-secondary">Job list</p>
+            <p className="mt-1 text-sm text-pm-secondary">
+              Search past work, check status, and jump into each job without leaving schedule.
+            </p>
+          </div>
           <button
             onClick={() => openAddEvent()}
-            className="flex h-11 items-center gap-1.5 rounded-full bg-pm-teal px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
-            Add
-          </button>
-          <button
-            onClick={nextMonth}
-            aria-label="Next month"
-            className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
-          >
-            <ChevronRight className="h-5 w-5 text-pm-secondary" />
+            Add event
           </button>
         </div>
-      </div>
+      )}
 
       {googleError && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
@@ -1224,15 +1348,25 @@ export function ScheduleCalendar({
           <Legend googleConnected={googleConnected} />
           {selected && (
             <section className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-base font-bold text-pm-body">{selectedLabel}</h3>
-                <button
-                  onClick={() => openAddEvent(selected)}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-pm-border px-3 text-xs font-semibold text-pm-secondary transition-colors hover:bg-pm-surface"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add
-                </button>
+              <div className="rounded-xl border border-pm-border bg-white p-3 shadow-sm sm:rounded-2xl sm:p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-pm-secondary">Selected day</p>
+                    <h3 className="mt-1 text-base font-bold text-pm-body">{selectedLabel}</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-pm-border bg-pm-surface px-2.5 py-1 text-xs font-semibold text-pm-secondary">
+                      {selectedEvents.length} item{selectedEvents.length === 1 ? '' : 's'}
+                    </span>
+                    <button
+                      onClick={() => openAddEvent(selected)}
+                      className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-pm-border px-3 text-xs font-semibold text-pm-secondary transition-colors hover:bg-pm-surface"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add
+                    </button>
+                  </div>
+                </div>
               </div>
               <EventStack
                 events={selectedEvents}
@@ -1247,6 +1381,7 @@ export function ScheduleCalendar({
         <section className="flex flex-col gap-3">
           <p className="text-sm text-pm-secondary">
             {filteredEvents.length} result{filteredEvents.length === 1 ? '' : 's'}
+            {sourceFilter === 'jobs' ? ' in jobs' : ''}
           </p>
           {filteredEvents.length === 0 ? (
             <EmptyState onAdd={() => openAddEvent()} />
@@ -1382,7 +1517,7 @@ function CalendarEventChip({
         e.dataTransfer.effectAllowed = 'move';
       }}
       title={getChipLabel(event)}
-      className={`flex h-5 w-full min-w-0 cursor-grab items-center rounded border px-1 text-left text-[10px] font-semibold leading-none shadow-sm active:cursor-grabbing ${getChipClassName(
+      className={`flex h-4 w-full min-w-0 cursor-grab items-center rounded border px-0.5 text-left text-[9px] font-semibold leading-none shadow-sm active:cursor-grabbing sm:h-5 sm:px-1 sm:text-[10px] ${getChipClassName(
         event,
       )} ${draggable ? '' : 'cursor-default'}`}
     >
@@ -1409,84 +1544,91 @@ function CalendarGrid({
   onDrop: (date: string, data: string) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-pm-border bg-white shadow-sm">
-      <div className="grid grid-cols-7 border-b border-pm-border bg-pm-surface">
-        {DAY_HEADERS.map((d) => (
-          <div key={d} className="py-2 text-center text-[11px] font-semibold uppercase text-pm-secondary">
-            {d}
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="min-w-0 pb-1">
+        <div
+          aria-label="Schedule calendar month"
+          className="w-full min-w-0 overflow-hidden rounded-xl border border-pm-border bg-white shadow-sm sm:rounded-2xl"
+        >
+          <div className="grid grid-cols-7 border-b border-pm-border bg-pm-surface">
+            {DAY_HEADERS.map((d) => (
+              <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase text-pm-secondary sm:text-[11px]">
+                {d}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7">
-        {calendarDays.map((dateStr, i) => {
-          if (!dateStr) {
-            return (
-              <div
-                key={`pad-${i}`}
-                className="min-h-[64px] border-b border-r border-pm-border/40 bg-pm-surface/20 last:border-r-0"
-              />
-            );
-          }
+          <div className="grid grid-cols-7">
+            {calendarDays.map((dateStr, i) => {
+              if (!dateStr) {
+                return (
+                  <div
+                    key={`pad-${i}`}
+                    className="min-h-[58px] border-b border-r border-pm-border/40 bg-pm-surface/20 last:border-r-0 sm:min-h-[64px]"
+                  />
+                );
+              }
 
-          const dayEvents = eventMap.get(dateStr) ?? [];
-          const isToday = dateStr === todayStr;
-          const isSelected = dateStr === selected;
-          const visibleEvents = dayEvents.slice(0, 3);
-          const hiddenCount = Math.max(0, dayEvents.length - visibleEvents.length);
-          const dayNum = parseInt(dateStr.slice(8), 10);
+              const dayEvents = eventMap.get(dateStr) ?? [];
+              const isToday = dateStr === todayStr;
+              const isSelected = dateStr === selected;
+              const visibleEvents = dayEvents.slice(0, 3);
+              const hiddenCount = Math.max(0, dayEvents.length - visibleEvents.length);
+              const dayNum = parseInt(dateStr.slice(8), 10);
 
-          return (
-            <div
-              key={dateStr}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                onDrop(dateStr, e.dataTransfer.getData('application/json'));
-              }}
-              className={`group relative min-h-[104px] border-b border-r border-pm-border/40 last:border-r-0 sm:min-h-[118px] ${
-                isSelected ? 'bg-pm-teal/5 ring-1 ring-inset ring-pm-teal/30' : 'hover:bg-pm-surface/50'
-              }`}
-            >
-              <button
-                onClick={() => onSelect(dateStr)}
-                className="flex h-8 w-full items-center justify-center px-1 pt-1.5"
-              >
-                <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
-                    isToday ? 'bg-pm-teal text-white' : isSelected ? 'text-pm-teal' : 'text-pm-body'
+              return (
+                <div
+                  key={dateStr}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    onDrop(dateStr, e.dataTransfer.getData('application/json'));
+                  }}
+                  className={`group relative min-h-[82px] border-b border-r border-pm-border/40 last:border-r-0 sm:min-h-[118px] ${
+                    isSelected ? 'bg-pm-teal/5 ring-1 ring-inset ring-pm-teal/30' : 'hover:bg-pm-surface/50'
                   }`}
                 >
-                  {dayNum}
-                </span>
-              </button>
-              <div className="flex flex-col gap-1 px-1 pb-8 pt-1">
-                {visibleEvents.map((event, index) => (
-                  <CalendarEventChip
-                    key={`${event.kind}-${getChipLabel(event)}-${index}`}
-                    event={event}
-                    onSelect={() => onSelect(dateStr)}
-                  />
-                ))}
-                {hiddenCount > 0 && (
                   <button
-                    type="button"
                     onClick={() => onSelect(dateStr)}
-                    className="h-5 rounded border border-pm-border bg-white px-1 text-left text-[10px] font-semibold leading-none text-pm-secondary"
+                    className="flex h-7 w-full items-center justify-center px-0.5 pt-1 sm:h-8 sm:px-1 sm:pt-1.5"
                   >
-                    +{hiddenCount} more
+                    <span
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold sm:h-7 sm:w-7 sm:text-xs ${
+                        isToday ? 'bg-pm-teal text-white' : isSelected ? 'text-pm-teal' : 'text-pm-body'
+                      }`}
+                    >
+                      {dayNum}
+                    </span>
                   </button>
-                )}
-              </div>
-              <button
-                onClick={() => onAdd(dateStr)}
-                className="absolute bottom-1 right-1 hidden h-7 w-7 items-center justify-center rounded-full bg-white text-pm-secondary shadow-sm ring-1 ring-pm-border transition-colors hover:text-pm-teal group-hover:flex"
-                aria-label="Add schedule on this day"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          );
-        })}
+                  <div className="flex flex-col gap-0.5 px-0.5 pb-7 pt-0.5 sm:gap-1 sm:px-1 sm:pb-8 sm:pt-1">
+                    {visibleEvents.map((event, index) => (
+                      <CalendarEventChip
+                        key={`${event.kind}-${getChipLabel(event)}-${index}`}
+                        event={event}
+                        onSelect={() => onSelect(dateStr)}
+                      />
+                    ))}
+                    {hiddenCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => onSelect(dateStr)}
+                        className="h-4 rounded border border-pm-border bg-white px-0.5 text-left text-[9px] font-semibold leading-none text-pm-secondary sm:h-5 sm:px-1 sm:text-[10px]"
+                      >
+                        +{hiddenCount} more
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => onAdd(dateStr)}
+                    className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-pm-secondary shadow-sm ring-1 ring-pm-border transition-colors hover:text-pm-teal sm:hidden sm:group-hover:flex"
+                    aria-label="Add schedule on this day"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1543,6 +1685,14 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   );
 }
 
+function SummaryChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full border border-pm-border bg-white px-2 py-0.5 text-[11px] font-medium text-pm-secondary sm:px-2.5 sm:py-1 sm:text-xs">
+      {children}
+    </span>
+  );
+}
+
 function SegmentButton({
   active,
   onClick,
@@ -1556,7 +1706,7 @@ function SegmentButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors ${
+      className={`flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors sm:h-11 sm:gap-2 sm:px-3 sm:text-sm ${
         active
           ? 'border-pm-teal bg-pm-teal/10 text-pm-teal'
           : 'border-pm-border bg-white text-pm-secondary hover:bg-pm-surface'
@@ -1580,7 +1730,7 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
-      className={`h-9 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors ${
+      className={`h-8 min-w-0 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-semibold transition-colors sm:h-9 sm:px-3 sm:text-xs ${
         active
           ? 'border-pm-teal bg-pm-teal/10 text-pm-teal'
           : 'border-pm-border bg-white text-pm-secondary hover:bg-pm-surface'

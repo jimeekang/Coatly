@@ -11,7 +11,19 @@ import {
 
 export const metadata: Metadata = { title: 'Schedule' };
 
-export default async function SchedulePage() {
+type ScheduleSearchParams = {
+  view?: string;
+  source?: string;
+  status?: string;
+  search?: string;
+};
+
+export default async function SchedulePage({
+  searchParams,
+}: {
+  searchParams?: Promise<ScheduleSearchParams>;
+}) {
+  const params = (await searchParams) ?? {};
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -62,11 +74,11 @@ export default async function SchedulePage() {
   }));
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
       <div>
-        <h1 className="text-[28px] font-bold text-pm-body">Schedule</h1>
+        <h1 className="text-2xl font-bold text-pm-body sm:text-[28px]">Schedule & Jobs</h1>
         <p className="mt-1 text-sm text-pm-secondary">
-          Your jobs and calendar events at a glance.
+          Switch between calendar planning and the job list without leaving the schedule.
         </p>
       </div>
 
@@ -77,6 +89,10 @@ export default async function SchedulePage() {
         googleConnected={googleSchedule.connected}
         googleError={Boolean(googleSchedule.error)}
         today={today}
+        initialView={params.view}
+        initialSource={params.source}
+        initialStatus={params.status}
+        initialSearch={params.search}
       />
     </div>
   );

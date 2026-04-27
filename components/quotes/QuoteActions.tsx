@@ -167,7 +167,7 @@ export function QuoteActions({
       )}
 
       {/* Secondary utility row */}
-      <div className={`grid gap-2 ${publicQuoteUrl ? 'grid-cols-5' : 'grid-cols-4'}`}>
+      <div className={`grid grid-cols-2 gap-2 ${publicQuoteUrl ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`}>
         {/* More */}
         <div className="relative">
           <button

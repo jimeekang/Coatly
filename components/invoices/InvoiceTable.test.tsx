@@ -170,4 +170,51 @@ describe('InvoiceTable', () => {
       });
     });
   });
+
+  it('wraps filters and keeps invoice cards fluid on small mobile screens', () => {
+    const { container } = render(
+      <InvoiceTable
+        invoices={[
+          {
+            id: 'invoice-1',
+            user_id: 'user-1',
+            customer_id: 'customer-1',
+            quote_id: 'quote-1',
+            invoice_number: 'INV-0012-LONG',
+            status: 'sent',
+            invoice_type: 'deposit',
+            subtotal_cents: 100000,
+            gst_cents: 10000,
+            total_cents: 110000,
+            amount_paid_cents: 0,
+            business_abn: null,
+            payment_terms: null,
+            bank_details: null,
+            due_date: '2026-04-10',
+            paid_date: null,
+            paid_at: null,
+            payment_method: null,
+            notes: null,
+            created_at: '2026-03-01T00:00:00.000Z',
+            updated_at: '2026-03-01T00:00:00.000Z',
+            customer: {
+              id: 'customer-1',
+              name: 'Very Long Customer Name That Should Stay Inside',
+              email: 'mark@example.com',
+              phone: '0412 555 012',
+              address: 'Bondi, NSW',
+            },
+            balance_cents: 110000,
+            line_item_count: 1,
+            quote_stage_label: '1/3',
+          },
+        ]}
+      />
+    );
+
+    const filters = container.querySelectorAll('.flex-wrap');
+    expect(filters.length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelector('.overflow-x-auto')).not.toBeInTheDocument();
+    expect(screen.getByText('Very Long Customer Name That Should Stay Inside')).toHaveClass('truncate');
+  });
 });

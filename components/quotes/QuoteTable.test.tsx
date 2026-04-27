@@ -82,4 +82,44 @@ describe('QuoteTable', () => {
     expect(screen.getByText('Shara Studio')).toBeInTheDocument();
     expect(screen.queryByText('Mark Johnson')).not.toBeInTheDocument();
   });
+
+  it('wraps filters and keeps cards fluid on small mobile screens', () => {
+    const { container } = render(
+      <QuoteTable
+        quotes={[
+          {
+            id: 'quote-1',
+            user_id: 'user-1',
+            customer_id: 'customer-1',
+            quote_number: 'QUO-0012-LONG',
+            title: 'Long living room repaint title that should stay inside the card',
+            status: 'sent',
+            valid_until: '2026-04-10',
+            complexity: 'standard',
+            subtotal_cents: 100000,
+            gst_cents: 10000,
+            total_cents: 110000,
+            estimate_category: 'manual',
+            created_at: '2026-03-01T00:00:00.000Z',
+            updated_at: '2026-03-01T00:00:00.000Z',
+            customer: {
+              id: 'customer-1',
+              name: 'Mark Johnson',
+              company_name: 'Very Long Painting Company Name',
+              email: null,
+              phone: null,
+              address: null,
+            },
+            room_count: 1,
+            surface_count: 2,
+          },
+        ]}
+      />
+    );
+
+    const filters = container.querySelectorAll('.flex-wrap');
+    expect(filters.length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelector('.overflow-x-auto')).not.toBeInTheDocument();
+    expect(screen.getByText('Very Long Painting Company Name')).toHaveClass('truncate');
+  });
 });

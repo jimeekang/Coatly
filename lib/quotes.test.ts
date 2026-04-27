@@ -3,6 +3,7 @@ import {
   calculateQuoteLineItemsSubtotal,
   calculateQuotePreview,
   getSuggestedRatePerSqmCents,
+  groupQuoteLineItemsByCategory,
   isQuoteExpired,
   normalizeQuoteCoatingType,
   parseQuoteCreateInput,
@@ -93,6 +94,7 @@ describe('lib/quotes', () => {
         title: 'Harbor Cafe repaint',
         status: 'draft',
         valid_until: '2026-04-10',
+        working_days: 1,
         complexity: 'standard',
         discount_cents: 0,
         deposit_percent: 0,
@@ -145,6 +147,42 @@ describe('lib/quotes', () => {
         },
       ])
     ).toBe(10000);
+  });
+
+  it('groups quote line items by saved material and service categories', () => {
+    const groups = groupQuoteLineItemsByCategory([
+      { id: 'service-1', category: 'service', name: 'Wallpaper removal' },
+      { id: 'paint-1', category: 'paint', name: 'Premium wall paint' },
+      { id: 'supply-1', category: 'supply', name: 'Drop sheets' },
+      { id: 'custom-1', category: 'custom', name: 'Misc item' },
+    ]);
+
+    expect(groups).toEqual([
+      {
+        category: 'paint',
+        label: 'Paint',
+        items: [
+          { id: 'paint-1', category: 'paint', name: 'Premium wall paint' },
+        ],
+      },
+      {
+        category: 'supply',
+        label: 'Supplies',
+        items: [{ id: 'supply-1', category: 'supply', name: 'Drop sheets' }],
+      },
+      {
+        category: 'service',
+        label: 'Services',
+        items: [
+          { id: 'service-1', category: 'service', name: 'Wallpaper removal' },
+        ],
+      },
+      {
+        category: 'other',
+        label: 'Other',
+        items: [{ id: 'custom-1', category: 'custom', name: 'Misc item' }],
+      },
+    ]);
   });
 
   it('normalizes optional quote line items so only selected add-ons affect totals', () => {
@@ -293,6 +331,7 @@ describe('lib/quotes', () => {
         title: 'Apartment repaint',
         status: 'draft',
         valid_until: '2026-04-10',
+        working_days: 1,
         complexity: 'standard',
         discount_cents: 0,
         deposit_percent: 0,
@@ -378,21 +417,29 @@ describe('lib/quotes', () => {
   });
 
   it('provides a suggested rate for a surface and complexity level', () => {
-    expect(getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'standard')).toBe(1800);
-    expect(getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'complex')).toBeGreaterThan(
-      1800
-    );
+    expect(
+      getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'standard')
+    ).toBe(1800);
+    expect(
+      getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'complex')
+    ).toBeGreaterThan(1800);
   });
 
   it('serializes refresh coatings canonically while still supporting legacy fallback', () => {
     expect(serializeQuoteCoatingType('refresh_1coat')).toBe('refresh_1coat');
-    expect(serializeLegacyQuoteCoatingType('refresh_1coat')).toBe('touch_up_1coat');
+    expect(serializeLegacyQuoteCoatingType('refresh_1coat')).toBe(
+      'touch_up_1coat'
+    );
     expect(normalizeQuoteCoatingType('touch_up_1coat')).toBe('refresh_1coat');
   });
 
   it('marks draft and sent quotes as expired after the valid-until date in Sydney time', () => {
-    expect(isQuoteExpired('2026-04-10', new Date('2026-04-10T23:30:00+10:00'))).toBe(false);
-    expect(isQuoteExpired('2026-04-10', new Date('2026-04-11T00:30:00+10:00'))).toBe(true);
+    expect(
+      isQuoteExpired('2026-04-10', new Date('2026-04-10T23:30:00+10:00'))
+    ).toBe(false);
+    expect(
+      isQuoteExpired('2026-04-10', new Date('2026-04-11T00:30:00+10:00'))
+    ).toBe(true);
 
     expect(
       resolveQuoteStatus(
@@ -411,11 +458,11 @@ describe('lib/quotes', () => {
   it('keeps approved and rejected quotes terminal even after the valid-until date', () => {
     const now = new Date('2026-04-20T09:00:00+10:00');
 
-    expect(resolveQuoteStatus({ status: 'approved', valid_until: '2026-04-10' }, now)).toBe(
-      'approved'
-    );
-    expect(resolveQuoteStatus({ status: 'rejected', valid_until: '2026-04-10' }, now)).toBe(
-      'rejected'
-    );
+    expect(
+      resolveQuoteStatus({ status: 'approved', valid_until: '2026-04-10' }, now)
+    ).toBe('approved');
+    expect(
+      resolveQuoteStatus({ status: 'rejected', valid_until: '2026-04-10' }, now)
+    ).toBe('rejected');
   });
 });

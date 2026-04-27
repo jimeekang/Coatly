@@ -70,7 +70,7 @@ function getDateFilterCutoff(filter: DateFilter): Date | null {
 function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   const style = INVOICE_STATUS_STYLES[status] ?? 'bg-surface-container-high text-on-surface-variant';
   return (
-    <span className={`inline-flex rounded px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${style}`}>
+    <span className={`inline-flex max-w-full rounded px-2.5 py-1 text-[10px] font-bold uppercase ${style}`}>
       {STATUS_LABELS[status]}
     </span>
   );
@@ -144,9 +144,9 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
       {/* Search */}
-      <div className="relative">
+      <div className="relative min-w-0">
         <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -158,7 +158,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by invoice, customer, or type..."
-          className="w-full bg-surface-container border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+          className="w-full rounded-lg border-none bg-surface-container py-3.5 pl-11 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary/20 sm:py-4 sm:pl-12"
         />
         {query && (
           <button
@@ -176,7 +176,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
       </div>
 
       {/* Status filter chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+      <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
         {STATUS_OPTIONS.map((option) => {
           const active = status === option.value;
           return (
@@ -184,7 +184,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               key={option.value}
               type="button"
               onClick={() => setStatus(option.value)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
+              className={`min-h-8 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-4 sm:py-1.5 sm:text-xs ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
@@ -197,7 +197,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
       </div>
 
       {/* Date filter chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+      <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
         {DATE_FILTER_OPTIONS.map((option) => {
           const active = dateFilter === option.value;
           return (
@@ -205,7 +205,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               key={option.value}
               type="button"
               onClick={() => setDateFilter(option.value)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
+              className={`min-h-8 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-4 sm:py-1.5 sm:text-xs ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
@@ -239,7 +239,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
       ) : (
         <>
           {/* Card list */}
-          <ul className="flex flex-col gap-3">
+          <ul className="flex min-w-0 flex-col gap-3">
             {filtered.map((invoice) => {
               const borderClass = INVOICE_LEFT_BORDER[invoice.status] ?? 'border-l-outline';
               const canQuickMarkPaid = invoice.status === 'sent' || invoice.status === 'overdue';
@@ -247,23 +247,23 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               return (
                 <li
                   key={invoice.id}
-                  className={`relative bg-surface-container-lowest rounded-lg shadow-sm border border-black/5 border-l-4 ${borderClass} hover:shadow-md transition-shadow`}
+                  className={`relative min-w-0 rounded-lg border border-l-4 border-black/5 bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
                 >
-                  <Link href={`/invoices/${invoice.id}`} className="block p-5">
-                    <div className="flex justify-between items-start mb-3">
+                  <Link href={`/invoices/${invoice.id}`} className="block min-w-0 p-3 sm:p-5">
+                    <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+                        <p className="truncate text-[10px] font-bold uppercase text-outline sm:text-[11px]">
                           {invoice.invoice_number}
                         </p>
-                        <h3 className="font-bold text-on-surface text-base leading-tight">
+                        <h3 className="truncate text-base font-bold leading-tight text-on-surface">
                           {invoice.customer.name}
                         </h3>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                          <p className="text-on-surface-variant text-sm font-medium capitalize">
+                        <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-medium capitalize text-on-surface-variant">
                             {invoice.invoice_type} invoice
                           </p>
                           {invoice.quote_stage_label && (
-                            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase text-primary">
                               {invoice.quote_stage_label}
                             </span>
                           )}
@@ -271,9 +271,9 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                       </div>
                       <InvoiceStatusBadge status={invoice.status} />
                     </div>
-                    <div className="flex justify-between items-end">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
                           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                             <line x1="16" y1="2" x2="16" y2="6"/>
@@ -283,7 +283,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                           Created {formatDate(invoice.created_at)}
                         </div>
                         {invoice.due_date && (
-                          <div className={`flex items-center gap-1.5 text-xs font-medium ${
+                          <div className={`flex min-w-0 items-center gap-1.5 text-xs font-medium ${
                             invoice.status === 'overdue' ? 'text-error' : 'text-outline'
                           }`}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -294,9 +294,9 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                           </div>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="min-w-0 sm:text-right">
                         <p className="text-[10px] text-outline font-bold uppercase tracking-wider">Balance</p>
-                        <p className="text-lg font-extrabold text-on-surface tracking-tight">
+                        <p className="text-base font-extrabold text-on-surface sm:text-lg">
                           {formatAUD(invoice.balance_cents)}{' '}
                           <span className="text-[10px] font-bold text-outline">AUD</span>
                         </p>
@@ -304,12 +304,12 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                     </div>
                   </Link>
                   {canQuickMarkPaid && (
-                    <div className="border-t border-outline-variant/40 px-5 py-4">
+                    <div className="border-t border-outline-variant/40 px-3 py-3 sm:px-5 sm:py-4">
                       {!isPaymentFormOpen ? (
                         <button
                           type="button"
                           onClick={() => openMarkPaidForm(invoice)}
-                          className="inline-flex h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90"
+                          className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 sm:w-auto"
                         >
                           Mark as Paid
                         </button>
@@ -318,7 +318,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                           <p className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
                             Record Payment
                           </p>
-                          <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                             <label className="space-y-1.5">
                               <span className="text-xs font-medium text-on-surface-variant">
                                 Paid date
@@ -361,7 +361,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                           {actionError && (
                             <p className="text-sm text-error">{actionError}</p>
                           )}
-                          <div className="flex flex-wrap gap-2">
+                          <div className="grid gap-2 sm:flex sm:flex-wrap">
                             <button
                               type="button"
                               onClick={() => handleMarkPaid(invoice.id)}
@@ -371,7 +371,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                                 !paidDate ||
                                 !paymentMethod
                               }
-                              className="inline-flex h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-60"
+                              className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-60"
                             >
                               {isSubmittingPayment && pendingInvoiceId === invoice.id
                                 ? 'Saving...'
@@ -380,7 +380,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                             <button
                               type="button"
                               onClick={closeMarkPaidForm}
-                              className="inline-flex h-11 items-center rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                              className="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
                             >
                               Cancel
                             </button>

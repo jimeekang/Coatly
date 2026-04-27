@@ -632,6 +632,7 @@ export async function createJob(input: JobUpsertInput): Promise<{ error: string 
   }
 
   revalidatePath('/jobs');
+  revalidatePath('/schedule');
   if (validation.quoteId) {
     revalidatePath(`/quotes/${validation.quoteId}`);
   }
@@ -694,6 +695,7 @@ export async function createJobFromQuote(quoteId: string): Promise<{
 
   if (existingJob) {
     revalidatePath('/jobs');
+    revalidatePath('/schedule');
     revalidatePath(`/quotes/${quote.id}`);
     return { error: null, jobId: existingJob.id, existing: true };
   }
@@ -727,6 +729,7 @@ export async function createJobFromQuote(quoteId: string): Promise<{
   }
 
   revalidatePath('/jobs');
+  revalidatePath('/schedule');
   revalidatePath(`/quotes/${quote.id}`);
 
   return { error: null, jobId: insertedJob.id, existing: false };
@@ -740,7 +743,7 @@ export async function createJobFromQuoteAndRedirect(formData: FormData): Promise
     redirect(`/quotes/${quoteId}?jobError=${encodeURIComponent(result.error)}`);
   }
 
-  redirect('/jobs');
+  redirect('/schedule?view=list&source=jobs');
 }
 
 export async function updateJob(
@@ -809,6 +812,7 @@ export async function updateJob(
   }
 
   revalidatePath('/jobs');
+  revalidatePath('/schedule');
   if (existingJob.quote_id) {
     revalidatePath(`/quotes/${existingJob.quote_id}`);
   }
@@ -856,6 +860,7 @@ export async function deleteJob(id: string): Promise<{ error: string | null }> {
   }
 
   revalidatePath('/jobs');
+  revalidatePath('/schedule');
   if (existingJob.quote_id) {
     revalidatePath(`/quotes/${existingJob.quote_id}`);
   }

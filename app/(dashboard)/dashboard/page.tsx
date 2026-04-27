@@ -184,10 +184,10 @@ export default async function DashboardPage() {
   ] as const;
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-5 sm:space-y-8">
       {/* Welcome header */}
       <div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-on-surface leading-tight">
+        <h1 className="text-2xl font-extrabold tracking-tight text-on-surface leading-tight sm:text-4xl">
           G&apos;day, <span className="text-primary">{businessName}</span>
         </h1>
         <p className="mt-2 text-on-surface-variant font-medium">
@@ -198,7 +198,7 @@ export default async function DashboardPage() {
       </div>
 
       {quoteSlotsRemaining !== null && (
-        <div className="rounded-xl border border-outline-variant bg-surface-container-low px-5 py-4">
+        <div className="rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3 sm:px-5 sm:py-4">
           <p className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
             Starter Usage
           </p>
@@ -220,11 +220,11 @@ export default async function DashboardPage() {
         >
           This Month
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
           {kpiStats.map((stat) => (
             <div
               key={stat.label}
-              className={`rounded-2xl p-6 transition-colors ${
+              className={`rounded-xl p-4 transition-colors sm:rounded-2xl sm:p-6 ${
                 stat.variant === 'positive'
                   ? 'bg-success-container border border-success/20'
                   : stat.variant === 'warning'
@@ -236,7 +236,7 @@ export default async function DashboardPage() {
                 {stat.label}
               </p>
               <div
-                className={`text-3xl font-extrabold tracking-tighter ${
+                className={`break-words text-2xl font-extrabold sm:text-3xl ${
                   stat.variant === 'positive'
                     ? 'text-success'
                     : stat.variant === 'warning'
@@ -260,16 +260,16 @@ export default async function DashboardPage() {
         >
           Quote Pipeline
         </h2>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
           {quotePipelineStats.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-outline-variant bg-white p-4">
+            <div key={stat.label} className="min-w-0 rounded-xl border border-outline-variant bg-white p-3 sm:rounded-2xl sm:p-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
                 {stat.label}
               </p>
-              <p className="mt-2 text-2xl font-extrabold tracking-tight text-on-surface">
+              <p className="mt-2 text-xl font-extrabold tracking-tight text-on-surface sm:text-2xl">
                 {stat.count}
               </p>
-              <p className="mt-1 text-xs text-on-surface-variant">
+              <p className="mt-1 truncate text-xs text-on-surface-variant">
                 {formatAUD(stat.totalCents)}
               </p>
             </div>
@@ -285,17 +285,17 @@ export default async function DashboardPage() {
         >
           Overview
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
           {overviewStats.map((stat) => (
             <div
               key={stat.label}
-              className="bg-surface-container-low p-6 rounded-2xl hover:bg-surface-container transition-colors"
+              className="min-w-0 rounded-xl bg-surface-container-low p-4 transition-colors hover:bg-surface-container sm:rounded-2xl sm:p-6"
             >
               <p className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
                 {stat.label}
               </p>
               <div className="flex items-start justify-between gap-3">
-                <div className="text-3xl font-extrabold tracking-tighter text-on-surface">
+                <div className="text-2xl font-extrabold text-on-surface sm:text-3xl">
                   {stat.value}
                 </div>
                 {stat.label === 'Pending Invoices' && overdueInvoiceCount > 0 && (

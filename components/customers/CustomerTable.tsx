@@ -76,11 +76,11 @@ function CustomerRow({
   const address = formatAddress(customer);
 
   return (
-    <li className="relative bg-surface-container-lowest rounded-lg shadow-sm border border-black/5 border-l-4 border-l-primary hover:shadow-md transition-shadow">
-      <Link href={`/customers/${customer.id}`} className="block p-5">
+    <li className="relative min-w-0 rounded-lg border border-l-4 border-black/5 border-l-primary bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md">
+      <Link href={`/customers/${customer.id}`} className="block min-w-0 p-3 sm:p-5">
         {/* Top row: avatar + main info */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="shrink-0 w-10 h-10 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary text-sm font-bold">
               {initials}
             </div>
@@ -97,12 +97,12 @@ function CustomerRow({
           </div>
           {/* Recent job badge */}
           {recentJob && (
-            <div className="shrink-0 flex flex-col items-end gap-1">
-              <p className="text-[10px] text-outline font-bold uppercase tracking-wider">
+            <div className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
+              <p className="text-[10px] font-bold uppercase text-outline">
                 {recentJob.type === 'quote' ? 'Quote' : 'Invoice'}
               </p>
               <span
-                className={`inline-flex rounded px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                className={`inline-flex rounded px-2.5 py-0.5 text-[10px] font-bold uppercase ${
                   RECENT_JOB_STATUS_STYLES[recentJob.status.toLowerCase()] ??
                   'bg-surface-container-highest text-on-surface-variant'
                 }`}
@@ -114,40 +114,42 @@ function CustomerRow({
         </div>
 
         {/* Meta row */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
           {phone && (
-            <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+            <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.93-.93a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
               </svg>
-              {phone}
+              <span className="min-w-0 truncate">{phone}</span>
             </div>
           )}
           {!phone && primaryContact && (
-            <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+            <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
-              {primaryContact}
+              <span className="min-w-0 truncate">{primaryContact}</span>
             </div>
           )}
           {address && (
-            <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+            <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                 <circle cx="12" cy="10" r="3"/>
               </svg>
-              {address}
+              <span className="min-w-0 truncate">{address}</span>
             </div>
           )}
           {recentJob && (
-            <div className="flex items-center gap-1.5 text-outline text-xs font-medium">
+            <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
                 <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
               </svg>
-              {recentJob.number}{recentJob.title ? ` · ${recentJob.title}` : ''}
+              <span className="min-w-0 truncate">
+                {recentJob.number}{recentJob.title ? ` · ${recentJob.title}` : ''}
+              </span>
             </div>
           )}
         </div>
@@ -183,9 +185,9 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
   });
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
       {/* Search */}
-      <div className="relative">
+      <div className="relative min-w-0">
         <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
@@ -197,7 +199,7 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name, email or phone…"
-          className="w-full bg-surface-container border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+          className="w-full rounded-lg border-none bg-surface-container py-3.5 pl-11 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary/20 sm:py-4 sm:pl-12"
         />
         {query && (
           <button
@@ -215,7 +217,7 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
       </div>
 
       {/* Sort chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+      <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
         {SORT_OPTIONS.map((option) => {
           const active = sort === option.value;
           return (
@@ -223,7 +225,7 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
               key={option.value}
               type="button"
               onClick={() => setSort(option.value)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border ${
+              className={`min-h-8 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-4 sm:py-1.5 sm:text-xs ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
@@ -249,7 +251,7 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
         </div>
       ) : (
         <>
-          <ul className="flex flex-col gap-3">
+          <ul className="flex min-w-0 flex-col gap-3">
             {sorted.map((c) => (
               <CustomerRow key={c.id} customer={c} recentJob={recentJobs?.[c.id]} />
             ))}

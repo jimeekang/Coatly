@@ -1,6 +1,13 @@
-import { Document, Image, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import {
+  Document,
+  Image,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+} from '@react-pdf/renderer';
 import { APP_NAME } from '@/config/constants';
-import type { QuoteDetail } from '@/lib/quotes';
+import { groupQuoteLineItemsByCategory, type QuoteDetail } from '@/lib/quotes';
 import { formatABN, formatAUD, formatDate } from '@/utils/format';
 
 const styles = StyleSheet.create({
@@ -72,6 +79,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
     fontSize: 9,
   },
+  categoryHeader: {
+    paddingTop: 8,
+    paddingBottom: 4,
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+  },
   col1: { width: '40%' },
   col2: { width: '20%', textAlign: 'right' },
   col3: { width: '20%', textAlign: 'right' },
@@ -118,8 +133,14 @@ export function QuoteTemplate({
   email: string | null;
   logoUrl: string | null;
 }) {
-  const includedLineItems = quote.line_items.filter((item) => !item.is_optional);
+  const includedLineItems = quote.line_items.filter(
+    (item) => !item.is_optional
+  );
   const optionalLineItems = quote.line_items.filter((item) => item.is_optional);
+  const includedLineItemGroups =
+    groupQuoteLineItemsByCategory(includedLineItems);
+  const optionalLineItemGroups =
+    groupQuoteLineItemsByCategory(optionalLineItems);
 
   return (
     <Document>
@@ -138,17 +159,27 @@ export function QuoteTemplate({
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.quoteTitle}>QUOTE</Text>
             <Text style={styles.metaLine}>Quote No: {quote.quote_number}</Text>
-            <Text style={styles.metaLine}>Date: {formatDate(quote.created_at)}</Text>
-            <Text style={styles.metaLine}>Valid Until: {formatDate(quote.valid_until)}</Text>
+            <Text style={styles.metaLine}>
+              Date: {formatDate(quote.created_at)}
+            </Text>
+            <Text style={styles.metaLine}>
+              Valid Until: {formatDate(quote.valid_until)}
+            </Text>
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Prepared For</Text>
           <Text style={styles.value}>{quote.customer.name}</Text>
-          {quote.customer.address && <Text style={styles.value}>{quote.customer.address}</Text>}
-          {quote.customer.email && <Text style={styles.value}>{quote.customer.email}</Text>}
-          {quote.customer.phone && <Text style={styles.value}>{quote.customer.phone}</Text>}
+          {quote.customer.address && (
+            <Text style={styles.value}>{quote.customer.address}</Text>
+          )}
+          {quote.customer.email && (
+            <Text style={styles.value}>{quote.customer.email}</Text>
+          )}
+          {quote.customer.phone && (
+            <Text style={styles.value}>{quote.customer.phone}</Text>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -172,7 +203,9 @@ export function QuoteTemplate({
           {quote.rooms.map((room) => (
             <View key={room.id}>
               <View style={[styles.tableRow, { backgroundColor: '#f9fafb' }]}>
-                <Text style={[styles.col1, { fontFamily: 'Helvetica-Bold' }]}>{room.name}</Text>
+                <Text style={[styles.col1, { fontFamily: 'Helvetica-Bold' }]}>
+                  {room.name}
+                </Text>
                 <Text style={styles.col2} />
                 <Text style={styles.col3} />
                 <Text style={[styles.col4, { fontFamily: 'Helvetica-Bold' }]}>
@@ -181,7 +214,9 @@ export function QuoteTemplate({
               </View>
               {room.surfaces.map((surface) => (
                 <View key={surface.id} style={styles.tableRow}>
-                  <Text style={[styles.col1, { paddingLeft: 10, color: '#6b7280' }]}>
+                  <Text
+                    style={[styles.col1, { paddingLeft: 10, color: '#6b7280' }]}
+                  >
                     {surface.surface_type}
                   </Text>
                   <Text style={[styles.col2, { color: '#6b7280' }]}>
@@ -208,17 +243,26 @@ export function QuoteTemplate({
               <Text style={styles.col3}>Rate</Text>
               <Text style={styles.col4}>Amount</Text>
             </View>
-            {includedLineItems.map((item) => (
-              <View key={item.id} style={styles.tableRow}>
-                <Text style={styles.col1}>
-                  {item.name}
-                  {item.notes ? `\n${item.notes}` : ''}
-                </Text>
-                <Text style={styles.col2}>
-                  {item.quantity} {item.unit}
-                </Text>
-                <Text style={styles.col3}>{formatAUD(item.unit_price_cents)}</Text>
-                <Text style={styles.col4}>{formatAUD(item.total_cents)}</Text>
+            {includedLineItemGroups.map((group) => (
+              <View key={group.category}>
+                <Text style={styles.categoryHeader}>{group.label}</Text>
+                {group.items.map((item) => (
+                  <View key={item.id} style={styles.tableRow}>
+                    <Text style={styles.col1}>
+                      {item.name}
+                      {item.notes ? `\n${item.notes}` : ''}
+                    </Text>
+                    <Text style={styles.col2}>
+                      {item.quantity} {item.unit}
+                    </Text>
+                    <Text style={styles.col3}>
+                      {formatAUD(item.unit_price_cents)}
+                    </Text>
+                    <Text style={styles.col4}>
+                      {formatAUD(item.total_cents)}
+                    </Text>
+                  </View>
+                ))}
               </View>
             ))}
           </View>
@@ -233,17 +277,26 @@ export function QuoteTemplate({
               <Text style={styles.col3}>Rate</Text>
               <Text style={styles.col4}>Amount</Text>
             </View>
-            {optionalLineItems.map((item) => (
-              <View key={item.id} style={styles.tableRow}>
-                <Text style={styles.col1}>
-                  {item.name}
-                  {item.notes ? `\n${item.notes}` : ''}
-                </Text>
-                <Text style={styles.col2}>{item.is_selected ? 'Selected' : 'Optional'}</Text>
-                <Text style={styles.col3}>
-                  {formatAUD(item.unit_price_cents)} / {item.unit}
-                </Text>
-                <Text style={styles.col4}>{formatAUD(item.total_cents)}</Text>
+            {optionalLineItemGroups.map((group) => (
+              <View key={group.category}>
+                <Text style={styles.categoryHeader}>{group.label}</Text>
+                {group.items.map((item) => (
+                  <View key={item.id} style={styles.tableRow}>
+                    <Text style={styles.col1}>
+                      {item.name}
+                      {item.notes ? `\n${item.notes}` : ''}
+                    </Text>
+                    <Text style={styles.col2}>
+                      {item.is_selected ? 'Selected' : 'Optional'}
+                    </Text>
+                    <Text style={styles.col3}>
+                      {formatAUD(item.unit_price_cents)} / {item.unit}
+                    </Text>
+                    <Text style={styles.col4}>
+                      {formatAUD(item.total_cents)}
+                    </Text>
+                  </View>
+                ))}
               </View>
             ))}
           </View>
@@ -265,7 +318,8 @@ export function QuoteTemplate({
         </View>
 
         <Text style={styles.footer}>
-          Generated by {APP_NAME} · This quote is valid until {formatDate(quote.valid_until)}
+          Generated by {APP_NAME} · This quote is valid until{' '}
+          {formatDate(quote.valid_until)}
         </Text>
       </Page>
     </Document>

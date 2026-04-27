@@ -49,11 +49,19 @@ function renderCalendar({
   googleEvents = [],
   nativeEvents = [],
   today = '2026-05-02',
+  initialView,
+  initialSource,
+  initialStatus,
+  initialSearch,
 }: {
   jobs?: CalendarJob[];
   googleEvents?: CalendarGoogleEvent[];
   nativeEvents?: ScheduleEvent[];
   today?: string;
+  initialView?: string;
+  initialSource?: string;
+  initialStatus?: string;
+  initialSearch?: string;
 } = {}) {
   return render(
     <>
@@ -65,6 +73,10 @@ function renderCalendar({
         googleConnected={false}
         googleError={false}
         today={today}
+        initialView={initialView}
+        initialSource={initialSource}
+        initialStatus={initialStatus}
+        initialSearch={initialSearch}
       />
     </>,
   );
@@ -178,5 +190,70 @@ describe('ScheduleCalendar', () => {
     renderCalendar({ today: '2026-05-02' });
 
     expect(screen.getByRole('heading', { name: 'May 2026' })).toBeInTheDocument();
+  });
+
+  it('returns to today from another month', async () => {
+    const user = userEvent.setup();
+
+    renderCalendar({ today: '2026-05-02' });
+
+    await user.click(screen.getByRole('button', { name: 'Next month' }));
+    expect(screen.getByRole('heading', { name: 'June 2026' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Today' }));
+    expect(screen.getByRole('heading', { name: 'May 2026' })).toBeInTheDocument();
+  });
+
+  it('uses a fluid calendar grid for small mobile screens', () => {
+    renderCalendar({ today: '2026-05-02' });
+
+    const calendarGrid = screen.getByLabelText('Schedule calendar month');
+
+    expect(calendarGrid).toHaveClass('w-full');
+    expect(calendarGrid).toHaveClass('min-w-0');
+    expect(calendarGrid).not.toHaveClass('min-w-[700px]');
+    expect(screen.queryByText('Swipe sideways if you need a wider calendar view.')).not.toBeInTheDocument();
+  });
+
+  it('wraps schedule filters instead of forcing horizontal mobile overflow', () => {
+    renderCalendar({ today: '2026-05-02' });
+
+    const showLabel = screen.getByText('Show');
+    const sourceFilters = showLabel.nextElementSibling;
+    const statusLabel = screen.getByText('Job status');
+    const statusFilters = statusLabel.nextElementSibling;
+
+    expect(sourceFilters).toHaveClass('flex-wrap');
+    expect(sourceFilters).not.toHaveClass('overflow-x-auto');
+    expect(statusFilters).toHaveClass('flex-wrap');
+    expect(statusFilters).not.toHaveClass('overflow-x-auto');
+  });
+
+  it('can open as a jobs list and search completed historical jobs', () => {
+    renderCalendar({
+      initialView: 'list',
+      initialSource: 'jobs',
+      initialStatus: 'completed',
+      initialSearch: 'warehouse',
+      jobs: [
+        JOB,
+        {
+          ...JOB,
+          id: 'job-2',
+          title: 'Warehouse repaint',
+          customerName: 'Northside Storage',
+          status: 'completed',
+          startDate: '2025-02-10',
+          endDate: '2025-02-10',
+          scheduleDates: ['2025-02-10'],
+          scheduledDate: '2025-02-10',
+          quoteNumber: 'QUO-0991',
+        },
+      ],
+    });
+
+    expect(screen.getByText('1 result in jobs')).toBeInTheDocument();
+    expect(screen.getByText('Northside Storage')).toBeInTheDocument();
+    expect(screen.queryByText('Sarah Mitchell')).not.toBeInTheDocument();
   });
 });
