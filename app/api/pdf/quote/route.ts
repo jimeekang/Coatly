@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import {
   isMissingQuoteCustomerSnapshotColumnError,
@@ -16,10 +17,10 @@ import { QuoteTemplate } from '@/lib/pdf/quote-template';
 
 const QUOTE_CUSTOMER_SELECT =
   'customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, address_line2, city, state, postcode)';
-const QUOTE_DETAIL_SELECT =
-  `id, user_id, customer_id, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const QUOTE_DETAIL_SELECT_LEGACY =
-  `id, user_id, customer_id, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_DETAIL_SELECT = `id, user_id, customer_id, customer_email, customer_address, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, customer_id, quote_number, title, status, valid_until, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type QuotePdfRow = {
   id: string;
@@ -72,36 +73,49 @@ type QuotePdfRow = {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const quoteId = searchParams.get('id');
+  const publicToken = searchParams.get('token')?.trim() ?? null;
 
-  if (!quoteId) {
-    return NextResponse.json({ error: 'Quote ID required' }, { status: 400 });
+  if (!quoteId && !publicToken) {
+    return NextResponse.json(
+      { error: 'Quote ID or token required' },
+      { status: 400 }
+    );
   }
 
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (publicToken && !UUID_RE.test(publicToken)) {
+    return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
+  }
 
-  if (!user) {
+  const privateQuoteId = quoteId ?? '';
+  const supabase = publicToken
+    ? createAdminClient()
+    : await createServerClient();
+  const user = publicToken ? null : (await supabase.auth.getUser()).data.user;
+
+  if (!publicToken && !user) {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
 
-  const quoteResult = await supabase
-    .from('quotes')
-    .select(QUOTE_DETAIL_SELECT)
-    .eq('id', quoteId)
-    .eq('user_id', user.id)
-    .single();
+  const quoteQuery = supabase.from('quotes').select(QUOTE_DETAIL_SELECT);
+  const quoteResult = publicToken
+    ? await quoteQuery.eq('public_share_token', publicToken).single()
+    : await quoteQuery
+        .eq('id', privateQuoteId)
+        .eq('user_id', user!.id)
+        .single();
   let quote = quoteResult.data as QuotePdfRow | null;
   let error = quoteResult.error;
 
   if (error && isMissingQuoteCustomerSnapshotColumnError(error.message)) {
-    const legacyResult = await supabase
+    const legacyQuery = supabase
       .from('quotes')
-      .select(QUOTE_DETAIL_SELECT_LEGACY)
-      .eq('id', quoteId)
-      .eq('user_id', user.id)
-      .single();
+      .select(QUOTE_DETAIL_SELECT_LEGACY);
+    const legacyResult = publicToken
+      ? await legacyQuery.eq('public_share_token', publicToken).single()
+      : await legacyQuery
+          .eq('id', privateQuoteId)
+          .eq('user_id', user!.id)
+          .single();
 
     quote = legacyResult.data as QuotePdfRow | null;
     error = legacyResult.error;
@@ -111,10 +125,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
   }
 
+  const resolvedQuoteId = quote.id;
   const { data: rooms } = await supabase
     .from('quote_rooms')
-    .select('id, quote_id, name, room_type, length_m, width_m, height_m, sort_order')
-    .eq('quote_id', quoteId)
+    .select(
+      'id, quote_id, name, room_type, length_m, width_m, height_m, sort_order'
+    )
+    .eq('quote_id', resolvedQuoteId)
     .order('sort_order', { ascending: true });
 
   const roomIds = rooms?.map((room) => room.id) ?? [];
@@ -133,13 +150,13 @@ export async function GET(request: NextRequest) {
     .select(
       'id, quote_id, material_item_id, name, category, unit, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected, sort_order, created_at, updated_at'
     )
-    .eq('quote_id', quoteId)
+    .eq('quote_id', resolvedQuoteId)
     .order('sort_order', { ascending: true });
 
   const { data: businessBranding } = await getBusinessDocumentBranding(
     supabase,
-    user.id,
-    user.email ?? null
+    quote.user_id,
+    user?.email ?? null
   );
   const logoUrl = await createStorageObjectDataUrl(
     supabase,
@@ -171,7 +188,10 @@ export async function GET(request: NextRequest) {
               surface_type: surface.surface_type as QuoteSurfaceType,
               area_m2: Number(surface.area_m2),
               coating_type: normalizeQuoteCoatingType(
-                surface.coating_type as QuoteCoatingType | 'touch_up_1coat' | null
+                surface.coating_type as
+                  | QuoteCoatingType
+                  | 'touch_up_1coat'
+                  | null
               ),
               rate_per_m2_cents: surface.rate_per_m2_cents,
               material_cost_cents: surface.material_cost_cents,
@@ -188,7 +208,7 @@ export async function GET(request: NextRequest) {
         ...item,
         quantity: Number(item.quantity),
         is_optional: item.is_optional ?? false,
-        is_selected: item.is_optional ? item.is_selected ?? false : true,
+        is_selected: item.is_optional ? (item.is_selected ?? false) : true,
       })) ?? [],
   });
 
@@ -198,7 +218,7 @@ export async function GET(request: NextRequest) {
       businessName: businessBranding?.name || 'My Painting Business',
       abn: businessBranding?.abn ?? null,
       phone: businessBranding?.phone ?? null,
-      email: businessBranding?.email ?? user.email ?? null,
+      email: businessBranding?.email ?? user?.email ?? null,
       logoUrl,
     })
   );

@@ -17,7 +17,18 @@ interface Props {
 
 function SpinnerIcon() {
   return (
-    <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="animate-spin"
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
   );
@@ -102,7 +113,9 @@ export function QuoteActions({
   return (
     <div className="flex flex-col gap-4">
       {error && (
-        <p className="rounded-lg bg-error/10 px-3 py-2.5 text-sm text-error">{error}</p>
+        <p className="bg-error/10 text-error rounded-lg px-3 py-2.5 text-sm">
+          {error}
+        </p>
       )}
       {hasLinkedInvoices && (
         <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
@@ -116,13 +129,25 @@ export function QuoteActions({
           type="button"
           onClick={handleApprove}
           disabled={anyPending}
-          className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-tertiary px-5 text-base font-semibold text-on-tertiary transition-colors hover:bg-tertiary/90 disabled:opacity-50"
+          className="bg-tertiary text-on-tertiary hover:bg-tertiary/90 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-colors disabled:opacity-50"
         >
           {approvePending ? (
-            <><SpinnerIcon /> Approving…</>
+            <>
+              <SpinnerIcon /> Approving…
+            </>
           ) : (
             <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Approve Quote
@@ -135,9 +160,19 @@ export function QuoteActions({
         <div className="flex flex-col gap-2.5">
           <Link
             href={`/invoices/new?quoteId=${quoteId}`}
-            className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-base font-semibold text-on-primary transition-colors hover:bg-primary/90"
+            className="bg-primary text-on-primary hover:bg-primary/90 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="12" y1="18" x2="12" y2="12" />
@@ -149,13 +184,25 @@ export function QuoteActions({
             type="button"
             onClick={handleConvertToJob}
             disabled={anyPending}
-            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-pm-border bg-white px-5 text-sm font-semibold text-pm-body transition-colors hover:bg-pm-surface disabled:opacity-50"
+            className="border-pm-border text-pm-body hover:bg-pm-surface inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border bg-white px-5 text-sm font-semibold transition-colors disabled:opacity-50"
           >
             {jobPending ? (
-              <><SpinnerIcon /> Converting…</>
+              <>
+                <SpinnerIcon /> Converting…
+              </>
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                   <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                 </svg>
@@ -167,7 +214,9 @@ export function QuoteActions({
       )}
 
       {/* Secondary utility row */}
-      <div className={`grid grid-cols-2 gap-2 ${publicQuoteUrl ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`}>
+      <div
+        className={`grid grid-cols-2 gap-2 ${publicQuoteUrl ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`}
+      >
         {/* More */}
         <div className="relative">
           <button
@@ -176,9 +225,19 @@ export function QuoteActions({
             disabled={anyPending}
             aria-expanded={isMoreOpen}
             aria-haspopup="menu"
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container px-2 py-3 text-[11px] font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high disabled:opacity-50"
+            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <circle cx="12" cy="12" r="1" />
               <circle cx="19" cy="12" r="1" />
               <circle cx="5" cy="12" r="1" />
@@ -188,13 +247,13 @@ export function QuoteActions({
           {isMoreOpen && (
             <div
               role="menu"
-              className="absolute left-0 z-20 mt-2 w-64 rounded-xl border border-outline-variant bg-white p-2 shadow-lg"
+              className="border-outline-variant absolute left-0 z-20 mt-2 w-64 rounded-xl border bg-white p-2 shadow-lg"
             >
               {(status === 'draft' || status === 'sent') && (
                 <button
                   type="button"
                   onClick={handleApproveWithoutSignature}
-                  className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                  className="text-on-surface hover:bg-surface-container-low flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors"
                 >
                   Approve without signature
                 </button>
@@ -202,35 +261,56 @@ export function QuoteActions({
               <button
                 type="button"
                 onClick={handleApproveAndConvertToJob}
-                className="mt-1 flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                className="text-on-surface hover:bg-surface-container-low mt-1 flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors"
               >
-                {status === 'approved' ? 'Convert to Job' : 'Approve and convert to job'}
+                {status === 'approved'
+                  ? 'Convert to Job'
+                  : 'Approve and convert to job'}
               </button>
             </div>
           )}
         </div>
 
         {/* PDF */}
-        <Link
+        <a
           href={`/api/pdf/quote?id=${quoteId}`}
-          target="_blank"
-          className="flex flex-col items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container px-2 py-3 text-[11px] font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high"
+          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
           </svg>
           PDF
-        </Link>
+        </a>
 
         {/* Client page — only shown when URL exists */}
         {publicQuoteUrl && (
           <Link
             href={publicQuoteUrl}
             target="_blank"
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container px-2 py-3 text-[11px] font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high"
+            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <circle cx="12" cy="12" r="10" />
               <line x1="2" y1="12" x2="22" y2="12" />
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -244,10 +324,22 @@ export function QuoteActions({
           type="button"
           onClick={handleDuplicate}
           disabled={anyPending}
-          className="flex flex-col items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container px-2 py-3 text-[11px] font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high disabled:opacity-50"
+          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
         >
-          {dupPending ? <SpinnerIcon /> : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {dupPending ? (
+            <SpinnerIcon />
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
             </svg>
@@ -260,9 +352,19 @@ export function QuoteActions({
           type="button"
           onClick={() => setShowDeleteModal(true)}
           disabled={anyPending || hasLinkedInvoices}
-          className="flex flex-col items-center gap-1.5 rounded-xl border border-error/30 bg-error/5 px-2 py-3 text-[11px] font-semibold text-error transition-colors hover:bg-error/10 disabled:opacity-50"
+          className="border-error/30 bg-error/5 text-error hover:bg-error/10 flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <polyline points="3 6 5 6 21 6" />
             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
             <path d="M10 11v6M14 11v6M9 6V4h6v2" />
@@ -313,37 +415,59 @@ function DeleteModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-6 sm:items-center"
-      onClick={(e) => { if (e.target === e.currentTarget && !isPending) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isPending) onClose();
+      }}
     >
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-error">
+        <div className="bg-error/10 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-error"
+          >
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             <line x1="12" y1="9" x2="12" y2="13" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </div>
-        <h2 className="text-lg font-bold text-pm-body">Delete Quote?</h2>
-        <p className="mt-1.5 text-sm text-pm-secondary">
-          <span className="font-semibold text-pm-body">{quoteNumber}</span> will be permanently deleted. This cannot be undone.
+        <h2 className="text-pm-body text-lg font-bold">Delete Quote?</h2>
+        <p className="text-pm-secondary mt-1.5 text-sm">
+          <span className="text-pm-body font-semibold">{quoteNumber}</span> will
+          be permanently deleted. This cannot be undone.
         </p>
         {error && (
-          <p className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-sm text-error">{error}</p>
+          <p className="bg-error/10 text-error mt-3 rounded-lg px-3 py-2 text-sm">
+            {error}
+          </p>
         )}
         <div className="mt-5 flex flex-col gap-2.5">
           <button
             type="button"
             onClick={handleDelete}
             disabled={isPending}
-            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-error px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-error/90 disabled:opacity-60"
+            className="bg-error hover:bg-error/90 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-colors disabled:opacity-60"
           >
-            {isPending ? <><SpinnerIcon /> Deleting…</> : 'Yes, Delete Quote'}
+            {isPending ? (
+              <>
+                <SpinnerIcon /> Deleting…
+              </>
+            ) : (
+              'Yes, Delete Quote'
+            )}
           </button>
           <button
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-pm-border bg-pm-surface px-4 py-3 text-sm font-medium text-pm-body transition-colors hover:bg-pm-border disabled:opacity-60"
+            className="border-pm-border bg-pm-surface text-pm-body hover:bg-pm-border inline-flex min-h-12 w-full items-center justify-center rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60"
           >
             Cancel
           </button>

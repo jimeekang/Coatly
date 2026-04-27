@@ -237,12 +237,20 @@ export function PublicQuoteClient({
                     {quote.quote_number}
                   </p>
                 </div>
-                {/* Status badge */}
-                <span
-                  className={`mt-0.5 shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_STYLES[quote.status] ?? STATUS_STYLES.draft}`}
-                >
-                  {QUOTE_STATUS_LABELS[quote.status]}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  {/* Status badge */}
+                  <span
+                    className={`mt-0.5 rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_STYLES[quote.status] ?? STATUS_STYLES.draft}`}
+                  >
+                    {QUOTE_STATUS_LABELS[quote.status]}
+                  </span>
+                  <a
+                    href={`/api/pdf/quote?token=${encodeURIComponent(token)}`}
+                    className="inline-flex min-h-9 items-center justify-center rounded-full border border-white/30 px-3 text-xs font-semibold text-white transition-colors hover:bg-white/10"
+                  >
+                    PDF
+                  </a>
+                </div>
               </div>
             </div>
 
