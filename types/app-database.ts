@@ -161,6 +161,28 @@ type JobInsert = {
 
 type JobUpdate = Partial<Omit<JobInsert, 'user_id'>>;
 
+type JobScheduleDayRow = {
+  id: string;
+  user_id: string;
+  job_id: string;
+  date: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type JobScheduleDayInsert = {
+  id?: string;
+  user_id: string;
+  job_id: string;
+  date: string;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type JobScheduleDayUpdate = Partial<Omit<JobScheduleDayInsert, 'user_id'>>;
+
 type GoogleCalendarConnectionRow = {
   user_id: string;
   google_account_email: string;
@@ -254,6 +276,20 @@ export type AppDatabase = Omit<BaseDatabase, 'public'> & {
             columns: ['quote_id'];
             isOneToOne: false;
             referencedRelation: 'quotes';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      job_schedule_days: {
+        Row: JobScheduleDayRow;
+        Insert: JobScheduleDayInsert;
+        Update: JobScheduleDayUpdate;
+        Relationships: [
+          {
+            foreignKeyName: 'job_schedule_days_job_id_fkey';
+            columns: ['job_id'];
+            isOneToOne: false;
+            referencedRelation: 'jobs';
             referencedColumns: ['id'];
           },
         ];

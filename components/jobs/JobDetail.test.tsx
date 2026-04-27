@@ -40,6 +40,7 @@ describe('JobDetail', () => {
       scheduled_date: '2026-04-22',
       start_date: null,
       end_date: null,
+      schedule_dates: ['2026-04-22'],
       duration_days: null,
       notes: null,
       created_at: '2026-04-20T00:00:00.000Z',

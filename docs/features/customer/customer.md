@@ -1,4 +1,4 @@
-# Spec: Customer Management
+# Feature: Customer Management
 
 ## User Story
 

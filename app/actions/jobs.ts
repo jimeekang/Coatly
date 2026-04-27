@@ -35,6 +35,10 @@ type JoinedCustomer = Pick<
 type JoinedQuote = Pick<Quote, 'id' | 'quote_number' | 'title' | 'status' | 'customer_id'>;
 
 type QuoteCreateJobRow = Pick<JoinedQuote, 'id' | 'quote_number' | 'title' | 'customer_id'>;
+type JobScheduleRecord = Pick<
+  JobRow,
+  'id' | 'quote_id' | 'status' | 'scheduled_date' | 'start_date' | 'end_date'
+>;
 
 type JobRow = Pick<
   Job,
@@ -88,10 +92,31 @@ function toJobStatus(status: string): JobListItem['status'] {
   return 'scheduled';
 }
 
+function sortUniqueDateValues(dates: string[]): string[] {
+  return [...new Set(dates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort();
+}
+
+function buildDateRangeValues(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  let current = startDate;
+  while (current <= endDate) {
+    dates.push(current);
+    current = addDaysToDateValue(current, 1);
+  }
+  return dates;
+}
+
+function fallbackScheduleDates(job: Pick<JobRow, 'scheduled_date' | 'start_date' | 'end_date'>): string[] {
+  const startDate = job.start_date ?? job.scheduled_date;
+  const endDate = job.end_date ?? startDate;
+  return buildDateRangeValues(startDate, endDate);
+}
+
 function mapJobListItem(
   job: JobRow,
   customer: JoinedCustomer | null,
   quote: JoinedQuote | null,
+  scheduleDates: string[],
 ): JobListItem | null {
   if (!customer) {
     return null;
@@ -106,6 +131,7 @@ function mapJobListItem(
     scheduled_date: job.scheduled_date,
     start_date: job.start_date,
     end_date: job.end_date,
+    schedule_dates: scheduleDates.length > 0 ? scheduleDates : fallbackScheduleDates(job),
     duration_days: job.duration_days,
     notes: job.notes,
     created_at: job.created_at,
@@ -133,8 +159,9 @@ async function hydrateJobListItems(
 ): Promise<{ data: JobListItem[]; error: string | null }> {
   const customerIds = uniqueValues(jobs.map((job) => job.customer_id));
   const quoteIds = uniqueValues(jobs.map((job) => job.quote_id));
+  const jobIds = uniqueValues(jobs.map((job) => job.id));
 
-  const [customersResult, quotesResult] = await Promise.all([
+  const [customersResult, quotesResult, scheduleDatesResult] = await Promise.all([
     customerIds.length > 0
       ? supabase
           .from('customers')
@@ -149,9 +176,16 @@ async function hydrateJobListItems(
           .eq('user_id', userId)
           .in('id', quoteIds)
       : Promise.resolve({ data: [] as JoinedQuote[], error: null }),
+    jobIds.length > 0
+      ? getJobScheduleDatesForJobIds(supabase, userId, jobIds)
+      : Promise.resolve({ data: {} as Record<string, string[]>, error: null }),
   ]);
 
-  const error = customersResult.error?.message ?? quotesResult.error?.message ?? null;
+  const error =
+    customersResult.error?.message ??
+    quotesResult.error?.message ??
+    scheduleDatesResult.error ??
+    null;
   if (error) {
     return { data: [], error };
   }
@@ -169,11 +203,42 @@ async function hydrateJobListItems(
         job,
         customersById.get(job.customer_id) ?? null,
         job.quote_id ? (quotesById.get(job.quote_id) ?? null) : null,
+        scheduleDatesResult.data[job.id] ?? [],
       );
       return mapped ? [mapped] : [];
     }),
     error: null,
   };
+}
+
+async function getJobScheduleDatesForJobIds(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string,
+  jobIds: string[],
+): Promise<{ data: Record<string, string[]>; error: string | null }> {
+  const uniqueJobIds = [...new Set(jobIds.filter(Boolean))];
+
+  if (uniqueJobIds.length === 0) {
+    return { data: {}, error: null };
+  }
+
+  const { data, error } = await supabase
+    .from('job_schedule_days')
+    .select('job_id, date')
+    .eq('user_id', userId)
+    .in('job_id', uniqueJobIds)
+    .order('date', { ascending: true });
+
+  if (error) {
+    return { data: {}, error: error.message };
+  }
+
+  const datesByJobId: Record<string, string[]> = {};
+  for (const row of data ?? []) {
+    datesByJobId[row.job_id] = [...(datesByJobId[row.job_id] ?? []), row.date];
+  }
+
+  return { data: datesByJobId, error: null };
 }
 
 function buildJobTitleFromQuote(quote: QuoteCreateJobRow): string {
@@ -188,6 +253,174 @@ function getTodayDateValue(): string {
 function addDaysToDateValue(dateValue: string, days: number): string {
   const [year, month, day] = dateValue.split('-').map(Number) as [number, number, number];
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function summarizeScheduleDates(dates: string[]): {
+  scheduledDate: string;
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+} {
+  const sortedDates = sortUniqueDateValues(dates);
+  const firstDate = sortedDates[0] ?? getTodayDateValue();
+  const lastDate = sortedDates[sortedDates.length - 1] ?? firstDate;
+
+  return {
+    scheduledDate: firstDate,
+    startDate: firstDate,
+    endDate: lastDate,
+    durationDays: sortedDates.length || 1,
+  };
+}
+
+async function replaceJobScheduleDays(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string,
+  jobId: string,
+  dates: string[],
+): Promise<{ error: string | null }> {
+  const sortedDates = sortUniqueDateValues(dates);
+
+  const { error: deleteError } = await supabase
+    .from('job_schedule_days')
+    .delete()
+    .eq('job_id', jobId)
+    .eq('user_id', userId);
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  if (sortedDates.length === 0) {
+    return { error: null };
+  }
+
+  const { error: insertError } = await supabase.from('job_schedule_days').insert(
+    sortedDates.map((date, index) => ({
+      user_id: userId,
+      job_id: jobId,
+      date,
+      sort_order: index,
+    })),
+  );
+
+  if (insertError) {
+    return { error: insertError.message };
+  }
+
+  return { error: null };
+}
+
+async function loadJobScheduleRecord(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string,
+  jobId: string,
+): Promise<{
+  data: { job: JobScheduleRecord; dates: string[] } | null;
+  error: string | null;
+}> {
+  const { data: existingJob, error: existingJobError } = await supabase
+    .from('jobs')
+    .select('id, quote_id, status, scheduled_date, start_date, end_date')
+    .eq('id', jobId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existingJobError) {
+    return { data: null, error: existingJobError.message };
+  }
+
+  if (!existingJob) {
+    return { data: null, error: 'Job not found.' };
+  }
+
+  const { data: existingDays, error: daysError } = await supabase
+    .from('job_schedule_days')
+    .select('date')
+    .eq('job_id', jobId)
+    .eq('user_id', userId)
+    .order('date', { ascending: true });
+
+  if (daysError) {
+    return { data: null, error: daysError.message };
+  }
+
+  return {
+    data: {
+      job: existingJob,
+      dates:
+        existingDays && existingDays.length > 0
+          ? sortUniqueDateValues(existingDays.map((day) => day.date))
+          : fallbackScheduleDates(existingJob),
+    },
+    error: null,
+  };
+}
+
+async function persistJobScheduleDates(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  userId: string,
+  jobId: string,
+  existingJob: JobScheduleRecord,
+  dates: string[],
+): Promise<{ error: string | null }> {
+  const nextDates = sortUniqueDateValues(dates);
+  if (nextDates.length < 1 || nextDates.length > 30) {
+    return { error: 'Job schedule must be between 1 and 30 days.' };
+  }
+
+  const summary = summarizeScheduleDates(nextDates);
+  const { error: updateError } = await supabase
+    .from('jobs')
+    .update({
+      scheduled_date: summary.scheduledDate,
+      start_date: summary.startDate,
+      end_date: summary.endDate,
+      duration_days: summary.durationDays,
+    })
+    .eq('id', jobId)
+    .eq('user_id', userId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  const scheduleResult = await replaceJobScheduleDays(supabase, userId, jobId, nextDates);
+  if (scheduleResult.error) {
+    return { error: scheduleResult.error };
+  }
+
+  if (existingJob.quote_id) {
+    const { data: quote } = await supabase
+      .from('quotes')
+      .select('id, quote_number, title, customer_id')
+      .eq('id', existingJob.quote_id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (quote) {
+      await syncBookedJobToGoogleCalendar({
+        supabase,
+        userId,
+        jobId,
+        quoteId: quote.id,
+        quoteNumber: quote.quote_number,
+        quoteTitle: quote.title,
+        customerId: quote.customer_id,
+        startDate: summary.startDate,
+        endDate: summary.endDate,
+      });
+    }
+  }
+
+  revalidatePath('/jobs');
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath('/schedule');
+  if (existingJob.quote_id) {
+    revalidatePath(`/quotes/${existingJob.quote_id}`);
+  }
+
+  return { error: null };
 }
 
 async function validateJobLinks(
@@ -275,6 +508,13 @@ export async function getJobs(): Promise<{
   return hydrateJobListItems(supabase, user.id, data ?? []);
 }
 
+export async function getJobScheduleDatesForJobs(
+  jobIds: string[],
+): Promise<{ data: Record<string, string[]>; error: string | null }> {
+  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  return getJobScheduleDatesForJobIds(supabase, user.id, jobIds);
+}
+
 export async function getJobFormOptions(): Promise<{
   data: {
     customers: JobCustomerOption[];
@@ -360,18 +600,35 @@ export async function createJob(input: JobUpsertInput): Promise<{ error: string 
     return { error: validation.error };
   }
 
-  const { error } = await supabase.from('jobs').insert({
-    user_id: user.id,
-    customer_id: validation.customerId,
-    quote_id: validation.quoteId,
-    title: validation.parsed.title.trim(),
-    status: validation.parsed.status,
-    scheduled_date: validation.parsed.scheduled_date,
-    notes: validation.notes,
-  });
+  const { data: insertedJob, error } = await supabase
+    .from('jobs')
+    .insert({
+      user_id: user.id,
+      customer_id: validation.customerId,
+      quote_id: validation.quoteId,
+      title: validation.parsed.title.trim(),
+      status: validation.parsed.status,
+      scheduled_date: validation.parsed.scheduled_date,
+      start_date: validation.parsed.scheduled_date,
+      end_date: validation.parsed.scheduled_date,
+      duration_days: 1,
+      notes: validation.notes,
+    })
+    .select('id')
+    .single();
 
   if (error) {
     return { error: error.message };
+  }
+
+  const scheduleResult = await replaceJobScheduleDays(
+    supabase,
+    user.id,
+    insertedJob.id,
+    [validation.parsed.scheduled_date],
+  );
+  if (scheduleResult.error) {
+    return { error: scheduleResult.error };
   }
 
   revalidatePath('/jobs');
@@ -450,6 +707,9 @@ export async function createJobFromQuote(quoteId: string): Promise<{
       title: buildJobTitleFromQuote(quote),
       status: 'scheduled',
       scheduled_date: getTodayDateValue(),
+      start_date: getTodayDateValue(),
+      end_date: getTodayDateValue(),
+      duration_days: 1,
       notes: null,
     })
     .select('id')
@@ -457,6 +717,13 @@ export async function createJobFromQuote(quoteId: string): Promise<{
 
   if (insertError) {
     return { error: insertError.message, jobId: null, existing: false };
+  }
+
+  const scheduleResult = await replaceJobScheduleDays(supabase, user.id, insertedJob.id, [
+    getTodayDateValue(),
+  ]);
+  if (scheduleResult.error) {
+    return { error: scheduleResult.error, jobId: null, existing: false };
   }
 
   revalidatePath('/jobs');
@@ -522,6 +789,9 @@ export async function updateJob(
       title: validation.parsed.title.trim(),
       status: validation.parsed.status,
       scheduled_date: validation.parsed.scheduled_date,
+      start_date: validation.parsed.scheduled_date,
+      end_date: validation.parsed.scheduled_date,
+      duration_days: 1,
       notes: validation.notes,
     })
     .eq('id', id)
@@ -529,6 +799,13 @@ export async function updateJob(
 
   if (error) {
     return { error: error.message };
+  }
+
+  const scheduleResult = await replaceJobScheduleDays(supabase, user.id, id, [
+    validation.parsed.scheduled_date,
+  ]);
+  if (scheduleResult.error) {
+    return { error: scheduleResult.error };
   }
 
   revalidatePath('/jobs');
@@ -584,6 +861,299 @@ export async function deleteJob(id: string): Promise<{ error: string | null }> {
   }
 
   return { error: null };
+}
+
+export async function updateJobSchedule(
+  id: string,
+  input: { startDate: string; endDate: string },
+): Promise<{ error: string | null }> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const subscription = await getSubscriptionSnapshotForUser(supabase, user.id);
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('job management') };
+  }
+
+  const startDate = input.startDate.trim();
+  const endDate = input.endDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return { error: 'Schedule dates must use YYYY-MM-DD.' };
+  }
+
+  if (endDate < startDate) {
+    return { error: 'End date must be on or after the start date.' };
+  }
+
+  const scheduleDates = buildDateRangeValues(startDate, endDate);
+  const durationDays = scheduleDates.length;
+  if (durationDays < 1 || durationDays > 30) {
+    return { error: 'Job schedule must be between 1 and 30 days.' };
+  }
+
+  const { data: existingJob, error: existingJobError } = await supabase
+    .from('jobs')
+    .select('id, quote_id, status')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (existingJobError) {
+    return { error: existingJobError.message };
+  }
+
+  if (!existingJob) {
+    return { error: 'Job not found.' };
+  }
+
+  if (existingJob.status !== 'completed' && existingJob.status !== 'cancelled') {
+    const { data: overlapResult, error: overlapError } = await supabase.rpc(
+      'check_job_date_overlap',
+      {
+        p_user_id: user.id,
+        p_start_date: startDate,
+        p_end_date: endDate,
+        p_exclude_job_id: id,
+      },
+    );
+
+    if (overlapError) {
+      return { error: overlapError.message };
+    }
+
+    if (overlapResult === true) {
+      return { error: 'Those dates overlap another active job.' };
+    }
+  }
+
+  const { error } = await supabase
+    .from('jobs')
+    .update({
+      scheduled_date: startDate,
+      start_date: startDate,
+      end_date: endDate,
+      duration_days: durationDays,
+    })
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const scheduleResult = await replaceJobScheduleDays(supabase, user.id, id, scheduleDates);
+  if (scheduleResult.error) {
+    return { error: scheduleResult.error };
+  }
+
+  if (existingJob.quote_id) {
+    const { data: quote } = await supabase
+      .from('quotes')
+      .select('id, quote_number, title, customer_id')
+      .eq('id', existingJob.quote_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (quote) {
+      await syncBookedJobToGoogleCalendar({
+        supabase,
+        userId: user.id,
+        jobId: id,
+        quoteId: quote.id,
+        quoteNumber: quote.quote_number,
+        quoteTitle: quote.title,
+        customerId: quote.customer_id,
+        startDate,
+        endDate,
+      });
+    }
+  }
+
+  revalidatePath('/jobs');
+  revalidatePath(`/jobs/${id}`);
+  revalidatePath('/schedule');
+  if (existingJob.quote_id) {
+    revalidatePath(`/quotes/${existingJob.quote_id}`);
+  }
+
+  return { error: null };
+}
+
+export async function updateJobScheduleDay(
+  id: string,
+  input: { fromDate: string; toDate: string },
+): Promise<{ error: string | null }> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const subscription = await getSubscriptionSnapshotForUser(supabase, user.id);
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('job management') };
+  }
+
+  const fromDate = input.fromDate.trim();
+  const toDate = input.toDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+    return { error: 'Schedule dates must use YYYY-MM-DD.' };
+  }
+
+  if (fromDate === toDate) {
+    return { error: null };
+  }
+
+  const scheduleRecord = await loadJobScheduleRecord(supabase, user.id, id);
+  if (scheduleRecord.error || !scheduleRecord.data) {
+    return { error: scheduleRecord.error ?? 'Job not found.' };
+  }
+
+  const { job: existingJob, dates: currentDates } = scheduleRecord.data;
+
+  if (!currentDates.includes(fromDate)) {
+    return { error: 'That job is not scheduled on the dragged date.' };
+  }
+
+  if (currentDates.includes(toDate)) {
+    return { error: 'This job is already scheduled on that date.' };
+  }
+
+  if (existingJob.status !== 'completed' && existingJob.status !== 'cancelled') {
+    const { data: overlapResult, error: overlapError } = await supabase.rpc(
+      'check_job_date_overlap',
+      {
+        p_user_id: user.id,
+        p_start_date: toDate,
+        p_end_date: toDate,
+        p_exclude_job_id: id,
+      },
+    );
+
+    if (overlapError) {
+      return { error: overlapError.message };
+    }
+
+    if (overlapResult === true) {
+      return { error: 'That day overlaps another active job.' };
+    }
+  }
+
+  const nextDates = sortUniqueDateValues(
+    currentDates.map((date) => (date === fromDate ? toDate : date)),
+  );
+  return persistJobScheduleDates(supabase, user.id, id, existingJob, nextDates);
+}
+
+export async function addJobScheduleDay(
+  id: string,
+  input: { date: string },
+): Promise<{ error: string | null }> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const subscription = await getSubscriptionSnapshotForUser(supabase, user.id);
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('job management') };
+  }
+
+  const date = input.date.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { error: 'Schedule dates must use YYYY-MM-DD.' };
+  }
+
+  const scheduleRecord = await loadJobScheduleRecord(supabase, user.id, id);
+  if (scheduleRecord.error || !scheduleRecord.data) {
+    return { error: scheduleRecord.error ?? 'Job not found.' };
+  }
+
+  const { job: existingJob, dates: currentDates } = scheduleRecord.data;
+  if (currentDates.includes(date)) {
+    return { error: 'This job is already scheduled on that date.' };
+  }
+
+  if (existingJob.status !== 'completed' && existingJob.status !== 'cancelled') {
+    const { data: overlapResult, error: overlapError } = await supabase.rpc(
+      'check_job_date_overlap',
+      {
+        p_user_id: user.id,
+        p_start_date: date,
+        p_end_date: date,
+        p_exclude_job_id: id,
+      },
+    );
+
+    if (overlapError) {
+      return { error: overlapError.message };
+    }
+
+    if (overlapResult === true) {
+      return { error: 'That day overlaps another active job.' };
+    }
+  }
+
+  return persistJobScheduleDates(supabase, user.id, id, existingJob, [...currentDates, date]);
+}
+
+export async function deleteJobScheduleDay(
+  id: string,
+  input: { date: string },
+): Promise<{ error: string | null }> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const subscription = await getSubscriptionSnapshotForUser(supabase, user.id);
+  if (!subscription.active) {
+    return { error: getActiveSubscriptionRequiredMessage('job management') };
+  }
+
+  const date = input.date.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { error: 'Schedule dates must use YYYY-MM-DD.' };
+  }
+
+  const scheduleRecord = await loadJobScheduleRecord(supabase, user.id, id);
+  if (scheduleRecord.error || !scheduleRecord.data) {
+    return { error: scheduleRecord.error ?? 'Job not found.' };
+  }
+
+  const { job: existingJob, dates: currentDates } = scheduleRecord.data;
+  if (!currentDates.includes(date)) {
+    return { error: 'That job is not scheduled on that date.' };
+  }
+
+  if (currentDates.length <= 1) {
+    return { error: 'A job must keep at least one scheduled day.' };
+  }
+
+  return persistJobScheduleDates(
+    supabase,
+    user.id,
+    id,
+    existingJob,
+    currentDates.filter((scheduledDate) => scheduledDate !== date),
+  );
 }
 
 /**
@@ -676,6 +1246,16 @@ export async function bookJobFromPublicQuote(
 
   if (insertError) {
     return { error: insertError.message, jobId: null };
+  }
+
+  const scheduleResult = await replaceJobScheduleDays(
+    supabase,
+    quote.user_id,
+    insertedJob.id,
+    bookingRange.scheduledDates,
+  );
+  if (scheduleResult.error) {
+    return { error: scheduleResult.error, jobId: null };
   }
 
   await syncBookedJobToGoogleCalendar({

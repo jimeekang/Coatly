@@ -56,9 +56,11 @@ vi.mock('@/lib/google-calendar/service', () => ({
 }));
 
 import {
+  addJobScheduleDay,
   bookJobFromPublicQuote,
   createJob,
   createJobFromQuote,
+  deleteJobScheduleDay,
   deleteJob,
   getAvailableDatesForToken,
   getJob,
@@ -66,6 +68,8 @@ import {
   getJobFormOptions,
   getJobs,
   updateJob,
+  updateJobSchedule,
+  updateJobScheduleDay,
 } from '@/app/actions/jobs';
 
 function createFilterQuery<Result>(result: Result) {
@@ -82,6 +86,35 @@ function createEqInQuery<Result>(result: Result) {
   return {
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockResolvedValue(result),
+  };
+}
+
+function createJobScheduleDaysTable(options?: {
+  existingDates?: string[];
+  jobId?: string;
+  onInsert?: (payload: Array<Record<string, unknown>>) => void;
+}) {
+  return {
+    delete: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    }),
+    insert: vi.fn().mockImplementation(async (payload: Array<Record<string, unknown>>) => {
+      options?.onInsert?.(payload);
+      return { error: null };
+    }),
+    select: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: (options?.existingDates ?? []).map((date) => ({
+          job_id: options?.jobId ?? 'job-1',
+          date,
+        })),
+        error: null,
+      }),
+    }),
   };
 }
 
@@ -192,6 +225,12 @@ describe('jobs actions', () => {
           };
         }
 
+        if (table === 'job_schedule_days') {
+          return createJobScheduleDaysTable({
+            existingDates: ['2026-04-05', '2026-04-07'],
+          });
+        }
+
         throw new Error(`Unexpected table ${table}`);
       }),
     });
@@ -202,6 +241,7 @@ describe('jobs actions', () => {
     expect(result.data).toEqual([
       expect.objectContaining({
         id: 'job-1',
+        schedule_dates: ['2026-04-05', '2026-04-07'],
         title: 'Prep living room',
         customer: expect.objectContaining({
           name: 'Olivia Brown',
@@ -275,6 +315,11 @@ describe('jobs actions', () => {
               }),
             ),
           };
+        }
+        if (table === 'job_schedule_days') {
+          return createJobScheduleDaysTable({
+            existingDates: ['2026-04-05'],
+          });
         }
         throw new Error(`Unexpected table ${table}`);
       }),
@@ -389,6 +434,11 @@ describe('jobs actions', () => {
               }),
             ),
           };
+        }
+        if (table === 'job_schedule_days') {
+          return createJobScheduleDaysTable({
+            existingDates: ['2026-04-05'],
+          });
         }
         if (table === 'quote_line_items') return { select: vi.fn().mockReturnValue(lineItemsQuery) };
         if (table === 'job_variations') return { select: vi.fn().mockReturnValue(variationsQuery) };
@@ -512,12 +562,21 @@ describe('jobs actions', () => {
 
         if (table === 'jobs') {
           return {
-            insert: vi.fn(async (payload) => {
+            insert: vi.fn((payload) => {
               captured.insert = payload;
-              return { error: null };
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'job-created-1' },
+                    error: null,
+                  }),
+                }),
+              };
             }),
           };
         }
+
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
 
         throw new Error(`Unexpected table ${table}`);
       }),
@@ -540,6 +599,9 @@ describe('jobs actions', () => {
       title: 'Prep living room',
       status: 'scheduled',
       scheduled_date: '2026-04-05',
+      start_date: '2026-04-05',
+      end_date: '2026-04-05',
+      duration_days: 1,
       notes: 'Rear gate access',
     });
     expect(revalidatePathMock).toHaveBeenCalledWith('/jobs');
@@ -594,6 +656,8 @@ describe('jobs actions', () => {
           };
         }
 
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
+
         throw new Error(`Unexpected table ${table}`);
       }),
     });
@@ -612,6 +676,9 @@ describe('jobs actions', () => {
       title: 'Living room repaint',
       status: 'scheduled',
       scheduled_date: '2026-04-04',
+      start_date: '2026-04-04',
+      end_date: '2026-04-04',
+      duration_days: 1,
       notes: null,
     });
     expect(revalidatePathMock).toHaveBeenCalledWith('/jobs');
@@ -770,6 +837,8 @@ describe('jobs actions', () => {
           };
         }
 
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
+
         throw new Error(`Unexpected table ${table}`);
       }),
     });
@@ -790,6 +859,9 @@ describe('jobs actions', () => {
       title: 'Finish living room',
       status: 'in_progress',
       scheduled_date: '2026-04-06',
+      start_date: '2026-04-06',
+      end_date: '2026-04-06',
+      duration_days: 1,
       notes: 'Client home after 2pm',
     });
     expect(eqIdMock).toHaveBeenCalledWith('id', 'job-1');
@@ -874,6 +946,398 @@ describe('jobs actions', () => {
     expect(revalidatePathMock).toHaveBeenCalledWith('/jobs');
     expect(revalidatePathMock).toHaveBeenCalledWith('/quotes/quote-1');
   });
+
+  it('updates a job schedule range and checks overlap excluding itself', async () => {
+    const existingJobQuery = createFilterQuery({
+      data: { id: 'job-1', quote_id: null, status: 'scheduled' },
+      error: null,
+    });
+    const rpcMock = vi.fn().mockResolvedValue({ data: false, error: null });
+    const eqUserMock = vi.fn().mockResolvedValue({ error: null });
+    const eqIdMock = vi.fn().mockReturnValue({ eq: eqUserMock });
+    const updateMock = vi.fn().mockReturnValue({ eq: eqIdMock });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      rpc: rpcMock,
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') {
+          return {
+            select: vi.fn().mockReturnValue(existingJobQuery),
+            update: updateMock,
+          };
+        }
+
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await updateJobSchedule('job-1', {
+      startDate: '2026-04-20',
+      endDate: '2026-04-22',
+    });
+
+    expect(result).toEqual({ error: null });
+    expect(rpcMock).toHaveBeenCalledWith('check_job_date_overlap', {
+      p_user_id: 'user-1',
+      p_start_date: '2026-04-20',
+      p_end_date: '2026-04-22',
+      p_exclude_job_id: 'job-1',
+    });
+    expect(updateMock).toHaveBeenCalledWith({
+      scheduled_date: '2026-04-20',
+      start_date: '2026-04-20',
+      end_date: '2026-04-22',
+      duration_days: 3,
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith('/schedule');
+    expect(revalidatePathMock).toHaveBeenCalledWith('/jobs/job-1');
+  });
+
+  it('blocks job schedule updates when the new range overlaps another active job', async () => {
+    const existingJobQuery = createFilterQuery({
+      data: { id: 'job-1', quote_id: null, status: 'scheduled' },
+      error: null,
+    });
+    const updateMock = vi.fn();
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') {
+          return {
+            select: vi.fn().mockReturnValue(existingJobQuery),
+            update: updateMock,
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await updateJobSchedule('job-1', {
+      startDate: '2026-04-20',
+      endDate: '2026-04-22',
+    });
+
+    expect(result).toEqual({ error: 'Those dates overlap another active job.' });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('moves only the dragged job day when rescheduling from the calendar', async () => {
+    const existingJobQuery = createFilterQuery({
+      data: {
+        id: 'job-1',
+        quote_id: null,
+        status: 'scheduled',
+        scheduled_date: '2026-04-20',
+        start_date: '2026-04-20',
+        end_date: '2026-04-25',
+      },
+      error: null,
+    });
+    const rpcMock = vi.fn().mockResolvedValue({ data: false, error: null });
+    const eqUserMock = vi.fn().mockResolvedValue({ error: null });
+    const eqIdMock = vi.fn().mockReturnValue({ eq: eqUserMock });
+    const updateMock = vi.fn().mockReturnValue({ eq: eqIdMock });
+    let insertedScheduleDays: string[] = [];
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      rpc: rpcMock,
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') {
+          return {
+            select: vi.fn().mockReturnValue(existingJobQuery),
+            update: updateMock,
+          };
+        }
+
+        if (table === 'job_schedule_days') {
+          return createJobScheduleDaysTable({
+            existingDates: [
+              '2026-04-20',
+              '2026-04-21',
+              '2026-04-22',
+              '2026-04-23',
+              '2026-04-24',
+              '2026-04-25',
+            ],
+            onInsert: (payload) => {
+              insertedScheduleDays = payload.map((row) => String(row.date));
+            },
+          });
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await updateJobScheduleDay('job-1', {
+      fromDate: '2026-04-22',
+      toDate: '2026-04-26',
+    });
+
+    expect(result).toEqual({ error: null });
+    expect(rpcMock).toHaveBeenCalledWith('check_job_date_overlap', {
+      p_user_id: 'user-1',
+      p_start_date: '2026-04-26',
+      p_end_date: '2026-04-26',
+      p_exclude_job_id: 'job-1',
+    });
+    expect(insertedScheduleDays).toEqual([
+      '2026-04-20',
+      '2026-04-21',
+      '2026-04-23',
+      '2026-04-24',
+      '2026-04-25',
+      '2026-04-26',
+    ]);
+    expect(updateMock).toHaveBeenCalledWith({
+      scheduled_date: '2026-04-20',
+      start_date: '2026-04-20',
+      end_date: '2026-04-26',
+      duration_days: 6,
+    });
+  });
+
+  it('rejects moving a job day onto another existing day for the same job', async () => {
+    const existingJobQuery = createFilterQuery({
+      data: {
+        id: 'job-1',
+        quote_id: null,
+        status: 'scheduled',
+        scheduled_date: '2026-04-20',
+        start_date: '2026-04-20',
+        end_date: '2026-04-25',
+      },
+      error: null,
+    });
+    const updateMock = vi.fn();
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      rpc: vi.fn(),
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') {
+          return {
+            select: vi.fn().mockReturnValue(existingJobQuery),
+            update: updateMock,
+          };
+        }
+
+        if (table === 'job_schedule_days') {
+          return createJobScheduleDaysTable({
+            existingDates: [
+              '2026-04-20',
+              '2026-04-21',
+              '2026-04-22',
+              '2026-04-23',
+              '2026-04-24',
+              '2026-04-25',
+            ],
+          });
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await updateJobScheduleDay('job-1', {
+      fromDate: '2026-04-22',
+      toDate: '2026-04-24',
+    });
+
+    expect(result).toEqual({ error: 'This job is already scheduled on that date.' });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('adds a single scheduled day to a job without rebuilding the full range', async () => {
+    const existingJobQuery = createFilterQuery({
+      data: {
+        id: 'job-1',
+        quote_id: null,
+        status: 'scheduled',
+        scheduled_date: '2026-04-20',
+        start_date: '2026-04-20',
+        end_date: '2026-04-22',
+      },
+      error: null,
+    });
+    const rpcMock = vi.fn().mockResolvedValue({ data: false, error: null });
+    const eqUserMock = vi.fn().mockResolvedValue({ error: null });
+    const eqIdMock = vi.fn().mockReturnValue({ eq: eqUserMock });
+    const updateMock = vi.fn().mockReturnValue({ eq: eqIdMock });
+    let insertedScheduleDays: string[] = [];
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      rpc: rpcMock,
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') {
+          return {
+            select: vi.fn().mockReturnValue(existingJobQuery),
+            update: updateMock,
+          };
+        }
+
+        if (table === 'job_schedule_days') {
+          return createJobScheduleDaysTable({
+            existingDates: ['2026-04-20', '2026-04-22'],
+            onInsert: (payload) => {
+              insertedScheduleDays = payload.map((row) => String(row.date));
+            },
+          });
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await addJobScheduleDay('job-1', { date: '2026-04-24' });
+
+    expect(result).toEqual({ error: null });
+    expect(rpcMock).toHaveBeenCalledWith('check_job_date_overlap', {
+      p_user_id: 'user-1',
+      p_start_date: '2026-04-24',
+      p_end_date: '2026-04-24',
+      p_exclude_job_id: 'job-1',
+    });
+    expect(insertedScheduleDays).toEqual(['2026-04-20', '2026-04-22', '2026-04-24']);
+    expect(updateMock).toHaveBeenCalledWith({
+      scheduled_date: '2026-04-20',
+      start_date: '2026-04-20',
+      end_date: '2026-04-24',
+      duration_days: 3,
+    });
+  });
+
+  it('deletes one scheduled day from a job and keeps the remaining dates', async () => {
+    const existingJobQuery = createFilterQuery({
+      data: {
+        id: 'job-1',
+        quote_id: null,
+        status: 'scheduled',
+        scheduled_date: '2026-04-20',
+        start_date: '2026-04-20',
+        end_date: '2026-04-24',
+      },
+      error: null,
+    });
+    const rpcMock = vi.fn();
+    const eqUserMock = vi.fn().mockResolvedValue({ error: null });
+    const eqIdMock = vi.fn().mockReturnValue({ eq: eqUserMock });
+    const updateMock = vi.fn().mockReturnValue({ eq: eqIdMock });
+    let insertedScheduleDays: string[] = [];
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      rpc: rpcMock,
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') {
+          return {
+            select: vi.fn().mockReturnValue(existingJobQuery),
+            update: updateMock,
+          };
+        }
+
+        if (table === 'job_schedule_days') {
+          return createJobScheduleDaysTable({
+            existingDates: ['2026-04-20', '2026-04-22', '2026-04-24'],
+            onInsert: (payload) => {
+              insertedScheduleDays = payload.map((row) => String(row.date));
+            },
+          });
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await deleteJobScheduleDay('job-1', { date: '2026-04-20' });
+
+    expect(result).toEqual({ error: null });
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(insertedScheduleDays).toEqual(['2026-04-22', '2026-04-24']);
+    expect(updateMock).toHaveBeenCalledWith({
+      scheduled_date: '2026-04-22',
+      start_date: '2026-04-22',
+      end_date: '2026-04-24',
+      duration_days: 2,
+    });
+  });
+
+  it('rejects deleting the last remaining scheduled day for a job', async () => {
+    const existingJobQuery = createFilterQuery({
+      data: {
+        id: 'job-1',
+        quote_id: null,
+        status: 'scheduled',
+        scheduled_date: '2026-04-20',
+        start_date: '2026-04-20',
+        end_date: '2026-04-20',
+      },
+      error: null,
+    });
+    const updateMock = vi.fn();
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      rpc: vi.fn(),
+      from: vi.fn((table: string) => {
+        if (table === 'jobs') {
+          return {
+            select: vi.fn().mockReturnValue(existingJobQuery),
+            update: updateMock,
+          };
+        }
+
+        if (table === 'job_schedule_days') {
+          return createJobScheduleDaysTable({
+            existingDates: ['2026-04-20'],
+          });
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await deleteJobScheduleDay('job-1', { date: '2026-04-20' });
+
+    expect(result).toEqual({ error: 'A job must keep at least one scheduled day.' });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -914,6 +1378,7 @@ describe('bookJobFromPublicQuote', () => {
           return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-1', status: 'approved', working_days: 3, user_id: 'uid-1', customer_id: 'customer-1', title: 'Fence paint', quote_number: 'Q-001' })) };
         }
         if (table === 'jobs') return { insert: insertMock };
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
         throw new Error(`Unexpected table ${table}`);
       }),
       rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
@@ -1017,6 +1482,7 @@ describe('bookJobFromPublicQuote', () => {
       from: vi.fn((table: string) => {
         if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-weekend-ok', status: 'approved', working_days: 2, user_id: 'uid-1', customer_id: 'customer-1', title: 'Weekend job', quote_number: 'Q-008' })) };
         if (table === 'jobs') return { insert: insertMock };
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
         throw new Error(`Unexpected table ${table}`);
       }),
       rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
@@ -1043,6 +1509,7 @@ describe('bookJobFromPublicQuote', () => {
       from: vi.fn((table: string) => {
         if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-5', status: 'approved', working_days: null, user_id: 'uid-1', customer_id: 'customer-1', title: 'Quick touch up', quote_number: 'Q-005' })) };
         if (table === 'jobs') return { insert: insertMock };
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
         throw new Error(`Unexpected table ${table}`);
       }),
       rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
@@ -1064,6 +1531,7 @@ describe('bookJobFromPublicQuote', () => {
       from: vi.fn((table: string) => {
         if (table === 'quotes') return { select: vi.fn().mockReturnValue(makeQuoteTokenQuery({ id: 'quote-6', status: 'approved', working_days: 3, user_id: 'uid-1', customer_id: 'customer-1', title: 'Full exterior', quote_number: 'Q-006' })) };
         if (table === 'jobs') return { insert: insertMock };
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
         throw new Error(`Unexpected table ${table}`);
       }),
       rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
@@ -1101,6 +1569,7 @@ describe('bookJobFromPublicQuote', () => {
           };
         }
         if (table === 'jobs') return { insert: insertMock };
+        if (table === 'job_schedule_days') return createJobScheduleDaysTable();
         throw new Error(`Unexpected table ${table}`);
       }),
       rpc: vi.fn().mockResolvedValue({ data: false, error: null }),

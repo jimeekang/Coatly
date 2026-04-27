@@ -20,6 +20,7 @@ export default async function SchedulePage() {
   if (!user) return null;
 
   const now = new Date();
+  const today = now.toISOString().slice(0, 10);
   const dateFrom = new Date(now.getFullYear(), now.getMonth() - 3, 1)
     .toISOString()
     .slice(0, 10);
@@ -34,7 +35,6 @@ export default async function SchedulePage() {
     getJobs(),
     getScheduleEvents(dateFrom, dateTo),
   ]);
-
   const calendarJobs: CalendarJob[] = allJobs.map((job) => ({
     id: job.id,
     title: job.title,
@@ -42,6 +42,7 @@ export default async function SchedulePage() {
     status: job.status,
     startDate: job.start_date,
     endDate: job.end_date,
+    scheduleDates: job.schedule_dates,
     scheduledDate: job.scheduled_date,
     notes: job.notes,
     address: job.customer.address,
@@ -75,6 +76,7 @@ export default async function SchedulePage() {
         nativeEvents={nativeEvents}
         googleConnected={googleSchedule.connected}
         googleError={Boolean(googleSchedule.error)}
+        today={today}
       />
     </div>
   );

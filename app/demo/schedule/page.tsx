@@ -17,6 +17,7 @@ const DEMO_JOBS: CalendarJob[] = [
     status: 'scheduled',
     startDate: today,
     endDate: tomorrow,
+    scheduleDates: [today, tomorrow],
     scheduledDate: today,
     notes: 'Dulux White on White. Two coats required.',
     address: '12 Collins St, Melbourne VIC 3000',
@@ -29,6 +30,7 @@ const DEMO_JOBS: CalendarJob[] = [
     status: 'in_progress',
     startDate: yesterday,
     endDate: today,
+    scheduleDates: [yesterday, today],
     scheduledDate: yesterday,
     notes: null,
     address: '88 Burke Rd, Camberwell VIC 3124',
@@ -41,6 +43,7 @@ const DEMO_JOBS: CalendarJob[] = [
     status: 'completed',
     startDate: nextWeek,
     endDate: nextWeek,
+    scheduleDates: [nextWeek],
     scheduledDate: nextWeek,
     notes: null,
     address: '5 Park Lane, Richmond VIC 3121',
@@ -89,6 +92,7 @@ export default function DemoSchedulePage() {
         nativeEvents={[]}
         googleConnected
         googleError={false}
+        today={today}
       />
     </div>
   );

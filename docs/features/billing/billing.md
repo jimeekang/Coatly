@@ -1,21 +1,22 @@
-# Design Doc: Subscription & Billing
-
-> 사용자 관점 플랜 스펙 → [`product-specs/subscription-plans.md`](../product-specs/subscription-plans.md)
-
-## Overview
-
-Stripe를 통한 구독 관리. Checkout → Webhook → DB 동기화.
+# Feature: Subscription & Billing
 
 ## Plans
 
-| Plan | Monthly | Annual | 핵심 제한 |
-|------|---------|--------|-----------|
-| Starter | A$39/mo | A$450/yr | 월 10건 활성 견적, 1 user |
-| Pro | A$59/mo | A$680/yr | 무제한 견적, 3 users, AI, Xero |
+| | Starter | Pro |
+|---|---------|-----|
+| 가격 (월) | A$39 | A$59 |
+| 가격 (연) | A$450 (A$37.50/mo) | A$680 (A$56.67/mo) |
+| 활성 견적 | 월 10건 | 무제한 |
+| 사용자 | 1명 | 3명 |
+| AI 드래프트 | ❌ | ✅ |
+| Xero 연동 | ❌ | ✅ |
+| Job Costing | ❌ | ✅ |
+| 우선 지원 | ❌ | ✅ |
+| 브랜딩 (PDF) | 기본 | 커스텀 |
 
-정의: `config/plans.ts`
+정의 파일: `config/plans.ts` (단일 소스)
 
-## Feature Gating
+## Feature Gating Logic
 
 ```ts
 // lib/subscription/access.ts
@@ -23,6 +24,11 @@ const FEATURES = {
   starter: { activeQuoteLimit: 10, ai: false, xeroSync: false, jobCosting: false },
   pro:     { activeQuoteLimit: Infinity, ai: true, xeroSync: true, jobCosting: true },
 }
+
+canCreateQuote()   → activeQuoteCount < plan.activeQuoteLimit
+canUseAI()         → plan === 'pro'
+canSyncXero()      → plan === 'pro'
+canUseJobCosting() → plan === 'pro'
 ```
 
 - 견적 생성 시 `activeQuoteLimit` 확인
@@ -40,6 +46,14 @@ const FEATURES = {
 6. 사용자 → 대시보드로 리다이렉트 (구독 활성)
 ```
 
+## Upgrade Flow
+
+1. Starter 사용자가 한도 도달 또는 Pro 기능 접근
+2. `UpgradePrompt` 컴포넌트 표시
+3. "Upgrade to Pro" 클릭 → POST /api/stripe/checkout
+4. Stripe Checkout → 결제 → webhook → DB 업데이트
+5. 즉시 Pro 기능 활성화
+
 ## Webhook Events
 
 | Event | 처리 |
@@ -52,22 +66,21 @@ const FEATURES = {
 
 **멱등성**: stripe_subscription_id 기준 upsert → 중복 webhook 안전.
 
-## Cancellation Flow
+## Cancellation & Renewal
 
+**취소:**
 ```
-1. 사용자 → Settings > Billing > "Cancel" 클릭
+1. Settings > Billing > "Cancel" 클릭
 2. POST /api/stripe/portal → Stripe Customer Portal
-3. 사용자 → Portal에서 취소 확인
+3. Portal에서 취소 확인
 4. Stripe → webhook: subscription.updated (cancel_at_period_end = true)
-5. DB: cancel_at_period_end = true, cancel_at = period_end
-6. UI: "구독이 [날짜]에 종료됩니다" + "Renew" 버튼 표시
+5. UI: "구독이 [날짜]에 종료됩니다" + "Renew" 버튼 표시
 ```
 
-### 취소 철회
-
+**갱신:**
 ```
-1. 사용자 → "Renew" 클릭
-2. POST /api/stripe/renew → Stripe API에서 cancel_at_period_end = false
+1. "Renew" 클릭
+2. POST /api/stripe/renew → cancel_at_period_end = false
 3. Stripe → webhook: subscription.updated
 4. DB: cancel_at_period_end = false, cancel_at = null
 ```

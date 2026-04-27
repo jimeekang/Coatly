@@ -41,9 +41,7 @@
 | 제품 감각 + 페르소나 | [`docs/PRODUCT_SENSE.md`](./docs/PRODUCT_SENSE.md) |
 | 안정성 + 복구 전략 | [`docs/RELIABILITY.md`](./docs/RELIABILITY.md) |
 | 보안 + RLS 정책 | [`docs/SECURITY.md`](./docs/SECURITY.md) |
-| 기능별 설계 문서 | [`docs/design-docs/`](./docs/design-docs/index.md) |
-| 실행 계획 | [`docs/exec-plans/`](./docs/exec-plans/) |
-| 제품 스펙 (PRD) | [`docs/product-specs/`](./docs/product-specs/index.md) |
+| 기능별 설계 + 스펙 문서 | [`docs/features/`](./docs/features/index.md) |
 | DB 스키마 스냅샷 | [`docs/generated/db-schema.md`](./docs/generated/db-schema.md) |
 
 ## Notion

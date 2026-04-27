@@ -1,4 +1,4 @@
-# Design Doc: PDF Generation
+# Feature: PDF Generation
 
 ## Overview
 

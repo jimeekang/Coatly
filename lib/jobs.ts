@@ -53,6 +53,7 @@ export type JobListItem = {
   scheduled_date: string;
   start_date: string | null;
   end_date: string | null;
+  schedule_dates: string[];
   duration_days: number | null;
   notes: string | null;
   created_at: string;
