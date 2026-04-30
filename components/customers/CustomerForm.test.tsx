@@ -46,12 +46,29 @@ describe('CustomerForm', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Add Site' }));
-    await user.clear(screen.getAllByPlaceholderText('e.g. Home, Rental, Beach house')[1]);
-    await user.type(screen.getAllByPlaceholderText('e.g. Home, Rental, Beach house')[1], 'Rental');
-    await user.type(screen.getAllByPlaceholderText('e.g. 12 Harbor St')[1], '8 Beach Rd');
+    await user.clear(
+      screen.getAllByPlaceholderText('e.g. Home, Rental, Beach house')[1]
+    );
+    await user.type(
+      screen.getAllByPlaceholderText('e.g. Home, Rental, Beach house')[1],
+      'Rental'
+    );
+    await user.type(
+      screen.getAllByPlaceholderText('e.g. 12 Harbor St')[1],
+      '8 Beach Rd'
+    );
     await user.type(screen.getAllByPlaceholderText('e.g. Unit 3')[1], 'Unit 2');
-    await user.type(screen.getAllByPlaceholderText('e.g. Manly')[1], 'Freshwater');
-    await user.selectOptions(screen.getAllByRole('combobox')[1], 'NSW');
+    await user.type(
+      screen.getAllByPlaceholderText('e.g. Manly')[1],
+      'Freshwater'
+    );
+    const stateSelects = screen
+      .getAllByRole('combobox')
+      .filter(
+        (element): element is HTMLSelectElement =>
+          element instanceof HTMLSelectElement
+      );
+    await user.selectOptions(stateSelects[1], 'NSW');
     await user.type(screen.getAllByPlaceholderText('e.g. 2095')[1], '2096');
 
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));

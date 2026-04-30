@@ -7,6 +7,8 @@ import {
   type CustomerFormData,
   type CustomerProperty,
 } from '@/app/actions/customers';
+import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
+import type { ParsedGooglePlaceAddress } from '@/lib/google-places-address';
 
 const AU_STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
@@ -18,8 +20,12 @@ const FIELD_DISABLED_CLASS =
 
 const LABEL_CLASS = 'block text-sm font-medium text-pm-body mb-1';
 
-const REQUIRED = <span className="ml-0.5 text-pm-coral">*</span>;
-const OPTIONAL = <span className="ml-1.5 text-xs font-normal text-pm-secondary">(optional)</span>;
+const REQUIRED = <span className="text-pm-coral ml-0.5">*</span>;
+const OPTIONAL = (
+  <span className="text-pm-secondary ml-1.5 text-xs font-normal">
+    (optional)
+  </span>
+);
 
 function createEmptyProperty(index = 0): CustomerProperty {
   return {
@@ -146,7 +152,9 @@ export function CustomerForm({
   );
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) {
     const { name, value } = e.target;
     setForm((prev) => {
@@ -210,10 +218,17 @@ export function CustomerForm({
     });
   }
 
-  function updateProperty(index: number, field: keyof CustomerProperty, value: string) {
+  function updateProperty(
+    index: number,
+    field: keyof CustomerProperty,
+    value: string
+  ) {
     setForm((prev) => {
       const properties = [...prev.properties];
-      properties[index] = { ...(properties[index] ?? createEmptyProperty(index)), [field]: value };
+      properties[index] = {
+        ...(properties[index] ?? createEmptyProperty(index)),
+        [field]: value,
+      };
       return {
         ...prev,
         properties,
@@ -227,17 +242,64 @@ export function CustomerForm({
     setError(null);
   }
 
+  function updatePropertyAddress(
+    index: number,
+    address: ParsedGooglePlaceAddress
+  ) {
+    setForm((prev) => {
+      const properties = [...prev.properties];
+      const currentProperty = properties[index] ?? createEmptyProperty(index);
+      const nextProperty = {
+        ...currentProperty,
+        address_line1: address.addressLine1 || currentProperty.address_line1,
+        address_line2: address.addressLine2 || currentProperty.address_line2,
+        city: address.city || currentProperty.city,
+        state: address.state || currentProperty.state,
+        postcode: address.postcode || currentProperty.postcode,
+      };
+      properties[index] = nextProperty;
+
+      return {
+        ...prev,
+        properties,
+        address_line1: properties[0]?.address_line1 ?? '',
+        address_line2: properties[0]?.address_line2 ?? '',
+        city: properties[0]?.city ?? '',
+        state: properties[0]?.state ?? '',
+        postcode: properties[0]?.postcode ?? '',
+      };
+    });
+    setError(null);
+  }
+
+  function updateBillingAddress(address: ParsedGooglePlaceAddress) {
+    setForm((prev) => ({
+      ...prev,
+      billing_address_line1: address.addressLine1 || prev.billing_address_line1,
+      billing_address_line2: address.addressLine2 || prev.billing_address_line2,
+      billing_city: address.city || prev.billing_city,
+      billing_state: address.state || prev.billing_state,
+      billing_postcode: address.postcode || prev.billing_postcode,
+    }));
+    setError(null);
+  }
+
   function addProperty() {
     setForm((prev) => ({
       ...prev,
-      properties: [...prev.properties, createEmptyProperty(prev.properties.length)],
+      properties: [
+        ...prev.properties,
+        createEmptyProperty(prev.properties.length),
+      ],
     }));
   }
 
   function removeProperty(index: number) {
     setForm((prev) => {
       const properties = prev.properties.filter((_, i) => i !== index);
-      const nextProperties = properties.length ? properties : [createEmptyProperty()];
+      const nextProperties = properties.length
+        ? properties
+        : [createEmptyProperty()];
       return {
         ...prev,
         properties: nextProperties,
@@ -285,11 +347,10 @@ export function CustomerForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-28">
       {/* ── Contact Details ── */}
       <section>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary mb-3">
+        <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
           Contact Details
         </h3>
         <div className="flex flex-col gap-4">
-
           {/* Full Name */}
           <div>
             <label htmlFor="name" className={LABEL_CLASS}>
@@ -297,7 +358,11 @@ export function CustomerForm({
             </label>
             {useCompanyName ? (
               <div className={FIELD_DISABLED_CLASS}>
-                {form.company_name || <span className="text-pm-border">Auto-filled from company name</span>}
+                {form.company_name || (
+                  <span className="text-pm-border">
+                    Auto-filled from company name
+                  </span>
+                )}
               </div>
             ) : (
               <input
@@ -331,14 +396,14 @@ export function CustomerForm({
               className={FIELD_CLASS}
             />
             {/* 체크박스: company name을 대표 이름으로 저장 */}
-            <label className="mt-2 flex items-center gap-2.5 cursor-pointer select-none">
+            <label className="mt-2 flex cursor-pointer items-center gap-2.5 select-none">
               <input
                 type="checkbox"
                 checked={useCompanyName}
                 onChange={handleUseCompanyName}
-                className="w-5 h-5 rounded border-pm-border text-pm-teal focus:ring-pm-teal-mid cursor-pointer"
+                className="border-pm-border text-pm-teal focus:ring-pm-teal-mid h-5 w-5 cursor-pointer rounded"
               />
-              <span className="text-sm text-pm-secondary">
+              <span className="text-pm-secondary text-sm">
                 Save using company name as the display name
               </span>
             </label>
@@ -346,13 +411,11 @@ export function CustomerForm({
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
-              <label className={LABEL_CLASS}>
-                Emails{OPTIONAL}
-              </label>
+              <label className={LABEL_CLASS}>Emails{OPTIONAL}</label>
               <button
                 type="button"
                 onClick={addEmail}
-                className="min-h-11 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-body"
+                className="border-pm-border text-pm-body min-h-11 rounded-lg border bg-white px-3 text-sm font-medium"
               >
                 Add Email
               </button>
@@ -364,7 +427,9 @@ export function CustomerForm({
                     type="email"
                     autoComplete={index === 0 ? 'email' : 'off'}
                     inputMode="email"
-                    placeholder={index === 0 ? 'Primary email' : 'Additional email'}
+                    placeholder={
+                      index === 0 ? 'Primary email' : 'Additional email'
+                    }
                     value={email}
                     onChange={(event) => updateEmail(index, event.target.value)}
                     className={`${FIELD_CLASS} min-w-0 flex-1`}
@@ -373,7 +438,7 @@ export function CustomerForm({
                     <button
                       type="button"
                       onClick={() => removeEmail(index)}
-                      className="min-h-12 shrink-0 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-secondary"
+                      className="border-pm-border text-pm-secondary min-h-12 shrink-0 rounded-lg border bg-white px-3 text-sm font-medium"
                     >
                       Remove
                     </button>
@@ -385,13 +450,11 @@ export function CustomerForm({
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
-              <label className={LABEL_CLASS}>
-                Phone Numbers{OPTIONAL}
-              </label>
+              <label className={LABEL_CLASS}>Phone Numbers{OPTIONAL}</label>
               <button
                 type="button"
                 onClick={addPhone}
-                className="min-h-11 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-body"
+                className="border-pm-border text-pm-body min-h-11 rounded-lg border bg-white px-3 text-sm font-medium"
               >
                 Add Phone
               </button>
@@ -403,7 +466,9 @@ export function CustomerForm({
                     type="tel"
                     autoComplete={index === 0 ? 'tel' : 'off'}
                     inputMode="tel"
-                    placeholder={index === 0 ? 'Primary phone' : 'Additional phone'}
+                    placeholder={
+                      index === 0 ? 'Primary phone' : 'Additional phone'
+                    }
                     value={phone}
                     onChange={(event) => updatePhone(index, event.target.value)}
                     className={`${FIELD_CLASS} min-w-0 flex-1`}
@@ -412,7 +477,7 @@ export function CustomerForm({
                     <button
                       type="button"
                       onClick={() => removePhone(index)}
-                      className="min-h-12 shrink-0 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-secondary"
+                      className="border-pm-border text-pm-secondary min-h-12 shrink-0 rounded-lg border bg-white px-3 text-sm font-medium"
                     >
                       Remove
                     </button>
@@ -426,29 +491,32 @@ export function CustomerForm({
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+          <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
             Site Address
           </h3>
           <button
             type="button"
             onClick={addProperty}
-            className="min-h-11 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-body"
+            className="border-pm-border text-pm-body min-h-11 rounded-lg border bg-white px-3 text-sm font-medium"
           >
             Add Site
           </button>
         </div>
         <div className="flex flex-col gap-4">
           {form.properties.map((property, index) => (
-            <div key={index} className="rounded-xl border border-pm-border bg-white p-4">
+            <div
+              key={index}
+              className="border-pm-border rounded-xl border bg-white p-4"
+            >
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
                   {index === 0 ? 'Primary Site' : `Site ${index + 1}`}
                 </p>
                 {form.properties.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeProperty(index)}
-                    className="min-h-10 rounded-lg border border-pm-border bg-white px-3 text-sm font-medium text-pm-secondary"
+                    className="border-pm-border text-pm-secondary min-h-10 rounded-lg border bg-white px-3 text-sm font-medium"
                   >
                     Remove
                   </button>
@@ -456,23 +524,33 @@ export function CustomerForm({
               </div>
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className={LABEL_CLASS}>Property Label{OPTIONAL}</label>
+                  <label className={LABEL_CLASS}>
+                    Property Label{OPTIONAL}
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Home, Rental, Beach house"
                     value={property.label}
-                    onChange={(event) => updateProperty(index, 'label', event.target.value)}
+                    onChange={(event) =>
+                      updateProperty(index, 'label', event.target.value)
+                    }
                     className={FIELD_CLASS}
                   />
                 </div>
                 <div>
-                  <label className={LABEL_CLASS}>Street Address{OPTIONAL}</label>
-                  <input
-                    type="text"
+                  <label className={LABEL_CLASS}>
+                    Street Address{OPTIONAL}
+                  </label>
+                  <GoogleAddressAutocomplete
                     autoComplete={index === 0 ? 'address-line1' : 'off'}
                     placeholder="e.g. 12 Harbor St"
                     value={property.address_line1}
-                    onChange={(event) => updateProperty(index, 'address_line1', event.target.value)}
+                    onChange={(value) =>
+                      updateProperty(index, 'address_line1', value)
+                    }
+                    onAddressSelected={(address) =>
+                      updatePropertyAddress(index, address)
+                    }
                     className={FIELD_CLASS}
                   />
                 </div>
@@ -483,7 +561,9 @@ export function CustomerForm({
                     autoComplete={index === 0 ? 'address-line2' : 'off'}
                     placeholder="e.g. Unit 3"
                     value={property.address_line2}
-                    onChange={(event) => updateProperty(index, 'address_line2', event.target.value)}
+                    onChange={(event) =>
+                      updateProperty(index, 'address_line2', event.target.value)
+                    }
                     className={FIELD_CLASS}
                   />
                 </div>
@@ -494,7 +574,9 @@ export function CustomerForm({
                     autoComplete={index === 0 ? 'address-level2' : 'off'}
                     placeholder="e.g. Manly"
                     value={property.city}
-                    onChange={(event) => updateProperty(index, 'city', event.target.value)}
+                    onChange={(event) =>
+                      updateProperty(index, 'city', event.target.value)
+                    }
                     className={FIELD_CLASS}
                   />
                 </div>
@@ -503,7 +585,9 @@ export function CustomerForm({
                     <label className={LABEL_CLASS}>State{OPTIONAL}</label>
                     <select
                       value={property.state}
-                      onChange={(event) => updateProperty(index, 'state', event.target.value)}
+                      onChange={(event) =>
+                        updateProperty(index, 'state', event.target.value)
+                      }
                       className={FIELD_CLASS}
                     >
                       <option value="">Select</option>
@@ -523,18 +607,24 @@ export function CustomerForm({
                       maxLength={4}
                       placeholder="e.g. 2095"
                       value={property.postcode}
-                      onChange={(event) => updateProperty(index, 'postcode', event.target.value)}
+                      onChange={(event) =>
+                        updateProperty(index, 'postcode', event.target.value)
+                      }
                       className={FIELD_CLASS}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className={LABEL_CLASS}>Property Notes{OPTIONAL}</label>
+                  <label className={LABEL_CLASS}>
+                    Property Notes{OPTIONAL}
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. Gate code, parking notes"
                     value={property.notes}
-                    onChange={(event) => updateProperty(index, 'notes', event.target.value)}
+                    onChange={(event) =>
+                      updateProperty(index, 'notes', event.target.value)
+                    }
                     className={FIELD_CLASS}
                   />
                 </div>
@@ -546,34 +636,42 @@ export function CustomerForm({
 
       {/* ── Billing Address ── */}
       <section>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary mb-3">
+        <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
           Billing Address
         </h3>
-        <div className="rounded-xl border border-pm-border bg-white p-4">
-          <label className="flex items-center gap-3 cursor-pointer select-none">
+        <div className="border-pm-border rounded-xl border bg-white p-4">
+          <label className="flex cursor-pointer items-center gap-3 select-none">
             <input
               type="checkbox"
               checked={form.billing_same_as_site}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, billing_same_as_site: e.target.checked }))
+                setForm((prev) => ({
+                  ...prev,
+                  billing_same_as_site: e.target.checked,
+                }))
               }
-              className="w-5 h-5 rounded border-pm-border text-pm-teal focus:ring-pm-teal-mid cursor-pointer"
+              className="border-pm-border text-pm-teal focus:ring-pm-teal-mid h-5 w-5 cursor-pointer rounded"
             />
-            <span className="text-sm text-pm-body font-medium">Same as site address</span>
+            <span className="text-pm-body text-sm font-medium">
+              Same as site address
+            </span>
           </label>
 
           {!form.billing_same_as_site && (
             <div className="mt-4 flex flex-col gap-4">
               <div>
                 <label className={LABEL_CLASS}>Street Address{OPTIONAL}</label>
-                <input
-                  type="text"
+                <GoogleAddressAutocomplete
                   autoComplete="billing address-line1"
                   placeholder="e.g. 12 Harbor St"
                   value={form.billing_address_line1}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, billing_address_line1: e.target.value }))
+                  onChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      billing_address_line1: value,
+                    }))
                   }
+                  onAddressSelected={updateBillingAddress}
                   className={FIELD_CLASS}
                 />
               </div>
@@ -585,7 +683,10 @@ export function CustomerForm({
                   placeholder="e.g. Suite 1"
                   value={form.billing_address_line2}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, billing_address_line2: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      billing_address_line2: e.target.value,
+                    }))
                   }
                   className={FIELD_CLASS}
                 />
@@ -598,7 +699,10 @@ export function CustomerForm({
                   placeholder="e.g. Manly"
                   value={form.billing_city}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, billing_city: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      billing_city: e.target.value,
+                    }))
                   }
                   className={FIELD_CLASS}
                 />
@@ -609,7 +713,10 @@ export function CustomerForm({
                   <select
                     value={form.billing_state}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, billing_state: e.target.value }))
+                      setForm((prev) => ({
+                        ...prev,
+                        billing_state: e.target.value,
+                      }))
                     }
                     className={FIELD_CLASS}
                   >
@@ -631,7 +738,10 @@ export function CustomerForm({
                     placeholder="e.g. 2095"
                     value={form.billing_postcode}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, billing_postcode: e.target.value }))
+                      setForm((prev) => ({
+                        ...prev,
+                        billing_postcode: e.target.value,
+                      }))
                     }
                     className={FIELD_CLASS}
                   />
@@ -644,13 +754,13 @@ export function CustomerForm({
 
       {/* ── Notes ── */}
       <section>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary mb-3">
+        <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
           Notes
         </h3>
         <div>
           <label htmlFor="notes" className={LABEL_CLASS}>
             Internal Notes
-            <span className="ml-1.5 text-xs font-normal text-pm-secondary">
+            <span className="text-pm-secondary ml-1.5 text-xs font-normal">
               (not shown to client)
             </span>
           </label>
@@ -661,21 +771,21 @@ export function CustomerForm({
             placeholder="e.g. Prefers work before 9am, park in rear"
             value={form.notes}
             onChange={handleChange}
-            className="w-full rounded-lg border border-pm-border bg-white px-4 py-3 text-base text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 resize-none"
+            className="border-pm-border text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-full resize-none rounded-lg border bg-white px-4 py-3 text-base focus:ring-2 focus:outline-none"
           />
         </div>
       </section>
 
       {/* ── 에러 메시지 ── */}
       {error && (
-        <div className="rounded-lg bg-pm-coral-light border border-pm-coral px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{error}</p>
+        <div className="bg-pm-coral-light border-pm-coral rounded-lg border px-4 py-3">
+          <p className="text-pm-coral-dark text-sm">{error}</p>
         </div>
       )}
 
       {/* ── CTA — 하단 고정 ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-pm-border px-4 py-4">
-        <div className="max-w-lg mx-auto flex gap-3">
+      <div className="border-pm-border fixed right-0 bottom-0 left-0 z-10 border-t bg-white px-4 py-4">
+        <div className="mx-auto flex max-w-lg gap-3">
           <button
             type="button"
             onClick={() => {
@@ -686,14 +796,14 @@ export function CustomerForm({
               router.back();
             }}
             disabled={loading}
-            className="flex-1 h-14 rounded-xl border border-pm-border bg-white text-base font-medium text-pm-body active:bg-pm-surface disabled:opacity-50 transition-colors"
+            className="border-pm-border text-pm-body active:bg-pm-surface h-14 flex-1 rounded-xl border bg-white text-base font-medium transition-colors disabled:opacity-50"
           >
             {cancelLabel}
           </button>
           <button
             type="submit"
             disabled={loading || !canSubmit}
-            className="flex-2 h-14 rounded-xl bg-pm-teal text-base font-semibold text-white active:bg-pm-teal-hover disabled:opacity-50 transition-colors"
+            className="bg-pm-teal active:bg-pm-teal-hover h-14 flex-[2] rounded-xl text-base font-semibold text-white transition-colors disabled:opacity-50"
           >
             {loading ? 'Saving…' : submitLabel}
           </button>

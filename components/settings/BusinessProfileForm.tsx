@@ -3,15 +3,32 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState, useTransition } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { CheckCircle2, ImagePlus, Loader2, Upload } from 'lucide-react';
 import { saveBusinessProfile } from '@/app/actions/business';
+import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
 import { normalizeAbn } from '@/lib/abn-lookup';
 import { useAbnLookup } from '@/hooks/useAbnLookup';
 import type { BusinessFormValues } from '@/lib/businesses';
-import { businessUpdateSchema, type BusinessUpdateInput } from '@/lib/supabase/validators';
+import {
+  formatStreetAddressWithUnit,
+  type ParsedGooglePlaceAddress,
+} from '@/lib/google-places-address';
+import {
+  businessUpdateSchema,
+  type BusinessUpdateInput,
+} from '@/lib/supabase/validators';
 
-const AU_STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'] as const;
+const AU_STATES = [
+  'ACT',
+  'NSW',
+  'NT',
+  'QLD',
+  'SA',
+  'TAS',
+  'VIC',
+  'WA',
+] as const;
 
 const inputBase =
   'w-full rounded-xl border border-pm-border bg-white px-4 text-sm text-pm-body transition-colors focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 disabled:opacity-50';
@@ -33,7 +50,9 @@ export default function BusinessProfileForm({
   const [isPending, startTransition] = useTransition();
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState(defaultValues.logoPreviewUrl);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState(
+    defaultValues.logoPreviewUrl
+  );
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const {
@@ -146,6 +165,35 @@ export default function BusinessProfileForm({
     }
   }
 
+  function applyGoogleAddress(address: ParsedGooglePlaceAddress) {
+    const streetAddress = formatStreetAddressWithUnit(address);
+
+    if (streetAddress) {
+      setValue('addressLine1', streetAddress, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (address.city) {
+      setValue('city', address.city, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (address.state) {
+      setValue('state', address.state, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (address.postcode) {
+      setValue('postcode', address.postcode, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }
+
   function onSubmit(data: FormInput) {
     setSuccessMessage(null);
     clearErrors('root');
@@ -158,7 +206,9 @@ export default function BusinessProfileForm({
         return;
       }
 
-      setSuccessMessage(result.success ?? 'Business details saved successfully.');
+      setSuccessMessage(
+        result.success ?? 'Business details saved successfully.'
+      );
     });
   }
 
@@ -171,11 +221,11 @@ export default function BusinessProfileForm({
   }
 
   return (
-    <div className="rounded-3xl border border-pm-border bg-white p-5 md:p-6">
+    <div className="border-pm-border rounded-3xl border bg-white p-5 md:p-6">
       {errors.root?.message && (
         <div
           role="alert"
-          className="mb-5 rounded-xl border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark"
+          className="border-pm-coral bg-pm-coral-light text-pm-coral-dark mb-5 rounded-xl border px-4 py-3 text-sm"
         >
           {errors.root.message}
         </div>
@@ -184,14 +234,21 @@ export default function BusinessProfileForm({
       {successMessage && (
         <div
           role="status"
-          className="mb-5 flex items-start gap-2 rounded-xl border border-pm-teal-pale bg-pm-teal-light px-4 py-3 text-sm text-pm-teal-hover"
+          className="border-pm-teal-pale bg-pm-teal-light text-pm-teal-hover mb-5 flex items-start gap-2 rounded-xl border px-4 py-3 text-sm"
         >
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <CheckCircle2
+            className="mt-0.5 h-4 w-4 shrink-0"
+            aria-hidden="true"
+          />
           <span>{successMessage}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit, onInvalidSubmit)} noValidate className="space-y-5">
+      <form
+        onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}
+        noValidate
+        className="space-y-5"
+      >
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <label htmlFor="name" className={labelClass}>
@@ -245,18 +302,33 @@ export default function BusinessProfileForm({
         </div>
 
         <fieldset>
-          <legend className="mb-3 text-sm font-medium text-pm-body">Business Address</legend>
+          <legend className="text-pm-body mb-3 text-sm font-medium">
+            Business Address
+          </legend>
 
           <div className="space-y-3">
             <div>
-              <input
-                id="addressLine1"
-                type="text"
-                autoComplete="street-address"
-                placeholder="Street address"
-                disabled={isPending}
-                className={inputClass(!!errors.addressLine1)}
-                {...register('addressLine1')}
+              <Controller
+                control={control}
+                name="addressLine1"
+                render={({ field }) => (
+                  <GoogleAddressAutocomplete
+                    id="addressLine1"
+                    name={field.name}
+                    autoComplete="street-address"
+                    placeholder="Street address"
+                    disabled={isPending}
+                    value={field.value ?? ''}
+                    onChange={(value) => {
+                      field.onChange(value);
+                      clearErrors('addressLine1');
+                    }}
+                    onBlur={field.onBlur}
+                    onAddressSelected={applyGoogleAddress}
+                    aria-invalid={!!errors.addressLine1}
+                    className={inputClass(!!errors.addressLine1)}
+                  />
+                )}
               />
               {errors.addressLine1 && (
                 <p className={errorClass}>{errors.addressLine1.message}</p>
@@ -274,7 +346,9 @@ export default function BusinessProfileForm({
                   className={inputClass(!!errors.city)}
                   {...register('city')}
                 />
-                {errors.city && <p className={errorClass}>{errors.city.message}</p>}
+                {errors.city && (
+                  <p className={errorClass}>{errors.city.message}</p>
+                )}
               </div>
 
               <div>
@@ -289,7 +363,9 @@ export default function BusinessProfileForm({
                   className={inputClass(!!errors.postcode)}
                   {...register('postcode')}
                 />
-                {errors.postcode && <p className={errorClass}>{errors.postcode.message}</p>}
+                {errors.postcode && (
+                  <p className={errorClass}>{errors.postcode.message}</p>
+                )}
               </div>
             </div>
 
@@ -307,7 +383,9 @@ export default function BusinessProfileForm({
                   </option>
                 ))}
               </select>
-              {errors.state && <p className={errorClass}>{errors.state.message}</p>}
+              {errors.state && (
+                <p className={errorClass}>{errors.state.message}</p>
+              )}
             </div>
           </div>
         </fieldset>
@@ -326,7 +404,9 @@ export default function BusinessProfileForm({
               className={inputClass(!!errors.phone)}
               {...register('phone')}
             />
-            {errors.phone && <p className={errorClass}>{errors.phone.message}</p>}
+            {errors.phone && (
+              <p className={errorClass}>{errors.phone.message}</p>
+            )}
           </div>
 
           <div>
@@ -341,7 +421,9 @@ export default function BusinessProfileForm({
               className={inputClass(!!errors.email)}
               {...register('email')}
             />
-            {errors.email && <p className={errorClass}>{errors.email.message}</p>}
+            {errors.email && (
+              <p className={errorClass}>{errors.email.message}</p>
+            )}
           </div>
         </div>
 
@@ -355,7 +437,10 @@ export default function BusinessProfileForm({
               rows={5}
               disabled={isPending}
               placeholder="Example: Payment due within 7 days from invoice date."
-              className={inputClass(!!errors.paymentTerms, 'min-h-[132px] py-3')}
+              className={inputClass(
+                !!errors.paymentTerms,
+                'min-h-[132px] py-3'
+              )}
               {...register('paymentTerms')}
             />
             {errors.paymentTerms && (
@@ -371,34 +456,40 @@ export default function BusinessProfileForm({
               id="bankDetails"
               rows={5}
               disabled={isPending}
-              placeholder={'Example: Account Name: Coatly Pty Ltd\nBSB: 123-456\nAccount Number: 12345678'}
+              placeholder={
+                'Example: Account Name: Coatly Pty Ltd\nBSB: 123-456\nAccount Number: 12345678'
+              }
               className={inputClass(!!errors.bankDetails, 'min-h-[132px] py-3')}
               {...register('bankDetails')}
             />
             {errors.bankDetails && (
               <p className={errorClass}>{errors.bankDetails.message}</p>
             )}
-            <p className="mt-1.5 text-xs text-pm-secondary">
-              These defaults are copied into new invoices and can still be edited per invoice.
+            <p className="text-pm-secondary mt-1.5 text-xs">
+              These defaults are copied into new invoices and can still be
+              edited per invoice.
             </p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-dashed border-pm-border bg-pm-surface/60 p-4">
+        <div className="border-pm-border bg-pm-surface/60 rounded-2xl border border-dashed p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <label htmlFor="logo-upload" className={labelClass}>
                 Business Logo
               </label>
-              <p className="text-sm text-pm-secondary">
-                Upload a PNG or JPG logo. This will appear on your quote and invoice PDFs.
+              <p className="text-pm-secondary text-sm">
+                Upload a PNG or JPG logo. This will appear on your quote and
+                invoice PDFs.
               </p>
             </div>
 
             <label
               htmlFor="logo-upload"
-              className={`inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-pm-border bg-white px-4 py-2.5 text-sm font-semibold text-pm-body transition-colors hover:bg-pm-surface ${
-                isPending || isUploadingLogo ? 'pointer-events-none opacity-60' : ''
+              className={`border-pm-border text-pm-body hover:bg-pm-surface inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold transition-colors ${
+                isPending || isUploadingLogo
+                  ? 'pointer-events-none opacity-60'
+                  : ''
               }`}
             >
               {isUploadingLogo ? (
@@ -422,7 +513,7 @@ export default function BusinessProfileForm({
           <input type="hidden" {...register('logo_url')} />
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-pm-border bg-white">
+            <div className="border-pm-border flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border bg-white">
               {logoPreviewUrl ? (
                 <img
                   src={logoPreviewUrl}
@@ -430,15 +521,18 @@ export default function BusinessProfileForm({
                   className="h-full w-full object-contain"
                 />
               ) : (
-                <ImagePlus className="h-8 w-8 text-pm-secondary" aria-hidden="true" />
+                <ImagePlus
+                  className="text-pm-secondary h-8 w-8"
+                  aria-hidden="true"
+                />
               )}
             </div>
 
             <div className="space-y-1">
-              <p className="text-sm font-medium text-pm-body">
+              <p className="text-pm-body text-sm font-medium">
                 {logoValue ? 'Logo ready to save' : 'No logo uploaded yet'}
               </p>
-              <p className="text-xs text-pm-secondary">
+              <p className="text-pm-secondary text-xs">
                 {logoValue
                   ? 'Save business details to apply this logo across your documents.'
                   : 'Best results come from a square or wide image with a transparent background.'}
@@ -454,7 +548,7 @@ export default function BusinessProfileForm({
                       shouldValidate: true,
                     });
                   }}
-                  className="text-xs font-semibold text-pm-teal transition-colors hover:text-pm-teal-hover"
+                  className="text-pm-teal hover:text-pm-teal-hover text-xs font-semibold transition-colors"
                 >
                   Remove logo
                 </button>
@@ -463,16 +557,20 @@ export default function BusinessProfileForm({
           </div>
 
           {(errors.logo_url?.message || logoUploadError) && (
-            <p className={errorClass}>{errors.logo_url?.message ?? logoUploadError}</p>
+            <p className={errorClass}>
+              {errors.logo_url?.message ?? logoUploadError}
+            </p>
           )}
         </div>
 
         <button
           type="submit"
           disabled={isPending || isUploadingLogo}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
+          className="bg-pm-teal hover:bg-pm-teal-hover focus:ring-pm-teal-mid flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
         >
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {isPending && (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          )}
           Save Business Details
         </button>
       </form>

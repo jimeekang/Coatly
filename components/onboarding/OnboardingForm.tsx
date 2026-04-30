@@ -6,10 +6,24 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Sparkles } from 'lucide-react';
 import { completeOnboarding } from '@/app/actions/profile';
+import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
 import { normalizeAbn } from '@/lib/abn-lookup';
 import { useAbnLookup } from '@/hooks/useAbnLookup';
+import {
+  formatStreetAddressWithUnit,
+  type ParsedGooglePlaceAddress,
+} from '@/lib/google-places-address';
 
-const AU_STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'] as const;
+const AU_STATES = [
+  'ACT',
+  'NSW',
+  'NT',
+  'QLD',
+  'SA',
+  'TAS',
+  'VIC',
+  'WA',
+] as const;
 
 const schema = z.object({
   businessName: z.string().min(1, 'Business name is required'),
@@ -72,6 +86,7 @@ export default function OnboardingForm({ defaultValues }: Props) {
     },
   });
   const abnValue = useWatch({ control, name: 'abn' }) ?? '';
+  const addressLine1Value = useWatch({ control, name: 'addressLine1' }) ?? '';
   const abnLookup = useAbnLookup(abnValue);
 
   useEffect(() => {
@@ -132,12 +147,41 @@ export default function OnboardingForm({ defaultValues }: Props) {
     });
   }
 
+  function applyGoogleAddress(address: ParsedGooglePlaceAddress) {
+    const streetAddress = formatStreetAddressWithUnit(address);
+
+    if (streetAddress) {
+      setValue('addressLine1', streetAddress, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (address.city) {
+      setValue('city', address.city, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (address.state) {
+      setValue('state', address.state, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (address.postcode) {
+      setValue('postcode', address.postcode, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }
+
   return (
-    <div className="rounded-2xl border border-pm-border bg-white p-6 shadow-sm">
+    <div className="border-pm-border rounded-2xl border bg-white p-6 shadow-sm">
       {errors.root && (
         <div
           role="alert"
-          className="mb-5 rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark"
+          className="border-pm-coral bg-pm-coral-light text-pm-coral-dark mb-5 rounded-lg border px-4 py-3 text-sm"
         >
           {errors.root.message}
         </div>
@@ -158,7 +202,9 @@ export default function OnboardingForm({ defaultValues }: Props) {
             className={inputClass(!!errors.abn)}
             {...register('abn')}
           />
-          {errors.abn && <p className={errorClass}>{errors.abn.message as string}</p>}
+          {errors.abn && (
+            <p className={errorClass}>{errors.abn.message as string}</p>
+          )}
           <p
             className={`mt-1.5 text-xs ${
               abnLookup.status === 'error'
@@ -217,20 +263,27 @@ export default function OnboardingForm({ defaultValues }: Props) {
         </div>
 
         <fieldset>
-          <legend className="mb-3 text-sm font-medium text-pm-body">
+          <legend className="text-pm-body mb-3 text-sm font-medium">
             Business Address <span className="text-red-500">*</span>
           </legend>
 
           <div className="space-y-3">
             <div>
-              <input
+              <GoogleAddressAutocomplete
                 id="addressLine1"
-                type="text"
                 autoComplete="street-address"
                 placeholder="Street address"
                 disabled={isPending}
+                value={addressLine1Value}
+                onChange={(value) =>
+                  setValue('addressLine1', value, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+                onAddressSelected={applyGoogleAddress}
+                aria-invalid={!!errors.addressLine1}
                 className={inputClass(!!errors.addressLine1)}
-                {...register('addressLine1')}
               />
               {errors.addressLine1 && (
                 <p className={errorClass}>{errors.addressLine1.message}</p>
@@ -248,7 +301,9 @@ export default function OnboardingForm({ defaultValues }: Props) {
                   className={inputClass(!!errors.city)}
                   {...register('city')}
                 />
-                {errors.city && <p className={errorClass}>{errors.city.message}</p>}
+                {errors.city && (
+                  <p className={errorClass}>{errors.city.message}</p>
+                )}
               </div>
 
               <div>
@@ -264,7 +319,9 @@ export default function OnboardingForm({ defaultValues }: Props) {
                   {...register('postcode')}
                 />
                 {errors.postcode && (
-                  <p className={errorClass}>{errors.postcode.message as string}</p>
+                  <p className={errorClass}>
+                    {errors.postcode.message as string}
+                  </p>
                 )}
               </div>
             </div>
@@ -283,29 +340,31 @@ export default function OnboardingForm({ defaultValues }: Props) {
                   </option>
                 ))}
               </select>
-              {errors.state && <p className={errorClass}>{errors.state.message}</p>}
+              {errors.state && (
+                <p className={errorClass}>{errors.state.message}</p>
+              )}
             </div>
           </div>
         </fieldset>
 
-        <div className="rounded-xl border border-pm-teal-light bg-pm-teal-light/70 p-4">
+        <div className="border-pm-teal-light bg-pm-teal-light/70 rounded-xl border p-4">
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
               disabled={isPending}
-              className="mt-1 h-5 w-5 rounded border-pm-teal-pale text-pm-teal focus:ring-2 focus:ring-pm-teal-mid"
+              className="border-pm-teal-pale text-pm-teal focus:ring-pm-teal-mid mt-1 h-5 w-5 rounded focus:ring-2"
               {...register('createExampleData')}
             />
             <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-pm-teal">
+              <div className="text-pm-teal flex items-center gap-2 text-sm font-semibold">
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
                 Add sample data
               </div>
-              <p className="mt-1 text-sm text-pm-teal-hover">
+              <p className="text-pm-teal-hover mt-1 text-sm">
                 Optional. Add one sample customer, quote, and invoice so you can
                 explore the app straight away.
               </p>
-              <p className="mt-1 text-xs text-pm-teal-mid">
+              <p className="text-pm-teal-mid mt-1 text-xs">
                 This only runs when your workspace is empty.
               </p>
             </div>
@@ -315,9 +374,11 @@ export default function OnboardingForm({ defaultValues }: Props) {
         <button
           type="submit"
           disabled={isPending}
-          className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-pm-teal text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-pm-teal hover:bg-pm-teal-hover focus:ring-pm-teal-mid mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {isPending && (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          )}
           Save &amp; continue
         </button>
       </form>
