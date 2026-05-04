@@ -1,7 +1,18 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { CalendarDays, Check, FilePenLine, Home, Pencil, PencilRuler, Plus, Save, Settings2, Trash2 } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  FilePenLine,
+  Home,
+  Pencil,
+  PencilRuler,
+  Plus,
+  Save,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
 import {
   NumericInput,
   sanitizeDecimalInput,
@@ -61,7 +72,9 @@ function displayToCents(value: string): number | null {
   return Math.round(parsed * 100);
 }
 
-function normalizeStoredPreferredPricingMethod(method: PricingMethod): PricingMethod {
+function normalizeStoredPreferredPricingMethod(
+  method: PricingMethod
+): PricingMethod {
   return method === 'sqm_rate' ? 'hybrid' : method;
 }
 
@@ -87,14 +100,14 @@ function PriceInput({
 }) {
   return (
     <div className="relative inline-flex items-center">
-      <span className="absolute left-3 text-sm text-pm-secondary">$</span>
+      <span className="text-pm-secondary absolute left-3 text-sm">$</span>
       <NumericInput
         value={centsToDisplay(value)}
         sanitize={sanitizeDecimalInput}
         onValueChange={onChange}
-        className={`${width} h-11 rounded-lg border border-pm-border bg-white py-2 pl-6 pr-2 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30`}
+        className={`${width} border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-11 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none`}
       />
-      <span className="ml-1.5 text-xs text-pm-secondary">{unit}</span>
+      <span className="text-pm-secondary ml-1.5 text-xs">{unit}</span>
     </div>
   );
 }
@@ -111,25 +124,35 @@ function OfferCheckbox({
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="h-4 w-4 rounded border-pm-border accent-pm-teal"
+      className="border-pm-border accent-pm-teal h-4 w-4 rounded"
     />
   );
 }
 
-function SectionHeading({ title, subtitle }: { title: string; subtitle?: string }) {
+function SectionHeading({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <div className="mb-4 flex flex-col gap-1">
-      <h3 className="text-base font-semibold text-pm-body">{title}</h3>
-      {subtitle && <p className="mt-0.5 text-sm text-pm-secondary">{subtitle}</p>}
+      <h3 className="text-pm-body text-base font-semibold">{title}</h3>
+      {subtitle && (
+        <p className="text-pm-secondary mt-0.5 text-sm">{subtitle}</p>
+      )}
     </div>
   );
 }
 
 function RateValueDisplay({ value, unit }: { value: number; unit: string }) {
   return (
-    <div className="inline-flex min-h-11 items-center justify-center rounded-lg border border-pm-border bg-pm-surface/55 px-3 text-sm font-semibold text-pm-body">
+    <div className="border-pm-border bg-pm-surface/55 text-pm-body inline-flex min-h-11 items-center justify-center rounded-lg border px-3 text-sm font-semibold">
       ${(value / 100).toFixed(2)}
-      <span className="ml-1.5 text-xs font-medium text-pm-secondary">{unit}</span>
+      <span className="text-pm-secondary ml-1.5 text-xs font-medium">
+        {unit}
+      </span>
     </div>
   );
 }
@@ -150,16 +173,20 @@ function RateRowActions({
       <button
         type="button"
         onClick={onEditToggle}
-        className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-pm-border bg-white px-3 text-xs font-medium text-pm-body hover:border-pm-teal-mid hover:text-pm-teal"
+        className="border-pm-border text-pm-body hover:border-pm-teal-mid hover:text-pm-teal inline-flex h-10 items-center gap-1.5 rounded-xl border bg-white px-3 text-xs font-medium"
       >
-        {isEditing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+        {isEditing ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : (
+          <Pencil className="h-3.5 w-3.5" />
+        )}
         {isEditing ? 'Done' : 'Edit'}
       </button>
       <button
         type="button"
         aria-label={deleteLabel}
         onClick={onDelete}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-pm-coral/30 bg-white text-pm-coral hover:bg-pm-coral-light"
+        className="border-pm-coral/30 text-pm-coral hover:bg-pm-coral-light inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-white"
       >
         <Trash2 className="h-4 w-4" />
       </button>
@@ -178,7 +205,7 @@ function AddRateItemButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-pm-teal/50 bg-white px-4 text-sm font-medium text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10"
+      className="border-pm-teal/50 text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed bg-white px-4 text-sm font-medium"
     >
       <Plus className="h-4 w-4" />
       {label}
@@ -188,7 +215,7 @@ function AddRateItemButton({
 
 function RateSectionStatus({ label }: { label: string }) {
   return (
-    <div className="inline-flex h-11 items-center justify-center rounded-xl border border-pm-border bg-pm-surface px-4 text-sm font-medium text-pm-secondary">
+    <div className="border-pm-border bg-pm-surface text-pm-secondary inline-flex h-11 items-center justify-center rounded-xl border px-4 text-sm font-medium">
       {label}
     </div>
   );
@@ -204,14 +231,22 @@ function WallCeilingRatesSection({
   onSurfaceToggle,
 }: {
   rates: UserRateSettings;
-  onSurfaceChange: (surface: keyof UserRateSettings, coating: string, v: string) => void;
+  onSurfaceChange: (
+    surface: keyof UserRateSettings,
+    coating: string,
+    v: string
+  ) => void;
   isEditing: (surface: SqmSurfaceType) => boolean;
   onEditToggle: (surface: SqmSurfaceType) => void;
   onSurfaceToggle: (surface: SqmSurfaceType, enabled: boolean) => void;
 }) {
   const surfaceOptions = ['walls', 'ceiling'] as const;
-  const activeSurfaces = surfaceOptions.filter((surface) => rates.enabled_surface_types.includes(surface));
-  const hiddenSurface = surfaceOptions.find((surface) => !rates.enabled_surface_types.includes(surface));
+  const activeSurfaces = surfaceOptions.filter((surface) =>
+    rates.enabled_surface_types.includes(surface)
+  );
+  const hiddenSurface = surfaceOptions.find(
+    (surface) => !rates.enabled_surface_types.includes(surface)
+  );
 
   return (
     <section>
@@ -229,27 +264,33 @@ function WallCeilingRatesSection({
           <RateSectionStatus label="All surfaces active" />
         )}
       </div>
-      <div className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
+      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
         <table className="w-full min-w-[520px] text-sm">
           <thead>
-            <tr className="border-b border-pm-border bg-pm-surface">
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+            <tr className="border-pm-border bg-pm-surface border-b">
+              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
                 Surface
               </th>
               {WALL_CEILING_COATING_TYPES.map((c) => (
-                <th key={c} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                <th
+                  key={c}
+                  className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase"
+                >
                   {COATING_LABELS[c]}
                 </th>
               ))}
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             {activeSurfaces.map((surface, i) => (
-              <tr key={surface} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
-                <td className="px-4 py-3 font-medium text-pm-body">
+              <tr
+                key={surface}
+                className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+              >
+                <td className="text-pm-body px-4 py-3 font-medium">
                   {SQM_SURFACE_TYPE_LABELS[surface]}
                 </td>
                 {WALL_CEILING_COATING_TYPES.map((coating) => (
@@ -261,7 +302,10 @@ function WallCeilingRatesSection({
                         onChange={(v) => onSurfaceChange(surface, coating, v)}
                       />
                     ) : (
-                      <RateValueDisplay value={rates[surface][coating]} unit="/sqm" />
+                      <RateValueDisplay
+                        value={rates[surface][coating]}
+                        unit="/sqm"
+                      />
                     )}
                   </td>
                 ))}
@@ -277,8 +321,12 @@ function WallCeilingRatesSection({
             ))}
             {activeSurfaces.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-pm-secondary">
-                  No wall or ceiling rates are active. Use Add Surface to restore one.
+                <td
+                  colSpan={5}
+                  className="text-pm-secondary px-4 py-8 text-center text-sm"
+                >
+                  No wall or ceiling rates are active. Use Add Surface to
+                  restore one.
                 </td>
               </tr>
             )}
@@ -297,7 +345,11 @@ function TrimRatesSection({
   onSurfaceToggle,
 }: {
   rates: UserRateSettings;
-  onSurfaceChange: (surface: keyof UserRateSettings, coating: string, v: string) => void;
+  onSurfaceChange: (
+    surface: keyof UserRateSettings,
+    coating: string,
+    v: string
+  ) => void;
   isEditing: (surface: SqmSurfaceType) => boolean;
   onEditToggle: (surface: SqmSurfaceType) => void;
   onSurfaceToggle: (surface: SqmSurfaceType, enabled: boolean) => void;
@@ -320,19 +372,22 @@ function TrimRatesSection({
           />
         )}
       </div>
-      <div className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
+      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
         <table className="w-full min-w-[420px] text-sm">
           <thead>
-            <tr className="border-b border-pm-border bg-pm-surface">
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+            <tr className="border-pm-border bg-pm-surface border-b">
+              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
                 Surface
               </th>
               {TRIM_COATING_TYPES.map((coating) => (
-                <th key={coating} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                <th
+                  key={coating}
+                  className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase"
+                >
                   {COATING_LABELS[coating]}
                 </th>
               ))}
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
                 Actions
               </th>
             </tr>
@@ -340,7 +395,7 @@ function TrimRatesSection({
           <tbody>
             {isTrimActive ? (
               <tr className="bg-white">
-                <td className="px-4 py-3 font-medium text-pm-body">
+                <td className="text-pm-body px-4 py-3 font-medium">
                   {SQM_SURFACE_TYPE_LABELS.trim}
                 </td>
                 {TRIM_COATING_TYPES.map((coating) => (
@@ -352,7 +407,10 @@ function TrimRatesSection({
                         onChange={(v) => onSurfaceChange('trim', coating, v)}
                       />
                     ) : (
-                      <RateValueDisplay value={rates.trim[coating]} unit="/sqm" />
+                      <RateValueDisplay
+                        value={rates.trim[coating]}
+                        unit="/sqm"
+                      />
                     )}
                   </td>
                 ))}
@@ -367,7 +425,10 @@ function TrimRatesSection({
               </tr>
             ) : (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-sm text-pm-secondary">
+                <td
+                  colSpan={4}
+                  className="text-pm-secondary px-4 py-8 text-center text-sm"
+                >
                   Skirting rates are hidden. Use Add Skirting to restore them.
                 </td>
               </tr>
@@ -390,13 +451,20 @@ function DoorRatesSection({
   onDoorTypeEditToggle,
 }: {
   rates: UserRateSettings;
-  onDoorRateChange: (ps: TrimPaintSystem, dt: RateDoorType, scope: DoorScope, v: string) => void;
+  onDoorRateChange: (
+    ps: TrimPaintSystem,
+    dt: RateDoorType,
+    scope: DoorScope,
+    v: string
+  ) => void;
   onDoorTypeToggle: (dt: RateDoorType, enabled: boolean) => void;
   onDoorScopeToggle: (scope: DoorScope, enabled: boolean) => void;
   isDoorTypeEditing: (doorType: RateDoorType) => boolean;
   onDoorTypeEditToggle: (doorType: RateDoorType) => void;
 }) {
-  const hiddenDoorType = RATE_DOOR_TYPES.find((doorType) => !rates.enabled_door_types.includes(doorType));
+  const hiddenDoorType = RATE_DOOR_TYPES.find(
+    (doorType) => !rates.enabled_door_types.includes(doorType)
+  );
 
   return (
     <section>
@@ -416,34 +484,48 @@ function DoorRatesSection({
       </div>
 
       {/* Door scope availability */}
-      <div className="mb-4 overflow-x-auto rounded-2xl border border-pm-border bg-white">
-        <div className="border-b border-pm-border bg-pm-surface px-4 py-2.5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+      <div className="border-pm-border mb-4 overflow-x-auto rounded-2xl border bg-white">
+        <div className="border-pm-border bg-pm-surface border-b px-4 py-2.5">
+          <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
             Available Scopes (applies to all door types)
           </p>
         </div>
         <table className="w-full min-w-[480px] text-sm">
           <thead>
-            <tr className="border-b border-pm-border bg-pm-surface/50">
-              <th className="px-4 py-2 text-left text-xs font-medium text-pm-secondary">Scope</th>
+            <tr className="border-pm-border bg-pm-surface/50 border-b">
+              <th className="text-pm-secondary px-4 py-2 text-left text-xs font-medium">
+                Scope
+              </th>
               {TRIM_PAINT_SYSTEMS.map((ps) => (
-                <th key={ps} className="px-4 py-2 text-center text-xs font-medium text-pm-secondary">
+                <th
+                  key={ps}
+                  className="text-pm-secondary px-4 py-2 text-center text-xs font-medium"
+                >
                   {TRIM_PAINT_SYSTEM_LABELS[ps]}
                 </th>
               ))}
-              <th className="px-4 py-2 text-center text-xs font-medium text-pm-secondary">Offer</th>
+              <th className="text-pm-secondary px-4 py-2 text-center text-xs font-medium">
+                Offer
+              </th>
             </tr>
           </thead>
           <tbody>
             {DOOR_SCOPES.map((scope, i) => (
-              <tr key={scope} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
-                <td className="px-4 py-3 font-medium text-pm-body">{DOOR_SCOPE_LABELS[scope]}</td>
+              <tr
+                key={scope}
+                className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+              >
+                <td className="text-pm-body px-4 py-3 font-medium">
+                  {DOOR_SCOPE_LABELS[scope]}
+                </td>
                 {TRIM_PAINT_SYSTEMS.map((ps) => (
                   <td key={ps} className="px-4 py-2 text-center">
                     <PriceInput
                       value={rates.door_unit_rates[ps].standard[scope]}
                       unit="/door"
-                      onChange={(v) => onDoorRateChange(ps, 'standard', scope, v)}
+                      onChange={(v) =>
+                        onDoorRateChange(ps, 'standard', scope, v)
+                      }
                     />
                   </td>
                 ))}
@@ -461,12 +543,17 @@ function DoorRatesSection({
 
       {/* Per door type pricing */}
       <div className="space-y-3">
-        {RATE_DOOR_TYPES.filter((doorType) => rates.enabled_door_types.includes(doorType)).map((doorType) => {
+        {RATE_DOOR_TYPES.filter((doorType) =>
+          rates.enabled_door_types.includes(doorType)
+        ).map((doorType) => {
           const isEditing = isDoorTypeEditing(doorType);
           return (
-            <div key={doorType} className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
-              <div className="flex items-center justify-between border-b border-pm-border bg-pm-surface px-4 py-2.5">
-                <span className="text-sm font-semibold text-pm-body">
+            <div
+              key={doorType}
+              className="border-pm-border overflow-x-auto rounded-2xl border bg-white"
+            >
+              <div className="border-pm-border bg-pm-surface flex items-center justify-between border-b px-4 py-2.5">
+                <span className="text-pm-body text-sm font-semibold">
                   {RATE_DOOR_TYPE_LABELS[doorType]}
                 </span>
                 <RateRowActions
@@ -478,10 +565,15 @@ function DoorRatesSection({
               </div>
               <table className="w-full min-w-[480px] text-sm">
                 <thead>
-                  <tr className="border-b border-pm-border bg-pm-surface/50">
-                    <th className="px-4 py-2 text-left text-xs font-medium text-pm-secondary">Scope</th>
+                  <tr className="border-pm-border bg-pm-surface/50 border-b">
+                    <th className="text-pm-secondary px-4 py-2 text-left text-xs font-medium">
+                      Scope
+                    </th>
                     {TRIM_PAINT_SYSTEMS.map((ps) => (
-                      <th key={ps} className="px-4 py-2 text-center text-xs font-medium text-pm-secondary">
+                      <th
+                        key={ps}
+                        className="text-pm-secondary px-4 py-2 text-center text-xs font-medium"
+                      >
                         {TRIM_PAINT_SYSTEM_LABELS[ps]}
                       </th>
                     ))}
@@ -489,8 +581,11 @@ function DoorRatesSection({
                 </thead>
                 <tbody>
                   {DOOR_SCOPES.map((scope, i) => (
-                    <tr key={scope} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
-                      <td className="px-4 py-2.5 font-medium text-pm-body">
+                    <tr
+                      key={scope}
+                      className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                    >
+                      <td className="text-pm-body px-4 py-2.5 font-medium">
                         {DOOR_SCOPE_LABELS[scope]}
                       </td>
                       {TRIM_PAINT_SYSTEMS.map((ps) => (
@@ -499,10 +594,15 @@ function DoorRatesSection({
                             <PriceInput
                               value={rates.door_unit_rates[ps][doorType][scope]}
                               unit="/door"
-                              onChange={(v) => onDoorRateChange(ps, doorType, scope, v)}
+                              onChange={(v) =>
+                                onDoorRateChange(ps, doorType, scope, v)
+                              }
                             />
                           ) : (
-                            <RateValueDisplay value={rates.door_unit_rates[ps][doorType][scope]} unit="/door" />
+                            <RateValueDisplay
+                              value={rates.door_unit_rates[ps][doorType][scope]}
+                              unit="/door"
+                            />
                           )}
                         </td>
                       ))}
@@ -514,7 +614,7 @@ function DoorRatesSection({
           );
         })}
         {rates.enabled_door_types.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-pm-border bg-white p-8 text-center text-sm text-pm-secondary">
+          <div className="border-pm-border text-pm-secondary rounded-2xl border border-dashed bg-white p-8 text-center text-sm">
             No door rates are active. Use Add Door Type to restore one.
           </div>
         )}
@@ -533,12 +633,19 @@ function WindowRatesSection({
   onWindowTypeEditToggle,
 }: {
   rates: UserRateSettings;
-  onWindowRateChange: (ps: TrimPaintSystem, type: WindowType, scope: WindowScope, v: string) => void;
+  onWindowRateChange: (
+    ps: TrimPaintSystem,
+    type: WindowType,
+    scope: WindowScope,
+    v: string
+  ) => void;
   onWindowTypeToggle: (type: WindowType, enabled: boolean) => void;
   isWindowTypeEditing: (type: WindowType) => boolean;
   onWindowTypeEditToggle: (type: WindowType) => void;
 }) {
-  const hiddenWindowType = WINDOW_TYPES.find((type) => !rates.enabled_window_types.includes(type));
+  const hiddenWindowType = WINDOW_TYPES.find(
+    (type) => !rates.enabled_window_types.includes(type)
+  );
 
   return (
     <section>
@@ -557,12 +664,17 @@ function WindowRatesSection({
         )}
       </div>
       <div className="space-y-3">
-        {WINDOW_TYPES.filter((type) => rates.enabled_window_types.includes(type)).map((type) => {
+        {WINDOW_TYPES.filter((type) =>
+          rates.enabled_window_types.includes(type)
+        ).map((type) => {
           const isEditing = isWindowTypeEditing(type);
           return (
-            <div key={type} className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
-              <div className="flex items-center justify-between border-b border-pm-border bg-pm-surface px-4 py-2.5">
-                <span className="text-sm font-semibold text-pm-body">
+            <div
+              key={type}
+              className="border-pm-border overflow-x-auto rounded-2xl border bg-white"
+            >
+              <div className="border-pm-border bg-pm-surface flex items-center justify-between border-b px-4 py-2.5">
+                <span className="text-pm-body text-sm font-semibold">
                   {WINDOW_TYPE_LABELS[type]}
                 </span>
                 <RateRowActions
@@ -574,10 +686,15 @@ function WindowRatesSection({
               </div>
               <table className="w-full min-w-[480px] text-sm">
                 <thead>
-                  <tr className="border-b border-pm-border bg-pm-surface/50">
-                    <th className="px-4 py-2 text-left text-xs font-medium text-pm-secondary">Scope</th>
+                  <tr className="border-pm-border bg-pm-surface/50 border-b">
+                    <th className="text-pm-secondary px-4 py-2 text-left text-xs font-medium">
+                      Scope
+                    </th>
                     {TRIM_PAINT_SYSTEMS.map((ps) => (
-                      <th key={ps} className="px-4 py-2 text-center text-xs font-medium text-pm-secondary">
+                      <th
+                        key={ps}
+                        className="text-pm-secondary px-4 py-2 text-center text-xs font-medium"
+                      >
                         {TRIM_PAINT_SYSTEM_LABELS[ps]}
                       </th>
                     ))}
@@ -585,8 +702,11 @@ function WindowRatesSection({
                 </thead>
                 <tbody>
                   {WINDOW_SCOPES.map((scope, i) => (
-                    <tr key={scope} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
-                      <td className="px-4 py-2.5 font-medium text-pm-body">
+                    <tr
+                      key={scope}
+                      className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                    >
+                      <td className="text-pm-body px-4 py-2.5 font-medium">
                         {WINDOW_SCOPE_LABELS[scope]}
                       </td>
                       {TRIM_PAINT_SYSTEMS.map((ps) => (
@@ -595,10 +715,15 @@ function WindowRatesSection({
                             <PriceInput
                               value={rates.window_unit_rates[ps][type][scope]}
                               unit="/window"
-                              onChange={(v) => onWindowRateChange(ps, type, scope, v)}
+                              onChange={(v) =>
+                                onWindowRateChange(ps, type, scope, v)
+                              }
                             />
                           ) : (
-                            <RateValueDisplay value={rates.window_unit_rates[ps][type][scope]} unit="/window" />
+                            <RateValueDisplay
+                              value={rates.window_unit_rates[ps][type][scope]}
+                              unit="/window"
+                            />
                           )}
                         </td>
                       ))}
@@ -610,7 +735,7 @@ function WindowRatesSection({
           );
         })}
         {rates.enabled_window_types.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-pm-border bg-white p-8 text-center text-sm text-pm-secondary">
+          <div className="border-pm-border text-pm-secondary rounded-2xl border border-dashed bg-white p-8 text-center text-sm">
             No window rates are active. Use Add Window Type to restore one.
           </div>
         )}
@@ -634,13 +759,17 @@ function DayRateTab({
         title="Day Rate Settings"
         subtitle="Set your default labour rate and how material costs are calculated when pricing by the day."
       />
-      <div className="space-y-5 rounded-2xl border border-pm-border bg-white p-5">
+      <div className="border-pm-border space-y-5 rounded-2xl border bg-white p-5">
         {/* Daily labour rate */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-pm-body">Daily labour rate</label>
+            <label className="text-pm-body mb-1.5 block text-sm font-medium">
+              Daily labour rate
+            </label>
             <div className="relative inline-flex items-center">
-              <span className="absolute left-3 text-sm text-pm-secondary">$</span>
+              <span className="text-pm-secondary absolute left-3 text-sm">
+                $
+              </span>
               <NumericInput
                 inputMode="numeric"
                 value={(pricing.daily_rate_cents / 100).toFixed(0)}
@@ -651,17 +780,23 @@ function DayRateTab({
                     onChange({ daily_rate_cents: Math.round(nextValue * 100) });
                   }
                 }}
-                className="w-32 rounded-lg border border-pm-border bg-white py-2 pl-6 pr-2 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
               />
-              <span className="ml-1.5 text-xs text-pm-secondary">/day</span>
+              <span className="text-pm-secondary ml-1.5 text-xs">/day</span>
             </div>
-            <p className="mt-1 text-xs text-pm-secondary">Your total labour earnings per day</p>
+            <p className="text-pm-secondary mt-1 text-xs">
+              Your total labour earnings per day
+            </p>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-pm-body">Target daily earnings</label>
+            <label className="text-pm-body mb-1.5 block text-sm font-medium">
+              Target daily earnings
+            </label>
             <div className="relative inline-flex items-center">
-              <span className="absolute left-3 text-sm text-pm-secondary">$</span>
+              <span className="text-pm-secondary absolute left-3 text-sm">
+                $
+              </span>
               <NumericInput
                 inputMode="numeric"
                 value={
@@ -673,28 +808,38 @@ function DayRateTab({
                 placeholder="Optional"
                 onValueChange={(value) => {
                   const raw = value.trim();
-                  if (raw === '') { onChange({ target_daily_earnings_cents: null }); return; }
+                  if (raw === '') {
+                    onChange({ target_daily_earnings_cents: null });
+                    return;
+                  }
                   const nextValue = parseFloat(raw);
                   if (Number.isFinite(nextValue) && nextValue >= 0) {
-                    onChange({ target_daily_earnings_cents: Math.round(nextValue * 100) });
+                    onChange({
+                      target_daily_earnings_cents: Math.round(nextValue * 100),
+                    });
                   }
                 }}
-                className="w-32 rounded-lg border border-pm-border bg-white py-2 pl-6 pr-2 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
               />
-              <span className="ml-1.5 text-xs text-pm-secondary">/day</span>
+              <span className="text-pm-secondary ml-1.5 text-xs">/day</span>
             </div>
-            <p className="mt-1 text-xs text-pm-secondary">
+            <p className="text-pm-secondary mt-1 text-xs">
               Used in the internal profitability review after a quote is saved.
             </p>
           </div>
         </div>
 
         {/* Material cost method */}
-        <div className="border-t border-pm-border pt-4">
-          <label className="mb-2 block text-sm font-medium text-pm-body">Material cost calculation</label>
+        <div className="border-pm-border border-t pt-4">
+          <label className="text-pm-body mb-2 block text-sm font-medium">
+            Material cost calculation
+          </label>
           <div className="flex items-center gap-4">
             {(['percentage', 'flat'] as MaterialCostMethod[]).map((method) => (
-              <label key={method} className="flex cursor-pointer items-center gap-2 text-sm text-pm-body">
+              <label
+                key={method}
+                className="text-pm-body flex cursor-pointer items-center gap-2 text-sm"
+              >
                 <input
                   type="radio"
                   name="material_cost_method"
@@ -703,7 +848,9 @@ function DayRateTab({
                   onChange={() => onChange({ material_cost_method: method })}
                   className="accent-pm-teal"
                 />
-                {method === 'percentage' ? '% of labour cost' : 'Flat amount per day'}
+                {method === 'percentage'
+                  ? '% of labour cost'
+                  : 'Flat amount per day'}
               </label>
             ))}
           </div>
@@ -714,14 +861,21 @@ function DayRateTab({
                 value={String(pricing.material_cost_percent)}
                 sanitize={sanitizeIntegerInput}
                 onValueChange={(value) => {
-                  const nextValue = value.trim() === '' ? 0 : parseInt(value, 10);
-                  if (Number.isFinite(nextValue) && nextValue >= 0 && nextValue <= 100) {
+                  const nextValue =
+                    value.trim() === '' ? 0 : parseInt(value, 10);
+                  if (
+                    Number.isFinite(nextValue) &&
+                    nextValue >= 0 &&
+                    nextValue <= 100
+                  ) {
                     onChange({ material_cost_percent: nextValue });
                   }
                 }}
-                className="w-20 rounded-lg border border-pm-border bg-white py-2 px-3 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-20 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
               />
-              <span className="text-sm text-pm-secondary">% of labour cost</span>
+              <span className="text-pm-secondary text-sm">
+                % of labour cost
+              </span>
             </div>
           )}
         </div>
@@ -750,24 +904,35 @@ function RoomPresetForm({
   function handleSave() {
     const sqmNum = parseFloat(sqm);
     const rateNum = parseFloat(rate);
-    if (!title.trim() || !Number.isFinite(sqmNum) || sqmNum <= 0 || !Number.isFinite(rateNum) || rateNum < 0) return;
+    if (
+      !title.trim() ||
+      !Number.isFinite(sqmNum) ||
+      sqmNum <= 0 ||
+      !Number.isFinite(rateNum) ||
+      rateNum < 0
+    )
+      return;
     onSave(title.trim(), sqmNum, Math.round(rateNum * 100));
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-pm-teal/40 bg-pm-teal-pale/10 p-4">
+    <div className="border-pm-teal/40 bg-pm-teal-pale/10 flex flex-wrap items-end gap-3 rounded-2xl border p-4">
       <div className="min-w-[160px] flex-1">
-        <label className="mb-1 block text-xs font-medium text-pm-secondary">Room name</label>
+        <label className="text-pm-secondary mb-1 block text-xs font-medium">
+          Room name
+        </label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Master Bedroom"
-          className="w-full rounded-lg border border-pm-border bg-white px-3 py-2 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+          className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:outline-none"
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-pm-secondary">Size (sqm)</label>
+        <label className="text-pm-secondary mb-1 block text-xs font-medium">
+          Size (sqm)
+        </label>
         <div className="relative inline-flex items-center">
           <NumericInput
             inputMode="decimal"
@@ -775,21 +940,23 @@ function RoomPresetForm({
             sanitize={sanitizeDecimalInput}
             onValueChange={setSqm}
             placeholder="20"
-            className="w-24 rounded-lg border border-pm-border bg-white py-2 px-3 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+            className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-24 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
           />
-          <span className="ml-1.5 text-xs text-pm-secondary">sqm</span>
+          <span className="text-pm-secondary ml-1.5 text-xs">sqm</span>
         </div>
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-pm-secondary">Flat rate</label>
+        <label className="text-pm-secondary mb-1 block text-xs font-medium">
+          Flat rate
+        </label>
         <div className="relative inline-flex items-center">
-          <span className="absolute left-3 text-sm text-pm-secondary">$</span>
+          <span className="text-pm-secondary absolute left-3 text-sm">$</span>
           <NumericInput
             value={rate}
             sanitize={sanitizeDecimalInput}
             onValueChange={setRate}
             placeholder="450"
-            className="w-28 rounded-lg border border-pm-border bg-white py-2 pl-6 pr-2 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+            className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-28 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
           />
         </div>
       </div>
@@ -797,14 +964,14 @@ function RoomPresetForm({
         <button
           type="button"
           onClick={handleSave}
-          className="inline-flex h-9 items-center rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white hover:bg-pm-teal-hover"
+          className="bg-pm-teal hover:bg-pm-teal-hover inline-flex h-9 items-center rounded-xl px-4 text-sm font-semibold text-white"
         >
           {submitLabel}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="inline-flex h-9 items-center rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body hover:bg-pm-surface"
+          className="border-pm-border text-pm-body hover:bg-pm-surface inline-flex h-9 items-center rounded-xl border bg-white px-4 text-sm font-medium"
         >
           Cancel
         </button>
@@ -840,14 +1007,22 @@ function RoomRateTab({
 
       {/* Preset list */}
       {presets.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
+        <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
           <table className="w-full min-w-[480px] text-sm">
             <thead>
-              <tr className="border-b border-pm-border bg-pm-surface">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-pm-secondary">Room</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">Size</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">Flat Rate</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">$/sqm</th>
+              <tr className="border-pm-border bg-pm-surface border-b">
+                <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
+                  Room
+                </th>
+                <th className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase">
+                  Size
+                </th>
+                <th className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase">
+                  Flat Rate
+                </th>
+                <th className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase">
+                  $/sqm
+                </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -872,28 +1047,40 @@ function RoomRateTab({
                     </td>
                   </tr>
                 ) : (
-                  <tr key={preset.id} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
-                    <td className="px-4 py-3 font-medium text-pm-body">{preset.title}</td>
-                    <td className="px-4 py-3 text-center text-pm-secondary">{preset.sqm} sqm</td>
-                    <td className="px-4 py-3 text-center font-medium text-pm-body">
+                  <tr
+                    key={preset.id}
+                    className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                  >
+                    <td className="text-pm-body px-4 py-3 font-medium">
+                      {preset.title}
+                    </td>
+                    <td className="text-pm-secondary px-4 py-3 text-center">
+                      {preset.sqm} sqm
+                    </td>
+                    <td className="text-pm-body px-4 py-3 text-center font-medium">
                       ${(preset.rate_cents / 100).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-center text-xs text-pm-secondary">
-                      {preset.sqm > 0 ? `$${(preset.rate_cents / preset.sqm / 100).toFixed(2)}` : '—'}
+                    <td className="text-pm-secondary px-4 py-3 text-center text-xs">
+                      {preset.sqm > 0
+                        ? `$${(preset.rate_cents / preset.sqm / 100).toFixed(2)}`
+                        : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => { setEditingId(preset.id); setIsAdding(false); }}
-                          className="rounded-lg border border-pm-border bg-white px-3 py-1.5 text-xs font-medium text-pm-body hover:bg-pm-surface"
+                          onClick={() => {
+                            setEditingId(preset.id);
+                            setIsAdding(false);
+                          }}
+                          className="border-pm-border text-pm-body hover:bg-pm-surface rounded-lg border bg-white px-3 py-1.5 text-xs font-medium"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => onDelete(preset.id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-pm-coral/30 bg-white px-3 py-1.5 text-xs font-medium text-pm-coral hover:bg-pm-coral-light"
+                          className="border-pm-coral/30 text-pm-coral hover:bg-pm-coral-light inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-medium"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete
@@ -910,9 +1097,11 @@ function RoomRateTab({
 
       {/* Empty state */}
       {presets.length === 0 && !isAdding && (
-        <div className="rounded-2xl border border-pm-border bg-white p-8 text-center">
-          <p className="text-sm font-medium text-pm-body">No room presets yet</p>
-          <p className="mt-1 text-xs text-pm-secondary">
+        <div className="border-pm-border rounded-2xl border bg-white p-8 text-center">
+          <p className="text-pm-body text-sm font-medium">
+            No room presets yet
+          </p>
+          <p className="text-pm-secondary mt-1 text-xs">
             Add your standard rooms to quickly price jobs by room rate.
           </p>
         </div>
@@ -935,8 +1124,11 @@ function RoomRateTab({
       {!isAdding && (
         <button
           type="button"
-          onClick={() => { setIsAdding(true); setEditingId(null); }}
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-pm-teal/50 bg-white px-4 text-sm font-medium text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10"
+          onClick={() => {
+            setIsAdding(true);
+            setEditingId(null);
+          }}
+          className="border-pm-teal/50 text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10 inline-flex h-10 items-center gap-2 rounded-xl border border-dashed bg-white px-4 text-sm font-medium"
         >
           <Plus className="h-4 w-4" />
           Add Room
@@ -955,14 +1147,90 @@ function ManualTab() {
         title="Manual Pricing"
         subtitle="Enter labour and material costs directly when creating a quote."
       />
-      <div className="rounded-2xl border border-pm-border bg-white p-6 text-center">
-        <p className="text-sm font-medium text-pm-body">No preset rates needed</p>
-        <p className="mt-1 text-xs text-pm-secondary">
-          With manual pricing, you enter the exact labour and material costs for each job.
-          No default rates are required.
+      <div className="border-pm-border rounded-2xl border bg-white p-6 text-center">
+        <p className="text-pm-body text-sm font-medium">
+          No preset rates needed
+        </p>
+        <p className="text-pm-secondary mt-1 text-xs">
+          With manual pricing, you enter the exact labour and material costs for
+          each job. No default rates are required.
         </p>
       </div>
     </div>
+  );
+}
+
+// ─── Tab content: Detailed Estimate anchors ──────────────────────────────────
+
+function DetailedEstimateAnchorsTab({
+  rates,
+  onChange,
+}: {
+  rates: UserRateSettings;
+  onChange: (anchors: UserRateSettings['detailed_estimate_anchors']) => void;
+}) {
+  const rooms = Object.entries(rates.detailed_estimate_anchors.interior_rooms);
+
+  return (
+    <section className="space-y-4">
+      <SectionHeading
+        title="Detailed Estimate Anchors"
+        subtitle="Set the base room prices used by Detailed Estimate. Room flat rate presets stay separate."
+      />
+      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
+        <table className="w-full min-w-[420px] text-sm">
+          <thead>
+            <tr className="border-pm-border bg-pm-surface border-b">
+              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
+                Room
+              </th>
+              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
+                Base price
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rooms.map(([room, range]) => (
+              <tr
+                key={room}
+                className="border-pm-border border-b last:border-0"
+              >
+                <td className="text-pm-body px-4 py-3 font-medium">{room}</td>
+                <td className="px-4 py-3 text-right">
+                  <div className="relative inline-flex items-center">
+                    <span className="text-pm-secondary absolute left-3 text-sm">
+                      $
+                    </span>
+                    <NumericInput
+                      inputMode="numeric"
+                      value={Math.round(range.median / 100).toString()}
+                      sanitize={sanitizeIntegerInput}
+                      onValueChange={(value) => {
+                        const dollars = value.trim() === '' ? 0 : Number(value);
+                        if (!Number.isFinite(dollars) || dollars < 0) return;
+                        const median = Math.max(0, Math.round(dollars * 100));
+                        onChange({
+                          ...rates.detailed_estimate_anchors,
+                          interior_rooms: {
+                            ...rates.detailed_estimate_anchors.interior_rooms,
+                            [room]: {
+                              min: Math.round(median * 0.85),
+                              median,
+                              max: Math.round(median * 1.15),
+                            },
+                          },
+                        });
+                      }}
+                      className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-10 w-28 rounded-lg border bg-white py-2 pr-3 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -985,18 +1253,29 @@ function ExteriorRatesSection({
   rates: ExteriorRateSettings;
   enabledSurfaces: ExteriorSurface[];
   customSurfaces: CustomExteriorSurfaceRate[];
-  onChange: (surface: ExteriorSurface, coating: ExteriorCoatingType, v: string) => void;
+  onChange: (
+    surface: ExteriorSurface,
+    coating: ExteriorCoatingType,
+    v: string
+  ) => void;
   onSurfaceToggle: (surface: ExteriorSurface, enabled: boolean) => void;
   onCustomAdd: () => void;
-  onCustomUpdate: (id: string, patch: Partial<CustomExteriorSurfaceRate>) => void;
+  onCustomUpdate: (
+    id: string,
+    patch: Partial<CustomExteriorSurfaceRate>
+  ) => void;
   onCustomDelete: (id: string) => void;
   isSurfaceEditing: (surface: ExteriorSurface) => boolean;
   onSurfaceEditToggle: (surface: ExteriorSurface) => void;
   isCustomEditing: (id: string) => boolean;
   onCustomEditToggle: (id: string) => void;
 }) {
-  const visibleSurfaces = EXTERIOR_SURFACES.filter((surface) => enabledSurfaces.includes(surface));
-  const hiddenSurfaces = EXTERIOR_SURFACES.filter((surface) => !enabledSurfaces.includes(surface));
+  const visibleSurfaces = EXTERIOR_SURFACES.filter((surface) =>
+    enabledSurfaces.includes(surface)
+  );
+  const hiddenSurfaces = EXTERIOR_SURFACES.filter(
+    (surface) => !enabledSurfaces.includes(surface)
+  );
   const rowCount = visibleSurfaces.length + customSurfaces.length;
 
   return (
@@ -1008,22 +1287,25 @@ function ExteriorRatesSection({
         />
         <AddRateItemButton label="Add Custom Surface" onClick={onCustomAdd} />
       </div>
-      <div className="overflow-x-auto rounded-2xl border border-pm-border bg-white">
+      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
-            <tr className="border-b border-pm-border bg-pm-surface">
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+            <tr className="border-pm-border bg-pm-surface border-b">
+              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
                 Surface
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              <th className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase">
                 Unit
               </th>
               {EXTERIOR_COATING_TYPES.map((c) => (
-                <th key={c} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                <th
+                  key={c}
+                  className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase"
+                >
                   {EXTERIOR_COATING_LABELS[c]}
                 </th>
               ))}
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
                 Actions
               </th>
             </tr>
@@ -1032,35 +1314,41 @@ function ExteriorRatesSection({
             {visibleSurfaces.map((surface, i) => {
               const isEditing = isSurfaceEditing(surface);
               return (
-              <tr key={surface} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
-                <td className="px-4 py-3 font-medium text-pm-body">
-                  {EXTERIOR_SURFACE_LABELS[surface]}
-                </td>
-                <td className="px-4 py-3 text-center text-xs text-pm-secondary">
-                  {EXTERIOR_SURFACE_UNITS[surface]}
-                </td>
-                {EXTERIOR_COATING_TYPES.map((coating) => (
-                  <td key={coating} className="px-4 py-2 text-center">
-                    {isEditing ? (
-                      <PriceInput
-                        value={rates[surface][coating]}
-                        unit={EXTERIOR_SURFACE_UNITS[surface]}
-                        onChange={(v) => onChange(surface, coating, v)}
-                      />
-                    ) : (
-                      <RateValueDisplay value={rates[surface][coating]} unit={EXTERIOR_SURFACE_UNITS[surface]} />
-                    )}
+                <tr
+                  key={surface}
+                  className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                >
+                  <td className="text-pm-body px-4 py-3 font-medium">
+                    {EXTERIOR_SURFACE_LABELS[surface]}
                   </td>
-                ))}
-                <td className="px-4 py-2">
-                  <RateRowActions
-                    isEditing={isEditing}
-                    onEditToggle={() => onSurfaceEditToggle(surface)}
-                    onDelete={() => onSurfaceToggle(surface, false)}
-                    deleteLabel={`Delete ${EXTERIOR_SURFACE_LABELS[surface]}`}
-                  />
-                </td>
-              </tr>
+                  <td className="text-pm-secondary px-4 py-3 text-center text-xs">
+                    {EXTERIOR_SURFACE_UNITS[surface]}
+                  </td>
+                  {EXTERIOR_COATING_TYPES.map((coating) => (
+                    <td key={coating} className="px-4 py-2 text-center">
+                      {isEditing ? (
+                        <PriceInput
+                          value={rates[surface][coating]}
+                          unit={EXTERIOR_SURFACE_UNITS[surface]}
+                          onChange={(v) => onChange(surface, coating, v)}
+                        />
+                      ) : (
+                        <RateValueDisplay
+                          value={rates[surface][coating]}
+                          unit={EXTERIOR_SURFACE_UNITS[surface]}
+                        />
+                      )}
+                    </td>
+                  ))}
+                  <td className="px-4 py-2">
+                    <RateRowActions
+                      isEditing={isEditing}
+                      onEditToggle={() => onSurfaceEditToggle(surface)}
+                      onDelete={() => onSurfaceToggle(surface, false)}
+                      deleteLabel={`Delete ${EXTERIOR_SURFACE_LABELS[surface]}`}
+                    />
+                  </td>
+                </tr>
               );
             })}
             {customSurfaces.map((surface, index) => {
@@ -1068,23 +1356,31 @@ function ExteriorRatesSection({
               return (
                 <tr
                   key={surface.id}
-                  className={(visibleSurfaces.length + index) % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                  className={
+                    (visibleSurfaces.length + index) % 2 === 0
+                      ? 'bg-white'
+                      : 'bg-pm-surface/40'
+                  }
                 >
-                  <td className="px-4 py-3 font-medium text-pm-body">
+                  <td className="text-pm-body px-4 py-3 font-medium">
                     {isEditing ? (
                       <input
                         value={surface.label}
-                        onChange={(event) => onCustomUpdate(surface.id, { label: event.target.value })}
+                        onChange={(event) =>
+                          onCustomUpdate(surface.id, {
+                            label: event.target.value,
+                          })
+                        }
                         placeholder="Surface name"
-                        className="h-11 w-full min-w-40 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                        className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-11 w-full min-w-40 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                       />
                     ) : (
                       surface.label
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center text-xs text-pm-secondary">
+                  <td className="text-pm-secondary px-4 py-3 text-center text-xs">
                     {isEditing ? (
-                      <div className="inline-flex rounded-xl border border-pm-border bg-pm-surface p-1">
+                      <div className="border-pm-border bg-pm-surface inline-flex rounded-xl border p-1">
                         {EXTERIOR_RATE_UNITS.map((unit) => (
                           <button
                             key={unit}
@@ -1092,7 +1388,7 @@ function ExteriorRatesSection({
                             onClick={() => onCustomUpdate(surface.id, { unit })}
                             className={`h-9 rounded-lg px-3 text-xs font-medium ${
                               surface.unit === unit
-                                ? 'bg-white text-pm-teal shadow-sm'
+                                ? 'text-pm-teal bg-white shadow-sm'
                                 : 'text-pm-secondary hover:text-pm-body'
                             }`}
                           >
@@ -1112,12 +1408,19 @@ function ExteriorRatesSection({
                           unit={surface.unit}
                           onChange={(v) =>
                             onCustomUpdate(surface.id, {
-                              rates: { ...surface.rates, [coating]: displayToCents(v) ?? surface.rates[coating] },
+                              rates: {
+                                ...surface.rates,
+                                [coating]:
+                                  displayToCents(v) ?? surface.rates[coating],
+                              },
                             })
                           }
                         />
                       ) : (
-                        <RateValueDisplay value={surface.rates[coating]} unit={surface.unit} />
+                        <RateValueDisplay
+                          value={surface.rates[coating]}
+                          unit={surface.unit}
+                        />
                       )}
                     </td>
                   ))}
@@ -1134,8 +1437,12 @@ function ExteriorRatesSection({
             })}
             {rowCount === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-pm-secondary">
-                  No exterior surface rates are active. Add a custom surface or restore a standard one.
+                <td
+                  colSpan={6}
+                  className="text-pm-secondary px-4 py-8 text-center text-sm"
+                >
+                  No exterior surface rates are active. Add a custom surface or
+                  restore a standard one.
                 </td>
               </tr>
             )}
@@ -1149,7 +1456,7 @@ function ExteriorRatesSection({
               key={surface}
               type="button"
               onClick={() => onSurfaceToggle(surface, true)}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-dashed border-pm-teal/50 bg-white px-3 text-xs font-medium text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10"
+              className="border-pm-teal/50 text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10 inline-flex h-10 items-center gap-1.5 rounded-xl border border-dashed bg-white px-3 text-xs font-medium"
             >
               <Plus className="h-3.5 w-3.5" />
               Restore {EXTERIOR_SURFACE_LABELS[surface]}
@@ -1178,10 +1485,17 @@ function ExteriorTab({
   rates: ExteriorRateSettings;
   enabledSurfaces: ExteriorSurface[];
   customSurfaces: CustomExteriorSurfaceRate[];
-  onChange: (surface: ExteriorSurface, coating: ExteriorCoatingType, v: string) => void;
+  onChange: (
+    surface: ExteriorSurface,
+    coating: ExteriorCoatingType,
+    v: string
+  ) => void;
   onSurfaceToggle: (surface: ExteriorSurface, enabled: boolean) => void;
   onCustomAdd: () => void;
-  onCustomUpdate: (id: string, patch: Partial<CustomExteriorSurfaceRate>) => void;
+  onCustomUpdate: (
+    id: string,
+    patch: Partial<CustomExteriorSurfaceRate>
+  ) => void;
   onCustomDelete: (id: string) => void;
   isSurfaceEditing: (surface: ExteriorSurface) => boolean;
   onSurfaceEditToggle: (surface: ExteriorSurface) => void;
@@ -1211,7 +1525,9 @@ function ExteriorTab({
 // ─── Method tab icons ─────────────────────────────────────────────────────────
 
 /** Pricing methods shown in the settings UI. sqm_rate is normalized to hybrid. */
-const DISPLAY_PRICING_METHODS = PRICING_METHODS.filter((m) => m !== 'sqm_rate') as Exclude<PricingMethod, 'sqm_rate'>[];
+const DISPLAY_PRICING_METHODS = PRICING_METHODS.filter(
+  (m) => m !== 'sqm_rate'
+) as Exclude<PricingMethod, 'sqm_rate'>[];
 
 const METHOD_ICONS: Record<PricingMethod, typeof PencilRuler> = {
   hybrid: PencilRuler,
@@ -1222,8 +1538,8 @@ const METHOD_ICONS: Record<PricingMethod, typeof PencilRuler> = {
 };
 
 const METHOD_DESCRIPTIONS: Record<PricingMethod, string> = {
-  hybrid: 'Anchor-based detailed estimate',
-  sqm_rate: 'Anchor-based detailed estimate',
+  hybrid: 'Detailed estimate anchors and rates',
+  sqm_rate: 'Detailed estimate anchors and rates',
   day_rate: 'Labour days × daily rate',
   room_rate: 'Flat rate per room',
   manual: 'Enter costs directly',
@@ -1238,19 +1554,33 @@ type RateEditorKey =
 
 // ─── Main form ────────────────────────────────────────────────────────────────
 
-export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSettings }) {
+export function PriceRatesForm({
+  defaultRates,
+}: {
+  defaultRates: UserRateSettings;
+}) {
   const [rates, setRates] = useState<UserRateSettings>(defaultRates);
   const [activeTab, setActiveTab] = useState<PricingMethod>(
-    normalizeStoredPreferredPricingMethod(defaultRates.pricing.preferred_pricing_method)
+    normalizeStoredPreferredPricingMethod(
+      defaultRates.pricing.preferred_pricing_method
+    )
   );
-  const [activeScope, setActiveScope] = useState<'interior' | 'exterior'>('interior');
-  const [editingRateItems, setEditingRateItems] = useState<Partial<Record<RateEditorKey, boolean>>>({});
+  const [activeScope, setActiveScope] = useState<'interior' | 'exterior'>(
+    'interior'
+  );
+  const [editingRateItems, setEditingRateItems] = useState<
+    Partial<Record<RateEditorKey, boolean>>
+  >({});
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // ── Surface handler ──────────────────────────────────────────────────────────
-  function handleSurfaceChange(surface: keyof UserRateSettings, coating: string, value: string) {
+  function handleSurfaceChange(
+    surface: keyof UserRateSettings,
+    coating: string,
+    value: string
+  ) {
     setSaved(false);
     const cents = displayToCents(value);
     if (cents === null) return;
@@ -1284,7 +1614,12 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
   }
 
   // ── Door handlers ────────────────────────────────────────────────────────────
-  function handleDoorRateChange(ps: TrimPaintSystem, dt: RateDoorType, scope: DoorScope, value: string) {
+  function handleDoorRateChange(
+    ps: TrimPaintSystem,
+    dt: RateDoorType,
+    scope: DoorScope,
+    value: string
+  ) {
     setSaved(false);
     const cents = displayToCents(value);
     if (cents === null) return;
@@ -1322,7 +1657,12 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
   }
 
   // ── Window handlers ──────────────────────────────────────────────────────────
-  function handleWindowRateChange(ps: TrimPaintSystem, type: WindowType, scope: WindowScope, value: string) {
+  function handleWindowRateChange(
+    ps: TrimPaintSystem,
+    type: WindowType,
+    scope: WindowScope,
+    value: string
+  ) {
     setSaved(false);
     const cents = displayToCents(value);
     if (cents === null) return;
@@ -1351,15 +1691,23 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
 
   // ── Room rate preset handlers (auto-save to DB) ──────────────────────────────
   function handleRoomPresetAdd(preset: RoomRatePreset) {
-    const nextRates = { ...rates, room_rate_presets: [...rates.room_rate_presets, preset] };
+    const nextRates = {
+      ...rates,
+      room_rate_presets: [...rates.room_rate_presets, preset],
+    };
     setRates(nextRates);
     persistRates(nextRates);
   }
 
-  function handleRoomPresetUpdate(id: string, patch: Omit<RoomRatePreset, 'id'>) {
+  function handleRoomPresetUpdate(
+    id: string,
+    patch: Omit<RoomRatePreset, 'id'>
+  ) {
     const nextRates = {
       ...rates,
-      room_rate_presets: rates.room_rate_presets.map((p) => (p.id === id ? { id, ...patch } : p)),
+      room_rate_presets: rates.room_rate_presets.map((p) =>
+        p.id === id ? { id, ...patch } : p
+      ),
     };
     setRates(nextRates);
     persistRates(nextRates);
@@ -1375,17 +1723,27 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
   }
 
   // ── Exterior rate handler ────────────────────────────────────────────────────
-  function handleExteriorChange(surface: ExteriorSurface, coating: ExteriorCoatingType, value: string) {
+  function handleExteriorChange(
+    surface: ExteriorSurface,
+    coating: ExteriorCoatingType,
+    value: string
+  ) {
     setSaved(false);
     const cents = displayToCents(value);
     if (cents === null) return;
     setRates((prev) => ({
       ...prev,
-      exterior: { ...prev.exterior, [surface]: { ...prev.exterior[surface], [coating]: cents } },
+      exterior: {
+        ...prev.exterior,
+        [surface]: { ...prev.exterior[surface], [coating]: cents },
+      },
     }));
   }
 
-  function handleExteriorSurfaceToggle(surface: ExteriorSurface, enabled: boolean) {
+  function handleExteriorSurfaceToggle(
+    surface: ExteriorSurface,
+    enabled: boolean
+  ) {
     setSaved(false);
     setRates((prev) => ({
       ...prev,
@@ -1411,12 +1769,21 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
     setSaved(false);
     setRates((prev) => ({
       ...prev,
-      custom_exterior_surfaces: [...prev.custom_exterior_surfaces, customSurface],
+      custom_exterior_surfaces: [
+        ...prev.custom_exterior_surfaces,
+        customSurface,
+      ],
     }));
-    setEditingRateItems((current) => ({ ...current, [`custom_exterior:${id}`]: true }));
+    setEditingRateItems((current) => ({
+      ...current,
+      [`custom_exterior:${id}`]: true,
+    }));
   }
 
-  function handleCustomExteriorUpdate(id: string, patch: Partial<CustomExteriorSurfaceRate>) {
+  function handleCustomExteriorUpdate(
+    id: string,
+    patch: Partial<CustomExteriorSurfaceRate>
+  ) {
     setSaved(false);
     setRates((prev) => ({
       ...prev,
@@ -1425,7 +1792,9 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
         return {
           ...surface,
           ...patch,
-          rates: patch.rates ? { ...surface.rates, ...patch.rates } : surface.rates,
+          rates: patch.rates
+            ? { ...surface.rates, ...patch.rates }
+            : surface.rates,
         };
       }),
     }));
@@ -1435,7 +1804,9 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
     setSaved(false);
     setRates((prev) => ({
       ...prev,
-      custom_exterior_surfaces: prev.custom_exterior_surfaces.filter((surface) => surface.id !== id),
+      custom_exterior_surfaces: prev.custom_exterior_surfaces.filter(
+        (surface) => surface.id !== id
+      ),
     }));
     clearRateItemEditing(`custom_exterior:${id}`);
   }
@@ -1445,10 +1816,11 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
     if (isRateItemEditing(editorKey)) {
       setRates((prev) => ({
         ...prev,
-        custom_exterior_surfaces: prev.custom_exterior_surfaces.map((surface) =>
-          surface.id === id
-            ? { ...surface, label: surface.label.trim() || 'Custom Surface' }
-            : surface
+        custom_exterior_surfaces: prev.custom_exterior_surfaces.map(
+          (surface) =>
+            surface.id === id
+              ? { ...surface, label: surface.label.trim() || 'Custom Surface' }
+              : surface
         ),
       }));
     }
@@ -1462,6 +1834,13 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
       ...prev,
       pricing: { ...prev.pricing, ...patch },
     }));
+  }
+
+  function handleDetailedEstimateAnchorsChange(
+    detailed_estimate_anchors: UserRateSettings['detailed_estimate_anchors']
+  ) {
+    setSaved(false);
+    setRates((prev) => ({ ...prev, detailed_estimate_anchors }));
   }
 
   // ── Tab change — also sets preferred method ──────────────────────────────────
@@ -1490,7 +1869,8 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
       ...rates,
       pricing: {
         ...rates.pricing,
-        preferred_pricing_method: normalizeStoredPreferredPricingMethod(activeTab),
+        preferred_pricing_method:
+          normalizeStoredPreferredPricingMethod(activeTab),
       },
     };
     persistRates(nextRates);
@@ -1498,12 +1878,11 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-
       {/* ── Method tabs ─────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-pm-border bg-white p-4 shadow-sm sm:p-5">
+      <div className="border-pm-border rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
         <div className="mb-4 flex items-center gap-2">
-          <Settings2 className="h-4 w-4 text-pm-teal" />
-          <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+          <Settings2 className="text-pm-teal h-4 w-4" />
+          <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
             Preferred Pricing Method
           </p>
         </div>
@@ -1519,22 +1898,28 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
                 className={`flex min-h-28 flex-col items-start gap-2 rounded-2xl border px-4 py-3 text-left transition-colors ${
                   isActive
                     ? 'border-pm-teal bg-pm-teal-light/60 shadow-sm'
-                    : 'border-pm-border bg-white hover:border-pm-teal-mid hover:bg-pm-teal-pale/10'
+                    : 'border-pm-border hover:border-pm-teal-mid hover:bg-pm-teal-pale/10 bg-white'
                 }`}
               >
                 <span
                   className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                    isActive ? 'bg-pm-teal text-white' : 'bg-pm-surface text-pm-secondary'
+                    isActive
+                      ? 'bg-pm-teal text-white'
+                      : 'bg-pm-surface text-pm-secondary'
                   }`}
                 >
                   <MethodIcon className="h-5 w-5" />
                 </span>
-                <span className={`text-sm font-semibold ${isActive ? 'text-pm-teal' : 'text-pm-body'}`}>
+                <span
+                  className={`text-sm font-semibold ${isActive ? 'text-pm-teal' : 'text-pm-body'}`}
+                >
                   {PRICING_METHOD_LABELS[m]}
                 </span>
-                <span className="text-xs text-pm-secondary">{METHOD_DESCRIPTIONS[m]}</span>
+                <span className="text-pm-secondary text-xs">
+                  {METHOD_DESCRIPTIONS[m]}
+                </span>
                 {isActive && (
-                  <span className="mt-0.5 rounded-full bg-pm-teal px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
+                  <span className="bg-pm-teal mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-widest text-white uppercase">
                     Default
                   </span>
                 )}
@@ -1544,14 +1929,19 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
         </div>
       </div>
 
-      <section className="rounded-2xl border border-pm-border bg-pm-surface/45 p-4">
-        <h3 className="text-sm font-semibold text-pm-body">How These Settings Apply</h3>
-        <div className="mt-3 grid gap-3 text-sm text-pm-secondary sm:grid-cols-2">
+      <section className="border-pm-border bg-pm-surface/45 rounded-2xl border p-4">
+        <h3 className="text-pm-body text-sm font-semibold">
+          How These Settings Apply
+        </h3>
+        <div className="text-pm-secondary mt-3 grid gap-3 text-sm sm:grid-cols-2">
           <p>
-            Detailed Estimate, day rate, and room rate settings control the defaults used when starting new quotes.
+            Detailed Estimate, day rate, and room rate settings control the
+            defaults used when starting new quotes.
           </p>
           <p>
-            Saved door and window rates now flow into the quick and detailed estimate engine. Surface sqm rates are used as a multiplier on the anchor-based estimate.
+            Saved door and window rates now flow into the quick and detailed
+            estimate engine. Surface sqm rates are used as a multiplier on the
+            anchor-based estimate.
           </p>
         </div>
       </section>
@@ -1578,10 +1968,10 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
       {activeTab === 'hybrid' && (
         <>
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+            <p className="text-pm-secondary mb-3 text-xs font-semibold tracking-wide uppercase">
               Job Scope
             </p>
-            <div className="inline-flex rounded-xl border border-pm-border bg-pm-surface p-1 gap-1">
+            <div className="border-pm-border bg-pm-surface inline-flex gap-1 rounded-xl border p-1">
               {(['interior', 'exterior'] as const).map((scope) => {
                 const isActive = activeScope === scope;
                 return (
@@ -1591,7 +1981,7 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
                     onClick={() => setActiveScope(scope)}
                     className={`rounded-lg px-5 py-2 text-sm font-semibold transition-colors ${
                       isActive
-                        ? 'bg-white text-pm-teal shadow-sm'
+                        ? 'text-pm-teal bg-white shadow-sm'
                         : 'text-pm-secondary hover:text-pm-body'
                     }`}
                   >
@@ -1604,18 +1994,26 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
 
           {activeScope === 'interior' && (
             <div className="space-y-10">
+              <DetailedEstimateAnchorsTab
+                rates={rates}
+                onChange={handleDetailedEstimateAnchorsChange}
+              />
               <WallCeilingRatesSection
                 rates={rates}
                 onSurfaceChange={handleSurfaceChange}
                 isEditing={(surface) => isRateItemEditing(`surface:${surface}`)}
-                onEditToggle={(surface) => toggleRateItemEditing(`surface:${surface}`)}
+                onEditToggle={(surface) =>
+                  toggleRateItemEditing(`surface:${surface}`)
+                }
                 onSurfaceToggle={handleSurfaceToggle}
               />
               <TrimRatesSection
                 rates={rates}
                 onSurfaceChange={handleSurfaceChange}
                 isEditing={(surface) => isRateItemEditing(`surface:${surface}`)}
-                onEditToggle={(surface) => toggleRateItemEditing(`surface:${surface}`)}
+                onEditToggle={(surface) =>
+                  toggleRateItemEditing(`surface:${surface}`)
+                }
                 onSurfaceToggle={handleSurfaceToggle}
               />
               <DoorRatesSection
@@ -1623,15 +2021,23 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
                 onDoorRateChange={handleDoorRateChange}
                 onDoorTypeToggle={handleDoorTypeToggle}
                 onDoorScopeToggle={handleDoorScopeToggle}
-                isDoorTypeEditing={(doorType) => isRateItemEditing(`door:${doorType}`)}
-                onDoorTypeEditToggle={(doorType) => toggleRateItemEditing(`door:${doorType}`)}
+                isDoorTypeEditing={(doorType) =>
+                  isRateItemEditing(`door:${doorType}`)
+                }
+                onDoorTypeEditToggle={(doorType) =>
+                  toggleRateItemEditing(`door:${doorType}`)
+                }
               />
               <WindowRatesSection
                 rates={rates}
                 onWindowRateChange={handleWindowRateChange}
                 onWindowTypeToggle={handleWindowTypeToggle}
-                isWindowTypeEditing={(type) => isRateItemEditing(`window:${type}`)}
-                onWindowTypeEditToggle={(type) => toggleRateItemEditing(`window:${type}`)}
+                isWindowTypeEditing={(type) =>
+                  isRateItemEditing(`window:${type}`)
+                }
+                onWindowTypeEditToggle={(type) =>
+                  toggleRateItemEditing(`window:${type}`)
+                }
               />
             </div>
           )}
@@ -1646,9 +2052,15 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
               onCustomAdd={handleCustomExteriorAdd}
               onCustomUpdate={handleCustomExteriorUpdate}
               onCustomDelete={handleCustomExteriorDelete}
-              isSurfaceEditing={(surface) => isRateItemEditing(`exterior:${surface}`)}
-              onSurfaceEditToggle={(surface) => toggleRateItemEditing(`exterior:${surface}`)}
-              isCustomEditing={(id) => isRateItemEditing(`custom_exterior:${id}`)}
+              isSurfaceEditing={(surface) =>
+                isRateItemEditing(`exterior:${surface}`)
+              }
+              onSurfaceEditToggle={(surface) =>
+                toggleRateItemEditing(`exterior:${surface}`)
+              }
+              isCustomEditing={(id) =>
+                isRateItemEditing(`custom_exterior:${id}`)
+              }
               onCustomEditToggle={handleCustomExteriorEditToggle}
             />
           )}
@@ -1657,25 +2069,25 @@ export function PriceRatesForm({ defaultRates }: { defaultRates: UserRateSetting
 
       {/* ── Status messages ─────────────────────────────────────────────────── */}
       {error && (
-        <p className="rounded-xl border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark">
+        <p className="border-pm-coral bg-pm-coral-light text-pm-coral-dark rounded-xl border px-4 py-3 text-sm">
           {error}
         </p>
       )}
       {saved && (
-        <p className="rounded-xl border border-pm-teal bg-pm-teal-pale/20 px-4 py-3 text-sm text-pm-teal">
+        <p className="border-pm-teal bg-pm-teal-pale/20 text-pm-teal rounded-xl border px-4 py-3 text-sm">
           Rates saved successfully.
         </p>
       )}
 
       {/* ── Sticky save bar ─────────────────────────────────────────────────── */}
-      <div className="sticky bottom-4 flex items-center justify-between rounded-2xl border border-pm-border bg-white/90 px-5 py-3 shadow-sm backdrop-blur-sm">
-        <p className="text-xs text-pm-secondary">
+      <div className="border-pm-border sticky bottom-4 flex items-center justify-between rounded-2xl border bg-white/90 px-5 py-3 shadow-sm backdrop-blur-sm">
+        <p className="text-pm-secondary text-xs">
           Selecting a tab sets your default pricing method for new quotes.
         </p>
         <button
           type="submit"
           disabled={isPending}
-          className="ml-4 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-pm-teal px-5 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover disabled:opacity-50"
+          className="bg-pm-teal hover:bg-pm-teal-hover ml-4 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {isPending ? 'Saving…' : 'Save Rates'}

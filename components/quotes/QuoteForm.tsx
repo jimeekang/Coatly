@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   NumericInput,
@@ -26,14 +27,27 @@ import {
   type QuoteStatus,
   type QuoteComplexity,
 } from '@/lib/quotes';
-import type { QuoteCreateInput, MaterialItem, QuoteLineItemFormInput } from '@/lib/supabase/validators';
+import type {
+  QuoteCreateInput,
+  MaterialItem,
+  QuoteLineItemFormInput,
+} from '@/lib/supabase/validators';
 import type { UserRateSettings } from '@/lib/rate-settings';
 import { LineItemsSection } from '@/components/quotes/LineItemsSection';
-import { QuoteExtraLineItems, toQuoteLineItemFormInput, type ExtraLineItemInput } from '@/components/quotes/QuoteExtraLineItems';
+import {
+  QuoteExtraLineItems,
+  toQuoteLineItemFormInput,
+  type ExtraLineItemInput,
+} from '@/components/quotes/QuoteExtraLineItems';
 import { QuoteStatusCard } from '@/components/quotes/QuoteStatusCard';
 import { PRICING_METHOD_LABELS } from '@/lib/rate-settings';
 import { formatAUD } from '@/utils/format';
-import type { PricingMethod, DayRateInputs, RoomRateInputs, ManualInputs } from '@/types/quote';
+import type {
+  PricingMethod,
+  DayRateInputs,
+  RoomRateInputs,
+  ManualInputs,
+} from '@/types/quote';
 import {
   calculateDayRateQuote,
   calculateRoomRateQuote,
@@ -74,7 +88,14 @@ type EstimateMode = 'quick' | 'advanced';
 /** Which high-level pricing strategy the user has chosen */
 type PricingStrategy = 'hybrid' | 'day_rate' | 'room_rate' | 'manual';
 
-const ROOM_TYPES = ['bedroom', 'bathroom', 'living', 'kitchen', 'hallway', 'other'] as const;
+const ROOM_TYPES = [
+  'bedroom',
+  'bathroom',
+  'living',
+  'kitchen',
+  'hallway',
+  'other',
+] as const;
 const ROOM_SIZES = ['small', 'medium', 'large'] as const;
 
 const ROOM_TYPE_LABELS: Record<(typeof ROOM_TYPES)[number], string> = {
@@ -92,7 +113,9 @@ type LegacyRoomDefault = {
   length_m: number | null;
   width_m: number | null;
   height_m: number | null;
-  surfaces?: Array<{ surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows' }>;
+  surfaces?: Array<{
+    surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
+  }>;
 };
 
 export type QuoteFormDefaultValues = {
@@ -127,7 +150,8 @@ type SendDialogState = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const str = (value: string | number | null | undefined) => (value == null ? '' : String(value));
+const str = (value: string | number | null | undefined) =>
+  value == null ? '' : String(value);
 const num = (value: string) => (!value.trim() ? null : Number(value));
 const intVal = (value: string, fallback = 0) => {
   const parsed = Number.parseInt(value, 10);
@@ -187,14 +211,15 @@ function buildInitialAdvancedEstimate(
   defaultValues?: QuoteFormDefaultValues
 ): InteriorEstimateFormState {
   const base = createEmptyInteriorEstimateState();
-  const estimateContext = isInteriorEstimateInput(defaultValues?.interior_estimate)
+  const estimateContext = isInteriorEstimateInput(
+    defaultValues?.interior_estimate
+  )
     ? defaultValues.interior_estimate
     : null;
 
   if (estimateContext) {
-    const roomOptions = estimateContext.rooms.length > 0
-      ? estimateContext.rooms
-      : base.rooms;
+    const roomOptions =
+      estimateContext.rooms.length > 0 ? estimateContext.rooms : base.rooms;
 
     return {
       ...base,
@@ -205,11 +230,13 @@ function buildInitialAdvancedEstimate(
       wall_paint_system:
         normalizeInteriorWallPaintSystem(estimateContext.wall_paint_system) ??
         base.wall_paint_system,
-      apartment_type: estimateContext.property_details.apartment_type ?? base.apartment_type,
+      apartment_type:
+        estimateContext.property_details.apartment_type ?? base.apartment_type,
       apartment_sqm: str(estimateContext.property_details.sqm),
       house_bedrooms: str(estimateContext.property_details.bedrooms),
       house_bathrooms: str(estimateContext.property_details.bathrooms),
-      house_storeys: estimateContext.property_details.storeys ?? base.house_storeys,
+      house_storeys:
+        estimateContext.property_details.storeys ?? base.house_storeys,
       house_sqm: str(estimateContext.property_details.sqm),
       rooms: roomOptions.map((room) => ({
         name: room.name,
@@ -230,7 +257,10 @@ function buildInitialAdvancedEstimate(
           scope: item.door_scope ?? 'door_and_frame',
           quantity: String(item.quantity),
           paint_system: item.paint_system,
-          room_index: item.room_index == null ? '' : String(item.room_index) as `${number}`,
+          room_index:
+            item.room_index == null
+              ? ''
+              : (String(item.room_index) as `${number}`),
         })),
       windows: estimateContext.opening_items
         .filter((item) => item.opening_type === 'window')
@@ -239,12 +269,18 @@ function buildInitialAdvancedEstimate(
           scope: item.window_scope ?? 'window_and_frame',
           quantity: String(item.quantity),
           paint_system: item.paint_system,
-          room_index: item.room_index == null ? '' : String(item.room_index) as `${number}`,
+          room_index:
+            item.room_index == null
+              ? ''
+              : (String(item.room_index) as `${number}`),
         })),
       trim_items: estimateContext.trim_items.map((item) => ({
         quantity: String(item.quantity),
         paint_system: item.paint_system,
-        room_index: item.room_index == null ? '' : String(item.room_index) as `${number}`,
+        room_index:
+          item.room_index == null
+            ? ''
+            : (String(item.room_index) as `${number}`),
       })),
     };
   }
@@ -259,11 +295,16 @@ function buildInitialAdvancedEstimate(
       length_m: str(room.length_m),
       width_m: str(room.width_m),
       height_m: str(room.height_m),
-      include_walls: room.surfaces?.some((s) => s.surface_type === 'walls') ?? true,
-      include_ceiling: room.surfaces?.some((s) => s.surface_type === 'ceiling') ?? true,
-      include_trim: room.surfaces?.some((s) => s.surface_type === 'trim') ?? false,
-      include_doors: room.surfaces?.some((s) => s.surface_type === 'doors') ?? false,
-      include_windows: room.surfaces?.some((s) => s.surface_type === 'windows') ?? false,
+      include_walls:
+        room.surfaces?.some((s) => s.surface_type === 'walls') ?? true,
+      include_ceiling:
+        room.surfaces?.some((s) => s.surface_type === 'ceiling') ?? true,
+      include_trim:
+        room.surfaces?.some((s) => s.surface_type === 'trim') ?? false,
+      include_doors:
+        room.surfaces?.some((s) => s.surface_type === 'doors') ?? false,
+      include_windows:
+        room.surfaces?.some((s) => s.surface_type === 'windows') ?? false,
     })),
   };
 }
@@ -327,7 +368,8 @@ function buildAdvancedEstimatePayload(
           opening_type: 'door' as const,
           paint_system: door.paint_system,
           quantity: intVal(door.quantity, 1),
-          room_index: door.room_index === '' ? null : intVal(door.room_index, 0),
+          room_index:
+            door.room_index === '' ? null : intVal(door.room_index, 0),
           door_type: door.door_type,
           door_scope: door.scope,
         })),
@@ -355,10 +397,7 @@ function buildAdvancedEstimatePayload(
 
 function getCustomerEmails(customer: QuoteCustomerOption | null) {
   if (!customer) return [];
-  const emails = [
-    customer.email,
-    ...(customer.emails ?? []),
-  ]
+  const emails = [customer.email, ...(customer.emails ?? [])]
     .filter((email): email is string => typeof email === 'string')
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
@@ -426,7 +465,8 @@ function PricingSummaryPanel({
 }) {
   const [isEditingNumber, setIsEditingNumber] = useState(false);
   const [draftNumber, setDraftNumber] = useState(quoteNumberPreview);
-  const isEditable = onQuoteNumberChange != null && quoteNumberPreview !== 'Assigned on save';
+  const isEditable =
+    onQuoteNumberChange != null && quoteNumberPreview !== 'Assigned on save';
 
   function commitEdit() {
     const trimmed = draftNumber.trim();
@@ -445,10 +485,10 @@ function PricingSummaryPanel({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-pm-border bg-white p-4 shadow-sm">
+      <section className="border-pm-border rounded-2xl border bg-white p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+            <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
               Quote Number
             </p>
             {isEditingNumber ? (
@@ -459,23 +499,39 @@ function PricingSummaryPanel({
                 onBlur={commitEdit}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') commitEdit();
-                  if (e.key === 'Escape') { setDraftNumber(quoteNumberPreview); setIsEditingNumber(false); }
+                  if (e.key === 'Escape') {
+                    setDraftNumber(quoteNumberPreview);
+                    setIsEditingNumber(false);
+                  }
                 }}
-                className="mt-1 w-full rounded-lg border border-pm-teal-mid bg-white px-2 py-1 text-lg font-semibold text-pm-body focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                className="border-pm-teal-mid text-pm-body focus:ring-pm-teal-pale/30 mt-1 w-full rounded-lg border bg-white px-2 py-1 text-lg font-semibold focus:ring-2 focus:outline-none"
               />
             ) : (
               <button
                 type="button"
                 onClick={() => isEditable && setIsEditingNumber(true)}
                 className={[
-                  'mt-1 flex items-center gap-1.5 text-lg font-semibold text-pm-body',
-                  isEditable ? 'cursor-pointer rounded-lg px-0 hover:text-pm-teal transition-colors' : 'cursor-default',
+                  'text-pm-body mt-1 flex items-center gap-1.5 text-lg font-semibold',
+                  isEditable
+                    ? 'hover:text-pm-teal cursor-pointer rounded-lg px-0 transition-colors'
+                    : 'cursor-default',
                 ].join(' ')}
                 title={isEditable ? 'Click to edit quote number' : undefined}
               >
                 {quoteNumberPreview}
                 {isEditable && (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pm-secondary">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-pm-secondary"
+                  >
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
@@ -483,40 +539,44 @@ function PricingSummaryPanel({
               </button>
             )}
           </div>
-          <div className="rounded-xl bg-pm-teal-light px-3 py-2 text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-pm-teal-mid">
+          <div className="bg-pm-teal-light rounded-xl px-3 py-2 text-right">
+            <p className="text-pm-teal-mid text-xs font-medium tracking-wide uppercase">
               Estimate Total
             </p>
-            <p className="mt-1 text-lg font-semibold text-pm-teal">
+            <p className="text-pm-teal mt-1 text-lg font-semibold">
               {formatAUD(total)}
             </p>
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-pm-border bg-pm-surface px-3 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+          <div className="border-pm-border bg-pm-surface rounded-xl border px-3 py-3">
+            <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
               Active Method
             </p>
-            <p className="mt-1 text-sm font-medium text-pm-body">{activeMethodLabel}</p>
+            <p className="text-pm-body mt-1 text-sm font-medium">
+              {activeMethodLabel}
+            </p>
           </div>
           <QuoteStatusCard status={resolvedStatus} validUntil={validUntil} />
         </div>
       </section>
 
-      <section className="rounded-2xl border border-pm-border bg-white p-4 shadow-sm">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+      <section className="border-pm-border rounded-2xl border bg-white p-4 shadow-sm">
+        <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
           Price Summary
         </h3>
-        <p className="mt-0.5 text-xs text-pm-secondary">
+        <p className="text-pm-secondary mt-0.5 text-xs">
           Live internal pricing while you build the quote.
         </p>
 
         {roomLines.length > 0 && (
-          <div className="mt-4 space-y-2 border-b border-pm-border pb-4">
+          <div className="border-pm-border mt-4 space-y-2 border-b pb-4">
             {roomLines.map((room) => (
               <div key={room.label} className="flex justify-between text-sm">
                 <span className="text-pm-body">{room.label}</span>
-                <span className="font-medium text-pm-body">{formatAUD(room.value)}</span>
+                <span className="text-pm-body font-medium">
+                  {formatAUD(room.value)}
+                </span>
               </div>
             ))}
           </div>
@@ -528,19 +588,30 @@ function PricingSummaryPanel({
               key={line.label}
               className={[
                 'flex justify-between text-sm',
-                line.emphasize ? 'border-t border-pm-border pt-2' : '',
+                line.emphasize ? 'border-pm-border border-t pt-2' : '',
               ].join(' ')}
             >
-              <span className={line.emphasize ? 'font-semibold text-pm-body' : 'text-pm-secondary'}>
+              <span
+                className={
+                  line.emphasize
+                    ? 'text-pm-body font-semibold'
+                    : 'text-pm-secondary'
+                }
+              >
                 {line.label}
               </span>
               <span
                 className={[
-                  line.emphasize ? 'font-bold text-pm-teal' : 'text-pm-body',
+                  line.emphasize ? 'text-pm-teal font-bold' : 'text-pm-body',
                   line.negative ? 'text-pm-coral-mid' : '',
                 ].join(' ')}
               >
-                {line.value > 0 && (line.label.includes('markup') || line.label === 'GST (10%)' || line.label === 'Adjustment') ? '+' : ''}
+                {line.value > 0 &&
+                (line.label.includes('markup') ||
+                  line.label === 'GST (10%)' ||
+                  line.label === 'Adjustment')
+                  ? '+'
+                  : ''}
                 {line.negative && line.value > 0 ? '-' : ''}
                 {formatAUD(line.value)}
               </span>
@@ -549,22 +620,24 @@ function PricingSummaryPanel({
         </div>
 
         {/* Discount & Deposit editors */}
-        <div className="mt-4 space-y-2 border-t border-pm-border pt-4">
+        <div className="border-pm-border mt-4 space-y-2 border-t pt-4">
           {/* Discount */}
           {showDiscountEditor ? (
-            <div className="rounded-xl border border-pm-coral/30 bg-pm-coral-pale/10 p-3">
+            <div className="border-pm-coral/30 bg-pm-coral-pale/10 rounded-xl border p-3">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold text-pm-coral-mid">Discount</span>
+                <span className="text-pm-coral-mid text-xs font-semibold">
+                  Discount
+                </span>
                 <button
                   type="button"
                   onClick={onDiscountToggle}
-                  className="text-xs text-pm-secondary hover:text-pm-coral-mid transition-colors"
+                  className="text-pm-secondary hover:text-pm-coral-mid text-xs transition-colors"
                 >
                   Remove
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-pm-secondary">$</span>
+                <span className="text-pm-secondary text-sm">$</span>
                 <input
                   type="number"
                   min="0"
@@ -572,10 +645,10 @@ function PricingSummaryPanel({
                   value={discountInput}
                   onChange={(e) => onDiscountInputChange(e.target.value)}
                   placeholder="0.00"
-                  className="h-10 flex-1 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-coral focus:outline-none focus:ring-2 focus:ring-pm-coral/20"
+                  className="border-pm-border text-pm-body focus:border-pm-coral focus:ring-pm-coral/20 h-10 flex-1 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                 />
                 {discountCents > 0 && (
-                  <span className="text-sm font-medium text-pm-coral-mid">
+                  <span className="text-pm-coral-mid text-sm font-medium">
                     -{formatAUD(discountCents)}
                   </span>
                 )}
@@ -585,22 +658,38 @@ function PricingSummaryPanel({
             <button
               type="button"
               onClick={onDiscountToggle}
-              className="flex w-full items-center gap-2 rounded-xl border border-dashed border-pm-border px-3 py-2.5 text-sm text-pm-secondary hover:border-pm-coral/50 hover:text-pm-coral-mid transition-colors"
+              className="border-pm-border text-pm-secondary hover:border-pm-coral/50 hover:text-pm-coral-mid flex w-full items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="16" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
               Add discount
             </button>
           )}
 
           {/* Deposit */}
           {showDepositEditor ? (
-            <div className="rounded-xl border border-pm-teal-mid/30 bg-pm-teal-pale/10 p-3">
+            <div className="border-pm-teal-mid/30 bg-pm-teal-pale/10 rounded-xl border p-3">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold text-pm-teal-mid">Deposit Required</span>
+                <span className="text-pm-teal-mid text-xs font-semibold">
+                  Deposit Required
+                </span>
                 <button
                   type="button"
                   onClick={onDepositToggle}
-                  className="text-xs text-pm-secondary hover:text-pm-coral-mid transition-colors"
+                  className="text-pm-secondary hover:text-pm-coral-mid text-xs transition-colors"
                 >
                   Remove
                 </button>
@@ -614,12 +703,12 @@ function PricingSummaryPanel({
                   value={depositInput}
                   onChange={(e) => onDepositInputChange(e.target.value)}
                   placeholder="50"
-                  className="h-10 w-20 rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                  className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-10 w-20 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                 />
-                <span className="text-sm text-pm-secondary">% of total</span>
+                <span className="text-pm-secondary text-sm">% of total</span>
                 {depositPercent > 0 && (
-                  <span className="ml-auto text-sm font-medium text-pm-teal">
-                    = {formatAUD(Math.round(total * depositPercent / 100))}
+                  <span className="text-pm-teal ml-auto text-sm font-medium">
+                    = {formatAUD(Math.round((total * depositPercent) / 100))}
                   </span>
                 )}
               </div>
@@ -628,9 +717,23 @@ function PricingSummaryPanel({
             <button
               type="button"
               onClick={onDepositToggle}
-              className="flex w-full items-center gap-2 rounded-xl border border-dashed border-pm-border px-3 py-2.5 text-sm text-pm-secondary hover:border-pm-teal-mid/50 hover:text-pm-teal-mid transition-colors"
+              className="border-pm-border text-pm-secondary hover:border-pm-teal-mid/50 hover:text-pm-teal-mid flex w-full items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="16" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
               Set deposit requirement
             </button>
           )}
@@ -671,71 +774,105 @@ export function QuoteForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [activeSubmitIntent, setActiveSubmitIntent] = useState<QuoteSubmitIntent>('save');
-  const [editableQuoteNumber, setEditableQuoteNumber] = useState(quoteNumberPreview);
+  const [activeSubmitIntent, setActiveSubmitIntent] =
+    useState<QuoteSubmitIntent>('save');
+  const [editableQuoteNumber, setEditableQuoteNumber] =
+    useState(quoteNumberPreview);
   const [selectedPropertyIndex, setSelectedPropertyIndex] = useState('0');
   const [sendDialog, setSendDialog] = useState<SendDialogState>(null);
 
   // Discount & deposit state
-  const [discountCents, setDiscountCents] = useState(defaultValues?.discount_cents ?? 0);
+  const [discountCents, setDiscountCents] = useState(
+    defaultValues?.discount_cents ?? 0
+  );
   const [discountInput, setDiscountInput] = useState(
-    defaultValues?.discount_cents ? String((defaultValues.discount_cents / 100).toFixed(2)) : ''
+    defaultValues?.discount_cents
+      ? String((defaultValues.discount_cents / 100).toFixed(2))
+      : ''
   );
   const [showDiscountEditor, setShowDiscountEditor] = useState(
     (defaultValues?.discount_cents ?? 0) > 0
   );
-  const [depositPercent, setDepositPercent] = useState(defaultValues?.deposit_percent ?? 0);
+  const [depositPercent, setDepositPercent] = useState(
+    defaultValues?.deposit_percent ?? 0
+  );
   const [depositInput, setDepositInput] = useState(
     defaultValues?.deposit_percent ? String(defaultValues.deposit_percent) : ''
   );
   const [showDepositEditor, setShowDepositEditor] = useState(
     (defaultValues?.deposit_percent ?? 0) > 0
   );
-  const hasSavedInteriorEstimate = isInteriorEstimateInput(defaultValues?.interior_estimate);
+  const hasSavedInteriorEstimate = isInteriorEstimateInput(
+    defaultValues?.interior_estimate
+  );
 
   // If pre-filled rooms exist (e.g., AI draft), start in advanced mode
   const [estimateMode, setEstimateMode] = useState<EstimateMode>(
-    hasSavedInteriorEstimate || defaultValues?.rooms?.length ? 'advanced' : 'quick'
+    hasSavedInteriorEstimate || defaultValues?.rooms?.length
+      ? 'advanced'
+      : 'quick'
   );
 
   // Pricing strategy (which method to use for this quote)
-  const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>(() => {
-    if (defaultValues?.pricing_method) {
-      return normalizePreferredPricingStrategy(defaultValues.pricing_method);
+  const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>(
+    () => {
+      if (defaultValues?.pricing_method) {
+        return normalizePreferredPricingStrategy(defaultValues.pricing_method);
+      }
+      return normalizePreferredPricingStrategy(
+        rateSettings?.pricing?.preferred_pricing_method
+      );
     }
-    return normalizePreferredPricingStrategy(rateSettings?.pricing?.preferred_pricing_method);
-  });
+  );
 
   // Day rate method state
   const [dayRateState, setDayRateState] = useState<DayRateInputs>(() => {
     const saved = defaultValues?.pricing_method_inputs;
-    if (saved && saved.method === 'day_rate' && saved.inputs && typeof saved.inputs === 'object') {
+    if (
+      saved &&
+      saved.method === 'day_rate' &&
+      saved.inputs &&
+      typeof saved.inputs === 'object'
+    ) {
       return saved.inputs as DayRateInputs;
     }
     return {
       days: 1,
       daily_rate_cents: rateSettings?.pricing?.daily_rate_cents ?? 80000,
-      material_method: rateSettings?.pricing?.material_cost_method ?? 'percentage',
+      material_method:
+        rateSettings?.pricing?.material_cost_method ?? 'percentage',
       material_percent: rateSettings?.pricing?.material_cost_percent ?? 30,
       material_flat_cents: 0,
     };
   });
 
   // Room rate method state
-  const [roomRateItems, setRoomRateItems] = useState<RoomRateInputs['rooms']>(() => {
-    const saved = defaultValues?.pricing_method_inputs;
-    if (saved && saved.method === 'room_rate' && saved.inputs && typeof saved.inputs === 'object') {
-      const inputs = saved.inputs as RoomRateInputs;
-      return Array.isArray(inputs.rooms) ? inputs.rooms : [];
+  const [roomRateItems, setRoomRateItems] = useState<RoomRateInputs['rooms']>(
+    () => {
+      const saved = defaultValues?.pricing_method_inputs;
+      if (
+        saved &&
+        saved.method === 'room_rate' &&
+        saved.inputs &&
+        typeof saved.inputs === 'object'
+      ) {
+        const inputs = saved.inputs as RoomRateInputs;
+        return Array.isArray(inputs.rooms) ? inputs.rooms : [];
+      }
+      return [];
     }
-    return [];
-  });
+  );
   const roomRatePresets = rateSettings?.room_rate_presets ?? [];
 
   // Manual method state
   const [manualInputs, setManualInputs] = useState<ManualInputs>(() => {
     const saved = defaultValues?.pricing_method_inputs;
-    if (saved && saved.method === 'manual' && saved.inputs && typeof saved.inputs === 'object') {
+    if (
+      saved &&
+      saved.method === 'manual' &&
+      saved.inputs &&
+      typeof saved.inputs === 'object'
+    ) {
       return saved.inputs as ManualInputs;
     }
     return { labor_cents: 0, material_cents: 0 };
@@ -762,7 +899,8 @@ export function QuoteForm({
     material_markup: String(defaultValues?.material_margin_percent ?? 0),
   });
   const selectedCustomer = useMemo(
-    () => customers.find((customer) => customer.id === form.customer_id) ?? null,
+    () =>
+      customers.find((customer) => customer.id === form.customer_id) ?? null,
     [customers, form.customer_id]
   );
   const customerEmailOptions = useMemo(
@@ -774,11 +912,15 @@ export function QuoteForm({
     [selectedCustomer]
   );
   const selectedProperty =
-    customerPropertyOptions[Number(selectedPropertyIndex)] ?? customerPropertyOptions[0] ?? null;
+    customerPropertyOptions[Number(selectedPropertyIndex)] ??
+    customerPropertyOptions[0] ??
+    null;
   const canSendQuote = customerEmailOptions.length > 0;
 
   // Interior / exterior scope (only affects hybrid method)
-  const [quoteScope, setQuoteScope] = useState<'interior' | 'exterior'>('interior');
+  const [quoteScope, setQuoteScope] = useState<'interior' | 'exterior'>(
+    'interior'
+  );
 
   // Quick mode state
   const [quickState, setQuickState] = useState<QuickQuoteBuilderState>(
@@ -791,9 +933,8 @@ export function QuoteForm({
   );
 
   // Exterior estimate state
-  const [exteriorEstimate, setExteriorEstimate] = useState<ExteriorEstimateFormState>(
-    createEmptyExteriorEstimateState
-  );
+  const [exteriorEstimate, setExteriorEstimate] =
+    useState<ExteriorEstimateFormState>(createEmptyExteriorEstimateState);
 
   // Live preview totals
   const quickPreview = useMemo(
@@ -802,16 +943,30 @@ export function QuoteForm({
   );
 
   const advancedPreview = useMemo(() => {
-    if (pricingStrategy !== 'hybrid' || estimateMode !== 'advanced' || quoteScope !== 'interior') return null;
+    if (
+      pricingStrategy !== 'hybrid' ||
+      estimateMode !== 'advanced' ||
+      quoteScope !== 'interior'
+    )
+      return null;
     return calculateInteriorEstimate(
       buildAdvancedEstimatePayload(advancedEstimate),
       rateSettings
     );
-  }, [advancedEstimate, estimateMode, pricingStrategy, quoteScope, rateSettings]);
+  }, [
+    advancedEstimate,
+    estimateMode,
+    pricingStrategy,
+    quoteScope,
+    rateSettings,
+  ]);
 
   const exteriorPreview = useMemo(() => {
     if (pricingStrategy !== 'hybrid' || quoteScope !== 'exterior') return null;
-    return calculateExteriorEstimate(buildExteriorEstimatePayload(exteriorEstimate), rateSettings);
+    return calculateExteriorEstimate(
+      buildExteriorEstimatePayload(exteriorEstimate),
+      rateSettings
+    );
   }, [exteriorEstimate, pricingStrategy, quoteScope, rateSettings]);
 
   // Markup calculations (applied on top of base estimate)
@@ -820,17 +975,23 @@ export function QuoteForm({
   const hybridBaseSubtotal =
     pricingStrategy === 'hybrid'
       ? quoteScope === 'exterior'
-        ? exteriorPreview?.subtotal_cents ?? 0
+        ? (exteriorPreview?.subtotal_cents ?? 0)
         : estimateMode === 'quick'
           ? quickPreview.subtotal_cents
-          : advancedPreview?.subtotal_cents ?? 0
+          : (advancedPreview?.subtotal_cents ?? 0)
       : 0;
-  const labourMarkupCents = Math.round(hybridBaseSubtotal * labourMarkupPct / 100);
-  const materialMarkupCents = Math.round(hybridBaseSubtotal * materialMarkupPct / 100);
-  const subtotalWithMarkup = hybridBaseSubtotal + labourMarkupCents + materialMarkupCents;
-  const adjustmentCents = pricingStrategy === 'hybrid' && estimateMode === 'quick'
-    ? quickPreview.adjustment_cents
-    : 0;
+  const labourMarkupCents = Math.round(
+    (hybridBaseSubtotal * labourMarkupPct) / 100
+  );
+  const materialMarkupCents = Math.round(
+    (hybridBaseSubtotal * materialMarkupPct) / 100
+  );
+  const subtotalWithMarkup =
+    hybridBaseSubtotal + labourMarkupCents + materialMarkupCents;
+  const adjustmentCents =
+    pricingStrategy === 'hybrid' && estimateMode === 'quick'
+      ? quickPreview.adjustment_cents
+      : 0;
   // Merge M&S library items with extra line items (excluding items with empty names)
   const allLineItems = useMemo(
     () => [
@@ -857,8 +1018,10 @@ export function QuoteForm({
 
   // Live preview for non-hybrid methods
   const methodPreview = useMemo(() => {
-    if (pricingStrategy === 'day_rate') return calculateDayRateQuote(dayRateState);
-    if (pricingStrategy === 'room_rate') return calculateRoomRateQuote({ rooms: roomRateItems });
+    if (pricingStrategy === 'day_rate')
+      return calculateDayRateQuote(dayRateState);
+    if (pricingStrategy === 'room_rate')
+      return calculateRoomRateQuote({ rooms: roomRateItems });
     if (pricingStrategy === 'manual') return calculateManualQuote(manualInputs);
     return null;
   }, [pricingStrategy, dayRateState, roomRateItems, manualInputs]);
@@ -871,28 +1034,43 @@ export function QuoteForm({
     });
   }, [methodPreview, allLineItems, discountCents]);
 
-  const displayTotal = composedMethodPreview?.total_cents ?? hybridTotals?.total_cents ?? 0;
+  const displayTotal =
+    composedMethodPreview?.total_cents ?? hybridTotals?.total_cents ?? 0;
   const depositCents = calculateDepositCents(displayTotal, depositPercent);
   const activeMethodLabel =
     pricingStrategy === 'hybrid'
       ? `Detailed Estimate · ${estimateMode === 'quick' ? 'Quick' : 'Advanced'}`
       : PRICING_METHOD_LABELS[pricingStrategy];
   const roomSummaryLines =
-    pricingStrategy === 'hybrid' && estimateMode === 'quick' && quickState.rooms.length > 0
+    pricingStrategy === 'hybrid' &&
+    estimateMode === 'quick' &&
+    quickState.rooms.length > 0
       ? quickState.rooms.map((room, idx) => ({
           label: room.name || `Room ${idx + 1}`,
           value: quickPreview.per_room_cents[idx] ?? 0,
         }))
       : [];
   const summaryLines: SummaryLine[] = (() => {
-    const discountLine = discountCents > 0
-      ? [{ label: 'Discount', value: discountCents, negative: true }]
-      : [];
-    const depositLine = depositCents > 0
-      ? [{ label: `Deposit required (${depositPercent}%)`, value: depositCents, emphasize: false }]
-      : [];
+    const discountLine =
+      discountCents > 0
+        ? [{ label: 'Discount', value: discountCents, negative: true }]
+        : [];
+    const depositLine =
+      depositCents > 0
+        ? [
+            {
+              label: `Deposit required (${depositPercent}%)`,
+              value: depositCents,
+              emphasize: false,
+            },
+          ]
+        : [];
 
-    if (pricingStrategy === 'day_rate' && methodPreview && composedMethodPreview) {
+    if (
+      pricingStrategy === 'day_rate' &&
+      methodPreview &&
+      composedMethodPreview
+    ) {
       return [
         { label: 'Labour', value: methodPreview.labor_cents },
         { label: 'Materials', value: methodPreview.material_cents },
@@ -900,9 +1078,16 @@ export function QuoteForm({
           ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
           : []),
         ...discountLine,
-        { label: 'Subtotal (ex GST)', value: composedMethodPreview.subtotal_cents },
+        {
+          label: 'Subtotal (ex GST)',
+          value: composedMethodPreview.subtotal_cents,
+        },
         { label: 'GST (10%)', value: composedMethodPreview.gst_cents },
-        { label: 'Total (inc GST)', value: composedMethodPreview.total_cents, emphasize: true },
+        {
+          label: 'Total (inc GST)',
+          value: composedMethodPreview.total_cents,
+          emphasize: true,
+        },
         ...depositLine,
       ];
     }
@@ -919,9 +1104,16 @@ export function QuoteForm({
           ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
           : []),
         ...discountLine,
-        { label: 'Subtotal (ex GST)', value: composedMethodPreview.subtotal_cents },
+        {
+          label: 'Subtotal (ex GST)',
+          value: composedMethodPreview.subtotal_cents,
+        },
         { label: 'GST (10%)', value: composedMethodPreview.gst_cents },
-        { label: 'Total (inc GST)', value: composedMethodPreview.total_cents, emphasize: true },
+        {
+          label: 'Total (inc GST)',
+          value: composedMethodPreview.total_cents,
+          emphasize: true,
+        },
         ...depositLine,
       ];
     }
@@ -929,44 +1121,68 @@ export function QuoteForm({
     return [
       { label: 'Base estimate', value: hybridBaseSubtotal },
       ...(labourMarkupPct > 0
-        ? [{ label: `Labour markup (${labourMarkupPct}%)`, value: labourMarkupCents }]
+        ? [
+            {
+              label: `Labour markup (${labourMarkupPct}%)`,
+              value: labourMarkupCents,
+            },
+          ]
         : []),
       ...(materialMarkupPct > 0
-        ? [{ label: `Materials markup (${materialMarkupPct}%)`, value: materialMarkupCents }]
+        ? [
+            {
+              label: `Materials markup (${materialMarkupPct}%)`,
+              value: materialMarkupCents,
+            },
+          ]
         : []),
       ...(lineItemSubtotal > 0
         ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
         : []),
       ...discountLine,
-      { label: 'Subtotal (ex GST)', value: hybridTotals?.subtotal_cents ?? subtotalWithMarkup },
+      {
+        label: 'Subtotal (ex GST)',
+        value: hybridTotals?.subtotal_cents ?? subtotalWithMarkup,
+      },
       { label: 'GST (10%)', value: hybridTotals?.gst_cents ?? 0 },
       ...(adjustmentCents !== 0
-        ? [{ label: 'Adjustment', value: adjustmentCents, negative: adjustmentCents < 0 }]
+        ? [
+            {
+              label: 'Adjustment',
+              value: adjustmentCents,
+              negative: adjustmentCents < 0,
+            },
+          ]
         : []),
-      { label: 'Total (inc GST)', value: hybridTotals?.total_cents ?? 0, emphasize: true },
+      {
+        label: 'Total (inc GST)',
+        value: hybridTotals?.total_cents ?? 0,
+        emphasize: true,
+      },
       ...depositLine,
     ];
   })();
 
   const canSubmit = Boolean(
     onSubmit &&
-      form.customer_id &&
-      form.title.trim() &&
-      form.valid_until &&
-      (pricingStrategy === 'day_rate' ||
-        pricingStrategy === 'manual' ||
-        (pricingStrategy === 'room_rate' && roomRateItems.length > 0) ||
-        (pricingStrategy === 'hybrid' && (
-          quoteScope === 'exterior'
-            ? (exteriorPreview?.subtotal_cents ?? 0) > 0
-            : estimateMode === 'advanced' || quickState.rooms.length > 0
-        )))
+    form.customer_id &&
+    form.title.trim() &&
+    form.valid_until &&
+    (pricingStrategy === 'day_rate' ||
+      pricingStrategy === 'manual' ||
+      (pricingStrategy === 'room_rate' && roomRateItems.length > 0) ||
+      (pricingStrategy === 'hybrid' &&
+        (quoteScope === 'exterior'
+          ? (exteriorPreview?.subtotal_cents ?? 0) > 0
+          : estimateMode === 'advanced' || quickState.rooms.length > 0)))
   );
 
   function handleDiscountInputChange(value: string) {
     setDiscountInput(value);
     const parsed = parseFloat(value);
-    setDiscountCents(Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : 0);
+    setDiscountCents(
+      Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : 0
+    );
   }
 
   function handleDiscountToggle() {
@@ -982,7 +1198,9 @@ export function QuoteForm({
   function handleDepositInputChange(value: string) {
     setDepositInput(value);
     const parsed = parseInt(value, 10);
-    setDepositPercent(Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : 0);
+    setDepositPercent(
+      Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : 0
+    );
   }
 
   function handleDepositToggle() {
@@ -996,7 +1214,9 @@ export function QuoteForm({
   }
 
   function handleChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) {
     const { name, value } = event.target;
     if (name === 'customer_id') {
@@ -1028,7 +1248,10 @@ export function QuoteForm({
         rooms: [],
         line_items: allLineItems,
         pricing_method: 'day_rate',
-        pricing_method_inputs: { method: 'day_rate' as const, inputs: dayRateState },
+        pricing_method_inputs: {
+          method: 'day_rate' as const,
+          inputs: dayRateState,
+        },
       };
     } else if (pricingStrategy === 'room_rate') {
       payload = {
@@ -1046,7 +1269,10 @@ export function QuoteForm({
         rooms: [],
         line_items: allLineItems,
         pricing_method: 'room_rate',
-        pricing_method_inputs: { method: 'room_rate' as const, inputs: { rooms: roomRateItems } },
+        pricing_method_inputs: {
+          method: 'room_rate' as const,
+          inputs: { rooms: roomRateItems },
+        },
       };
     } else if (pricingStrategy === 'manual') {
       payload = {
@@ -1064,7 +1290,10 @@ export function QuoteForm({
         rooms: [],
         line_items: allLineItems,
         pricing_method: 'manual',
-        pricing_method_inputs: { method: 'manual' as const, inputs: manualInputs },
+        pricing_method_inputs: {
+          method: 'manual' as const,
+          inputs: manualInputs,
+        },
       };
     } else if (quoteScope === 'exterior') {
       payload = {
@@ -1106,7 +1335,8 @@ export function QuoteForm({
         complexity: 'standard',
         labour_margin_percent: labourMarkupPct,
         material_margin_percent: materialMarkupPct,
-        manual_adjustment_cents: estimateMode === 'quick' ? quickState.manual_adjustment_cents : 0,
+        manual_adjustment_cents:
+          estimateMode === 'quick' ? quickState.manual_adjustment_cents : 0,
         notes: form.notes,
         internal_notes: form.internal_notes,
         rooms: [],
@@ -1128,7 +1358,10 @@ export function QuoteForm({
     return payload;
   }
 
-  function submitQuote(payload: QuoteCreateInput, submitIntent: QuoteSubmitIntent) {
+  function submitQuote(
+    payload: QuoteCreateInput,
+    submitIntent: QuoteSubmitIntent
+  ) {
     if (!onSubmit) return;
 
     const parsed = parseQuoteCreateInput(payload);
@@ -1174,7 +1407,8 @@ export function QuoteForm({
       {
         ...sendDialog.payload,
         customer_email: sendDialog.email,
-        customer_address: selectedProperty?.address ?? sendDialog.payload.customer_address,
+        customer_address:
+          selectedProperty?.address ?? sendDialog.payload.customer_address,
       },
       'send_email'
     );
@@ -1183,7 +1417,8 @@ export function QuoteForm({
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!onSubmit) return;
-    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const submitter = (event.nativeEvent as SubmitEvent)
+      .submitter as HTMLButtonElement | null;
     const submitIntent =
       submitter?.dataset.submitIntent === 'send_email' ? 'send_email' : 'save';
 
@@ -1207,7 +1442,11 @@ export function QuoteForm({
     ]);
   }
 
-  function addRoomRatePresetItem(title: string, sqm: number, rateCents: number) {
+  function addRoomRatePresetItem(
+    title: string,
+    sqm: number,
+    rateCents: number
+  ) {
     setRoomRateItems((prev) => [
       ...prev,
       {
@@ -1222,7 +1461,11 @@ export function QuoteForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className={showSendQuoteButton ? 'pb-80 md:pb-40 lg:pb-36' : 'pb-52 md:pb-28 lg:pb-24'}
+      className={
+        showSendQuoteButton
+          ? 'pb-80 md:pb-40 lg:pb-36'
+          : 'pb-52 md:pb-28 lg:pb-24'
+      }
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
         <div className="space-y-4">
@@ -1250,628 +1493,773 @@ export function QuoteForm({
           </div>
 
           {/* Quote details */}
-      <section className="rounded-2xl border border-pm-border bg-white p-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-          Quote Details
-        </h3>
-        <div className="mt-4 grid gap-4">
-          <div>
-            <label htmlFor="customer_id" className={LABEL}>
-              Customer
-            </label>
-            <select
-              id="customer_id"
-              name="customer_id"
-              value={form.customer_id}
-              onChange={handleChange}
-              className={FIELD}
-            >
-              <option value="">Select a customer</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.company_name || customer.name}
-                </option>
-              ))}
-            </select>
-            {selectedCustomer && (
-              <div className="mt-3 rounded-xl border border-pm-border bg-pm-surface px-4 py-3 text-sm text-pm-body">
-                <p className="font-medium text-pm-body">
-                  {selectedCustomer.company_name || selectedCustomer.name}
-                </p>
-                {customerEmailOptions.length > 0 && (
-                  <p className="mt-1 break-all text-pm-secondary">
-                    {customerEmailOptions[0]}
-                    {customerEmailOptions.length > 1 && (
-                      <span className="ml-1 whitespace-nowrap text-xs">
-                        +{customerEmailOptions.length - 1} more
-                      </span>
+          <section className="border-pm-border rounded-2xl border bg-white p-4">
+            <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
+              Quote Details
+            </h3>
+            <div className="mt-4 grid gap-4">
+              <div>
+                <label htmlFor="customer_id" className={LABEL}>
+                  Customer
+                </label>
+                <select
+                  id="customer_id"
+                  name="customer_id"
+                  value={form.customer_id}
+                  onChange={handleChange}
+                  className={FIELD}
+                >
+                  <option value="">Select a customer</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.company_name || customer.name}
+                    </option>
+                  ))}
+                </select>
+                {selectedCustomer && (
+                  <div className="border-pm-border bg-pm-surface text-pm-body mt-3 rounded-xl border px-4 py-3 text-sm">
+                    <p className="text-pm-body font-medium">
+                      {selectedCustomer.company_name || selectedCustomer.name}
+                    </p>
+                    {customerEmailOptions.length > 0 && (
+                      <p className="text-pm-secondary mt-1 break-all">
+                        {customerEmailOptions[0]}
+                        {customerEmailOptions.length > 1 && (
+                          <span className="ml-1 text-xs whitespace-nowrap">
+                            +{customerEmailOptions.length - 1} more
+                          </span>
+                        )}
+                      </p>
                     )}
-                  </p>
-                )}
-                {customerPropertyOptions.length > 0 ? (
-                  <div className="mt-3">
-                    <label htmlFor="customer_property" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-pm-secondary">
-                      Property
-                    </label>
-                    <select
-                      id="customer_property"
-                      value={selectedPropertyIndex}
-                      onChange={(event) => {
-                        setSelectedPropertyIndex(event.target.value);
-                        setError(null);
-                      }}
-                      className="h-11 w-full rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
-                    >
-                      {customerPropertyOptions.map((property, index) => (
-                        <option key={`${property.address}-${index}`} value={String(index)}>
-                          {property.label} — {property.address}
-                        </option>
-                      ))}
-                    </select>
-                    {selectedProperty?.notes && (
-                      <p className="mt-1 text-xs text-pm-secondary">{selectedProperty.notes}</p>
+                    {customerPropertyOptions.length > 0 ? (
+                      <div className="mt-3">
+                        <label
+                          htmlFor="customer_property"
+                          className="text-pm-secondary mb-1 block text-xs font-semibold tracking-wide uppercase"
+                        >
+                          Property
+                        </label>
+                        <select
+                          id="customer_property"
+                          value={selectedPropertyIndex}
+                          onChange={(event) => {
+                            setSelectedPropertyIndex(event.target.value);
+                            setError(null);
+                          }}
+                          className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                        >
+                          {customerPropertyOptions.map((property, index) => (
+                            <option
+                              key={`${property.address}-${index}`}
+                              value={String(index)}
+                            >
+                              {property.label} — {property.address}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedProperty?.notes && (
+                          <p className="text-pm-secondary mt-1 text-xs">
+                            {selectedProperty.notes}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-pm-secondary mt-2 text-xs">
+                        No saved property for this customer.
+                      </p>
                     )}
                   </div>
-                ) : (
-                  <p className="mt-2 text-xs text-pm-secondary">
-                    No saved property for this customer.
+                )}
+                {showSendQuoteButton && selectedCustomer && !canSendQuote && (
+                  <p className="text-pm-coral-dark mt-2 text-xs">
+                    No email on file — add one to this customer to enable Send
+                    Quote.
                   </p>
                 )}
               </div>
-            )}
-            {showSendQuoteButton && selectedCustomer && !canSendQuote && (
-              <p className="mt-2 text-xs text-pm-coral-dark">
-                No email on file — add one to this customer to enable Send Quote.
-              </p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="title" className={LABEL}>
-              Title
-            </label>
-            <input
-              id="title"
-              name="title"
-              type="text"
-              value={form.title}
-              onChange={handleChange}
-              placeholder="Interior repaint — 42 Ocean View Rd"
-              className={FIELD}
-            />
-          </div>
-          <div>
-            <label htmlFor="valid_until" className={LABEL}>
-              Valid Until
-            </label>
-            <input
-              id="valid_until"
-              name="valid_until"
-              type="date"
-              value={form.valid_until}
-              onChange={handleChange}
-              className={FIELD}
-            />
-          </div>
-          <div>
-            <label htmlFor="working_days" className={LABEL}>
-              Booking Duration
-            </label>
-            <div className="relative">
-              <NumericInput
-                id="working_days"
-                name="working_days"
-                inputMode="numeric"
-                min={1}
-                max={30}
-                value={form.working_days}
-                sanitize={sanitizeIntegerInput}
-                onValueChange={(value) => {
-                  setForm((current) => ({ ...current, working_days: value }));
-                  setError(null);
-                }}
-                onBlur={() => {
-                  setForm((current) => ({
-                    ...current,
-                    working_days: String(normalizeWorkingDays(intVal(current.working_days, 1))),
-                  }));
-                }}
-                aria-describedby="working_days_help"
-                className="h-12 w-full rounded-xl border border-pm-border bg-white pl-4 pr-16 text-base text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
-              />
-              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-pm-secondary">
-                days
-              </span>
-            </div>
-            <p id="working_days_help" className="mt-1 text-xs text-pm-secondary">
-              Used after approval when the client chooses their booking start date.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing method selector */}
-      <section className="rounded-2xl border border-pm-border bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-          Pricing Method
-        </h3>
-        <div className="grid grid-cols-2 gap-2">
-          {([
-            ['hybrid', '📐', 'Detailed estimate'],
-            ['day_rate', '📅', 'Labour × days'],
-            ['room_rate', '🏠', 'Room flat rate'],
-            ['manual', '✏️', 'Direct input'],
-          ] as [PricingStrategy, string, string][]).map(([method, icon, label]) => (
-            <button
-              key={method}
-              type="button"
-              onClick={() => { setPricingStrategy(method); setError(null); }}
-              className={[
-                'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors',
-                pricingStrategy === method
-                  ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'
-                  : 'border-pm-border text-pm-body hover:border-pm-teal-mid',
-              ].join(' ')}
-            >
-              <span>{icon}</span>
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 rounded-xl border border-pm-border bg-pm-surface/45 px-4 py-3 text-sm text-pm-secondary">
-          Using default rates from Price Rates.
-          {' '}
-          <a href="/price-rates" className="font-medium text-pm-teal underline underline-offset-2">
-            Edit default rates
-          </a>
-        </div>
-      </section>
-
-      {/* Interior / Exterior scope toggle — only for detailed estimate */}
-      {pricingStrategy === 'hybrid' && (
-        <section className="rounded-2xl border border-pm-border bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-            Job Scope
-          </h3>
-          <div className="inline-flex rounded-xl border border-pm-border bg-pm-surface p-1 gap-1">
-            {(['interior', 'exterior'] as const).map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                onClick={() => setQuoteScope(scope)}
-                className={`rounded-lg px-6 py-2 text-sm font-semibold transition-colors ${
-                  quoteScope === scope
-                    ? 'bg-white text-pm-teal shadow-sm'
-                    : 'text-pm-secondary hover:text-pm-body'
-                }`}
-              >
-                {scope === 'interior' ? 'Interior' : 'Exterior'}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Day rate inputs */}
-      {pricingStrategy === 'day_rate' && (
-        <section className="rounded-2xl border border-pm-border bg-white p-4">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-            Labour × Days
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={LABEL}>Number of days</label>
-              <input
-                type="number"
-                min="0.5"
-                step="0.5"
-                value={dayRateState.days}
-                onChange={(e) => setDayRateState((prev) => ({ ...prev, days: parseFloat(e.target.value) || 1 }))}
-                className={FIELD}
-              />
-            </div>
-            <div>
-              <label className={LABEL}>Daily labour rate ($)</label>
-              <NumericInput
-                inputMode="numeric"
-                value={(dayRateState.daily_rate_cents / 100).toFixed(0)}
-                sanitize={sanitizeIntegerInput}
-                onValueChange={(value) => {
-                  const nextValue = value.trim() === '' ? 0 : parseFloat(value);
-                  if (!Number.isFinite(nextValue)) {
-                    return;
-                  }
-
-                  setDayRateState((prev) => ({
-                    ...prev,
-                    daily_rate_cents: Math.round(nextValue * 100),
-                  }));
-                }}
-                className={FIELD}
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <label className={LABEL}>Material costs</label>
-            <div className="flex gap-4">
-              {(['percentage', 'flat'] as const).map((m) => (
-                <label key={m} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    checked={dayRateState.material_method === m}
-                    onChange={() => setDayRateState((prev) => ({ ...prev, material_method: m }))}
-                    className="accent-pm-teal"
-                  />
-                  {m === 'percentage' ? '% of labour' : 'Flat amount'}
+              <div>
+                <label htmlFor="title" className={LABEL}>
+                  Title
                 </label>
+                <input
+                  id="title"
+                  name="title"
+                  type="text"
+                  value={form.title}
+                  onChange={handleChange}
+                  placeholder="Interior repaint — 42 Ocean View Rd"
+                  className={FIELD}
+                />
+              </div>
+              <div>
+                <label htmlFor="valid_until" className={LABEL}>
+                  Valid Until
+                </label>
+                <input
+                  id="valid_until"
+                  name="valid_until"
+                  type="date"
+                  value={form.valid_until}
+                  onChange={handleChange}
+                  className={FIELD}
+                />
+              </div>
+              <div>
+                <label htmlFor="working_days" className={LABEL}>
+                  Booking Duration
+                </label>
+                <div className="relative">
+                  <NumericInput
+                    id="working_days"
+                    name="working_days"
+                    inputMode="numeric"
+                    min={1}
+                    max={30}
+                    value={form.working_days}
+                    sanitize={sanitizeIntegerInput}
+                    onValueChange={(value) => {
+                      setForm((current) => ({
+                        ...current,
+                        working_days: value,
+                      }));
+                      setError(null);
+                    }}
+                    onBlur={() => {
+                      setForm((current) => ({
+                        ...current,
+                        working_days: String(
+                          normalizeWorkingDays(intVal(current.working_days, 1))
+                        ),
+                      }));
+                    }}
+                    aria-describedby="working_days_help"
+                    className="border-pm-border text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-12 w-full rounded-xl border bg-white pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
+                  />
+                  <span className="text-pm-secondary pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
+                    days
+                  </span>
+                </div>
+                <p
+                  id="working_days_help"
+                  className="text-pm-secondary mt-1 text-xs"
+                >
+                  Used after approval when the client chooses their booking
+                  start date.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Pricing method selector */}
+          <section className="border-pm-border rounded-2xl border bg-white p-4">
+            <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
+              Pricing Method
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ['hybrid', '📐', 'Detailed estimate'],
+                  ['day_rate', '📅', 'Labour × days'],
+                  ['room_rate', '🏠', 'Room flat rate'],
+                  ['manual', '✏️', 'Direct input'],
+                ] as [PricingStrategy, string, string][]
+              ).map(([method, icon, label]) => (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => {
+                    setPricingStrategy(method);
+                    setError(null);
+                  }}
+                  className={[
+                    'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors',
+                    pricingStrategy === method
+                      ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'
+                      : 'border-pm-border text-pm-body hover:border-pm-teal-mid',
+                  ].join(' ')}
+                >
+                  <span>{icon}</span>
+                  <span>{label}</span>
+                </button>
               ))}
             </div>
-            {dayRateState.material_method === 'percentage' ? (
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={dayRateState.material_percent ?? 30}
-                  onChange={(e) => setDayRateState((prev) => ({ ...prev, material_percent: parseInt(e.target.value, 10) || 0 }))}
-                  className="w-20 rounded-xl border border-pm-border bg-white px-3 py-2.5 text-center text-base"
-                />
-                <span className="text-sm text-pm-secondary">% of labour</span>
-              </div>
-            ) : (
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-sm text-pm-secondary">$</span>
-                <NumericInput
-                  inputMode="numeric"
-                  value={((dayRateState.material_flat_cents ?? 0) / 100).toFixed(0)}
-                  sanitize={sanitizeIntegerInput}
-                  onValueChange={(value) => {
-                    const nextValue = value.trim() === '' ? 0 : parseFloat(value);
-                    if (!Number.isFinite(nextValue)) {
-                      return;
-                    }
-
-                    setDayRateState((prev) => ({
-                      ...prev,
-                      material_flat_cents: Math.round(nextValue * 100),
-                    }));
-                  }}
-                  className="w-32 rounded-xl border border-pm-border bg-white px-3 py-2.5 text-base"
-                />
-              </div>
-            )}
-          </div>
-          <div className="mt-4 rounded-xl bg-pm-teal-pale/20 px-4 py-3 text-sm text-pm-teal">
-            Labour: {formatAUD(dayRateState.days * dayRateState.daily_rate_cents)} (ex-GST)
-          </div>
-        </section>
-      )}
-
-      {/* Room rate inputs */}
-      {pricingStrategy === 'room_rate' && (
-        <section className="rounded-2xl border border-pm-border bg-white p-4">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-            Room Flat Rates
-          </h3>
-          {roomRatePresets.length > 0 && (
-            <div className="mb-4 rounded-xl border border-pm-teal/25 bg-pm-teal-pale/10 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-pm-teal">
-                Saved Room Presets
-              </p>
-              <p className="mt-1 text-xs text-pm-secondary">
-                Add your saved room presets directly into this quote, then adjust the flat rate if needed.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {roomRatePresets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => addRoomRatePresetItem(preset.title, preset.sqm, preset.rate_cents)}
-                    className="rounded-full border border-pm-teal/30 bg-white px-3 py-1.5 text-xs font-medium text-pm-body hover:border-pm-teal hover:bg-pm-teal-pale/20"
+            <div className="border-pm-border bg-pm-surface/45 text-pm-secondary mt-3 rounded-xl border px-4 py-3 text-sm">
+              {pricingStrategy === 'hybrid' ? (
+                <>
+                  Using Detailed Estimate Anchors from Price Rates.
+                  <Link
+                    href="/price-rates"
+                    className="text-pm-teal font-medium underline underline-offset-2"
                   >
-                    {preset.title} · {preset.sqm} sqm · {formatAUD(preset.rate_cents)}
+                    {' '}
+                    Edit Price Rates
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Using default rates from Price Rates.{' '}
+                  <Link
+                    href="/price-rates"
+                    className="text-pm-teal font-medium underline underline-offset-2"
+                  >
+                    Edit default rates
+                  </Link>
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* Interior / Exterior scope toggle — only for detailed estimate */}
+          {pricingStrategy === 'hybrid' && (
+            <section className="border-pm-border rounded-2xl border bg-white p-4">
+              <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
+                Job Scope
+              </h3>
+              <div className="border-pm-border bg-pm-surface inline-flex gap-1 rounded-xl border p-1">
+                {(['interior', 'exterior'] as const).map((scope) => (
+                  <button
+                    key={scope}
+                    type="button"
+                    onClick={() => setQuoteScope(scope)}
+                    className={`rounded-lg px-6 py-2 text-sm font-semibold transition-colors ${
+                      quoteScope === scope
+                        ? 'text-pm-teal bg-white shadow-sm'
+                        : 'text-pm-secondary hover:text-pm-body'
+                    }`}
+                  >
+                    {scope === 'interior' ? 'Interior' : 'Exterior'}
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
           )}
-          <div className="space-y-3">
-            {roomRateItems.map((item, idx) => (
-              <div key={idx} className="rounded-xl border border-pm-border p-3">
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+
+          {/* Day rate inputs */}
+          {pricingStrategy === 'day_rate' && (
+            <section className="border-pm-border rounded-2xl border bg-white p-4">
+              <h3 className="text-pm-secondary mb-4 text-sm font-semibold tracking-wide uppercase">
+                Labour × Days
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL}>Number of days</label>
                   <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => setRoomRateItems((prev) => prev.map((r, i) => i === idx ? { ...r, name: e.target.value } : r))}
-                    placeholder="Room name"
-                    className="rounded-lg border border-pm-border bg-white px-3 py-2 text-sm"
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    value={dayRateState.days}
+                    onChange={(e) =>
+                      setDayRateState((prev) => ({
+                        ...prev,
+                        days: parseFloat(e.target.value) || 1,
+                      }))
+                    }
+                    className={FIELD}
                   />
-                  <select
-                    value={item.room_type}
-                    onChange={(e) => setRoomRateItems((prev) => prev.map((r, i) => i === idx ? { ...r, room_type: e.target.value as typeof item.room_type } : r))}
-                    className="rounded-lg border border-pm-border bg-white px-2 py-1.5 text-sm"
-                  >
-                    {ROOM_TYPES.map((t) => <option key={t} value={t}>{ROOM_TYPE_LABELS[t]}</option>)}
-                  </select>
-                  <select
-                    value={item.size}
-                    onChange={(e) => {
-                      const size = e.target.value as typeof item.size;
-                      setRoomRateItems((prev) => prev.map((r, i) =>
-                        i === idx ? { ...r, size, rate_cents: getRoomRateBaseline(r.room_type, size, roomRatePresets) } : r
-                      ));
+                </div>
+                <div>
+                  <label className={LABEL}>Daily labour rate ($)</label>
+                  <NumericInput
+                    inputMode="numeric"
+                    value={(dayRateState.daily_rate_cents / 100).toFixed(0)}
+                    sanitize={sanitizeIntegerInput}
+                    onValueChange={(value) => {
+                      const nextValue =
+                        value.trim() === '' ? 0 : parseFloat(value);
+                      if (!Number.isFinite(nextValue)) {
+                        return;
+                      }
+
+                      setDayRateState((prev) => ({
+                        ...prev,
+                        daily_rate_cents: Math.round(nextValue * 100),
+                      }));
                     }}
-                    className="rounded-lg border border-pm-border bg-white px-2 py-1.5 text-sm"
-                  >
-                    {ROOM_SIZES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                  </select>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-pm-secondary">$</span>
+                    className={FIELD}
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className={LABEL}>Material costs</label>
+                <div className="flex gap-4">
+                  {(['percentage', 'flat'] as const).map((m) => (
+                    <label
+                      key={m}
+                      className="flex cursor-pointer items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="radio"
+                        checked={dayRateState.material_method === m}
+                        onChange={() =>
+                          setDayRateState((prev) => ({
+                            ...prev,
+                            material_method: m,
+                          }))
+                        }
+                        className="accent-pm-teal"
+                      />
+                      {m === 'percentage' ? '% of labour' : 'Flat amount'}
+                    </label>
+                  ))}
+                </div>
+                {dayRateState.material_method === 'percentage' ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={dayRateState.material_percent ?? 30}
+                      onChange={(e) =>
+                        setDayRateState((prev) => ({
+                          ...prev,
+                          material_percent: parseInt(e.target.value, 10) || 0,
+                        }))
+                      }
+                      className="border-pm-border w-20 rounded-xl border bg-white px-3 py-2.5 text-center text-base"
+                    />
+                    <span className="text-pm-secondary text-sm">
+                      % of labour
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-pm-secondary text-sm">$</span>
                     <NumericInput
                       inputMode="numeric"
-                      value={(item.rate_cents / 100).toFixed(0)}
+                      value={(
+                        (dayRateState.material_flat_cents ?? 0) / 100
+                      ).toFixed(0)}
                       sanitize={sanitizeIntegerInput}
                       onValueChange={(value) => {
-                        const nextValue = value.trim() === '' ? 0 : parseFloat(value);
+                        const nextValue =
+                          value.trim() === '' ? 0 : parseFloat(value);
                         if (!Number.isFinite(nextValue)) {
                           return;
                         }
 
-                        setRoomRateItems((prev) =>
-                          prev.map((r, i) =>
-                            i === idx
-                              ? { ...r, rate_cents: Math.round(nextValue * 100) }
-                              : r
-                          )
-                        );
+                        setDayRateState((prev) => ({
+                          ...prev,
+                          material_flat_cents: Math.round(nextValue * 100),
+                        }));
                       }}
-                      className="w-24 rounded-lg border border-pm-border bg-white px-2 py-1.5 text-sm"
+                      className="border-pm-border w-32 rounded-xl border bg-white px-3 py-2.5 text-base"
                     />
                   </div>
+                )}
+              </div>
+              <div className="bg-pm-teal-pale/20 text-pm-teal mt-4 rounded-xl px-4 py-3 text-sm">
+                Labour:{' '}
+                {formatAUD(dayRateState.days * dayRateState.daily_rate_cents)}{' '}
+                (ex-GST)
+              </div>
+            </section>
+          )}
+
+          {/* Room rate inputs */}
+          {pricingStrategy === 'room_rate' && (
+            <section className="border-pm-border rounded-2xl border bg-white p-4">
+              <h3 className="text-pm-secondary mb-4 text-sm font-semibold tracking-wide uppercase">
+                Room Flat Rates
+              </h3>
+              {roomRatePresets.length > 0 && (
+                <div className="border-pm-teal/25 bg-pm-teal-pale/10 mb-4 rounded-xl border p-3">
+                  <p className="text-pm-teal text-xs font-semibold tracking-wide uppercase">
+                    Saved Room Presets
+                  </p>
+                  <p className="text-pm-secondary mt-1 text-xs">
+                    Add your saved room presets directly into this quote, then
+                    adjust the flat rate if needed.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {roomRatePresets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() =>
+                          addRoomRatePresetItem(
+                            preset.title,
+                            preset.sqm,
+                            preset.rate_cents
+                          )
+                        }
+                        className="border-pm-teal/30 text-pm-body hover:border-pm-teal hover:bg-pm-teal-pale/20 rounded-full border bg-white px-3 py-1.5 text-xs font-medium"
+                      >
+                        {preset.title} · {preset.sqm} sqm ·{' '}
+                        {formatAUD(preset.rate_cents)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="mt-2 flex justify-end">
-                  <button type="button" onClick={() => setRoomRateItems((prev) => prev.filter((_, i) => i !== idx))} className="text-sm text-pm-secondary hover:text-pm-coral">Remove</button>
+              )}
+              <div className="space-y-3">
+                {roomRateItems.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="border-pm-border rounded-xl border p-3"
+                  >
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) =>
+                          setRoomRateItems((prev) =>
+                            prev.map((r, i) =>
+                              i === idx ? { ...r, name: e.target.value } : r
+                            )
+                          )
+                        }
+                        placeholder="Room name"
+                        className="border-pm-border rounded-lg border bg-white px-3 py-2 text-sm"
+                      />
+                      <select
+                        value={item.room_type}
+                        onChange={(e) =>
+                          setRoomRateItems((prev) =>
+                            prev.map((r, i) =>
+                              i === idx
+                                ? {
+                                    ...r,
+                                    room_type: e.target
+                                      .value as typeof item.room_type,
+                                  }
+                                : r
+                            )
+                          )
+                        }
+                        className="border-pm-border rounded-lg border bg-white px-2 py-1.5 text-sm"
+                      >
+                        {ROOM_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {ROOM_TYPE_LABELS[t]}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={item.size}
+                        onChange={(e) => {
+                          const size = e.target.value as typeof item.size;
+                          setRoomRateItems((prev) =>
+                            prev.map((r, i) =>
+                              i === idx
+                                ? {
+                                    ...r,
+                                    size,
+                                    rate_cents: getRoomRateBaseline(
+                                      r.room_type,
+                                      size,
+                                      roomRatePresets
+                                    ),
+                                  }
+                                : r
+                            )
+                          );
+                        }}
+                        className="border-pm-border rounded-lg border bg-white px-2 py-1.5 text-sm"
+                      >
+                        {ROOM_SIZES.map((s) => (
+                          <option key={s} value={s}>
+                            {s.charAt(0).toUpperCase() + s.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex items-center gap-1">
+                        <span className="text-pm-secondary text-sm">$</span>
+                        <NumericInput
+                          inputMode="numeric"
+                          value={(item.rate_cents / 100).toFixed(0)}
+                          sanitize={sanitizeIntegerInput}
+                          onValueChange={(value) => {
+                            const nextValue =
+                              value.trim() === '' ? 0 : parseFloat(value);
+                            if (!Number.isFinite(nextValue)) {
+                              return;
+                            }
+
+                            setRoomRateItems((prev) =>
+                              prev.map((r, i) =>
+                                i === idx
+                                  ? {
+                                      ...r,
+                                      rate_cents: Math.round(nextValue * 100),
+                                    }
+                                  : r
+                              )
+                            );
+                          }}
+                          className="border-pm-border w-24 rounded-lg border bg-white px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRoomRateItems((prev) =>
+                            prev.filter((_, i) => i !== idx)
+                          )
+                        }
+                        className="text-pm-secondary hover:text-pm-coral text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={addManualRoomRateItem}
+                  className="border-pm-teal text-pm-teal hover:bg-pm-teal-pale/10 flex items-center gap-1.5 rounded-xl border border-dashed px-4 py-2.5 text-sm font-semibold"
+                >
+                  + Add Custom Room
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* Manual direct input */}
+          {pricingStrategy === 'manual' && (
+            <section className="border-pm-border rounded-2xl border bg-white p-4">
+              <h3 className="text-pm-secondary mb-4 text-sm font-semibold tracking-wide uppercase">
+                Direct Price Entry
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL}>Labour cost ($, ex-GST)</label>
+                  <NumericInput
+                    inputMode="numeric"
+                    value={(manualInputs.labor_cents / 100).toFixed(0)}
+                    sanitize={sanitizeIntegerInput}
+                    onValueChange={(value) => {
+                      const nextValue =
+                        value.trim() === '' ? 0 : parseFloat(value);
+                      if (!Number.isFinite(nextValue)) {
+                        return;
+                      }
+
+                      setManualInputs((prev) => ({
+                        ...prev,
+                        labor_cents: Math.round(nextValue * 100),
+                      }));
+                    }}
+                    className={FIELD}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL}>Material cost ($, ex-GST)</label>
+                  <NumericInput
+                    inputMode="numeric"
+                    value={(manualInputs.material_cents / 100).toFixed(0)}
+                    sanitize={sanitizeIntegerInput}
+                    onValueChange={(value) => {
+                      const nextValue =
+                        value.trim() === '' ? 0 : parseFloat(value);
+                      if (!Number.isFinite(nextValue)) {
+                        return;
+                      }
+
+                      setManualInputs((prev) => ({
+                        ...prev,
+                        material_cents: Math.round(nextValue * 100),
+                      }));
+                    }}
+                    className={FIELD}
+                  />
                 </div>
               </div>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={addManualRoomRateItem}
-              className="flex items-center gap-1.5 rounded-xl border border-dashed border-pm-teal px-4 py-2.5 text-sm font-semibold text-pm-teal hover:bg-pm-teal-pale/10"
-            >
-              + Add Custom Room
-            </button>
-          </div>
-        </section>
-      )}
+            </section>
+          )}
 
-      {/* Manual direct input */}
-      {pricingStrategy === 'manual' && (
-        <section className="rounded-2xl border border-pm-border bg-white p-4">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-            Direct Price Entry
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={LABEL}>Labour cost ($, ex-GST)</label>
-              <NumericInput
-                inputMode="numeric"
-                value={(manualInputs.labor_cents / 100).toFixed(0)}
-                sanitize={sanitizeIntegerInput}
-                onValueChange={(value) => {
-                  const nextValue = value.trim() === '' ? 0 : parseFloat(value);
-                  if (!Number.isFinite(nextValue)) {
-                    return;
-                  }
+          {/* Estimate builder — only shown for hybrid method */}
+          {pricingStrategy === 'hybrid' && quoteScope === 'interior' && (
+            <>
+              {/* Mode toggle — Quick vs Advanced */}
+              <div className="border-pm-border flex overflow-hidden rounded-xl border bg-white">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEstimateMode('quick');
+                    setError(null);
+                  }}
+                  className={[
+                    'flex flex-1 flex-col items-center gap-0.5 py-3 text-sm font-semibold transition-colors',
+                    estimateMode === 'quick'
+                      ? 'bg-pm-teal text-white'
+                      : 'text-pm-secondary hover:text-pm-body',
+                  ].join(' ')}
+                >
+                  <span className="text-base">⚡</span>
+                  Quick
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEstimateMode('advanced');
+                    setError(null);
+                  }}
+                  className={[
+                    'flex flex-1 flex-col items-center gap-0.5 py-3 text-sm font-semibold transition-colors',
+                    estimateMode === 'advanced'
+                      ? 'bg-pm-teal text-white'
+                      : 'text-pm-secondary hover:text-pm-body',
+                  ].join(' ')}
+                >
+                  <span className="text-base">🔧</span>
+                  Advanced
+                </button>
+              </div>
 
-                  setManualInputs((prev) => ({
-                    ...prev,
-                    labor_cents: Math.round(nextValue * 100),
-                  }));
-                }}
-                className={FIELD}
-              />
-            </div>
-            <div>
-              <label className={LABEL}>Material cost ($, ex-GST)</label>
-              <NumericInput
-                inputMode="numeric"
-                value={(manualInputs.material_cents / 100).toFixed(0)}
-                sanitize={sanitizeIntegerInput}
-                onValueChange={(value) => {
-                  const nextValue = value.trim() === '' ? 0 : parseFloat(value);
-                  if (!Number.isFinite(nextValue)) {
-                    return;
-                  }
+              {estimateMode === 'quick' ? (
+                <QuickQuoteBuilder
+                  value={quickState}
+                  onChange={(next) => {
+                    setQuickState(next);
+                    setError(null);
+                  }}
+                  rateSettings={rateSettings}
+                />
+              ) : (
+                <InteriorEstimateBuilder
+                  value={advancedEstimate}
+                  onChange={(next) => {
+                    setAdvancedEstimate(next);
+                    setError(null);
+                  }}
+                  rateSettings={rateSettings}
+                />
+              )}
+            </>
+          )}
 
-                  setManualInputs((prev) => ({
-                    ...prev,
-                    material_cents: Math.round(nextValue * 100),
-                  }));
-                }}
-                className={FIELD}
-              />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Estimate builder — only shown for hybrid method */}
-      {pricingStrategy === 'hybrid' && quoteScope === 'interior' && (
-        <>
-          {/* Mode toggle — Quick vs Advanced */}
-          <div className="flex overflow-hidden rounded-xl border border-pm-border bg-white">
-            <button
-              type="button"
-              onClick={() => { setEstimateMode('quick'); setError(null); }}
-              className={[
-                'flex flex-1 flex-col items-center gap-0.5 py-3 text-sm font-semibold transition-colors',
-                estimateMode === 'quick'
-                  ? 'bg-pm-teal text-white'
-                  : 'text-pm-secondary hover:text-pm-body',
-              ].join(' ')}
-            >
-              <span className="text-base">⚡</span>
-              Quick
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEstimateMode('advanced'); setError(null); }}
-              className={[
-                'flex flex-1 flex-col items-center gap-0.5 py-3 text-sm font-semibold transition-colors',
-                estimateMode === 'advanced'
-                  ? 'bg-pm-teal text-white'
-                  : 'text-pm-secondary hover:text-pm-body',
-              ].join(' ')}
-            >
-              <span className="text-base">🔧</span>
-              Advanced
-            </button>
-          </div>
-
-          {estimateMode === 'quick' ? (
-            <QuickQuoteBuilder
-              value={quickState}
-              onChange={(next) => { setQuickState(next); setError(null); }}
-              rateSettings={rateSettings}
-            />
-          ) : (
-            <InteriorEstimateBuilder
-              value={advancedEstimate}
-              onChange={(next) => { setAdvancedEstimate(next); setError(null); }}
+          {/* Exterior estimate builder */}
+          {pricingStrategy === 'hybrid' && quoteScope === 'exterior' && (
+            <ExteriorEstimateBuilder
+              value={exteriorEstimate}
+              onChange={(next) => {
+                setExteriorEstimate(next);
+                setError(null);
+              }}
               rateSettings={rateSettings}
             />
           )}
-        </>
-      )}
 
-      {/* Exterior estimate builder */}
-      {pricingStrategy === 'hybrid' && quoteScope === 'exterior' && (
-        <ExteriorEstimateBuilder
-          value={exteriorEstimate}
-          onChange={(next) => { setExteriorEstimate(next); setError(null); }}
-          rateSettings={rateSettings}
-        />
-      )}
+          {/* Materials & Services line items */}
+          <LineItemsSection
+            libraryItems={libraryItems}
+            value={lineItems}
+            onChange={setLineItems}
+          />
 
-      {/* Materials & Services line items */}
-      <LineItemsSection
-        libraryItems={libraryItems}
-        value={lineItems}
-        onChange={setLineItems}
-      />
+          {/* Custom line items with optional toggle */}
+          <QuoteExtraLineItems
+            libraryItems={libraryItems}
+            value={extraLineItems}
+            onChange={setExtraLineItems}
+          />
 
-      {/* Custom line items with optional toggle */}
-      <QuoteExtraLineItems
-        libraryItems={libraryItems}
-        value={extraLineItems}
-        onChange={setExtraLineItems}
-      />
-
-      {/* Notes */}
-      <section className="rounded-2xl border border-pm-border bg-white p-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-          Notes
-        </h3>
-        <div className="mt-4 grid gap-4">
-          <div>
-            <label htmlFor="notes" className={LABEL}>
-              Client Notes
-            </label>
-            <textarea
-              id="notes"
-              name="notes"
-              rows={4}
-              value={form.notes}
-              onChange={handleChange}
-              placeholder="Any notes visible to the client on the quote"
-              className={TEXTAREA}
-            />
-          </div>
-          <div>
-            <label htmlFor="internal_notes" className={LABEL}>
-              Internal Notes
-            </label>
-            <textarea
-              id="internal_notes"
-              name="internal_notes"
-              rows={3}
-              value={form.internal_notes}
-              onChange={handleChange}
-              placeholder="Internal notes — not shown to the client"
-              className={TEXTAREA}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Markup Settings */}
-      {pricingStrategy === 'hybrid' && (
-        <section className="rounded-2xl border border-pm-border bg-white p-4">
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
-              Markup
+          {/* Notes */}
+          <section className="border-pm-border rounded-2xl border bg-white p-4">
+            <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
+              Notes
             </h3>
-            <p className="mt-0.5 text-xs text-pm-secondary">
-              Applies to the detailed estimate only. Internal only — not visible on the quote PDF.
-            </p>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="labour_markup" className={LABEL}>
-                Labour Markup
-              </label>
-              <div className="relative">
-                <input
-                  id="labour_markup"
-                  name="labour_markup"
-                  type="number"
-                  min="0"
-                  max="500"
-                  step="1"
-                  value={form.labour_markup}
+            <div className="mt-4 grid gap-4">
+              <div>
+                <label htmlFor="notes" className={LABEL}>
+                  Client Notes
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={4}
+                  value={form.notes}
                   onChange={handleChange}
-                  className="h-12 w-full rounded-xl border border-pm-border bg-white pl-4 pr-10 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                  placeholder="Any notes visible to the client on the quote"
+                  className={TEXTAREA}
                 />
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-pm-secondary">
-                  %
-                </span>
+              </div>
+              <div>
+                <label htmlFor="internal_notes" className={LABEL}>
+                  Internal Notes
+                </label>
+                <textarea
+                  id="internal_notes"
+                  name="internal_notes"
+                  rows={3}
+                  value={form.internal_notes}
+                  onChange={handleChange}
+                  placeholder="Internal notes — not shown to the client"
+                  className={TEXTAREA}
+                />
               </div>
             </div>
-            <div>
-              <label htmlFor="material_markup" className={LABEL}>
-                Materials Markup
-              </label>
-              <div className="relative">
-                <input
-                  id="material_markup"
-                  name="material_markup"
-                  type="number"
-                  min="0"
-                  max="500"
-                  step="1"
-                  value={form.material_markup}
-                  onChange={handleChange}
-                  className="h-12 w-full rounded-xl border border-pm-border bg-white pl-4 pr-10 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
-                />
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-pm-secondary">
-                  %
-                </span>
+          </section>
+
+          {/* Markup Settings */}
+          {pricingStrategy === 'hybrid' && (
+            <section className="border-pm-border rounded-2xl border bg-white p-4">
+              <div>
+                <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
+                  Markup
+                </h3>
+                <p className="text-pm-secondary mt-0.5 text-xs">
+                  Applies to the detailed estimate only. Internal only — not
+                  visible on the quote PDF.
+                </p>
               </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="labour_markup" className={LABEL}>
+                    Labour Markup
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="labour_markup"
+                      name="labour_markup"
+                      type="number"
+                      min="0"
+                      max="500"
+                      step="1"
+                      value={form.labour_markup}
+                      onChange={handleChange}
+                      className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-12 w-full rounded-xl border bg-white pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
+                    />
+                    <span className="text-pm-secondary pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
+                      %
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="material_markup" className={LABEL}>
+                    Materials Markup
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="material_markup"
+                      name="material_markup"
+                      type="number"
+                      min="0"
+                      max="500"
+                      step="1"
+                      value={form.material_markup}
+                      onChange={handleChange}
+                      className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-12 w-full rounded-xl border bg-white pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
+                    />
+                    <span className="text-pm-secondary pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
+                      %
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Validation error */}
+          {error && (
+            <div className="border-pm-coral bg-pm-coral-light rounded-lg border px-4 py-3">
+              <p className="text-pm-coral-dark text-sm">{error}</p>
             </div>
-          </div>
-        </section>
-      )}
-
-      {/* Validation error */}
-      {error && (
-        <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{error}</p>
-        </div>
-      )}
-
-
+          )}
         </div>
 
         <aside className="hidden lg:block lg:self-stretch">
@@ -1905,10 +2293,10 @@ export function QuoteForm({
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
                   Send Quote
                 </p>
-                <h3 className="mt-1 text-xl font-semibold text-pm-body">
+                <h3 className="text-pm-body mt-1 text-xl font-semibold">
                   Review before sending
                 </h3>
               </div>
@@ -1916,7 +2304,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="h-10 rounded-lg border border-pm-border px-3 text-sm font-medium text-pm-secondary disabled:opacity-50"
+                className="border-pm-border text-pm-secondary h-10 rounded-lg border px-3 text-sm font-medium disabled:opacity-50"
               >
                 Close
               </button>
@@ -1932,7 +2320,9 @@ export function QuoteForm({
                   value={sendDialog.email}
                   onChange={(event) =>
                     setSendDialog((current) =>
-                      current ? { ...current, email: event.target.value } : current
+                      current
+                        ? { ...current, email: event.target.value }
+                        : current
                     )
                   }
                   className={FIELD}
@@ -1943,43 +2333,49 @@ export function QuoteForm({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-pm-secondary">
+                <p className="text-pm-secondary mt-1 text-xs">
                   Choose from emails saved on this customer.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              <div className="border-pm-border bg-pm-surface rounded-xl border px-4 py-3">
+                <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
                   Customer
                 </p>
-                <p className="mt-1 font-medium text-pm-body">
+                <p className="text-pm-body mt-1 font-medium">
                   {selectedCustomer.company_name || selectedCustomer.name}
                 </p>
                 {selectedProperty?.address && (
-                  <p className="mt-1 text-sm text-pm-secondary">{selectedProperty.address}</p>
+                  <p className="text-pm-secondary mt-1 text-sm">
+                    {selectedProperty.address}
+                  </p>
                 )}
               </div>
 
-              <div className="rounded-xl border border-pm-border bg-white px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              <div className="border-pm-border rounded-xl border bg-white px-4 py-3">
+                <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
                   Quote Content
                 </p>
-                <p className="mt-1 font-medium text-pm-body">{sendDialog.payload.title}</p>
-                <p className="mt-1 text-sm text-pm-secondary">
+                <p className="text-pm-body mt-1 font-medium">
+                  {sendDialog.payload.title}
+                </p>
+                <p className="text-pm-secondary mt-1 text-sm">
                   Valid until {sendDialog.payload.valid_until}
                 </p>
-                <p className="mt-1 text-sm text-pm-secondary">
+                <p className="text-pm-secondary mt-1 text-sm">
                   Booking duration: {sendDialog.payload.working_days ?? 1} day
                   {(sendDialog.payload.working_days ?? 1) !== 1 ? 's' : ''}
                 </p>
                 {sendDialog.payload.notes && (
-                  <p className="mt-3 whitespace-pre-wrap rounded-lg bg-pm-surface px-3 py-2 text-sm text-pm-body">
+                  <p className="bg-pm-surface text-pm-body mt-3 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap">
                     {sendDialog.payload.notes}
                   </p>
                 )}
-                <div className="mt-3 flex items-center justify-between rounded-lg bg-pm-teal-light px-3 py-2">
-                  <span className="text-sm font-medium text-pm-teal">Estimated total</span>
-                  <span className="text-base font-semibold text-pm-teal">
+                <div className="bg-pm-teal-light mt-3 flex items-center justify-between rounded-lg px-3 py-2">
+                  <span className="text-pm-teal text-sm font-medium">
+                    Estimated total
+                  </span>
+                  <span className="text-pm-teal text-base font-semibold">
                     {formatAUD(displayTotal)}
                   </span>
                 </div>
@@ -1991,7 +2387,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="h-12 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body disabled:opacity-50"
+                className="border-pm-border text-pm-body h-12 rounded-xl border bg-white px-4 text-sm font-medium disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1999,9 +2395,11 @@ export function QuoteForm({
                 type="button"
                 onClick={handleConfirmSendQuote}
                 disabled={isPending || !sendDialog.email}
-                className="h-12 rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white disabled:opacity-50"
+                className="bg-pm-teal h-12 rounded-xl px-4 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {isPending && activeSubmitIntent === 'send_email' ? 'Sending...' : 'Send Quote'}
+                {isPending && activeSubmitIntent === 'send_email'
+                  ? 'Sending...'
+                  : 'Send Quote'}
               </button>
             </div>
           </div>
@@ -2009,7 +2407,7 @@ export function QuoteForm({
       )}
 
       {/* Sticky footer CTA — sits above the dashboard bottom tab bar (h-20) on mobile */}
-      <div className="fixed bottom-20 left-0 right-0 z-10 border-t border-pm-border bg-white px-4 pt-4 pb-4 md:bottom-0 md:left-64 md:pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div className="border-pm-border fixed right-0 bottom-20 left-0 z-10 border-t bg-white px-4 pt-4 pb-4 md:bottom-0 md:left-64 md:pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto flex w-full max-w-lg justify-center">
           {showSendQuoteButton ? (
             <div className="w-full space-y-2">
@@ -2017,9 +2415,11 @@ export function QuoteForm({
                 type="button"
                 onClick={handleOpenSendDialog}
                 disabled={isPending || !canSubmit || !canSendQuote}
-                className="h-12 w-full rounded-xl bg-pm-teal px-4 text-base font-semibold text-white disabled:opacity-50"
+                className="bg-pm-teal h-12 w-full rounded-xl px-4 text-base font-semibold text-white disabled:opacity-50"
               >
-                {isPending && activeSubmitIntent === 'send_email' ? 'Sending...' : 'Send Quote to Client'}
+                {isPending && activeSubmitIntent === 'send_email'
+                  ? 'Sending...'
+                  : 'Send Quote to Client'}
               </button>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -2027,15 +2427,17 @@ export function QuoteForm({
                   data-submit-intent="save"
                   onClick={() => setActiveSubmitIntent('save')}
                   disabled={isPending || !canSubmit}
-                  className="h-11 rounded-xl border border-pm-teal bg-white px-4 text-sm font-semibold text-pm-teal disabled:opacity-50"
+                  className="border-pm-teal text-pm-teal h-11 rounded-xl border bg-white px-4 text-sm font-semibold disabled:opacity-50"
                 >
-                  {isPending && activeSubmitIntent === 'save' ? 'Saving...' : 'Save Draft'}
+                  {isPending && activeSubmitIntent === 'save'
+                    ? 'Saving...'
+                    : 'Save Draft'}
                 </button>
                 <button
                   type="button"
                   onClick={() => (onCancel ? onCancel() : router.back())}
                   disabled={isPending}
-                  className="h-11 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body disabled:opacity-50"
+                  className="border-pm-border text-pm-body h-11 rounded-xl border bg-white px-4 text-sm font-medium disabled:opacity-50"
                 >
                   {cancelLabel}
                 </button>
@@ -2047,7 +2449,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => (onCancel ? onCancel() : router.back())}
                 disabled={isPending}
-                className="h-14 rounded-xl border border-pm-border bg-white px-4 text-base font-medium text-pm-body disabled:opacity-50"
+                className="border-pm-border text-pm-body h-14 rounded-xl border bg-white px-4 text-base font-medium disabled:opacity-50"
               >
                 {cancelLabel}
               </button>
@@ -2055,7 +2457,7 @@ export function QuoteForm({
                 type="submit"
                 data-submit-intent="save"
                 disabled={isPending || !canSubmit}
-                className="h-14 rounded-xl bg-pm-teal px-4 text-base font-semibold text-white disabled:opacity-50"
+                className="bg-pm-teal h-14 rounded-xl px-4 text-base font-semibold text-white disabled:opacity-50"
               >
                 {isPending ? 'Saving...' : submitLabel}
               </button>

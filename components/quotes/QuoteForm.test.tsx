@@ -88,7 +88,8 @@ function getEstimateTotalsCents() {
   return Array.from(
     new Set(
       screen.getAllByText('Estimate Total').map((label) => {
-        const value = label.parentElement?.querySelectorAll('p')[1]?.textContent;
+        const value =
+          label.parentElement?.querySelectorAll('p')[1]?.textContent;
         if (!value) {
           throw new Error('Estimate total value not found');
         }
@@ -101,7 +102,9 @@ function getEstimateTotalsCents() {
 
 async function addLibraryItemToQuote(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Add Item' }));
-  await user.click(screen.getByRole('button', { name: /Premium wash & wear/i }));
+  await user.click(
+    screen.getByRole('button', { name: /Premium wash & wear/i })
+  );
   await user.click(screen.getByRole('button', { name: 'Add to Quote' }));
 }
 
@@ -137,7 +140,9 @@ describe('QuoteForm', () => {
     expect(payload.interior_estimate).toBeDefined();
     expect(payload.interior_estimate.estimate_mode).toBe('specific_areas');
     expect(payload.interior_estimate.rooms).toHaveLength(1);
-    expect(payload.interior_estimate.rooms[0].anchor_room_type).toBe('Living Room');
+    expect(payload.interior_estimate.rooms[0].anchor_room_type).toBe(
+      'Living Room'
+    );
     expect(typeof payload.manual_adjustment_cents).toBe('number');
   });
 
@@ -169,7 +174,11 @@ describe('QuoteForm', () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
 
     render(
-      <QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} showSendQuoteButton />
+      <QuoteForm
+        customers={[CUSTOMER]}
+        onSubmit={onSubmit}
+        showSendQuoteButton
+      />
     );
 
     await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
@@ -177,10 +186,17 @@ describe('QuoteForm', () => {
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
     await user.click(screen.getByRole('button', { name: /Living Room/i }));
-    await user.click(screen.getByRole('button', { name: 'Send Quote to Client' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Send Quote to Client' })
+    );
 
-    expect(screen.getByRole('heading', { name: 'Review before sending' })).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('Send to'), 'accounts@example.com');
+    expect(
+      screen.getByRole('heading', { name: 'Review before sending' })
+    ).toBeInTheDocument();
+    await user.selectOptions(
+      screen.getByLabelText('Send to'),
+      'accounts@example.com'
+    );
     await user.click(screen.getByRole('button', { name: 'Send Quote' }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
@@ -199,8 +215,13 @@ describe('QuoteForm', () => {
       <QuoteForm customers={[CUSTOMER_WITHOUT_EMAIL]} showSendQuoteButton />
     );
 
-    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER_WITHOUT_EMAIL.id);
-    expect(screen.getByRole('button', { name: 'Send Quote to Client' })).toBeDisabled();
+    await user.selectOptions(
+      screen.getByLabelText('Customer'),
+      CUSTOMER_WITHOUT_EMAIL.id
+    );
+    expect(
+      screen.getByRole('button', { name: 'Send Quote to Client' })
+    ).toBeDisabled();
   });
 
   it('lets users pick a customer property for the quote snapshot', async () => {
@@ -233,7 +254,9 @@ describe('QuoteForm', () => {
     await user.click(screen.getByRole('button', { name: /Advanced/i }));
 
     // Advanced mode renders property-type toggle buttons from InteriorEstimateBuilder
-    expect(screen.getByRole('button', { name: 'Apartment' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Apartment' })
+    ).toBeInTheDocument();
   });
 
   it('pre-fills advanced mode when defaultValues has rooms', () => {
@@ -313,10 +336,9 @@ describe('QuoteForm', () => {
 
     await user.click(screen.getByRole('button', { name: /Advanced/i }));
 
-    expect(screen.getByRole('button', { name: 'New Plaster (3 coats)' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(
+      screen.getByRole('button', { name: 'New Plaster (3 coats)' })
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('ignores invalid saved interior estimate defaults instead of crashing edit mode', () => {
@@ -336,8 +358,12 @@ describe('QuoteForm', () => {
       />
     );
 
-    expect(screen.queryByRole('button', { name: 'Apartment' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Living Room/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Apartment' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Living Room/i })
+    ).toBeInTheDocument();
   });
 
   it('shows the estimate total', () => {
@@ -360,6 +386,14 @@ describe('QuoteForm', () => {
 
     expect(screen.getByRole('button', { name: /Quick/i })).toBeInTheDocument();
     expect(screen.getByLabelText('Labour Markup')).toBeInTheDocument();
+  });
+
+  it('shows that detailed estimate uses anchors from Price Rates', () => {
+    render(<QuoteForm customers={[CUSTOMER]} />);
+
+    expect(
+      screen.getByText(/Using Detailed Estimate Anchors from Price Rates/i)
+    ).toBeInTheDocument();
   });
 
   it('adds a saved room preset to a room-rate quote and submits it', async () => {
@@ -390,7 +424,9 @@ describe('QuoteForm', () => {
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-12');
 
     await user.click(screen.getByRole('button', { name: /Master Bedroom/i }));
-    expect(screen.getByDisplayValue('Master Bedroom (18 sqm)')).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue('Master Bedroom (18 sqm)')
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save Quote' }));
 
@@ -429,7 +465,9 @@ describe('QuoteForm', () => {
     await addLibraryItemToQuote(user);
 
     expect(getEstimateTotalsCents()).toEqual([125400]);
-    expect(screen.getAllByText('Materials & Services').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Materials & Services').length).toBeGreaterThan(
+      0
+    );
   });
 
   it('includes line items in hybrid preview totals', async () => {
@@ -443,7 +481,9 @@ describe('QuoteForm', () => {
     await addLibraryItemToQuote(user);
 
     expect(getEstimateTotalsCents()).toEqual([before + 11000]);
-    expect(screen.getAllByText('Materials & Services').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Materials & Services').length).toBeGreaterThan(
+      0
+    );
   });
 
   it('keeps paint quantities editable while enforcing whole numbers', async () => {
@@ -453,16 +493,22 @@ describe('QuoteForm', () => {
 
     await user.click(screen.getByRole('button', { name: /Living Room/i }));
     await user.click(screen.getByRole('button', { name: 'Add Item' }));
-    await user.click(screen.getByRole('button', { name: /Premium wash & wear/i }));
+    await user.click(
+      screen.getByRole('button', { name: /Premium wash & wear/i })
+    );
 
-    const pickerQuantityInput = screen.getByLabelText('Premium wash & wear quantity');
+    const pickerQuantityInput = screen.getByLabelText(
+      'Premium wash & wear quantity'
+    );
     await user.clear(pickerQuantityInput);
     await user.type(pickerQuantityInput, '2');
     expect(pickerQuantityInput).toHaveValue('2');
 
     await user.click(screen.getByRole('button', { name: 'Add to Quote' }));
 
-    const quoteQuantityInput = screen.getByLabelText('Premium wash & wear quantity');
+    const quoteQuantityInput = screen.getByLabelText(
+      'Premium wash & wear quantity'
+    );
     expect(quoteQuantityInput).toHaveValue('2');
 
     await user.clear(quoteQuantityInput);
@@ -493,7 +539,9 @@ describe('QuoteForm', () => {
     // Mark as optional → excluded from total
     await user.click(screen.getByLabelText(/Ceiling repaint optional/i));
     expect(getEstimateTotalsCents()).toEqual([before]);
-    expect(screen.getByText(/Optional \(not included in total\)/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Optional \(not included in total\)/i)
+    ).toBeInTheDocument();
 
     // Unmark optional → included again
     await user.click(screen.getByLabelText(/Ceiling repaint optional/i));
@@ -525,7 +573,9 @@ describe('QuoteForm', () => {
 
     await user.click(screen.getByRole('button', { name: /Ceiling repaint/i }));
 
-    expect(screen.getByLabelText('Line item name')).toHaveValue('Ceiling repaint');
+    expect(screen.getByLabelText('Line item name')).toHaveValue(
+      'Ceiling repaint'
+    );
     expect(screen.getByLabelText('Line item description')).toHaveValue(
       'Two-coat ceiling repaint service'
     );

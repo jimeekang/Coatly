@@ -45,12 +45,11 @@ function buildResponse(requestHeaders: Headers, baseResponse: NextResponse) {
 
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isAuthRoute = matchesPrefixes(pathname, ['/login', '/signup']);
   const isPaidAppRoute = matchesPrefixes(pathname, PAID_APP_PREFIXES);
   const isOnboardingRoute = matchesPrefixes(pathname, ['/onboarding']);
   const isSubscribeRoute = matchesPrefixes(pathname, ['/subscribe']);
   const needsAuth = isPaidAppRoute || isOnboardingRoute || isSubscribeRoute;
-  const shouldCheckAuth = needsAuth || isAuthRoute;
+  const shouldCheckAuth = needsAuth;
 
   if (!shouldCheckAuth) {
     return NextResponse.next({ request });
@@ -79,7 +78,9 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
           supabaseResponse = NextResponse.next({
             request: {
               headers: requestHeaders,
@@ -99,10 +100,6 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && needsAuth) {
     return redirectTo(request, '/login');
-  }
-
-  if (user && isAuthRoute) {
-    return redirectTo(request, '/dashboard');
   }
 
   return buildResponse(requestHeaders, supabaseResponse);

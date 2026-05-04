@@ -48,7 +48,8 @@ vi.mock('@/lib/supabase/request-context', () => ({
 }));
 
 vi.mock('@/lib/subscription/access', () => ({
-  getActiveSubscriptionRequiredMessage: getActiveSubscriptionRequiredMessageMock,
+  getActiveSubscriptionRequiredMessage:
+    getActiveSubscriptionRequiredMessageMock,
   getMonthlyActiveQuoteUsageForUser: getMonthlyActiveQuoteUsageForUserMock,
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
@@ -215,7 +216,9 @@ describe('createQuote', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             }),
           };
         }
@@ -470,7 +473,9 @@ describe('createQuote', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             }),
           };
         }
@@ -618,11 +623,14 @@ describe('createQuote', () => {
     expect(sendQuoteEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'accounts@harborcafe.com.au',
-        approvalUrl: 'https://app.coatly.com.au/q/11111111-1111-1111-1111-111111111111',
+        approvalUrl:
+          'https://app.coatly.com.au/q/11111111-1111-1111-1111-111111111111',
         pdfAttachment: expect.any(Buffer),
       })
     );
-    expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-send-1?emailSent=1');
+    expect(redirectMock).toHaveBeenCalledWith(
+      '/quotes/quote-send-1?emailSent=1'
+    );
   });
 
   it('returns an error when send_email is used without a customer email', async () => {
@@ -656,7 +664,9 @@ describe('createQuote', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             }),
           };
         }
@@ -699,7 +709,9 @@ describe('createQuote', () => {
       { submitIntent: 'send_email' }
     );
 
-    expect(result).toEqual({ error: 'Add a customer email before sending this quote.' });
+    expect(result).toEqual({
+      error: 'Add a customer email before sending this quote.',
+    });
   });
 
   it('creates an interior anchor quote and stores estimate items instead of room surfaces', async () => {
@@ -760,7 +772,9 @@ describe('createQuote', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             }),
           };
         }
@@ -890,11 +904,159 @@ describe('createQuote', () => {
         is_selected: true,
       }),
     ]);
-    expect(rpcMock).toHaveBeenCalledWith('generate_quote_number', { user_uuid: 'user-1' });
+    expect(rpcMock).toHaveBeenCalledWith('generate_quote_number', {
+      user_uuid: 'user-1',
+    });
     expect(rpcMock).not.toHaveBeenCalledWith('calculate_quote_totals', {
       quote_uuid: 'quote-1',
     });
     expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-1');
+  });
+
+  it('uses custom detailed estimate anchors when creating a hybrid interior quote', async () => {
+    const captured: {
+      quoteInsert?: Record<string, unknown>;
+      estimateItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: {
+                  id: '550e8400-e29b-41d4-a716-446655440000',
+                  email: 'client@example.com',
+                  emails: ['client@example.com'],
+                  address_line1: '128 Beach Street',
+                  address_line2: null,
+                  city: 'Manly',
+                  state: 'NSW',
+                  postcode: '2095',
+                  properties: [],
+                },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: {
+                  default_rates: {
+                    detailed_estimate_anchors: {
+                      interior_rooms: {
+                        'Bedroom 1': {
+                          min: 200000,
+                          median: 200000,
+                          max: 200000,
+                        },
+                      },
+                    },
+                  },
+                },
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            insert: vi.fn((payload) => {
+              captured.quoteInsert = payload;
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'quote-1' },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            insert: vi.fn(async (payload) => {
+              captured.estimateItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'generate_quote_number')
+          return { data: 'QUO-0010', error: null };
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    const result = await createQuote({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Custom anchor bedroom',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [],
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'excellent',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom',
+            anchor_room_type: 'Bedroom 1',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: true,
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteInsert?.subtotal_cents).toBeGreaterThan(150000);
+    expect(captured.quoteInsert?.subtotal_cents).toBe(200000);
+    expect(captured.estimateItemsInsert?.[0]).toEqual(
+      expect.objectContaining({
+        category: 'room_anchor',
+        label: 'Bedroom',
+        unit_price_cents: 200000,
+        total_cents: 200000,
+      })
+    );
   });
 
   it('keeps day-rate quote totals when materials and services are attached', async () => {
@@ -950,7 +1112,9 @@ describe('createQuote', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             }),
           };
         }
@@ -1181,6 +1345,185 @@ describe('updateQuote', () => {
     vi.clearAllMocks();
   });
 
+  it('uses custom detailed estimate anchors when updating a hybrid interior quote', async () => {
+    const captured: {
+      quoteUpdate?: Record<string, unknown>;
+      estimateItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-1',
+                  quote_number: 'QUO-0009',
+                  customer_id: 'customer-1',
+                },
+                error: null,
+              }),
+            })),
+            update: vi.fn((payload) => {
+              captured.quoteUpdate = payload;
+              return {
+                error: null,
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          const invoiceQuery = {
+            count: 0,
+            error: null,
+            eq: vi.fn().mockReturnThis(),
+          };
+          return {
+            select: vi.fn(() => invoiceQuery),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: {
+                  id: 'customer-1',
+                  email: 'client@example.com',
+                  emails: ['client@example.com'],
+                  address_line1: '128 Beach Street',
+                  address_line2: null,
+                  city: 'Manly',
+                  state: 'NSW',
+                  postcode: '2095',
+                  properties: [],
+                },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: {
+                  default_rates: {
+                    detailed_estimate_anchors: {
+                      interior_rooms: {
+                        'Bedroom 1': {
+                          min: 200000,
+                          median: 200000,
+                          max: 200000,
+                        },
+                      },
+                    },
+                  },
+                },
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+            insert: vi.fn(async (payload) => {
+              captured.estimateItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Updated custom anchor bedroom',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [],
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'excellent',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom',
+            anchor_room_type: 'Bedroom 1',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: true,
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteUpdate?.subtotal_cents).toBeGreaterThan(150000);
+    expect(captured.quoteUpdate?.subtotal_cents).toBe(200000);
+    expect(captured.estimateItemsInsert?.[0]).toEqual(
+      expect.objectContaining({
+        category: 'room_anchor',
+        label: 'Bedroom',
+        unit_price_cents: 200000,
+        total_cents: 200000,
+      })
+    );
+  });
+
   it('falls back when the quotes customer snapshot columns are missing during edit save', async () => {
     const captured: {
       firstQuoteUpdate?: Record<string, unknown>;
@@ -1265,7 +1608,9 @@ describe('updateQuote', () => {
           return {
             select: vi.fn(() => ({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             })),
           };
         }
@@ -1426,7 +1771,8 @@ describe('updateQuote', () => {
     });
 
     expect(result).toEqual({
-      error: 'This quote can no longer be edited because an invoice already exists for it.',
+      error:
+        'This quote can no longer be edited because an invoice already exists for it.',
     });
   });
 });
@@ -1680,7 +2026,9 @@ describe('public quote access', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             }),
           };
         }
@@ -1711,7 +2059,9 @@ describe('public quote access', () => {
       }),
     });
 
-    const result = await getPublicQuoteByToken('11111111-1111-1111-1111-111111111111');
+    const result = await getPublicQuoteByToken(
+      '11111111-1111-1111-1111-111111111111'
+    );
 
     expect(quoteSelectMock).toHaveBeenCalledWith(
       expect.not.stringContaining('public_share_token')
@@ -1721,7 +2071,9 @@ describe('public quote access', () => {
     );
     expect(result.error).toBeNull();
     expect(result.data?.quote).not.toHaveProperty('public_share_token');
-    expect(result.data?.quote.customer.address).toBe('128 Beach Street, Manly, NSW, 2095');
+    expect(result.data?.quote.customer.address).toBe(
+      '128 Beach Street, Manly, NSW, 2095'
+    );
     expect(result.data?.quote.line_items).toEqual([
       expect.objectContaining({
         id: 'line-item-1',
@@ -1902,7 +2254,9 @@ describe('public quote access', () => {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             }),
           };
         }
@@ -2190,7 +2544,9 @@ describe('getQuote', () => {
     expect(result.error).toBeNull();
     expect(result.data?.pricing_method).toBe('day_rate');
     expect(result.data?.customer.email).toBe('quotes@harborcafe.com.au');
-    expect(result.data?.customer.address).toBe('Quote Snapshot Address, Manly, NSW, 2095');
+    expect(result.data?.customer.address).toBe(
+      'Quote Snapshot Address, Manly, NSW, 2095'
+    );
     expect(result.data?.pricing_method_inputs).toEqual({
       method: 'day_rate',
       inputs: {
@@ -2216,7 +2572,8 @@ describe('getQuote', () => {
         createFilterQuery({
           data: null,
           error: {
-            message: "Could not find the 'customer_address' column of 'quotes' in the schema cache",
+            message:
+              "Could not find the 'customer_address' column of 'quotes' in the schema cache",
           },
         })
       )
@@ -2333,7 +2690,9 @@ describe('getQuote', () => {
       expect.not.stringContaining('customer_address')
     );
     expect(result.error).toBeNull();
-    expect(result.data?.public_share_token).toBe('22222222-2222-4222-8222-222222222222');
+    expect(result.data?.public_share_token).toBe(
+      '22222222-2222-4222-8222-222222222222'
+    );
   });
 
   it('falls back to legacy quote selects when snapshot columns are missing', async () => {
@@ -2399,6 +2758,8 @@ describe('getQuote', () => {
     expect(result.data).toHaveLength(1);
     expect(result.data[0]?.quote_number).toBe('DEMO-Q001');
     expect(result.data[0]?.customer.email).toBe('legacy@example.com');
-    expect(result.data[0]?.customer.address).toBe('12 Legacy Street, Sydney, NSW, 2000');
+    expect(result.data[0]?.customer.address).toBe(
+      '12 Legacy Street, Sydney, NSW, 2000'
+    );
   });
 });

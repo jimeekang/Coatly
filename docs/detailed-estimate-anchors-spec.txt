@@ -1,0 +1,230 @@
+# Detailed Estimate Anchors Spec
+
+Date: 2026-05-04
+Status: Approved design, ready for implementation planning
+
+## Goal
+
+Make every quotation price more consistent by letting the painter configure the
+price anchors used by New Quote > Detailed Estimate from Price Rates.
+
+The user should be able to set their own standard room anchor prices in one
+place, then have Detailed Estimate use those anchors consistently when creating
+quotes.
+
+## Current State
+
+New Quote has multiple pricing methods:
+
+- Detailed estimate: anchor-based pricing with scope, condition, room size,
+  doors, windows, skirting, surface rates, and markup.
+- Room flat rate: simple room rows with a saved flat price per room.
+- Day rate: labour days multiplied by a daily rate, plus materials.
+- Manual: direct labour and material input.
+
+Detailed Estimate currently reads most interior room anchor prices from
+config/interior-estimate-anchors.ts. Price Rates already controls surface rates,
+door unit rates, window unit rates, exterior rates, day rate settings, and room
+flat rate presets.
+
+Room flat rate presets look similar to detailed room anchors because both can
+contain names like Bedroom, Bathroom, and Living Room. They are not the same
+thing:
+
+- Room flat rate is a complete price for a quick quote row.
+- Detailed Estimate room anchor is a starting price that is modified by scope,
+  condition, size, coating, door/window/skirting rates, and markup.
+
+## Decision
+
+Add a separate Detailed Estimate Anchors section to Price Rates.
+
+Room flat rate remains a separate pricing method and is not reused as the
+Detailed Estimate source of truth.
+
+Price Rates will have these separate concepts:
+
+- Detailed Estimate Anchors: room anchor prices used by the detailed estimate
+  engine.
+- Surface Rates: walls, ceiling, and trim rates.
+- Door Rates: door type and scope unit rates.
+- Window Rates: window type and scope unit rates.
+- Exterior Rates: exterior surface rates.
+- Room Flat Rate Presets: quick flat-rate room rows.
+- Day Rate Settings: daily labour and material defaults.
+
+## Why This Separation Matters
+
+Combining Room flat rate and Detailed Estimate anchors would make the user's
+settings ambiguous. A Bedroom price could mean either a complete flat quote row
+or a base anchor that still needs scope and condition adjustments.
+
+Keeping them separate avoids these problems:
+
+- No accidental changes to Detailed Estimate when editing flat-rate presets.
+- No double-counting when scope or condition multipliers are applied.
+- Easier explanation in the UI.
+- Easier tests because each pricing method has one source of truth.
+
+## Scope For First Implementation
+
+First implementation should only make interior specific-area room anchors
+editable.
+
+Included:
+
+- Add user-configurable Detailed Estimate room anchors for common room types.
+- Detailed Estimate uses these anchors for specific-area interior estimates.
+- Missing settings fall back to the existing default anchors.
+- Room flat rate presets stay separate.
+- Existing door, window, skirting, surface, and exterior rate behaviour remains.
+
+Deferred:
+
+- Entire property apartment anchors.
+- Entire property house anchors.
+- Condition multiplier editing.
+- Storey multiplier editing.
+- Quantity scale factor editing.
+- DB schema migration for a separate typed table.
+
+The first version stores the settings in businesses.default_rates JSON, matching
+the current Price Rates pattern.
+
+## Data Model
+
+Add this optional shape under UserRateSettings:
+
+detailed_estimate_anchors: {
+  interior_rooms: {
+    "Master Bedroom": { min: number; median: number; max: number };
+    "Bedroom 1": { min: number; median: number; max: number };
+    "Bedroom 2": { min: number; median: number; max: number };
+    "Bedroom 3": { min: number; median: number; max: number };
+    "Bathroom": { min: number; median: number; max: number };
+    "Living Room": { min: number; median: number; max: number };
+    "Lounge": { min: number; median: number; max: number };
+    "Dining": { min: number; median: number; max: number };
+    "Kitchen": { min: number; median: number; max: number };
+    "Study / Office": { min: number; median: number; max: number };
+    "Laundry": { min: number; median: number; max: number };
+    "Hallway": { min: number; median: number; max: number };
+    "Foyer": { min: number; median: number; max: number };
+    "Stairwell": { min: number; median: number; max: number };
+    "Walk-in Robe": { min: number; median: number; max: number };
+    "Other": { min: number; median: number; max: number };
+  };
+}
+
+All numbers are AUD cents, pre-GST.
+
+For the first UI, only the median price needs to be editable. Min and max can be
+derived from the original default range ratio or kept in sync by a helper.
+
+Recommended first implementation:
+
+- UI shows one "Base price" input per room.
+- Saving writes min, median, and max, preserving a stable range around the
+  median.
+- Calculation uses the median exactly as it does today after applying scope,
+  condition, storey, and surface-rate adjustments.
+
+## Calculation Rules
+
+Detailed Estimate specific-area interior pricing should use:
+
+1. User room anchor from Price Rates, if present.
+2. Default anchor from config/interior-estimate-anchors.ts, if user setting is
+   absent or invalid.
+
+For each room:
+
+itemMedian =
+  anchor.median
+  * 100
+  * scopeMultiplier
+  * storeyMultiplier
+  * conditionMedian
+  * surfaceRateMultiplier
+
+If anchor values are already stored in cents, the calculation should avoid a
+second multiply-by-100. The implementation should normalize the source into
+cents before calculation.
+
+Door, window, and skirting calculations stay separate:
+
+- Doors use userRates.door_unit_rates.
+- Windows use userRates.window_unit_rates.
+- Skirting uses the existing skirting anchor behaviour for now.
+
+Room flat rate must not affect Detailed Estimate.
+
+## User Experience
+
+In Price Rates:
+
+- Add a "Detailed Estimate" tab or section.
+- Add a "Room Anchors" table.
+- Columns: Room, Base price.
+- Show helper copy: "Used by Detailed Estimate. Room flat rate presets are
+  separate and only apply to the Room flat rate method."
+- Add reset controls later, not required for first implementation.
+
+In New Quote:
+
+- Detailed estimate keeps the same workflow.
+- Add a small note near Pricing Method or Detailed Estimate: "Using Detailed
+  Estimate Anchors from Price Rates."
+- Add a link to Price Rates.
+
+## Data Flow
+
+1. User edits Detailed Estimate room anchors in Price Rates.
+2. Settings are saved into businesses.default_rates.
+3. New Quote loads rateSettings as it does today.
+4. Client preview calls calculateInteriorEstimate(input, rateSettings).
+5. Server createQuote/updateQuote reloads business rate settings and calls the
+   same calculator.
+6. Saved quote_estimate_items and pricing_snapshot store the calculated result.
+7. Quote detail, public quote, and PDF render saved quote data.
+
+## Error Handling
+
+- Invalid or missing anchor settings fall back to defaults.
+- Negative values are rejected by validation.
+- Zero is allowed because the current rate settings allow intentional zero
+  pricing.
+- Existing quotes do not recalculate automatically when Price Rates change.
+  Only new quotes or edited quotes use the latest settings.
+
+## Testing Requirements
+
+Add tests for:
+
+- Parsing rate settings with detailed_estimate_anchors.
+- Default fallback when detailed_estimate_anchors is missing.
+- Detailed Estimate subtotal changes when a custom room anchor is saved.
+- Room flat rate presets do not affect Detailed Estimate.
+- createQuote uses custom detailed anchors server-side.
+- updateQuote uses custom detailed anchors server-side.
+- Existing quote display and PDF use saved quote_estimate_items, not live rate
+  settings.
+
+## Acceptance Criteria
+
+- A painter can set Detailed Estimate room anchor prices from Price Rates.
+- New Quote > Detailed Estimate uses those room anchors.
+- Room flat rate presets remain separate and unchanged.
+- Existing users without this setting keep the current default pricing.
+- Tests cover client calculation and server save paths.
+- TypeScript, lint, formatting, and focused Vitest suites pass.
+
+## Self-Review
+
+Placeholder scan: No placeholder markers remain.
+Consistency check: Detailed Estimate anchors and Room flat rate presets are
+kept separate throughout the spec.
+Scope check: First implementation is limited to interior specific-area room
+anchors. Entire property and multiplier editing are intentionally deferred.
+Ambiguity check: Values are stored as cents in user settings and normalized
+before calculation to avoid double conversion.

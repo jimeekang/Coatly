@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase/server';
+import { resolveAuthBaseUrl } from '@/lib/auth/base-url';
 
 const DUPLICATE_SIGNUP_ERROR = 'This ID is already signed up.';
 
@@ -32,7 +33,11 @@ export async function signUpWithEmail(data: {
   });
   if (error) return { error: normalizeAuthError(error.message) };
 
-  if (signUpData.user && !signUpData.session && signUpData.user.identities?.length === 0) {
+  if (
+    signUpData.user &&
+    !signUpData.session &&
+    signUpData.user.identities?.length === 0
+  ) {
     return { error: `${DUPLICATE_SIGNUP_ERROR} Sign in instead.` };
   }
 
@@ -52,18 +57,17 @@ export async function signOut(): Promise<void> {
 async function getBaseUrl(): Promise<string> {
   const envUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
-
-  if (envUrl) {
-    return envUrl.replace(/\/$/, '');
-  }
-
   const headerStore = await headers();
   const host =
-    headerStore.get('x-forwarded-host') ?? headerStore.get('host') ?? 'localhost:3000';
-  const protocol =
-    headerStore.get('x-forwarded-proto') ?? (host.includes('localhost') ? 'http' : 'https');
+    headerStore.get('x-forwarded-host') ??
+    headerStore.get('host') ??
+    'localhost:3000';
 
-  return `${protocol}://${host}`;
+  return resolveAuthBaseUrl({
+    envUrl,
+    host,
+    forwardedProto: headerStore.get('x-forwarded-proto'),
+  });
 }
 
 export async function getGoogleOAuthUrl(): Promise<
@@ -100,7 +104,6 @@ export async function requestPasswordReset(data: {
   return { success: true };
 }
 
-
 function normalizeAuthError(message: string): string {
   if (!message) {
     return 'Authentication failed. Please try again.';
@@ -110,7 +113,9 @@ function normalizeAuthError(message: string): string {
     message.includes('This Google account is not registered yet') ||
     message.includes('This email is already registered with Google') ||
     message.includes('This email is already registered') ||
-    message.includes('This email is already registered with email and password') ||
+    message.includes(
+      'This email is already registered with email and password'
+    ) ||
     message.includes('This ID is already signed up')
   ) {
     return message;

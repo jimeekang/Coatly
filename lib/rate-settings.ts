@@ -1,41 +1,82 @@
-import {
-  PAINT_RATES,
-} from '@/config/paint-rates';
+import { PAINT_RATES } from '@/config/paint-rates';
 import { z } from 'zod';
+import {
+  buildDefaultDetailedEstimateAnchors,
+  DETAILED_ESTIMATE_INTERIOR_ROOM_KEYS,
+  type DetailedEstimateAnchors,
+} from '@/lib/detailed-estimate-anchors';
 import type { PricingMethod } from '@/types/quote';
 
 // ─── Surface / coating types ──────────────────────────────────────────────────
 
-export const SURFACE_TYPES = ['walls', 'ceiling', 'trim', 'doors', 'windows'] as const;
+export const SURFACE_TYPES = [
+  'walls',
+  'ceiling',
+  'trim',
+  'doors',
+  'windows',
+] as const;
 /** Surfaces priced per m² in the rate table */
 export const SQM_SURFACE_TYPES = ['walls', 'ceiling', 'trim'] as const;
-export const COATING_TYPES = ['refresh_1coat', 'repaint_2coat', 'new_plaster_3coat'] as const;
-export const WALL_CEILING_COATING_TYPES = ['refresh_1coat', 'repaint_2coat', 'new_plaster_3coat'] as const;
+export const COATING_TYPES = [
+  'refresh_1coat',
+  'repaint_2coat',
+  'new_plaster_3coat',
+] as const;
+export const WALL_CEILING_COATING_TYPES = [
+  'refresh_1coat',
+  'repaint_2coat',
+  'new_plaster_3coat',
+] as const;
 export const TRIM_COATING_TYPES = ['refresh_1coat', 'repaint_2coat'] as const;
 const LEGACY_REFRESH_RATE_KEY = 'touch_up_2coat';
 
 export type RatePresetSurfaceType = (typeof SURFACE_TYPES)[number];
 export type SqmSurfaceType = (typeof SQM_SURFACE_TYPES)[number];
 export type RatePresetCoatingType = (typeof COATING_TYPES)[number];
-export type WallCeilingCoatingType = (typeof WALL_CEILING_COATING_TYPES)[number];
+export type WallCeilingCoatingType =
+  (typeof WALL_CEILING_COATING_TYPES)[number];
 export type TrimCoatingType = (typeof TRIM_COATING_TYPES)[number];
 
 // ─── Per-unit door / window types ────────────────────────────────────────────
 
-export const TRIM_PAINT_SYSTEMS = ['oil_2coat', 'water_3coat_white_finish'] as const;
+export const TRIM_PAINT_SYSTEMS = [
+  'oil_2coat',
+  'water_3coat_white_finish',
+] as const;
 export type TrimPaintSystem = (typeof TRIM_PAINT_SYSTEMS)[number];
 
 /** Door types (mirrors INTERIOR_DOOR_TYPES in interior-estimates.ts) */
-export const RATE_DOOR_TYPES = ['standard', 'flush', 'panelled', 'french', 'sliding', 'bi_fold'] as const;
+export const RATE_DOOR_TYPES = [
+  'standard',
+  'flush',
+  'panelled',
+  'french',
+  'sliding',
+  'bi_fold',
+] as const;
 export type RateDoorType = (typeof RATE_DOOR_TYPES)[number];
 
-export const DOOR_SCOPES = ['door_and_frame', 'door_only', 'frame_only'] as const;
+export const DOOR_SCOPES = [
+  'door_and_frame',
+  'door_only',
+  'frame_only',
+] as const;
 export type DoorScope = (typeof DOOR_SCOPES)[number];
 
-export const WINDOW_TYPES = ['normal', 'awning', 'double_hung', 'french'] as const;
+export const WINDOW_TYPES = [
+  'normal',
+  'awning',
+  'double_hung',
+  'french',
+] as const;
 export type WindowType = (typeof WINDOW_TYPES)[number];
 
-export const WINDOW_SCOPES = ['window_and_frame', 'window_only', 'frame_only'] as const;
+export const WINDOW_SCOPES = [
+  'window_and_frame',
+  'window_only',
+  'frame_only',
+] as const;
 export type WindowScope = (typeof WINDOW_SCOPES)[number];
 
 export type DoorUnitRates = {
@@ -98,35 +139,43 @@ export const WINDOW_SCOPE_LABELS: Record<WindowScope, string> = {
  */
 export const DEFAULT_DOOR_UNIT_RATES: DoorUnitRates = {
   oil_2coat: {
-    standard: { door_and_frame: 22000, door_only: 16000, frame_only:  6000 },
-    flush:    { door_and_frame: 21100, door_only: 15400, frame_only:  5800 },
-    panelled: { door_and_frame: 23800, door_only: 17300, frame_only:  6500 },
-    french:   { door_and_frame: 28200, door_only: 20500, frame_only:  7700 },
-    sliding:  { door_and_frame: 24600, door_only: 17900, frame_only:  6700 },
-    bi_fold:  { door_and_frame: 26800, door_only: 19500, frame_only:  7300 },
+    standard: { door_and_frame: 22000, door_only: 16000, frame_only: 6000 },
+    flush: { door_and_frame: 21100, door_only: 15400, frame_only: 5800 },
+    panelled: { door_and_frame: 23800, door_only: 17300, frame_only: 6500 },
+    french: { door_and_frame: 28200, door_only: 20500, frame_only: 7700 },
+    sliding: { door_and_frame: 24600, door_only: 17900, frame_only: 6700 },
+    bi_fold: { door_and_frame: 26800, door_only: 19500, frame_only: 7300 },
   },
   water_3coat_white_finish: {
-    standard: { door_and_frame: 29500, door_only: 21000, frame_only:  8500 },
-    flush:    { door_and_frame: 28300, door_only: 20200, frame_only:  8200 },
-    panelled: { door_and_frame: 31900, door_only: 22700, frame_only:  9200 },
-    french:   { door_and_frame: 37800, door_only: 26900, frame_only: 10900 },
-    sliding:  { door_and_frame: 33000, door_only: 23500, frame_only:  9500 },
-    bi_fold:  { door_and_frame: 36000, door_only: 25600, frame_only: 10400 },
+    standard: { door_and_frame: 29500, door_only: 21000, frame_only: 8500 },
+    flush: { door_and_frame: 28300, door_only: 20200, frame_only: 8200 },
+    panelled: { door_and_frame: 31900, door_only: 22700, frame_only: 9200 },
+    french: { door_and_frame: 37800, door_only: 26900, frame_only: 10900 },
+    sliding: { door_and_frame: 33000, door_only: 23500, frame_only: 9500 },
+    bi_fold: { door_and_frame: 36000, door_only: 25600, frame_only: 10400 },
   },
 };
 
 export const DEFAULT_WINDOW_UNIT_RATES: WindowUnitRates = {
   oil_2coat: {
-    normal:      { window_and_frame: 20000, window_only: 15000, frame_only: 11000 },
-    awning:      { window_and_frame: 23500, window_only: 18000, frame_only: 13500 },
-    double_hung: { window_and_frame: 30000, window_only: 23000, frame_only: 17500 },
-    french:      { window_and_frame: 40000, window_only: 31000, frame_only: 24000 },
+    normal: { window_and_frame: 20000, window_only: 15000, frame_only: 11000 },
+    awning: { window_and_frame: 23500, window_only: 18000, frame_only: 13500 },
+    double_hung: {
+      window_and_frame: 30000,
+      window_only: 23000,
+      frame_only: 17500,
+    },
+    french: { window_and_frame: 40000, window_only: 31000, frame_only: 24000 },
   },
   water_3coat_white_finish: {
-    normal:      { window_and_frame: 27500, window_only: 20000, frame_only: 13500 },
-    awning:      { window_and_frame: 31000, window_only: 23000, frame_only: 16000 },
-    double_hung: { window_and_frame: 37500, window_only: 28000, frame_only: 20000 },
-    french:      { window_and_frame: 47500, window_only: 36000, frame_only: 26500 },
+    normal: { window_and_frame: 27500, window_only: 20000, frame_only: 13500 },
+    awning: { window_and_frame: 31000, window_only: 23000, frame_only: 16000 },
+    double_hung: {
+      window_and_frame: 37500,
+      window_only: 28000,
+      frame_only: 20000,
+    },
+    french: { window_and_frame: 47500, window_only: 36000, frame_only: 26500 },
   },
 };
 
@@ -144,7 +193,13 @@ export type RoomRatePreset = {
 
 // ─── Pricing Method Settings ──────────────────────────────────────────────────
 
-export const PRICING_METHODS = ['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid'] as const;
+export const PRICING_METHODS = [
+  'day_rate',
+  'sqm_rate',
+  'room_rate',
+  'manual',
+  'hybrid',
+] as const;
 
 export const PRICING_METHOD_LABELS: Record<PricingMethod, string> = {
   day_rate: 'Day Rate',
@@ -156,17 +211,29 @@ export const PRICING_METHOD_LABELS: Record<PricingMethod, string> = {
 
 // ─── Exterior rate types ──────────────────────────────────────────────────────
 
-export const EXTERIOR_COATING_TYPES = ['refresh_1coat', 'repaint_2coat', 'full_system'] as const;
+export const EXTERIOR_COATING_TYPES = [
+  'refresh_1coat',
+  'repaint_2coat',
+  'full_system',
+] as const;
 export type ExteriorCoatingType = (typeof EXTERIOR_COATING_TYPES)[number];
 
-export const EXTERIOR_SURFACES = ['ext_walls', 'eaves', 'fascia', 'gutters'] as const;
+export const EXTERIOR_SURFACES = [
+  'ext_walls',
+  'eaves',
+  'fascia',
+  'gutters',
+] as const;
 export type ExteriorSurface = (typeof EXTERIOR_SURFACES)[number];
 
 export const EXTERIOR_RATE_UNITS = ['/sqm', '/lm'] as const;
 export type ExteriorRateUnit = (typeof EXTERIOR_RATE_UNITS)[number];
 
 export type ExteriorSurfaceRates = Record<ExteriorCoatingType, number>;
-export type ExteriorRateSettings = Record<ExteriorSurface, ExteriorSurfaceRates>;
+export type ExteriorRateSettings = Record<
+  ExteriorSurface,
+  ExteriorSurfaceRates
+>;
 export type CustomExteriorSurfaceRate = {
   id: string;
   label: string;
@@ -197,9 +264,9 @@ export const EXTERIOR_SURFACE_UNITS: Record<ExteriorSurface, string> = {
 export function buildDefaultExteriorRates(): ExteriorRateSettings {
   return {
     ext_walls: { refresh_1coat: 1800, repaint_2coat: 2500, full_system: 3500 },
-    eaves:     { refresh_1coat: 1500, repaint_2coat: 2200, full_system: 3000 },
-    fascia:    { refresh_1coat: 1000, repaint_2coat: 1500, full_system: 2000 },
-    gutters:   { refresh_1coat:  800, repaint_2coat: 1200, full_system: 1600 },
+    eaves: { refresh_1coat: 1500, repaint_2coat: 2200, full_system: 3000 },
+    fascia: { refresh_1coat: 1000, repaint_2coat: 1500, full_system: 2000 },
+    gutters: { refresh_1coat: 800, repaint_2coat: 1200, full_system: 1600 },
   };
 }
 
@@ -242,6 +309,7 @@ export type UserRateSettings = {
   enabled_exterior_surfaces: ExteriorSurface[];
   custom_exterior_surfaces: CustomExteriorSurfaceRate[];
   room_rate_presets: RoomRatePreset[];
+  detailed_estimate_anchors: DetailedEstimateAnchors;
   pricing: PricingMethodSettings;
   exterior: ExteriorRateSettings;
 };
@@ -297,7 +365,9 @@ const windowUnitRatesSchema = z.object({
 });
 
 const pricingMethodSettingsSchema = z.object({
-  preferred_pricing_method: z.enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid']).optional(),
+  preferred_pricing_method: z
+    .enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid'])
+    .optional(),
   daily_rate_cents: z.number().int().min(0).optional(),
   material_cost_method: z.enum(['percentage', 'flat']).optional(),
   material_cost_percent: z.number().int().min(0).max(100).optional(),
@@ -331,6 +401,16 @@ const customExteriorSurfaceRateSchema = z.object({
   rates: exteriorSurfaceRatesSchema,
 });
 
+const detailedEstimateAnchorRangeSchema = z.object({
+  min: z.number().int().min(0),
+  median: z.number().int().min(0),
+  max: z.number().int().min(0),
+});
+
+const detailedEstimateAnchorsSchema = z.object({
+  interior_rooms: z.record(z.string(), detailedEstimateAnchorRangeSchema),
+});
+
 export const ratePresetSchema = z.object({
   walls: ratePresetSurfaceSchema,
   ceiling: ratePresetSurfaceSchema,
@@ -346,6 +426,7 @@ export const ratePresetSchema = z.object({
   enabled_exterior_surfaces: z.array(z.enum(EXTERIOR_SURFACES)).optional(),
   custom_exterior_surfaces: z.array(customExteriorSurfaceRateSchema).optional(),
   room_rate_presets: z.array(roomRatePresetSchema).optional(),
+  detailed_estimate_anchors: detailedEstimateAnchorsSchema.optional(),
   pricing: pricingMethodSettingsSchema.optional(),
   exterior: exteriorRateSettingsSchema.optional(),
 });
@@ -364,8 +445,11 @@ const partialRatePresetSchema = z
     enabled_door_scopes: z.array(z.enum(DOOR_SCOPES)).optional(),
     enabled_window_types: z.array(z.enum(WINDOW_TYPES)).optional(),
     enabled_exterior_surfaces: z.array(z.enum(EXTERIOR_SURFACES)).optional(),
-    custom_exterior_surfaces: z.array(customExteriorSurfaceRateSchema).optional(),
+    custom_exterior_surfaces: z
+      .array(customExteriorSurfaceRateSchema)
+      .optional(),
     room_rate_presets: z.array(roomRatePresetSchema).optional(),
+    detailed_estimate_anchors: detailedEstimateAnchorsSchema.optional(),
     pricing: pricingMethodSettingsSchema.optional(),
     exterior: exteriorRateSettingsSchema.optional(),
   })
@@ -407,12 +491,14 @@ export function buildDefaultRateSettings(): UserRateSettings {
   settings.enabled_exterior_surfaces = [...EXTERIOR_SURFACES];
   settings.custom_exterior_surfaces = [];
   settings.room_rate_presets = [];
+  settings.detailed_estimate_anchors = buildDefaultDetailedEstimateAnchors();
   settings.pricing = { ...DEFAULT_PRICING_METHOD_SETTINGS };
   settings.exterior = buildDefaultExteriorRates();
   return settings;
 }
 
-export const DEFAULT_RATE_SETTINGS: UserRateSettings = buildDefaultRateSettings();
+export const DEFAULT_RATE_SETTINGS: UserRateSettings =
+  buildDefaultRateSettings();
 
 // ─── Parse ────────────────────────────────────────────────────────────────────
 
@@ -421,26 +507,32 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
   const result = buildDefaultRateSettings();
   const parsed = partialRatePresetSchema.safeParse(json);
   if (!parsed.success) return result;
-  const rawJson = (
-    json != null &&
-    typeof json === 'object' &&
-    !Array.isArray(json)
-  ) ? (json as Partial<Record<RatePresetSurfaceType, unknown>>) : null;
+  const rawJson =
+    json != null && typeof json === 'object' && !Array.isArray(json)
+      ? (json as Partial<Record<RatePresetSurfaceType, unknown>>)
+      : null;
 
   // Per-m² surface rates
   for (const surface of SURFACE_TYPES) {
     const surfaceData = parsed.data[surface];
-    const rawSurfaceData = (
+    const rawSurfaceData =
       rawJson?.[surface] != null &&
       typeof rawJson[surface] === 'object' &&
       !Array.isArray(rawJson[surface])
-    ) ? (rawJson[surface] as Partial<Record<RatePresetCoatingType | typeof LEGACY_REFRESH_RATE_KEY, unknown>>) : null;
+        ? (rawJson[surface] as Partial<
+            Record<
+              RatePresetCoatingType | typeof LEGACY_REFRESH_RATE_KEY,
+              unknown
+            >
+          >)
+        : null;
 
     if (!surfaceData) continue;
     for (const coating of COATING_TYPES) {
-      const legacyRefreshRate = coating === 'refresh_1coat'
-        ? rawSurfaceData?.[LEGACY_REFRESH_RATE_KEY]
-        : undefined;
+      const legacyRefreshRate =
+        coating === 'refresh_1coat'
+          ? rawSurfaceData?.[LEGACY_REFRESH_RATE_KEY]
+          : undefined;
       const rate = surfaceData[coating] ?? legacyRefreshRate;
       if (typeof rate === 'number' && Number.isInteger(rate) && rate >= 0) {
         result[surface][coating] = rate;
@@ -475,25 +567,31 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
   }
 
   if (parsed.data.enabled_door_types) {
-    result.enabled_door_types = parsed.data.enabled_door_types as RateDoorType[];
+    result.enabled_door_types = parsed.data
+      .enabled_door_types as RateDoorType[];
   }
   if (parsed.data.enabled_surface_types) {
-    result.enabled_surface_types = parsed.data.enabled_surface_types as SqmSurfaceType[];
+    result.enabled_surface_types = parsed.data
+      .enabled_surface_types as SqmSurfaceType[];
   }
   if (parsed.data.enabled_door_scopes) {
     result.enabled_door_scopes = parsed.data.enabled_door_scopes as DoorScope[];
   }
   if (parsed.data.enabled_window_types) {
-    result.enabled_window_types = parsed.data.enabled_window_types as WindowType[];
+    result.enabled_window_types = parsed.data
+      .enabled_window_types as WindowType[];
   }
   if (parsed.data.enabled_exterior_surfaces) {
-    result.enabled_exterior_surfaces = parsed.data.enabled_exterior_surfaces as ExteriorSurface[];
+    result.enabled_exterior_surfaces = parsed.data
+      .enabled_exterior_surfaces as ExteriorSurface[];
   }
   if (parsed.data.custom_exterior_surfaces) {
-    result.custom_exterior_surfaces = parsed.data.custom_exterior_surfaces.map((surface) => ({
-      ...surface,
-      label: surface.label || 'Custom Surface',
-    }));
+    result.custom_exterior_surfaces = parsed.data.custom_exterior_surfaces.map(
+      (surface) => ({
+        ...surface,
+        label: surface.label || 'Custom Surface',
+      })
+    );
   }
 
   // Room rate presets
@@ -501,15 +599,29 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
     result.room_rate_presets = parsed.data.room_rate_presets;
   }
 
+  if (parsed.data.detailed_estimate_anchors?.interior_rooms) {
+    for (const room of DETAILED_ESTIMATE_INTERIOR_ROOM_KEYS) {
+      const range = parsed.data.detailed_estimate_anchors.interior_rooms[room];
+      if (range) {
+        result.detailed_estimate_anchors.interior_rooms[room] = range;
+      }
+    }
+  }
+
   // Pricing method settings
   if (parsed.data.pricing) {
     const p = parsed.data.pricing;
-    if (p.preferred_pricing_method) result.pricing.preferred_pricing_method = p.preferred_pricing_method;
-    if (p.daily_rate_cents != null) result.pricing.daily_rate_cents = p.daily_rate_cents;
-    if (p.material_cost_method) result.pricing.material_cost_method = p.material_cost_method;
-    if (p.material_cost_percent != null) result.pricing.material_cost_percent = p.material_cost_percent;
+    if (p.preferred_pricing_method)
+      result.pricing.preferred_pricing_method = p.preferred_pricing_method;
+    if (p.daily_rate_cents != null)
+      result.pricing.daily_rate_cents = p.daily_rate_cents;
+    if (p.material_cost_method)
+      result.pricing.material_cost_method = p.material_cost_method;
+    if (p.material_cost_percent != null)
+      result.pricing.material_cost_percent = p.material_cost_percent;
     if ('target_daily_earnings_cents' in p) {
-      result.pricing.target_daily_earnings_cents = p.target_daily_earnings_cents ?? null;
+      result.pricing.target_daily_earnings_cents =
+        p.target_daily_earnings_cents ?? null;
     }
   }
 
@@ -538,5 +650,7 @@ export function getRatePerM2Cents(
   surface: RatePresetSurfaceType,
   coating: RatePresetCoatingType
 ): number {
-  return settings[surface]?.[coating] ?? DEFAULT_RATE_SETTINGS[surface][coating];
+  return (
+    settings[surface]?.[coating] ?? DEFAULT_RATE_SETTINGS[surface][coating]
+  );
 }

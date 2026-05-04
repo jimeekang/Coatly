@@ -115,43 +115,46 @@ describe('calculateInteriorEstimate', () => {
     const userRates = buildDefaultRateSettings();
     userRates.door_unit_rates.oil_2coat.standard.door_and_frame = 30000;
 
-    const result = calculateInteriorEstimate({
-      property_type: 'apartment',
-      estimate_mode: 'specific_areas',
-      condition: 'fair',
-      scope: ['walls', 'ceiling', 'trim'],
-      property_details: {
-        apartment_type: null,
-        sqm: null,
-        bedrooms: null,
-        bathrooms: null,
-        storeys: null,
+    const result = calculateInteriorEstimate(
+      {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        property_details: {
+          apartment_type: null,
+          sqm: null,
+          bedrooms: null,
+          bathrooms: null,
+          storeys: null,
+        },
+        rooms: [
+          {
+            name: 'Living Room',
+            anchor_room_type: 'Living Room',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: true,
+          },
+        ],
+        opening_items: [
+          {
+            opening_type: 'door',
+            paint_system: 'oil_2coat',
+            quantity: 4,
+            room_index: 0,
+            door_type: 'standard',
+            door_scope: 'door_and_frame',
+          },
+        ],
+        trim_items: [],
       },
-      rooms: [
-        {
-          name: 'Living Room',
-          anchor_room_type: 'Living Room',
-          room_type: 'interior',
-          length_m: null,
-          width_m: null,
-          height_m: null,
-          include_walls: true,
-          include_ceiling: true,
-          include_trim: true,
-        },
-      ],
-      opening_items: [
-        {
-          opening_type: 'door',
-          paint_system: 'oil_2coat',
-          quantity: 4,
-          room_index: 0,
-          door_type: 'standard',
-          door_scope: 'door_and_frame',
-        },
-      ],
-      trim_items: [],
-    }, userRates);
+      userRates
+    );
 
     expect(result.subtotal_cents).toBe(415150);
     expect(result.line_items).toEqual([
@@ -176,43 +179,46 @@ describe('calculateInteriorEstimate', () => {
     const userRates = buildDefaultRateSettings();
     userRates.window_unit_rates.oil_2coat.normal.window_and_frame = 25000;
 
-    const result = calculateInteriorEstimate({
-      property_type: 'apartment',
-      estimate_mode: 'specific_areas',
-      condition: 'fair',
-      scope: ['walls', 'ceiling', 'trim'],
-      property_details: {
-        apartment_type: null,
-        sqm: null,
-        bedrooms: null,
-        bathrooms: null,
-        storeys: null,
+    const result = calculateInteriorEstimate(
+      {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        property_details: {
+          apartment_type: null,
+          sqm: null,
+          bedrooms: null,
+          bathrooms: null,
+          storeys: null,
+        },
+        rooms: [
+          {
+            name: 'Living Room',
+            anchor_room_type: 'Living Room',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: true,
+          },
+        ],
+        opening_items: [
+          {
+            opening_type: 'window',
+            paint_system: 'oil_2coat',
+            quantity: 2,
+            room_index: 0,
+            window_type: 'normal',
+            window_scope: 'window_and_frame',
+          },
+        ],
+        trim_items: [],
       },
-      rooms: [
-        {
-          name: 'Living Room',
-          anchor_room_type: 'Living Room',
-          room_type: 'interior',
-          length_m: null,
-          width_m: null,
-          height_m: null,
-          include_walls: true,
-          include_ceiling: true,
-          include_trim: true,
-        },
-      ],
-      opening_items: [
-        {
-          opening_type: 'window',
-          paint_system: 'oil_2coat',
-          quantity: 2,
-          room_index: 0,
-          window_type: 'normal',
-          window_scope: 'window_and_frame',
-        },
-      ],
-      trim_items: [],
-    }, userRates);
+      userRates
+    );
 
     expect(result.subtotal_cents).toBe(354750);
     expect(result.line_items).toEqual([
@@ -233,28 +239,110 @@ describe('calculateInteriorEstimate', () => {
     expect(result.snapshot.price_source).toBe('mixed');
   });
 
+  it('uses custom detailed estimate room anchors for specific areas', () => {
+    const userRates = buildDefaultRateSettings();
+    userRates.detailed_estimate_anchors.interior_rooms['Bedroom 1'] = {
+      min: 200000,
+      median: 200000,
+      max: 200000,
+    };
+
+    const result = calculateInteriorEstimate(
+      {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'excellent',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom',
+            anchor_room_type: 'Bedroom 1',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: true,
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+      userRates
+    );
+
+    expect(result.pricing_items[0]?.unit_price_cents).toBe(200000);
+  });
+
+  it('does not use room flat rate presets for detailed estimates', () => {
+    const userRates = buildDefaultRateSettings();
+    userRates.room_rate_presets = [
+      {
+        id: 'preset-bedroom',
+        title: 'Bedroom 1',
+        sqm: 12,
+        rate_cents: 999999,
+      },
+    ];
+
+    const result = calculateInteriorEstimate(
+      {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'excellent',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom',
+            anchor_room_type: 'Bedroom 1',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: true,
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+      userRates
+    );
+
+    expect(result.pricing_items[0]?.unit_price_cents).not.toBe(999999);
+  });
+
   it('uses saved surface rates as a multiplier for entire-property estimates', () => {
     const userRates = buildDefaultRateSettings();
     userRates.walls.repaint_2coat *= 2;
     userRates.ceiling.repaint_2coat *= 2;
     userRates.trim.repaint_2coat *= 2;
 
-    const result = calculateInteriorEstimate({
-      property_type: 'apartment',
-      estimate_mode: 'entire_property',
-      condition: 'fair',
-      scope: ['walls', 'ceiling', 'trim'],
-      property_details: {
-        apartment_type: '2_bedroom_standard',
-        sqm: null,
-        bedrooms: null,
-        bathrooms: null,
-        storeys: null,
+    const result = calculateInteriorEstimate(
+      {
+        property_type: 'apartment',
+        estimate_mode: 'entire_property',
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        property_details: {
+          apartment_type: '2_bedroom_standard',
+          sqm: null,
+          bedrooms: null,
+          bathrooms: null,
+          storeys: null,
+        },
+        rooms: [],
+        opening_items: [],
+        trim_items: [],
       },
-      rooms: [],
-      opening_items: [],
-      trim_items: [],
-    }, userRates);
+      userRates
+    );
 
     expect(result.subtotal_cents).toBe(1150000);
     expect(result.gst_cents).toBe(115000);
