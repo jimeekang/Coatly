@@ -1,7 +1,7 @@
 # Generated: DB Schema Summary
 
 > ⚠️ 이 파일은 참조용 스냅샷입니다. 정확한 스키마는 `supabase/migrations/`와 `types/database.ts`를 확인하세요.
-> 마지막 업데이트: 2026-04-25 (migration 036 기준)
+> 마지막 업데이트: 2026-05-05 (migration 040 기준)
 
 ## Tables
 
@@ -15,7 +15,7 @@
 `id(PK) | user_id(FK) | name | email | phone | company_name | address | notes | is_archived`
 
 ### quotes
-`id(PK) | user_id(FK) | customer_id(FK) | customer_email(snapshot) | customer_address(snapshot) | quote_number | title | status | tier(complexity: standard|moderate|complex) | margins | totals_cents | valid_until | notes`
+`id(PK) | user_id(FK) | customer_id(FK) | customer_email(snapshot) | customer_address(snapshot) | quote_number | title | status | tier(complexity: standard|moderate|complex) | margins | totals_cents | valid_until | public_share_token | public_share_expires_at | public_share_revoked_at | public_share_revoked_reason | notes`
 
 ### quote_rooms
 `id(PK) | quote_id(FK) | name | room_type | dimensions(m) | sort_order`
@@ -28,6 +28,9 @@
 
 ### invoice_line_items
 `id(PK) | invoice_id(FK) | description | quantity | unit_price_cents | gst_cents | total_cents | sort_order`
+
+### invoice_reminder_events
+`id(PK) | user_id(FK) | invoice_id(FK) | reminder_type(due_soon|overdue) | status(pending|sent|failed) | scheduled_for | resend_message_id | attempt_count | last_attempted_at | sent_at | error_message | metadata`
 
 ### jobs
 `id(PK) | user_id(FK) | customer_id(FK) | quote_id(FK,nullable) | title | status | scheduled_date | start_date | end_date | duration_days | schedule_source | google_sync_status | notes`
@@ -53,6 +56,12 @@
 ### google_calendar_settings
 `user_id(PK/FK) | display_calendar_id | availability_calendar_id | event_destination_calendar_id | timezone`
 
+### ai_usage_events
+`id(PK) | user_id(FK) | action | provider | model | status(completed|failed) | input_tokens | output_tokens | total_tokens | latency_ms | request_id | error_message | metadata | created_at`
+
+### public_quote_events
+`id(PK) | user_id(FK) | quote_id(FK) | event_type | public_share_token | actor_name | actor_email | ip_hash | user_agent_hash | error_message | metadata | created_at`
+
 ## Storage Buckets
 
 | Bucket | 접근 | 용도 |
@@ -60,6 +69,6 @@
 | logos | Private (per user) | 비즈니스 로고 |
 | photos | Private (per user) | 현장 사진 |
 
-## Migrations (001–036)
+## Migrations (001–040)
 
-총 36개 마이그레이션. 상세 내용은 `supabase/migrations/` 디렉토리 참조.
+총 40개 마이그레이션. 상세 내용은 `supabase/migrations/` 디렉토리 참조.

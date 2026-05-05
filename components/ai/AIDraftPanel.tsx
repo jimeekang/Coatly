@@ -42,6 +42,9 @@ export function AIDraftPanel({
           <p className="mt-1 text-sm text-pm-secondary">
             AI prepares a structured draft only. You still review the form before saving.
           </p>
+          <p className="mt-2 rounded-xl border border-pm-teal-light bg-white/80 px-3 py-2 text-xs text-pm-secondary">
+            AI may use business, customer, and job context to draft this form. Check all details before applying or saving.
+          </p>
         </div>
       </div>
 

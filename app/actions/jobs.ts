@@ -1230,6 +1230,25 @@ export async function bookJobFromPublicQuote(
     return { error: 'The selected dates are not available. Please choose different dates.', jobId: null };
   }
 
+  const googleBusy = await getGoogleBusyDatesForUser({
+    supabase,
+    userId: quote.user_id,
+    timeMin: `${startDate}T00:00:00.000Z`,
+    timeMax: `${endDate}T23:59:59.999Z`,
+  });
+
+  if (googleBusy.error) {
+    return {
+      error: 'We could not confirm calendar availability. Please contact the contractor before booking.',
+      jobId: null,
+    };
+  }
+
+  const googleBlockedDates = new Set(googleBusy.blockedDates);
+  if (bookingRange.scheduledDates.some((scheduledDate) => googleBlockedDates.has(scheduledDate))) {
+    return { error: 'The selected dates are not available. Please choose different dates.', jobId: null };
+  }
+
   const title = quote.title?.trim() || `Job for ${quote.quote_number}`;
 
   const { data: insertedJob, error: insertError } = await supabase
@@ -1337,6 +1356,14 @@ export async function getAvailableDatesForToken(
     timeMin: `${today}T00:00:00.000Z`,
     timeMax: `${addDaysToDateValue(today, 365)}T23:59:59.999Z`,
   });
+
+  if (googleBusy.error) {
+    return {
+      blockedDates: [],
+      workingDays,
+      error: 'Calendar availability could not be confirmed. Please contact the contractor before booking.',
+    };
+  }
 
   const mergedBlockedDates = [...new Set([...blockedDates, ...googleBusy.blockedDates])].sort();
 

@@ -269,7 +269,6 @@ describe('runWorkspaceAssistant', () => {
         customers: expect.arrayContaining([
           expect.objectContaining({
             id: 'customer-1',
-            address: '128 Beach Street, Manly, NSW, 2095',
           }),
         ]),
         quotes: expect.arrayContaining([
@@ -290,5 +289,108 @@ describe('runWorkspaceAssistant', () => {
         ]),
       })
     );
+  });
+
+  it('does not pass raw customer contact PII into dashboard AI context', async () => {
+    isAIDraftConfiguredMock.mockReturnValue(true);
+    generateWorkspaceAssistantResultMock.mockResolvedValue({
+      intent: 'answer',
+      summary: 'Found Shara invoice details.',
+      answer: "Shara's invoice INV-0012 is due on 2026-04-10.",
+      warnings: [],
+      matches: [],
+      customer: null,
+      quote: null,
+      invoice: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: {
+                    name: 'Coatly Co',
+                    email: 'owner@example.com',
+                    phone: '0412 111 222',
+                    address: '1 Test St, Sydney NSW 2000',
+                  },
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'customer-1',
+                    name: 'Shara Adams',
+                    company_name: 'Shara Studio',
+                    email: 'shara@example.com',
+                    phone: '0412 555 012',
+                    address_line1: '128 Beach Street',
+                    city: 'Manly',
+                    state: 'NSW',
+                    postcode: '2095',
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({ data: [] }),
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({ data: [] }),
+            }),
+          };
+        }
+
+        if (table === 'ai_usage_events') {
+          return {
+            insert: vi.fn().mockResolvedValue({ error: null }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    await runWorkspaceAssistant({
+      prompt: "When is Shara's invoice due date?",
+    });
+
+    const aiInput = generateWorkspaceAssistantResultMock.mock.calls[0]?.[0];
+    const serializedInput = JSON.stringify(aiInput);
+    expect(serializedInput).not.toContain('shara@example.com');
+    expect(serializedInput).not.toContain('0412 555 012');
+    expect(serializedInput).not.toContain('128 Beach Street');
+    expect(serializedInput).not.toContain('owner@example.com');
   });
 });

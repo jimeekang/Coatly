@@ -13,6 +13,9 @@ export type Update<T extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][T]['Update'];
 
 export type Business = Tables<'businesses'>;
+export type AiUsageEvent = Tables<'ai_usage_events'>;
+export type AiUsageEventInsert = Insert<'ai_usage_events'>;
+export type AiUsageEventUpdate = Update<'ai_usage_events'>;
 export type Customer = Tables<'customers'>;
 export type GoogleCalendarConnection = Tables<'google_calendar_connections'>;
 export type GoogleCalendarConnectionInsert = Insert<'google_calendar_connections'>;
@@ -22,6 +25,9 @@ export type GoogleCalendarSettingsInsert = Insert<'google_calendar_settings'>;
 export type GoogleCalendarSettingsUpdate = Update<'google_calendar_settings'>;
 export type Invoice = Tables<'invoices'>;
 export type InvoiceLineItem = Tables<'invoice_line_items'>;
+export type InvoiceReminderEvent = Tables<'invoice_reminder_events'>;
+export type InvoiceReminderEventInsert = Insert<'invoice_reminder_events'>;
+export type InvoiceReminderEventUpdate = Update<'invoice_reminder_events'>;
 export type Job = Tables<'jobs'>;
 export type JobInsert = Insert<'jobs'>;
 export type JobUpdate = Update<'jobs'>;
@@ -49,6 +55,9 @@ export type QuoteEstimateItem = QuoteLineItem;
 export type QuoteTemplate = Tables<'quote_templates'>;
 export type QuoteTemplateInsert = Insert<'quote_templates'>;
 export type QuoteTemplateUpdate = Update<'quote_templates'>;
+export type PublicQuoteEvent = Tables<'public_quote_events'>;
+export type PublicQuoteEventInsert = Insert<'public_quote_events'>;
+export type PublicQuoteEventUpdate = Update<'public_quote_events'>;
 
 export type RatePreset = UserRatePreset;
 export type RatePresetJson = Database['public']['Tables']['businesses']['Row']['default_rates'];

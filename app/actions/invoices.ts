@@ -860,44 +860,7 @@ export async function updateInvoice(
     payment_method: parsed.data.payment_method,
   });
 
-  const { error: invoiceError } = await supabase
-    .from('invoices')
-    .update({
-      customer_id: parsed.data.customer_id,
-      quote_id: parsed.data.quote_id,
-      status: statusToSave,
-      invoice_type: parsed.data.invoice_type,
-      business_abn: parsed.data.business_abn,
-      payment_terms: parsed.data.payment_terms,
-      bank_details: parsed.data.bank_details,
-      subtotal_cents,
-      gst_cents,
-      total_cents,
-      amount_paid_cents: paymentTracking.amount_paid_cents,
-      due_date: parsed.data.due_date,
-      paid_date: paymentTracking.paid_date,
-      paid_at: paymentTracking.paid_at,
-      payment_method: paymentTracking.payment_method,
-      notes: parsed.data.notes,
-    })
-    .eq('id', id)
-    .eq('user_id', user.id);
-
-  if (invoiceError) {
-    return { error: invoiceError.message };
-  }
-
-  const { error: deleteLineItemsError } = await supabase
-    .from('invoice_line_items')
-    .delete()
-    .eq('invoice_id', id);
-
-  if (deleteLineItemsError) {
-    return { error: deleteLineItemsError.message };
-  }
-
   const lineItems = line_items.map((item) => ({
-    invoice_id: id,
     description: item.description,
     quantity: item.quantity,
     unit_price_cents: item.unit_price_cents,
@@ -906,15 +869,36 @@ export async function updateInvoice(
     sort_order: item.sort_order,
   }));
 
-  const { error: lineItemsError } = await supabase
-    .from('invoice_line_items')
-    .insert(lineItems);
+  const { error: invoiceUpdateError } = await supabase.rpc(
+    'update_invoice_with_line_items',
+    {
+      p_invoice_id: id,
+      p_user_id: user.id,
+      p_invoice: {
+        customer_id: parsed.data.customer_id,
+        quote_id: parsed.data.quote_id,
+        status: statusToSave,
+        invoice_type: parsed.data.invoice_type,
+        business_abn: parsed.data.business_abn,
+        payment_terms: parsed.data.payment_terms,
+        bank_details: parsed.data.bank_details,
+        subtotal_cents,
+        gst_cents,
+        total_cents,
+        amount_paid_cents: paymentTracking.amount_paid_cents,
+        due_date: parsed.data.due_date,
+        paid_date: paymentTracking.paid_date,
+        paid_at: paymentTracking.paid_at,
+        payment_method: paymentTracking.payment_method,
+        notes: parsed.data.notes,
+      },
+      p_line_items: lineItems,
+    }
+  );
 
-  if (lineItemsError) {
-    return { error: lineItemsError.message };
+  if (invoiceUpdateError) {
+    return { error: invoiceUpdateError.message };
   }
-
-  await supabase.rpc('calculate_invoice_totals', { invoice_uuid: id });
 
   revalidatePath('/invoices');
   revalidatePath(`/invoices/${id}`);

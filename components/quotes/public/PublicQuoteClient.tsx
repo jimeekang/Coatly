@@ -29,6 +29,8 @@ interface PublicQuoteClientProps {
     blockedDates: string[];
     workingDays: number;
     error: string | null;
+    availabilityStatus?: 'ready' | 'degraded' | 'unavailable';
+    availabilityMessage?: string | null;
   } | null;
 }
 
@@ -508,6 +510,11 @@ export function PublicQuoteClient({
                     bookingAvailability?.workingDays ?? quote.working_days ?? 1
                   }
                   initialLoadError={bookingAvailability?.error ?? null}
+                  initialAvailabilityStatus={bookingAvailability?.availabilityStatus}
+                  initialAvailabilityMessage={bookingAvailability?.availabilityMessage}
+                  contractorName={business?.name ?? null}
+                  contractorPhone={business?.phone ?? null}
+                  contractorEmail={business?.email ?? null}
                 />
               </div>
             </SectionCard>

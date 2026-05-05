@@ -29,6 +29,11 @@ interface PublicDatePickerStepProps {
   initialBlockedDates?: string[];
   initialWorkingDays?: number;
   initialLoadError?: string | null;
+  initialAvailabilityStatus?: 'ready' | 'degraded' | 'unavailable';
+  initialAvailabilityMessage?: string | null;
+  contractorName?: string | null;
+  contractorPhone?: string | null;
+  contractorEmail?: string | null;
 }
 
 function renderStep(props: PublicDatePickerStepProps = { token: 'test-token', workingDays: 1, customerName: 'Test Customer' }) {
@@ -69,6 +74,44 @@ describe('PublicDatePickerStep', () => {
     const now = new Date();
     const monthName = now.toLocaleString('default', { month: 'long' });
     expect(screen.getByText(new RegExp(monthName, 'i'))).toBeInTheDocument();
+  });
+
+  it('pauses booking and shows contractor contact when availability is unavailable', () => {
+    renderStep({
+      token: 'test-token',
+      workingDays: 1,
+      customerName: 'Test Customer',
+      initialLoadError: 'Calendar availability could not be checked.',
+      contractorName: 'Bondi Paint Co',
+      contractorPhone: '0412 555 012',
+      contractorEmail: 'hello@example.com',
+    });
+
+    expect(screen.getByText('Online booking is paused')).toBeInTheDocument();
+    expect(screen.getByText(/Bondi Paint Co/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Call contractor/i })).toHaveAttribute(
+      'href',
+      'tel:0412 555 012',
+    );
+    expect(screen.getByRole('link', { name: /Email contractor/i })).toHaveAttribute(
+      'href',
+      'mailto:hello@example.com',
+    );
+    expect(screen.queryByRole('button', { name: /^Book /i })).not.toBeInTheDocument();
+  });
+
+  it('pauses booking for degraded availability without a load error', () => {
+    renderStep({
+      token: 'test-token',
+      workingDays: 1,
+      customerName: 'Test Customer',
+      initialAvailabilityStatus: 'degraded',
+      initialAvailabilityMessage: 'Calendar status is out of date.',
+    });
+
+    expect(screen.getByText('Online booking is paused')).toBeInTheDocument();
+    expect(screen.getByText(/Calendar status is out of date/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Book /i })).not.toBeInTheDocument();
   });
 
   it('disables past dates', async () => {

@@ -2368,23 +2368,6 @@ export async function updateQuote(
     preview = calculateQuotePreview(parsed.data);
   }
 
-  // Delete old relations
-  const { data: oldRooms } = await supabase
-    .from('quote_rooms')
-    .select('id')
-    .eq('quote_id', quoteId);
-
-  const oldRoomIds = oldRooms?.map((r) => r.id) ?? [];
-  if (oldRoomIds.length > 0) {
-    await supabase
-      .from('quote_room_surfaces')
-      .delete()
-      .in('room_id', oldRoomIds);
-    await supabase.from('quote_rooms').delete().eq('quote_id', quoteId);
-  }
-  await supabase.from('quote_estimate_items').delete().eq('quote_id', quoteId);
-  await supabase.from('quote_line_items').delete().eq('quote_id', quoteId);
-
   // Resolve quote number — allow custom override if different from existing
   let resolvedQuoteNumber = existing.quote_number;
   if (
@@ -2406,6 +2389,43 @@ export async function updateQuote(
     }
     resolvedQuoteNumber = parsed.data.quote_number;
   }
+
+  // Delete old relations only after validations that can fail without touching quote details.
+  const { data: oldRooms, error: oldRoomsError } = await supabase
+    .from('quote_rooms')
+    .select('id')
+    .eq('quote_id', quoteId);
+
+  if (oldRoomsError) {
+    return { error: oldRoomsError.message };
+  }
+
+  const oldRoomIds = oldRooms?.map((r) => r.id) ?? [];
+  if (oldRoomIds.length > 0) {
+    const { error: surfacesDeleteError } = await supabase
+      .from('quote_room_surfaces')
+      .delete()
+      .in('room_id', oldRoomIds);
+    if (surfacesDeleteError) return { error: surfacesDeleteError.message };
+
+    const { error: roomsDeleteError } = await supabase
+      .from('quote_rooms')
+      .delete()
+      .eq('quote_id', quoteId);
+    if (roomsDeleteError) return { error: roomsDeleteError.message };
+  }
+
+  const { error: estimateItemsDeleteError } = await supabase
+    .from('quote_estimate_items')
+    .delete()
+    .eq('quote_id', quoteId);
+  if (estimateItemsDeleteError) return { error: estimateItemsDeleteError.message };
+
+  const { error: lineItemsDeleteError } = await supabase
+    .from('quote_line_items')
+    .delete()
+    .eq('quote_id', quoteId);
+  if (lineItemsDeleteError) return { error: lineItemsDeleteError.message };
 
   // Update the quote record
   const quoteUpdatePayload = {

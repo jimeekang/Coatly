@@ -1067,30 +1067,12 @@ describe('updateInvoice', () => {
         if (table === 'invoices') {
           return {
             select: vi.fn().mockReturnValue(existingInvoiceQuery),
-            update: vi.fn((payload) => {
-              captured.invoiceUpdate = payload;
-              return {
-                eq: vi.fn().mockReturnThis(),
-              };
-            }),
           };
         }
 
         if (table === 'customers') {
           return {
             select: vi.fn().mockReturnValue(customersQuery),
-          };
-        }
-
-        if (table === 'invoice_line_items') {
-          return {
-            delete: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ error: null }),
-            }),
-            insert: vi.fn(async (payload) => {
-              captured.lineItemsInsert = payload;
-              return { error: null };
-            }),
           };
         }
 
@@ -1108,7 +1090,7 @@ describe('updateInvoice', () => {
         throw new Error(`Unexpected table ${table}`);
       }),
       rpc: vi.fn(async (fn: string) => {
-        if (fn === 'calculate_invoice_totals') {
+        if (fn === 'update_invoice_with_line_items') {
           return { data: null, error: null };
         }
 
@@ -1138,6 +1120,10 @@ describe('updateInvoice', () => {
     });
 
     expect(result).toBeUndefined();
+    const rpcMock = (await createServerClientMock.mock.results[0]?.value).rpc;
+    const rpcPayload = rpcMock.mock.calls[0]?.[1];
+    captured.invoiceUpdate = rpcPayload.p_invoice;
+    captured.lineItemsInsert = rpcPayload.p_line_items;
     expect(captured.invoiceUpdate).toMatchObject({
       invoice_type: 'progress',
       due_date: null,
@@ -1147,7 +1133,6 @@ describe('updateInvoice', () => {
     });
     expect(captured.lineItemsInsert).toEqual([
       {
-        invoice_id: 'invoice-1',
         description: 'Progress payment',
         quantity: 1.5,
         unit_price_cents: 20000,
@@ -1157,5 +1142,110 @@ describe('updateInvoice', () => {
       },
     ]);
     expect(redirectMock).toHaveBeenCalledWith('/invoices/invoice-1');
+  });
+
+  it('does not update the invoice parent outside a transactional line item replacement', async () => {
+    const invoiceUpdateMock = vi.fn(() => ({
+      eq: vi.fn().mockReturnThis(),
+    }));
+    const lineItemsDeleteMock = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    const lineItemsInsertMock = vi.fn().mockResolvedValue({
+      error: { message: 'Line items could not be saved.' },
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: { id: 'invoice-1', user_id: 'user-1', status: 'draft' },
+                error: null,
+              })
+            ),
+            update: invoiceUpdateMock,
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: { id: 'customer-1' },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: null,
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'invoice_line_items') {
+          return {
+            delete: lineItemsDeleteMock,
+            insert: lineItemsInsertMock,
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'update_invoice_with_line_items') {
+          return {
+            data: null,
+            error: { message: 'Line items could not be saved.' },
+          };
+        }
+
+        if (fn === 'calculate_invoice_totals') {
+          return { data: null, error: null };
+        }
+
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    const result = await updateInvoice('invoice-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_id: null,
+      invoice_type: 'progress',
+      status: 'draft',
+      business_abn: null,
+      payment_terms: 'Payment on completion',
+      bank_details: null,
+      due_date: '2026-04-18',
+      paid_date: null,
+      payment_method: null,
+      notes: 'Second stage invoice',
+      line_items: [
+        {
+          description: 'Progress payment',
+          quantity: 1,
+          unit_price_cents: 20000,
+        },
+      ],
+    });
+
+    expect(result).toEqual({ error: 'Line items could not be saved.' });
+    expect(invoiceUpdateMock).not.toHaveBeenCalled();
+    expect(lineItemsDeleteMock).not.toHaveBeenCalled();
+    expect(lineItemsInsertMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 });

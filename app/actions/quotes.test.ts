@@ -1775,6 +1775,159 @@ describe('updateQuote', () => {
         'This quote can no longer be edited because an invoice already exists for it.',
     });
   });
+
+  it('checks custom quote number conflicts before deleting existing relations', async () => {
+    const quoteEstimateItemsDeleteMock = vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    }));
+    const quoteLineItemsDeleteMock = vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    }));
+    let quotesSelectCalls = 0;
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn(() => {
+              quotesSelectCalls += 1;
+              if (quotesSelectCalls === 1) {
+                return {
+                  eq: vi.fn().mockReturnThis(),
+                  single: vi.fn().mockResolvedValue({
+                    data: {
+                      id: 'quote-1',
+                      quote_number: 'QUO-0009',
+                      customer_id: 'customer-1',
+                    },
+                    error: null,
+                  }),
+                };
+              }
+
+              return {
+                eq: vi.fn().mockReturnThis(),
+                neq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { id: 'quote-conflict' },
+                  error: null,
+                }),
+              };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => ({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            })),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: {
+                  id: 'customer-1',
+                  email: 'client@example.com',
+                  emails: ['client@example.com'],
+                  address_line1: '128 Beach Street',
+                  address_line2: null,
+                  city: 'Manly',
+                  state: 'NSW',
+                  postcode: '2095',
+                  properties: [],
+                },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            delete: quoteEstimateItemsDeleteMock,
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            delete: quoteLineItemsDeleteMock,
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_number: 'QUO-0010',
+      title: 'Apartment repaint',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: '',
+      internal_notes: '',
+      rooms: [
+        {
+          name: 'Living Room',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              coating_type: 'repaint_2coat',
+              area_m2: 35,
+              rate_per_m2_cents: 1800,
+              notes: '',
+            },
+          ],
+        },
+      ],
+      line_items: [],
+    });
+
+    expect(result).toEqual({
+      error: 'Quote number "QUO-0010" is already in use.',
+    });
+    expect(quoteEstimateItemsDeleteMock).not.toHaveBeenCalled();
+    expect(quoteLineItemsDeleteMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('setQuoteOptionalLineItemSelection', () => {

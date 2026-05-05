@@ -2,7 +2,6 @@
 
 import { redirect } from 'next/navigation';
 import { generateWorkspaceAssistantResult, isAIDraftConfigured } from '@/lib/ai/drafts';
-import { buildQuoteCustomerAddress } from '@/lib/quotes';
 import {
   getActiveSubscriptionRequiredMessage,
   getProFeatureMessage,
@@ -18,6 +17,28 @@ function getCurrentSydneyDate() {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date());
+}
+
+async function recordAIUsage(input: {
+  supabase: Awaited<ReturnType<typeof createServerClient>>;
+  userId: string;
+  status: 'completed' | 'failed';
+  startedAt: number;
+  errorMessage?: string;
+}) {
+  try {
+    await input.supabase.from('ai_usage_events').insert({
+      user_id: input.userId,
+      action: 'workspace_assistant',
+      provider: 'google',
+      model: 'gemini-2.5-flash',
+      status: input.status,
+      latency_ms: Date.now() - input.startedAt,
+      error_message: input.errorMessage ?? null,
+    });
+  } catch {
+    // Usage logging must never block the assistant workflow.
+  }
 }
 
 export async function runWorkspaceAssistant(input: {
@@ -87,6 +108,8 @@ export async function runWorkspaceAssistant(input: {
         .limit(50),
     ]);
 
+  const startedAt = Date.now();
+
   try {
     const data = await generateWorkspaceAssistantResult({
       prompt: input.prompt.trim(),
@@ -95,9 +118,9 @@ export async function runWorkspaceAssistant(input: {
         business && business.name
           ? {
               name: business.name,
-              email: business.email,
-              phone: business.phone,
-              address: business.address,
+              email: null,
+              phone: null,
+              address: null,
             }
           : null,
       customers:
@@ -105,9 +128,9 @@ export async function runWorkspaceAssistant(input: {
           id: customer.id,
           name: customer.name,
           company_name: customer.company_name,
-          email: customer.email,
-          phone: customer.phone,
-          address: buildQuoteCustomerAddress(customer),
+          email: null,
+          phone: null,
+          address: null,
         })) ?? [],
       quotes:
         quotes?.map((quote) => {
@@ -150,10 +173,24 @@ export async function runWorkspaceAssistant(input: {
         }) ?? [],
     });
 
+    await recordAIUsage({
+      supabase,
+      userId: user.id,
+      status: 'completed',
+      startedAt,
+    });
+
     return { data, error: null };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Workspace assistant could not complete the request.';
+    await recordAIUsage({
+      supabase,
+      userId: user.id,
+      status: 'failed',
+      startedAt,
+      errorMessage: message,
+    });
     return { data: null, error: message };
   }
 }

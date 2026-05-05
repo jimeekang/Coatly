@@ -89,6 +89,10 @@ describe('WorkspaceAssistant', () => {
       />
     );
 
+    expect(
+      screen.getByText(/AI may use business, customer, quote, and invoice context/i)
+    ).toBeInTheDocument();
+
     await user.type(
       screen.getByLabelText(/Dashboard AI prompt/i),
       "When is Shara's invoice due date?"
