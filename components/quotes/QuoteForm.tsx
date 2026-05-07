@@ -47,13 +47,16 @@ import type {
   DayRateInputs,
   RoomRateInputs,
   ManualInputs,
+  QuickInputs,
 } from '@/types/quote';
 import {
   calculateDayRateQuote,
   calculateRoomRateQuote,
   calculateManualQuote,
+  calculateQuickEstimate,
   getRoomRateBaseline,
 } from '@/utils/calculations';
+import { QuickEstimateBuilder } from '@/components/quotes/QuickEstimateBuilder';
 import {
   InteriorEstimateBuilder,
   createEmptyInteriorEstimateState,
@@ -86,7 +89,7 @@ const TEXTAREA =
 type EstimateMode = 'quick' | 'advanced';
 
 /** Which high-level pricing strategy the user has chosen */
-type PricingStrategy = 'hybrid' | 'day_rate' | 'room_rate' | 'manual';
+type PricingStrategy = 'hybrid' | 'day_rate' | 'room_rate' | 'manual' | 'detailed_quick';
 
 const ROOM_TYPES = [
   'bedroom',
@@ -168,7 +171,7 @@ type SummaryLine = {
 function normalizePreferredPricingStrategy(
   method?: PricingMethod | null
 ): PricingStrategy {
-  if (method === 'day_rate' || method === 'room_rate' || method === 'manual') {
+  if (method === 'day_rate' || method === 'room_rate' || method === 'manual' || method === 'detailed_quick') {
     return method;
   }
 
@@ -878,6 +881,24 @@ export function QuoteForm({
     return { labor_cents: 0, material_cents: 0 };
   });
 
+  // Quick estimate method state
+  const [quickInputs, setQuickInputs] = useState<QuickInputs>(() => {
+    const saved = defaultValues?.pricing_method_inputs;
+    if (
+      saved &&
+      saved.method === 'detailed_quick' &&
+      saved.inputs &&
+      typeof saved.inputs === 'object'
+    ) {
+      return saved.inputs as QuickInputs;
+    }
+    return {
+      rooms: [],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+  });
+
   // Materials & Services line items (library picker)
   const [lineItems, setLineItems] = useState<QuoteLineItemFormInput[]>(
     defaultValues?.line_items ?? []
@@ -1023,8 +1044,10 @@ export function QuoteForm({
     if (pricingStrategy === 'room_rate')
       return calculateRoomRateQuote({ rooms: roomRateItems });
     if (pricingStrategy === 'manual') return calculateManualQuote(manualInputs);
+    if (pricingStrategy === 'detailed_quick' && rateSettings)
+      return calculateQuickEstimate(quickInputs, rateSettings);
     return null;
-  }, [pricingStrategy, dayRateState, roomRateItems, manualInputs]);
+  }, [pricingStrategy, dayRateState, roomRateItems, manualInputs, quickInputs, rateSettings]);
   const composedMethodPreview = useMemo(() => {
     if (!methodPreview) return null;
     return composeQuoteTotals({
@@ -1093,7 +1116,7 @@ export function QuoteForm({
     }
 
     if (
-      (pricingStrategy === 'room_rate' || pricingStrategy === 'manual') &&
+      (pricingStrategy === 'detailed_quick' || pricingStrategy === 'room_rate' || pricingStrategy === 'manual') &&
       methodPreview &&
       composedMethodPreview
     ) {
@@ -1171,6 +1194,9 @@ export function QuoteForm({
     (pricingStrategy === 'day_rate' ||
       pricingStrategy === 'manual' ||
       (pricingStrategy === 'room_rate' && roomRateItems.length > 0) ||
+      (pricingStrategy === 'detailed_quick' &&
+        quickInputs.rooms.length > 0 &&
+        quickInputs.rooms.every((r) => r.selected_surfaces.length > 0)) ||
       (pricingStrategy === 'hybrid' &&
         (quoteScope === 'exterior'
           ? (exteriorPreview?.subtotal_cents ?? 0) > 0
@@ -1232,7 +1258,28 @@ export function QuoteForm({
     const customer_address = selectedProperty?.address ?? undefined;
     const working_days = normalizeWorkingDays(intVal(form.working_days, 1));
 
-    if (pricingStrategy === 'day_rate') {
+    if (pricingStrategy === 'detailed_quick') {
+      payload = {
+        customer_id: form.customer_id,
+        customer_address,
+        title: form.title.trim(),
+        status: form.status,
+        valid_until: form.valid_until,
+        working_days,
+        complexity: 'standard',
+        labour_margin_percent: 0,
+        material_margin_percent: 0,
+        notes: form.notes,
+        internal_notes: form.internal_notes,
+        rooms: [],
+        line_items: allLineItems,
+        pricing_method: 'detailed_quick',
+        pricing_method_inputs: {
+          method: 'detailed_quick' as const,
+          inputs: quickInputs,
+        },
+      };
+    } else if (pricingStrategy === 'day_rate') {
       payload = {
         customer_id: form.customer_id,
         customer_address,
@@ -1658,9 +1705,9 @@ export function QuoteForm({
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
+                  ['detailed_quick', '⚡', 'Quick estimate'],
                   ['hybrid', '📐', 'Detailed estimate'],
                   ['day_rate', '📅', 'Labour × days'],
-                  ['room_rate', '🏠', 'Room flat rate'],
                   ['manual', '✏️', 'Direct input'],
                 ] as [PricingStrategy, string, string][]
               ).map(([method, icon, label]) => (
@@ -1684,7 +1731,17 @@ export function QuoteForm({
               ))}
             </div>
             <div className="border-pm-border bg-pm-surface/45 text-pm-secondary mt-3 rounded-xl border px-4 py-3 text-sm">
-              {pricingStrategy === 'hybrid' ? (
+              {pricingStrategy === 'detailed_quick' ? (
+                <>
+                  Pick rooms, sizes &amp; scope — ~30 sec.{' '}
+                  <Link
+                    href="/price-rates"
+                    className="text-pm-teal font-medium underline underline-offset-2"
+                  >
+                    Edit room prices
+                  </Link>
+                </>
+              ) : pricingStrategy === 'hybrid' ? (
                 <>
                   Using Detailed Estimate Anchors from Price Rates.
                   <Link
@@ -1731,6 +1788,17 @@ export function QuoteForm({
                   </button>
                 ))}
               </div>
+            </section>
+          )}
+
+          {/* Quick estimate builder */}
+          {pricingStrategy === 'detailed_quick' && (
+            <section>
+              <QuickEstimateBuilder
+                rateSettings={rateSettings ?? null}
+                value={quickInputs}
+                onChange={setQuickInputs}
+              />
             </section>
           )}
 
@@ -1855,11 +1923,18 @@ export function QuoteForm({
             </section>
           )}
 
-          {/* Room rate inputs */}
+          {/* Room rate inputs — legacy method, shown read-only for existing quotes */}
           {pricingStrategy === 'room_rate' && (
             <section className="border-pm-border rounded-2xl border bg-white p-4">
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                <span className="mt-0.5 shrink-0">⚠️</span>
+                <span>
+                  <span className="font-semibold">Room Flat Rate is no longer available</span>{' '}
+                  for new quotes. Switch to <strong>Quick estimate</strong> for a faster, more accurate result.
+                </span>
+              </div>
               <h3 className="text-pm-secondary mb-4 text-sm font-semibold tracking-wide uppercase">
-                Room Flat Rates
+                Room Flat Rates (read-only)
               </h3>
               {roomRatePresets.length > 0 && (
                 <div className="border-pm-teal/25 bg-pm-teal-pale/10 mb-4 rounded-xl border p-3">

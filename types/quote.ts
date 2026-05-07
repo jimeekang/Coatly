@@ -5,7 +5,7 @@ export type ComplexityLevel = 'standard' | 'moderate' | 'complex';
 
 // ─── Pricing Method ───────────────────────────────────────────────────────────
 
-export type PricingMethod = 'day_rate' | 'sqm_rate' | 'room_rate' | 'manual' | 'hybrid';
+export type PricingMethod = 'day_rate' | 'sqm_rate' | 'room_rate' | 'manual' | 'hybrid' | 'detailed_quick';
 
 /** Inputs for day_rate method: labour days × daily rate + materials */
 export interface DayRateInputs {
@@ -36,13 +36,35 @@ export interface ManualInputs {
   material_cents: number;
 }
 
+/** Quick Estimate: one selected room card in the 4-step wizard */
+export interface SelectedQuickRoom {
+  room_id: string;
+  label: string;
+  size: 'small' | 'medium' | 'large';
+  selected_surfaces: ('walls' | 'ceiling' | 'trim')[];
+  notes?: string;
+  walls_cents: number;
+  ceiling_cents: number;
+  trim_cents: number;
+  coating_multiplier_pct: number;
+  condition_multiplier_pct: number;
+  total_cents: number;
+}
+
+export interface QuickInputs {
+  rooms: SelectedQuickRoom[];
+  global_coating: 'one_coat_refresh' | 'two_coats_repaint' | 'three_coats_new_plaster';
+  global_condition: 'good' | 'average' | 'poor';
+}
+
 /** Union of all method-specific inputs */
 export type PricingMethodInputs =
   | { method: 'day_rate'; inputs: DayRateInputs }
   | { method: 'room_rate'; inputs: RoomRateInputs }
   | { method: 'manual'; inputs: ManualInputs }
   | { method: 'sqm_rate'; inputs: null }
-  | { method: 'hybrid'; inputs: null };
+  | { method: 'hybrid'; inputs: null }
+  | { method: 'detailed_quick'; inputs: QuickInputs };
 
 export interface QuoteRoomSurface {
   id: string;

@@ -695,12 +695,17 @@ export type Database = {
       quote_estimate_items: {
         Row: {
           category: string
+          coating_multiplier_pct: number | null
+          condition_multiplier_pct: number | null
           created_at: string
           id: string
+          item_notes: string | null
           label: string
           metadata: Json
           quantity: number
           quote_id: string
+          selected_surfaces: Json | null
+          size: string | null
           sort_order: number
           total_cents: number
           unit: string
@@ -709,12 +714,17 @@ export type Database = {
         }
         Insert: {
           category: string
+          coating_multiplier_pct?: number | null
+          condition_multiplier_pct?: number | null
           created_at?: string
           id?: string
+          item_notes?: string | null
           label: string
           metadata?: Json
           quantity?: number
           quote_id: string
+          selected_surfaces?: Json | null
+          size?: string | null
           sort_order?: number
           total_cents?: number
           unit?: string
@@ -723,12 +733,17 @@ export type Database = {
         }
         Update: {
           category?: string
+          coating_multiplier_pct?: number | null
+          condition_multiplier_pct?: number | null
           created_at?: string
           id?: string
+          item_notes?: string | null
           label?: string
           metadata?: Json
           quantity?: number
           quote_id?: string
+          selected_surfaces?: Json | null
+          size?: string | null
           sort_order?: number
           total_cents?: number
           unit?: string

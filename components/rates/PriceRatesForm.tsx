@@ -12,6 +12,7 @@ import {
   Save,
   Settings2,
   Trash2,
+  Zap,
 } from 'lucide-react';
 import {
   NumericInput,
@@ -30,7 +31,6 @@ import {
   EXTERIOR_SURFACE_UNITS,
   EXTERIOR_SURFACES,
   PRICING_METHOD_LABELS,
-  PRICING_METHODS,
   RATE_DOOR_TYPE_LABELS,
   RATE_DOOR_TYPES,
   TRIM_COATING_TYPES,
@@ -53,11 +53,13 @@ import {
   type RoomRatePreset,
   type SqmSurfaceType,
   type TrimPaintSystem,
+  type QuickEstimateSettings,
   type UserRateSettings,
   type WindowScope,
   type WindowType,
 } from '@/lib/rate-settings';
 import type { PricingMethod } from '@/types/quote';
+import { QuickEstimateTab } from '@/components/rates/QuickEstimateTab';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1524,12 +1526,16 @@ function ExteriorTab({
 
 // ─── Method tab icons ─────────────────────────────────────────────────────────
 
-/** Pricing methods shown in the settings UI. sqm_rate is normalized to hybrid. */
-const DISPLAY_PRICING_METHODS = PRICING_METHODS.filter(
-  (m) => m !== 'sqm_rate'
-) as Exclude<PricingMethod, 'sqm_rate'>[];
+/** Pricing methods shown in the settings UI. sqm_rate and room_rate hidden. */
+const DISPLAY_PRICING_METHODS: Exclude<PricingMethod, 'sqm_rate' | 'room_rate'>[] = [
+  'detailed_quick',
+  'hybrid',
+  'day_rate',
+  'manual',
+];
 
 const METHOD_ICONS: Record<PricingMethod, typeof PencilRuler> = {
+  detailed_quick: Zap,
   hybrid: PencilRuler,
   sqm_rate: PencilRuler,
   day_rate: CalendarDays,
@@ -1538,7 +1544,8 @@ const METHOD_ICONS: Record<PricingMethod, typeof PencilRuler> = {
 };
 
 const METHOD_DESCRIPTIONS: Record<PricingMethod, string> = {
-  hybrid: 'Detailed estimate anchors and rates',
+  detailed_quick: 'Pick rooms, sizes & scope. ~30 sec',
+  hybrid: 'Measure walls in sqm. ~5 min',
   sqm_rate: 'Detailed estimate anchors and rates',
   day_rate: 'Labour days × daily rate',
   room_rate: 'Flat rate per room',
@@ -1687,6 +1694,12 @@ export function PriceRatesForm({
         : prev.enabled_window_types.filter((t) => t !== type),
     }));
     if (!enabled) clearRateItemEditing(`window:${type}`);
+  }
+
+  // ── Quick estimate handler ───────────────────────────────────────────────────
+  function handleQuickEstimateChange(quick_estimate: QuickEstimateSettings) {
+    setSaved(false);
+    setRates((prev) => ({ ...prev, quick_estimate }));
   }
 
   // ── Room rate preset handlers (auto-save to DB) ──────────────────────────────
@@ -1946,12 +1959,20 @@ export function PriceRatesForm({
         </div>
       </section>
 
+      {/* ── Quick Estimate ───────────────────────────────────────────────────── */}
+      {activeTab === 'detailed_quick' && (
+        <QuickEstimateTab
+          settings={rates.quick_estimate}
+          onChange={handleQuickEstimateChange}
+        />
+      )}
+
       {/* ── Day Rate: no scope distinction ──────────────────────────────────── */}
       {activeTab === 'day_rate' && (
         <DayRateTab pricing={rates.pricing} onChange={handlePricingChange} />
       )}
 
-      {/* ── Room Rate: interior only ─────────────────────────────────────────── */}
+      {/* ── Room Rate: interior only (legacy, hidden from tab bar) ───────────── */}
       {activeTab === 'room_rate' && (
         <RoomRateTab
           rates={rates}

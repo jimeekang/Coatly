@@ -650,7 +650,7 @@ export const quoteCreateSchema = z.object({
     })
   ).default([]),
   pricing_method: z
-    .enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid'])
+    .enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid', 'detailed_quick'])
     .default('hybrid'),
   pricing_method_inputs: z.discriminatedUnion('method', [
     z.object({
@@ -689,6 +689,26 @@ export const quoteCreateSchema = z.object({
       method: z.literal('hybrid'),
       inputs: z.null(),
     }),
+    z.object({
+      method: z.literal('detailed_quick'),
+      inputs: z.object({
+        rooms: z.array(z.object({
+          room_id: z.string(),
+          label: z.string(),
+          size: z.enum(['small', 'medium', 'large']),
+          selected_surfaces: z.array(z.enum(['walls', 'ceiling', 'trim'])),
+          notes: z.string().optional(),
+          walls_cents: z.number().int().min(0),
+          ceiling_cents: z.number().int().min(0),
+          trim_cents: z.number().int().min(0),
+          coating_multiplier_pct: z.number().min(0),
+          condition_multiplier_pct: z.number().min(0),
+          total_cents: z.number().int().min(0),
+        })),
+        global_coating: z.enum(['one_coat_refresh', 'two_coats_repaint', 'three_coats_new_plaster']),
+        global_condition: z.enum(['good', 'average', 'poor']),
+      }),
+    }),
   ]).optional(),
 }).superRefine((value, ctx) => {
   if (value.interior_estimate && value.rooms.length > 0) {
@@ -699,7 +719,7 @@ export const quoteCreateSchema = z.object({
     });
   }
 
-  // day_rate / room_rate / manual methods don't need rooms or interior_estimate
+  // day_rate / room_rate / manual / detailed_quick methods don't need rooms or interior_estimate
   const methodNeedsRooms = ['sqm_rate', 'hybrid'].includes(value.pricing_method);
   if (methodNeedsRooms && !value.interior_estimate && !value.exterior_estimate && value.rooms.length === 0) {
     ctx.addIssue({

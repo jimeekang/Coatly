@@ -384,7 +384,8 @@ describe('QuoteForm', () => {
 
     render(<QuoteForm customers={[CUSTOMER]} rateSettings={rateSettings} />);
 
-    expect(screen.getByRole('button', { name: /Quick/i })).toBeInTheDocument();
+    // "Quick" estimateMode toggle button (inside hybrid/detailed-estimate mode)
+    expect(screen.getAllByRole('button', { name: /Quick/i }).length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Labour Markup')).toBeInTheDocument();
   });
 

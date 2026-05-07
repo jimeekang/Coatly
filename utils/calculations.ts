@@ -1,6 +1,6 @@
 import { DEFAULT_COVERAGE_PER_LITRE, STANDARD_DOOR_AREA_M2, STANDARD_WINDOW_AREA_M2 } from '@/config/constants';
-import type { DayRateInputs, RoomRateInputs, ManualInputs } from '@/types/quote';
-import type { RoomRatePreset } from '@/lib/rate-settings';
+import type { DayRateInputs, RoomRateInputs, ManualInputs, QuickInputs, SelectedQuickRoom } from '@/types/quote';
+import type { RoomRatePreset, UserRateSettings } from '@/lib/rate-settings';
 
 /**
  * Calculate total wall area for a rectangular room (4 walls).
@@ -138,6 +138,101 @@ export function calculateRoomRateQuote(inputs: RoomRateInputs): PricingResult {
   const total_cents = subtotal_cents + gst_cents;
 
   return { subtotal_cents, gst_cents, total_cents, labor_cents, material_cents };
+}
+
+// ─── Quick Estimate calculator ────────────────────────────────────────────────
+
+export interface QuickEstimateRoomResult {
+  room_id: string;
+  label: string;
+  size: 'small' | 'medium' | 'large';
+  selected_surfaces: ('walls' | 'ceiling' | 'trim')[];
+  notes?: string;
+  walls_cents: number;
+  ceiling_cents: number;
+  trim_cents: number;
+  base_subtotal_cents: number;
+  coating_multiplier_pct: number;
+  condition_multiplier_pct: number;
+  total_cents: number;
+}
+
+export interface QuickEstimateResult extends PricingResult {
+  rooms: QuickEstimateRoomResult[];
+}
+
+/**
+ * Calculate quote price using the detailed_quick method.
+ * Per-room: surface prices × (coating_pct/100) × (condition_pct/100).
+ * GST and labour/material split use the painter's pricing settings.
+ */
+export function calculateQuickEstimate(
+  inputs: QuickInputs,
+  rateSettings: UserRateSettings
+): QuickEstimateResult {
+  const { coating_multipliers, condition_multipliers } = rateSettings.quick_estimate;
+
+  const coatingPct =
+    inputs.global_coating === 'one_coat_refresh'
+      ? coating_multipliers.one_coat_refresh_pct
+      : inputs.global_coating === 'three_coats_new_plaster'
+        ? coating_multipliers.three_coats_new_plaster_pct
+        : coating_multipliers.two_coats_repaint_pct;
+
+  const conditionPct =
+    inputs.global_condition === 'good'
+      ? condition_multipliers.good_pct
+      : inputs.global_condition === 'poor'
+        ? condition_multipliers.poor_pct
+        : condition_multipliers.average_pct;
+
+  const rooms: QuickEstimateRoomResult[] = inputs.rooms.map((room) => {
+    const template = rateSettings.quick_estimate.rooms.find(
+      (r) => r.id === room.room_id
+    );
+    const sizeRates = template?.sizes[room.size] ?? {
+      walls_cents: room.walls_cents,
+      ceiling_cents: room.ceiling_cents,
+      trim_cents: room.trim_cents,
+    };
+
+    const walls_cents = sizeRates.walls_cents;
+    const ceiling_cents = sizeRates.ceiling_cents;
+    const trim_cents = sizeRates.trim_cents;
+
+    const base_subtotal_cents =
+      (room.selected_surfaces.includes('walls') ? walls_cents : 0) +
+      (room.selected_surfaces.includes('ceiling') ? ceiling_cents : 0) +
+      (room.selected_surfaces.includes('trim') ? trim_cents : 0);
+
+    const total_cents = Math.round(
+      base_subtotal_cents * (coatingPct / 100) * (conditionPct / 100)
+    );
+
+    return {
+      room_id: room.room_id,
+      label: room.label,
+      size: room.size,
+      selected_surfaces: room.selected_surfaces,
+      notes: room.notes,
+      walls_cents,
+      ceiling_cents,
+      trim_cents,
+      base_subtotal_cents,
+      coating_multiplier_pct: coatingPct,
+      condition_multiplier_pct: conditionPct,
+      total_cents,
+    };
+  });
+
+  const subtotal_cents = rooms.reduce((sum, r) => sum + r.total_cents, 0);
+  const labourSharePct = rateSettings.pricing.material_cost_percent;
+  const labor_cents = Math.round(subtotal_cents * (1 - labourSharePct / 100));
+  const material_cents = subtotal_cents - labor_cents;
+  const gst_cents = Math.round(subtotal_cents * 0.1);
+  const total_cents = subtotal_cents + gst_cents;
+
+  return { subtotal_cents, gst_cents, total_cents, labor_cents, material_cents, rooms };
 }
 
 /**

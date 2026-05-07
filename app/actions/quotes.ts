@@ -45,11 +45,13 @@ import {
   calculateDayRateQuote,
   calculateRoomRateQuote,
   calculateManualQuote,
+  calculateQuickEstimate,
 } from '@/utils/calculations';
 import type {
   DayRateInputs,
   RoomRateInputs,
   ManualInputs,
+  QuickInputs,
   PricingMethodInputs,
 } from '@/types/quote';
 import {
@@ -1290,6 +1292,24 @@ export async function createQuote(
       ...totals,
     };
   } else if (
+    pricingMethod === 'detailed_quick' &&
+    rawMethodInputs?.method === 'detailed_quick'
+  ) {
+    const inputs: QuickInputs = rawMethodInputs.inputs;
+    const result = calculateQuickEstimate(inputs, effectiveRates);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'detailed_quick', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (
     pricingMethod === 'room_rate' &&
     rawMethodInputs?.method === 'room_rate'
   ) {
@@ -1476,6 +1496,46 @@ export async function createQuote(
           .eq('id', quote.id)
           .eq('user_id', user.id);
         return { error: estimateItemsError.message };
+      }
+    }
+  } else if (
+    pricingMethod === 'detailed_quick' &&
+    resolvedPricingInputs?.method === 'detailed_quick'
+  ) {
+    const quickRooms = resolvedPricingInputs.inputs.rooms;
+    if (quickRooms.length > 0) {
+      const { error: quickItemsError } = await supabase
+        .from('quote_estimate_items')
+        .insert(
+          quickRooms.map((room, index) => ({
+            quote_id: quote.id,
+            category: 'quick_estimate',
+            label: room.label,
+            quantity: 1,
+            unit: 'room',
+            unit_price_cents: room.total_cents,
+            total_cents: room.total_cents,
+            size: room.size,
+            selected_surfaces: room.selected_surfaces,
+            coating_multiplier_pct: room.coating_multiplier_pct,
+            condition_multiplier_pct: room.condition_multiplier_pct,
+            item_notes: room.notes ?? null,
+            metadata: {
+              room_id: room.room_id,
+              global_coating: resolvedPricingInputs!.inputs.global_coating,
+              global_condition: resolvedPricingInputs!.inputs.global_condition,
+            },
+            sort_order: index,
+          }))
+        );
+
+      if (quickItemsError) {
+        await supabase
+          .from('quotes')
+          .delete()
+          .eq('id', quote.id)
+          .eq('user_id', user.id);
+        return { error: quickItemsError.message };
       }
     }
   } else {
@@ -2292,6 +2352,24 @@ export async function updateQuote(
       line_items: lineItems,
     });
     resolvedPricingInputs = { method: 'day_rate', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (
+    pricingMethod === 'detailed_quick' &&
+    rawMethodInputs?.method === 'detailed_quick'
+  ) {
+    const inputs: QuickInputs = rawMethodInputs.inputs;
+    const result = calculateQuickEstimate(inputs, effectiveRates);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'detailed_quick', inputs };
     preview = {
       rooms: [],
       base_subtotal_cents: result.subtotal_cents,
