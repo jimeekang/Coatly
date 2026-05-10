@@ -8,6 +8,7 @@ import {
   type CalendarJob,
   type CalendarGoogleEvent,
 } from '@/components/schedule/ScheduleCalendar';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export const metadata: Metadata = { title: 'Schedule' };
 
@@ -75,12 +76,10 @@ export default async function SchedulePage({
 
   return (
     <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-pm-body sm:text-[28px]">Schedule & Jobs</h1>
-        <p className="mt-1 text-sm text-pm-secondary">
-          Switch between calendar planning and the job list without leaving the schedule.
-        </p>
-      </div>
+      <PageHeader
+        title="Schedule & Jobs"
+        subtitle="Switch between calendar planning and the job list without leaving the schedule."
+      />
 
       <ScheduleCalendar
         jobs={calendarJobs}

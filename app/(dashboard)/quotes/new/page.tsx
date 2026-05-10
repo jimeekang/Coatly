@@ -4,6 +4,8 @@ import { getQuoteFormOptions } from '@/app/actions/quotes';
 import { getMaterialItemsForPicker } from '@/app/actions/materials';
 import { listQuoteTemplates } from '@/app/actions/quote-templates';
 import { QuoteCreateScreen } from '@/components/quotes/QuoteCreateScreen';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { BackButton } from '@/components/layout/BackButton';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server';
 
@@ -40,42 +42,26 @@ export default async function NewQuotePage({
   return (
     <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-7xl">
       <div className="mb-6 flex items-center gap-3">
-        <Link
-          href="/quotes"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors active:bg-pm-border"
-          aria-label="Back to quotes"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </Link>
+        <BackButton href="/quotes" label="Back to quotes" />
         <div>
-          <h1 className="text-2xl font-bold text-pm-body">New Quote</h1>
-          <p className="mt-0.5 text-sm text-pm-secondary">
+          <h1 className="text-2xl font-extrabold tracking-tight text-on-surface sm:text-[28px]">
+            New Quote
+          </h1>
+          <p className="mt-0.5 text-sm text-on-surface-variant">
             Build a quote manually{subscription?.features.ai ? ' or let AI prepare a draft first.' : '.'}
           </p>
         </div>
       </div>
 
       {quoteUsage && (
-        <div className="mb-6 rounded-2xl border border-pm-border bg-white px-4 py-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pm-secondary">
+        <div className="mb-6 rounded-2xl border border-outline-variant bg-surface-container px-4 py-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
             Starter Usage
           </p>
-          <p className="mt-1 text-base font-semibold text-pm-body">
+          <p className="mt-1 text-base font-semibold text-on-surface">
             {quoteUsage.remaining} of {quoteUsage.limit} active quote slots remaining this month
           </p>
-          <p className="mt-1 text-sm text-pm-secondary">
+          <p className="mt-1 text-sm text-on-surface-variant">
             Starter includes up to {quoteUsage.limit} draft, sent, or approved quotes each
             month. Upgrade to Pro for unlimited quoting and AI drafting.
           </p>
@@ -83,18 +69,16 @@ export default async function NewQuotePage({
       )}
 
       {error ? (
-        <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{error}</p>
-        </div>
+        <ErrorAlert>{error}</ErrorAlert>
       ) : customers.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-pm-border bg-pm-surface px-5 py-8">
-          <h2 className="text-base font-semibold text-pm-body">Add a customer first</h2>
-          <p className="mt-1 text-sm text-pm-secondary">
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-5 py-8">
+          <h2 className="text-base font-semibold text-on-surface">Add a customer first</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
             Quotes are linked to a saved customer in your workspace.
           </p>
           <Link
             href="/customers/new"
-            className="mt-4 inline-flex h-11 items-center rounded-lg bg-pm-teal px-4 text-sm font-medium text-white transition-colors hover:bg-pm-teal-hover"
+            className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
           >
             Go to New Customer
           </Link>

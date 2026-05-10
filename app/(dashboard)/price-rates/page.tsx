@@ -18,25 +18,27 @@ export default async function PriceRatesPage() {
   const { data: rateSettings } = await getBusinessRateSettings(supabase, user.id);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div className="overflow-hidden rounded-2xl border border-pm-border bg-white shadow-sm">
-        <div className="border-b border-pm-border bg-pm-surface/70 px-5 py-4 sm:px-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-pm-teal">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-6">
+      <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container shadow-sm">
+        <div className="border-b border-outline-variant bg-surface-container-low px-5 py-4 sm:px-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
             Business defaults
           </p>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-pm-body sm:text-[28px]">Price Rates</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-pm-secondary">
+              <h1 className="text-2xl font-extrabold tracking-tight text-on-surface sm:text-4xl">
+                Price Rates
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-on-surface-variant">
                 Set the default rates used by new quotes and choose which detailed estimate options
                 your quoting workflow offers.
               </p>
             </div>
-            <div className="rounded-xl border border-pm-teal-light bg-white px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+            <div className="rounded-xl border border-outline-variant bg-surface-container px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                 Currency
               </p>
-              <p className="mt-0.5 text-base font-semibold text-pm-body">AUD</p>
+              <p className="mt-0.5 text-base font-semibold text-on-surface">AUD</p>
             </div>
           </div>
         </div>
