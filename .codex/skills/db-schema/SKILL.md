@@ -1,14 +1,17 @@
 ---
 name: db-schema
+owner: codex
 description: >
   Supabase schema → TypeScript types + RLS policies + Zod validators를 자동 생성.
   "DB 타입 생성해줘", "RLS 정책 추가해줘", "schema 바꿨는데 코드 업데이트해줘",
   "새 테이블 추가해줘" 같은 요청에 반드시 이 skill을 사용할 것.
+  (Coatly 라우팅: DB/스키마 작업은 Codex 담당. Claude Code에서는 호출 X)
 ---
 
-# DB Schema Skill
+# DB Schema Skill (Codex)
 
 > **로컬 Supabase 미사용** — 모든 DB 작업은 MCP 도구로 원격 직접 제어.
+> 라우팅 표 → [`../../../AGENTS.md`](../../../AGENTS.md)
 
 ## MCP Supabase 도구 (유일한 제어 방법)
 
@@ -66,7 +69,7 @@ import { z } from 'zod'
 
 export const quoteInsertSchema = z.object({
   customer_id: z.string().uuid(),
-  status: z.enum(['draft', 'sent', 'accepted', 'rejected']),
+  status: z.enum(['draft', 'sent', 'approved', 'rejected', 'expired']),
   valid_until: z.string().datetime().optional(),
 })
 export type QuoteInsertInput = z.infer<typeof quoteInsertSchema>

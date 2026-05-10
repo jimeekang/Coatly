@@ -1,12 +1,17 @@
 ---
 name: ui-spec
+owner: claude-code
 description: >
-  Frontend UI/UX 스펙/기획을 받아서 mobile-first Tailwind + shadcn/ui React 컴포넌트를 생성.
+  Frontend UI/UX 스펙/기획을 받아서 mobile-first Tailwind + shadcn/ui React 컴포넌트 스펙을 작성.
   "화면 만들어줘", "UI 짜줘", "컴포넌트 만들어줘", "이 디자인 구현해줘",
   "UX 개선해줘", "프론트엔드 UI/UX 만들어줘" 요청에 반드시 이 skill을 사용할 것.
+  (Coatly 라우팅: 디자인/UI/UX 스펙·결정은 Claude Code 담당. 실제 컴포넌트 구현 + DB/server action 통합은 Codex로 넘긴다.)
 ---
 
-# UI Spec Skill
+# UI Spec Skill (Claude Code)
+
+> Claude Code 전용. UI/UX 스펙·디자인 결정·컴포넌트 디자인 산출. 산출물(타입 시그니처, 동작, 모바일 케이스, 디자인 토큰 적용)을 Codex가 받아서 구현.
+> 라우팅 표 → [`../../../AGENTS.md`](../../../AGENTS.md)
 
 ## 작업 순서 (agent loop)
 

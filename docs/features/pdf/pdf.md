@@ -72,3 +72,73 @@ lib/pdf/
 
 Supabase Storage의 signed URL을 fetch하여 buffer로 변환 후 React-PDF Image에 전달.
 Public URL이 아닌 signed URL 사용으로 비공개 버킷에서도 동작.
+
+---
+
+## Implementation Patterns
+
+### Basic Template
+
+```tsx
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
+import { renderToStream } from '@react-pdf/renderer'
+
+const styles = StyleSheet.create({
+  page: { padding: 30, fontFamily: 'Helvetica' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: 'bold' },
+  table: { width: '100%' },
+  row: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eee', paddingVertical: 8 },
+  cell: { flex: 1, fontSize: 10 },
+})
+
+function QuotePDF({ quote, business }) {
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          {business.logo_url && <Image src={logoBuffer} style={{ width: 80 }} />}
+          <View>
+            <Text style={styles.title}>{business.business_name}</Text>
+            <Text>ABN: {business.abn}</Text>
+          </View>
+        </View>
+        {/* ... content ... */}
+      </Page>
+    </Document>
+  )
+}
+```
+
+### API Route
+
+```ts
+// app/api/pdf/quote/route.ts
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return new Response('Unauthorized', { status: 401 })
+
+  const quote = await getQuote(supabase, id)
+  const business = await getBusiness(supabase, user.id)
+
+  const stream = await renderToStream(<QuotePDF quote={quote} business={business} />)
+
+  return new Response(stream as any, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="quote-${quote.quote_number}.pdf"`,
+    },
+  })
+}
+```
+
+### Limitations
+
+- No CSS — `StyleSheet.create()` only
+- 레이아웃: flexbox만 (grid 없음)
+- 폰트: 내장(Helvetica, Courier, Times-Roman) 또는 등록 `.ttf`
+- 웹 폰트 직접 사용 불가
