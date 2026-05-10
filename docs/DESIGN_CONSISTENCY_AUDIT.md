@@ -322,3 +322,49 @@ className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-co
 - [ ] ESLint `no-restricted-syntax` 로 `pm-*` 사용 시 경고
 - [ ] CLAUDE.md 에 "신규 페이지 = `<PageTitle>` + `<Button>` + MD3 토큰" 명시
 - [ ] PR 템플릿에 "디자인 토큰 MD3 만 사용" 체크박스
+
+---
+
+## 실행 기록 (2026-05-10)
+
+### 적용 완료 (P0 + P1)
+- ✅ P0-1 page title typography 통일 — 10개 페이지에 `<PageHeader>` 적용
+- ✅ P0-2 페이지 레벨 토큰 → MD3 (대시보드 라우트의 page.tsx 10개 한정)
+- ✅ P0-3 CTA 컴포넌트화 — `<PrimaryActionLink>` / `<SecondaryActionLink>`
+- ✅ P1-1 `<ErrorAlert>` 단일 패턴
+- ✅ P1-2 CTA 텍스트 `+ New {Entity}` 통일
+- ✅ P1-3 `<BackButton>` — `hover:` + `active:` 양쪽 정의
+- 커밋: `e28238c` (design consistency P0+P1 fixes)
+
+### 적용 완료 (P2 — 가드레일)
+- ✅ [`app/globals.css`](../app/globals.css) — legacy `pm-*` 블록에 `@deprecated` 주석 + 토큰 매핑표 추가
+- ✅ [`eslint.config.mjs`](../eslint.config.mjs) — `no-restricted-syntax` 룰로 신규 `pm-*` 사용 시 warn (기존 사용 파일은 화이트리스트로 점진 마이그레이션 허용)
+- ✅ [`CLAUDE.md`](../CLAUDE.md) — Design Conventions 섹션 추가 (필수 컴포넌트 + 토큰 정책)
+
+### P2-1 컨테이너 너비 — 부분 적용
+재검토 결과, new entity 페이지 너비는 콘텐츠 밀도에 따라 정당화됨:
+- `customers/new` → `max-w-lg md:max-w-2xl` (단순 form, 적용 완료)
+- `quotes/new` → `max-w-lg lg:max-w-7xl` (line items + customer + rates → 넓은 폭 필요, 유지)
+- `invoices/new` → `max-w-lg lg:max-w-6xl` (line items + payment terms → 유지)
+- list/dashboard 페이지 → layout의 `max-w-7xl` 의존, 개별 override 없음 ✓
+- `materials-service` → `max-w-2xl`, `price-rates` → `max-w-6xl`, `settings` → `max-w-4xl` 유지 (콘텐츠 적절)
+
+### 후속 작업 (별도 PR로 분리)
+
+**컴포넌트 코드 일괄 마이그레이션 (`pm-*` → MD3)** — 약 60개 파일 / 수천 occurrences:
+- 위험: `pm-teal-light` (#E6F4F0), `pm-teal-mid` (#0B9E80), `pm-teal-pale` (#B2DDD6) 등은 MD3와 1:1 매핑이 아니어서 자동 sed 치환 불가
+- 권장 진행 방식:
+  1. 한 번에 한 컴포넌트 디렉토리씩 마이그레이션 (예: `components/quotes/` 단위)
+  2. 마이그레이션 완료한 디렉토리는 [`eslint.config.mjs`](../eslint.config.mjs) 화이트리스트에서 제거
+  3. 각 마이그레이션 후 시각적 회귀 테스트 (`/gstack-design-review --regression`)
+- 현재 화이트리스트: `eslint.config.mjs` 의 두 번째 config 블록 참조
+
+**ESLint warn 정책**
+- 신규 코드(화이트리스트 외): `pm-*` 사용 시 warn → CI에서 `--max-warnings=0` 적용 권장
+- 기존 코드: warn 없음 (점진 정리 중)
+
+**최종 정리 시점에 할 일**
+- [`app/globals.css`](../app/globals.css) 의 legacy alias 블록 삭제
+- [`eslint.config.mjs`](../eslint.config.mjs) 의 화이트리스트 config 블록 삭제
+- 이 audit 문서를 archive (예: `docs/archive/2026-05-design-audit.md`)
+
