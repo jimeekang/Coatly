@@ -10,10 +10,10 @@ export default async function MaterialsServicePage() {
   const { data: items, error } = await getMaterialItems();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 sm:gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
       <PageHeader
-        title="Materials & Services"
-        subtitle="Save reusable paints, supplies, and services to quickly add them to quotes. Search and filter by category from the list below."
+        title="Material / Service"
+        subtitle="Catalogue of paints, materials, supplies, and service line items used on every quote."
       />
 
       {error && <ErrorAlert>{error}</ErrorAlert>}

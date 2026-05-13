@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Pencil, Trash2, Plus, Package, Search, Upload, Download } from 'lucide-react';
+import { Pencil, Trash2, Plus, Package, Search, Upload, Download, PaintBucket, Droplets, Wrench, Hammer, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import {
   MATERIAL_ITEM_CATEGORIES,
   MATERIAL_ITEM_CATEGORY_LABELS,
@@ -17,6 +17,46 @@ function formatAUD(cents: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100);
 }
 
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
+  paint: PaintBucket,
+  primer: Droplets,
+  supply: Wrench,
+  service: Hammer,
+  other: Package,
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  paint: 'bg-primary/8 text-primary',
+  primer: 'bg-tertiary/10 text-tertiary',
+  supply: 'bg-secondary/10 text-secondary',
+  service: 'bg-surface-container-highest text-on-surface-variant',
+  other: 'bg-surface-container text-on-surface-variant',
+};
+
+type SortKey = 'name' | 'category' | 'unit_price_cents';
+type SortDir = 'asc' | 'desc';
+
+function SortHeader({
+  col, current, dir, onSort, children, className,
+}: {
+  col: SortKey; current: SortKey; dir: SortDir;
+  onSort: (k: SortKey) => void; children: React.ReactNode; className?: string;
+}) {
+  const active = current === col;
+  const Icon = active ? (dir === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown;
+  return (
+    <th
+      className={`cursor-pointer select-none text-xs font-semibold uppercase tracking-wide text-on-surface-variant hover:text-on-surface ${className ?? ''}`}
+      onClick={() => onSort(col)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {children}
+        <Icon className={`h-3 w-3 ${active ? 'text-primary' : 'opacity-40'}`} />
+      </span>
+    </th>
+  );
+}
+
 interface MaterialItemListProps {
   initialItems: MaterialItem[];
 }
@@ -30,7 +70,14 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<MaterialItemCategory | 'all'>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir('asc'); }
+  }
 
   const trimmedQuery = searchQuery.trim().toLowerCase();
   const categoryCounts = MATERIAL_ITEM_CATEGORIES.map((category) => ({
@@ -38,21 +85,21 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
     count: items.filter((item) => item.category === category).length,
   })).filter((entry) => entry.count > 0);
 
-  const visibleItems = items.filter((item) => {
-    if (categoryFilter !== 'all' && item.category !== categoryFilter) {
-      return false;
-    }
-
-    if (!trimmedQuery) {
-      return true;
-    }
-
-    const haystack = [item.name, item.notes ?? '', item.unit, MATERIAL_ITEM_CATEGORY_LABELS[item.category]]
-      .join(' ')
-      .toLowerCase();
-
-    return haystack.includes(trimmedQuery);
-  });
+  const visibleItems = items
+    .filter((item) => {
+      if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
+      if (!trimmedQuery) return true;
+      const haystack = [item.name, item.notes ?? '', item.unit, MATERIAL_ITEM_CATEGORY_LABELS[item.category]]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(trimmedQuery);
+    })
+    .sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      if (sortKey === 'unit_price_cents') return (a.unit_price_cents - b.unit_price_cents) * dir;
+      if (sortKey === 'category') return a.category.localeCompare(b.category) * dir;
+      return a.name.localeCompare(b.name) * dir;
+    });
 
   function resetCsvFeedback() {
     setCsvError(null);
@@ -163,7 +210,7 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
       <button
         type="button"
         onClick={() => importInputRef.current?.click()}
-        className="inline-flex items-center gap-2 rounded-xl border border-pm-border bg-white px-4 py-2.5 text-sm font-medium text-pm-body hover:border-pm-teal-mid hover:text-pm-teal"
+        className="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2 text-sm font-medium text-on-surface-variant hover:border-outline hover:text-on-surface"
       >
         <Upload className="h-4 w-4" />
         Import CSV
@@ -171,7 +218,7 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
       <button
         type="button"
         onClick={handleExportCsv}
-        className="inline-flex items-center gap-2 rounded-xl border border-pm-border bg-white px-4 py-2.5 text-sm font-medium text-pm-body hover:border-pm-teal-mid hover:text-pm-teal"
+        className="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2 text-sm font-medium text-on-surface-variant hover:border-outline hover:text-on-surface"
       >
         <Download className="h-4 w-4" />
         Export CSV
@@ -181,8 +228,8 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
 
   if (mode === 'add') {
     return (
-      <div className="rounded-2xl border border-pm-border bg-white p-5">
-        <h2 className="mb-4 text-base font-semibold text-pm-body">New Item</h2>
+      <div className="rounded-2xl border border-outline-variant bg-surface p-5">
+        <h2 className="mb-4 text-base font-semibold text-on-surface">New Item</h2>
         <MaterialItemForm
           onSubmit={handleCreate}
           onCancel={() => setMode('list')}
@@ -194,8 +241,8 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
 
   if (typeof mode === 'object' && 'edit' in mode) {
     return (
-      <div className="rounded-2xl border border-pm-border bg-white p-5">
-        <h2 className="mb-4 text-base font-semibold text-pm-body">Edit Item</h2>
+      <div className="rounded-2xl border border-outline-variant bg-surface p-5">
+        <h2 className="mb-4 text-base font-semibold text-on-surface">Edit Item</h2>
         <MaterialItemForm
           defaultValues={mode.edit}
           onSubmit={(data) => handleUpdate(mode.edit.id, data)}
@@ -209,58 +256,55 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
   return (
     <div className="space-y-4">
       {deleteError && (
-        <p className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark">
+        <p className="rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container">
           {deleteError}
         </p>
       )}
 
       {csvError && (
-        <p className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark">
+        <p className="rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container">
           {csvError}
         </p>
       )}
 
       {csvMessage && (
-        <p className="rounded-lg border border-pm-border bg-white px-4 py-3 text-sm text-pm-body">
+        <p className="rounded-lg border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface">
           {csvMessage}
         </p>
       )}
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-pm-border bg-white p-8 text-center">
-          <Package className="mx-auto h-10 w-10 text-pm-secondary/40" strokeWidth={1.5} />
-          <p className="mt-3 text-base font-medium text-pm-body">No items yet</p>
-          <p className="mt-1 text-sm text-pm-secondary">
+        <div className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low p-8 text-center">
+          <Package className="mx-auto h-10 w-10 text-on-surface-variant/40" strokeWidth={1.5} />
+          <p className="mt-3 text-base font-medium text-on-surface">No items yet</p>
+          <p className="mt-1 text-sm text-on-surface-variant">
             Add paints, supplies, and services to reuse them across quotes.
           </p>
           <button
             type="button"
             onClick={() => setMode('add')}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-pm-teal px-5 py-2.5 text-sm font-semibold text-white"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary"
           >
             <Plus className="h-4 w-4" />
             Add First Item
           </button>
           <div className="mt-4 flex justify-center">{csvActions}</div>
-          <p className="mt-3 text-xs text-pm-secondary">
-            CSV columns: category, brand, title, size_l, price_aud, notes, is_active
-          </p>
         </div>
       ) : (
         <>
-          <div className="rounded-2xl border border-pm-border bg-white p-4">
+          <div className="rounded-2xl border border-outline-variant bg-surface-container-low p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1">
-              <label htmlFor="material-search" className="sr-only">Search items</label>
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-pm-secondary" />
-              <input
-                id="material-search"
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search by title, notes, unit, or category"
-                className="h-12 w-full rounded-xl border border-pm-border bg-white pl-11 pr-4 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
-              />
+                <label htmlFor="material-search" className="sr-only">Search items</label>
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+                <input
+                  id="material-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search by title, notes, unit, or category"
+                  className="h-11 w-full rounded-xl border border-outline-variant bg-surface pl-11 pr-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
               {csvActions}
             </div>
@@ -269,93 +313,162 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
               <button
                 type="button"
                 onClick={() => setCategoryFilter('all')}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                   categoryFilter === 'all'
-                    ? 'border-pm-teal bg-pm-teal text-white'
-                    : 'border-pm-border bg-white text-pm-secondary hover:border-pm-teal-mid hover:text-pm-body'
+                    ? 'border-primary bg-primary text-on-primary'
+                    : 'border-outline-variant bg-surface text-on-surface-variant hover:border-outline hover:text-on-surface'
                 }`}
               >
-                All - {items.length}
+                All · {items.length}
               </button>
-
               {categoryCounts.map(({ category, count }) => (
                 <button
                   key={category}
                   type="button"
                   onClick={() => setCategoryFilter(category)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                     categoryFilter === category
-                      ? 'border-pm-teal bg-pm-teal text-white'
-                      : 'border-pm-border bg-white text-pm-secondary hover:border-pm-teal-mid hover:text-pm-body'
+                      ? 'border-primary bg-primary text-on-primary'
+                      : 'border-outline-variant bg-surface text-on-surface-variant hover:border-outline hover:text-on-surface'
                   }`}
                 >
-                  {MATERIAL_ITEM_CATEGORY_LABELS[category]} - {count}
+                  {MATERIAL_ITEM_CATEGORY_LABELS[category]} · {count}
                 </button>
               ))}
             </div>
 
-            <p className="mt-3 text-xs text-pm-secondary">
-              Showing {visibleItems.length} of {items.length} items
-            </p>
-            <p className="mt-1 text-xs text-pm-secondary">
-              CSV columns: category, brand, title, size_l, price_aud, notes, is_active
+            <p className="mt-3 text-xs text-on-surface-variant">
+              {visibleItems.length} of {items.length} items
             </p>
           </div>
 
           {visibleItems.length > 0 ? (
-            <div className="rounded-2xl border border-pm-border bg-white divide-y divide-pm-border overflow-hidden">
-              {visibleItems.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-pm-body">{item.name}</p>
-                      {!item.is_active && (
-                        <span className="shrink-0 rounded-full bg-pm-surface px-2 py-0.5 text-xs text-pm-secondary">
-                          Inactive
-                        </span>
-                      )}
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-hidden rounded-2xl border border-outline-variant bg-surface">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead>
+                    <tr className="border-b border-outline-variant bg-surface-container-low">
+                      <SortHeader col="name" current={sortKey} dir={sortDir} onSort={handleSort} className="px-4 py-3 text-left">Item</SortHeader>
+                      <SortHeader col="category" current={sortKey} dir={sortDir} onSort={handleSort} className="px-4 py-3 text-left w-32">Category</SortHeader>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-on-surface-variant w-28">Unit</th>
+                      <SortHeader col="unit_price_cents" current={sortKey} dir={sortDir} onSort={handleSort} className="px-4 py-3 text-right w-32">Price</SortHeader>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-on-surface-variant w-24">Status</th>
+                      <th className="px-4 py-3 w-20" aria-label="Actions" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant">
+                    {visibleItems.map((item) => {
+                      const Icon = CATEGORY_ICONS[item.category] ?? Package;
+                      const iconCls = CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS.other;
+                      return (
+                        <tr key={item.id} className="hover:bg-surface-container-low transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconCls}`}>
+                                <Icon className="h-4 w-4" strokeWidth={1.75} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-on-surface">{item.name}</p>
+                                {item.notes && <p className="truncate text-xs text-on-surface-variant mt-0.5">{item.notes}</p>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-on-surface-variant">{MATERIAL_ITEM_CATEGORY_LABELS[item.category]}</td>
+                          <td className="px-4 py-3 text-sm text-on-surface-variant">per {item.unit}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-on-surface tabular-nums">{formatAUD(item.unit_price_cents)}</td>
+                          <td className="px-4 py-3">
+                            {item.is_active ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-container px-2 py-0.5 text-xs font-semibold text-on-secondary-container">Active</span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-high px-2 py-0.5 text-xs font-semibold text-on-surface-variant">Inactive</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setMode({ edit: item })}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+                                aria-label={`Edit ${item.name}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(item.id)}
+                                disabled={deletingId === item.id}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-on-error-container disabled:opacity-40"
+                                aria-label={`Delete ${item.name}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile list */}
+              <div className="md:hidden rounded-2xl border border-outline-variant bg-surface divide-y divide-outline-variant overflow-hidden">
+                {visibleItems.map((item) => {
+                  const Icon = CATEGORY_ICONS[item.category] ?? Package;
+                  const iconCls = CATEGORY_COLORS[item.category] ?? CATEGORY_COLORS.other;
+                  return (
+                    <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconCls}`}>
+                        <Icon className="h-4 w-4" strokeWidth={1.75} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-on-surface">{item.name}</p>
+                          {!item.is_active && (
+                            <span className="shrink-0 rounded-full bg-surface-container-high px-2 py-0.5 text-xs text-on-surface-variant">Inactive</span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-on-surface-variant">
+                          {MATERIAL_ITEM_CATEGORY_LABELS[item.category]} · {formatAUD(item.unit_price_cents)} / {item.unit}
+                        </p>
+                        {item.notes && <p className="mt-1 truncate text-xs text-on-surface-variant">{item.notes}</p>}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setMode({ edit: item })}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+                          aria-label={`Edit ${item.name}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item.id)}
+                          disabled={deletingId === item.id}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-on-error-container disabled:opacity-40"
+                          aria-label={`Delete ${item.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                    <p className="mt-0.5 text-xs text-pm-secondary">
-                      {MATERIAL_ITEM_CATEGORY_LABELS[item.category]} - {formatAUD(item.unit_price_cents)} / {item.unit}
-                    </p>
-                    {item.notes && <p className="mt-1 truncate text-xs text-pm-secondary">{item.notes}</p>}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setMode({ edit: item })}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-pm-secondary hover:bg-pm-surface hover:text-pm-body"
-                      aria-label={`Edit ${item.name}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.id)}
-                      disabled={deletingId === item.id}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-pm-secondary hover:bg-pm-coral-light hover:text-pm-coral-dark disabled:opacity-40"
-                      aria-label={`Delete ${item.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            </>
           ) : (
-            <div className="rounded-2xl border border-dashed border-pm-border bg-white p-8 text-center">
-              <Package className="mx-auto h-10 w-10 text-pm-secondary/40" strokeWidth={1.5} />
-              <p className="mt-3 text-base font-medium text-pm-body">No matching items</p>
-              <p className="mt-1 text-sm text-pm-secondary">
+            <div className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low p-8 text-center">
+              <Package className="mx-auto h-10 w-10 text-on-surface-variant/40" strokeWidth={1.5} />
+              <p className="mt-3 text-base font-medium text-on-surface">No matching items</p>
+              <p className="mt-1 text-sm text-on-surface-variant">
                 Try a different search or choose another category.
               </p>
               <button
                 type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setCategoryFilter('all');
-                }}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-pm-border bg-white px-5 py-2.5 text-sm font-medium text-pm-body"
+                onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-5 py-2.5 text-sm font-medium text-on-surface"
               >
                 Clear Filters
               </button>
@@ -365,10 +478,10 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
           <button
             type="button"
             onClick={() => setMode('add')}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-pm-border bg-white py-3 text-sm font-medium text-pm-secondary hover:border-pm-teal-mid hover:text-pm-teal"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant bg-surface py-3 text-sm font-medium text-on-surface-variant hover:border-primary hover:text-primary"
           >
             <Plus className="h-4 w-4" />
-            Add Item
+            + New Item
           </button>
         </>
       )}
