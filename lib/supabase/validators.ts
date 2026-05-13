@@ -5,7 +5,6 @@ import {
   INTERIOR_DOOR_SCOPES,
   INTERIOR_DOOR_TYPES,
   INTERIOR_PAINT_SYSTEMS,
-  INTERIOR_ROOM_TYPES,
   INTERIOR_SCOPE_OPTIONS,
   INTERIOR_STOREYS,
   INTERIOR_WALL_PAINT_SYSTEMS,
@@ -395,7 +394,7 @@ const interiorWallPaintSystemSchema = z
 
 const interiorEstimateRoomSchema = z.object({
   name: z.string().trim().min(1, 'Room name is required'),
-  anchor_room_type: z.enum(INTERIOR_ROOM_TYPES),
+  anchor_room_type: z.string().trim().min(1),
   room_type: z.enum(['interior', 'exterior']).default('interior'),
   length_m: z.number().positive('Length must be greater than zero').nullable().optional(),
   width_m: z.number().positive('Width must be greater than zero').nullable().optional(),

@@ -92,10 +92,10 @@ describe('MaterialItemList', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByLabelText(`Edit ${CREATED_ITEM.name}`)).toBeInTheDocument()
+      expect(screen.getAllByLabelText(`Edit ${CREATED_ITEM.name}`).length).toBeGreaterThan(0)
     );
 
-    await user.click(screen.getByLabelText(`Edit ${CREATED_ITEM.name}`));
+    await user.click(screen.getAllByLabelText(`Edit ${CREATED_ITEM.name}`)[0]);
     await user.clear(screen.getByLabelText('Item Name'));
     await user.type(screen.getByLabelText('Item Name'), 'Ceiling Paint Updated');
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
@@ -108,9 +108,9 @@ describe('MaterialItemList', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByLabelText('Delete Ceiling Paint Updated')).toBeInTheDocument()
+      expect(screen.getAllByLabelText('Delete Ceiling Paint Updated').length).toBeGreaterThan(0)
     );
-    await user.click(screen.getByLabelText('Delete Ceiling Paint Updated'));
+    await user.click(screen.getAllByLabelText('Delete Ceiling Paint Updated')[0]);
 
     await waitFor(() => expect(deleteMaterialItemMock).toHaveBeenCalledWith('db-item-1'));
   });
@@ -177,19 +177,19 @@ describe('MaterialItemList', () => {
 
     render(<MaterialItemList initialItems={FILTER_ITEMS} />);
 
-    expect(screen.getByText('Showing 3 of 3 items')).toBeInTheDocument();
+    expect(screen.getByText('3 of 3 items')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Service - 1' }));
+    await user.click(screen.getByRole('button', { name: 'Service · 1' }));
 
-    expect(screen.getByText('Showing 1 of 3 items')).toBeInTheDocument();
-    expect(screen.getByText('Ceiling repaint')).toBeInTheDocument();
+    expect(screen.getByText('1 of 3 items')).toBeInTheDocument();
+    expect(screen.getAllByText('Ceiling repaint').length).toBeGreaterThan(0);
     expect(screen.queryByText('Zinsser Primer')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'All - 3' }));
+    await user.click(screen.getByRole('button', { name: 'All · 3' }));
     await user.type(screen.getByLabelText('Search items'), 'primer');
 
-    expect(screen.getByText('Showing 1 of 3 items')).toBeInTheDocument();
-    expect(screen.getByText('Zinsser Primer')).toBeInTheDocument();
+    expect(screen.getByText('1 of 3 items')).toBeInTheDocument();
+    expect(screen.getAllByText('Zinsser Primer').length).toBeGreaterThan(0);
     expect(screen.queryByText('Ceiling repaint')).not.toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Search items'));
@@ -199,9 +199,9 @@ describe('MaterialItemList', () => {
 
     await user.click(screen.getByRole('button', { name: 'Clear Filters' }));
 
-    expect(screen.getByText('Showing 3 of 3 items')).toBeInTheDocument();
-    expect(screen.getByText('Ceiling Paint')).toBeInTheDocument();
-    expect(screen.getByText('Zinsser Primer')).toBeInTheDocument();
-    expect(screen.getByText('Ceiling repaint')).toBeInTheDocument();
+    expect(screen.getByText('3 of 3 items')).toBeInTheDocument();
+    expect(screen.getAllByText('Ceiling Paint').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Zinsser Primer').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ceiling repaint').length).toBeGreaterThan(0);
   });
 });

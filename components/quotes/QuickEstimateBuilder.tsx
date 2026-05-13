@@ -79,8 +79,7 @@ function calcRoomTotal(
 
 function makeRoomFromTemplate(
   template: QuickEstimateRoom,
-  size: 'small' | 'medium' | 'large',
-  index: number
+  size: 'small' | 'medium' | 'large'
 ): SelectedQuickRoom {
   const sizeRates = template.sizes[size];
   return {
@@ -266,7 +265,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
   }
 
   function addRoom(template: QuickEstimateRoom) {
-    const newRoom = makeRoomFromTemplate(template, 'medium', value.rooms.length);
+    const newRoom = makeRoomFromTemplate(template, 'medium');
     onChange({ ...value, rooms: [...value.rooms, newRoom] });
   }
 

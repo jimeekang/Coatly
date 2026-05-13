@@ -2,7 +2,6 @@ import { PAINT_RATES } from '@/config/paint-rates';
 import { z } from 'zod';
 import {
   buildDefaultDetailedEstimateAnchors,
-  DETAILED_ESTIMATE_INTERIOR_ROOM_KEYS,
   type DetailedEstimateAnchors,
 } from '@/lib/detailed-estimate-anchors';
 import type { PricingMethod } from '@/types/quote';
@@ -707,12 +706,11 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
   }
 
   if (parsed.data.detailed_estimate_anchors?.interior_rooms) {
-    for (const room of DETAILED_ESTIMATE_INTERIOR_ROOM_KEYS) {
-      const range = parsed.data.detailed_estimate_anchors.interior_rooms[room];
-      if (range) {
-        result.detailed_estimate_anchors.interior_rooms[room] = range;
-      }
-    }
+    result.detailed_estimate_anchors = {
+      interior_rooms: {
+        ...parsed.data.detailed_estimate_anchors.interior_rooms,
+      },
+    };
   }
 
   // Pricing method settings

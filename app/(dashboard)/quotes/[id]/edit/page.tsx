@@ -125,7 +125,7 @@ export default async function EditQuotePage({
       <div className="mb-6 flex items-center gap-3">
         <Link
           href={`/quotes/${id}`}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors active:bg-pm-border"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors active:bg-surface-container-high"
           aria-label="Back to quote"
         >
           <svg
@@ -143,8 +143,8 @@ export default async function EditQuotePage({
           </svg>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-pm-body">Edit Quote</h1>
-          <p className="mt-0.5 text-sm text-pm-secondary">
+          <h1 className="text-2xl font-bold text-on-surface">Edit Quote</h1>
+          <p className="mt-0.5 text-sm text-on-surface-variant">
             {quote.quote_number}
             {quote.title ? ` · ${quote.title}` : ''}
           </p>

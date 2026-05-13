@@ -148,14 +148,39 @@ function SectionHeading({
   );
 }
 
-function RateValueDisplay({ value, unit }: { value: number; unit: string }) {
-  return (
-    <div className="border-pm-border bg-pm-surface/55 text-pm-body inline-flex min-h-11 items-center justify-center rounded-lg border px-3 text-sm font-semibold">
+function RateValueDisplay({
+  value,
+  unit,
+  onClick,
+  ariaLabel,
+}: {
+  value: number;
+  unit: string;
+  onClick?: () => void;
+  ariaLabel?: string;
+}) {
+  const content = (
+    <>
       ${(value / 100).toFixed(2)}
       <span className="text-pm-secondary ml-1.5 text-xs font-medium">
         {unit}
       </span>
-    </div>
+    </>
+  );
+  const className =
+    'border-pm-border bg-pm-surface/55 text-pm-body inline-flex min-h-11 items-center justify-center rounded-lg border px-3 text-sm font-semibold';
+
+  if (!onClick) return <div className={className}>{content}</div>;
+
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={`${className} hover:border-pm-teal-mid hover:bg-pm-teal-pale/15 cursor-pointer transition-colors`}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -307,6 +332,8 @@ function WallCeilingRatesSection({
                       <RateValueDisplay
                         value={rates[surface][coating]}
                         unit="/sqm"
+                        onClick={() => onEditToggle(surface)}
+                        ariaLabel={`Edit ${SQM_SURFACE_TYPE_LABELS[surface]} ${COATING_LABELS[coating]} rate`}
                       />
                     )}
                   </td>
@@ -412,6 +439,8 @@ function TrimRatesSection({
                       <RateValueDisplay
                         value={rates.trim[coating]}
                         unit="/sqm"
+                        onClick={() => onEditToggle('trim')}
+                        ariaLabel={`Edit Skirting ${COATING_LABELS[coating]} rate`}
                       />
                     )}
                   </td>
@@ -604,6 +633,8 @@ function DoorRatesSection({
                             <RateValueDisplay
                               value={rates.door_unit_rates[ps][doorType][scope]}
                               unit="/door"
+                              onClick={() => onDoorTypeEditToggle(doorType)}
+                              ariaLabel={`Edit ${RATE_DOOR_TYPE_LABELS[doorType]} ${DOOR_SCOPE_LABELS[scope]} ${TRIM_PAINT_SYSTEM_LABELS[ps]} rate`}
                             />
                           )}
                         </td>
@@ -725,6 +756,8 @@ function WindowRatesSection({
                             <RateValueDisplay
                               value={rates.window_unit_rates[ps][type][scope]}
                               unit="/window"
+                              onClick={() => onWindowTypeEditToggle(type)}
+                              ariaLabel={`Edit ${WINDOW_TYPE_LABELS[type]} ${WINDOW_SCOPE_LABELS[scope]} ${TRIM_PAINT_SYSTEM_LABELS[ps]} rate`}
                             />
                           )}
                         </td>
@@ -1171,67 +1204,200 @@ function DetailedEstimateAnchorsTab({
   rates: UserRateSettings;
   onChange: (anchors: UserRateSettings['detailed_estimate_anchors']) => void;
 }) {
-  const rooms = Object.entries(rates.detailed_estimate_anchors.interior_rooms);
+  const anchors = rates.detailed_estimate_anchors.interior_rooms;
+  const rooms = Object.entries(anchors);
+  const [roomNameDrafts, setRoomNameDrafts] = useState<
+    Partial<Record<string, string>>
+  >({});
+
+  function updateAnchors(interiorRooms: typeof anchors) {
+    onChange({
+      ...rates.detailed_estimate_anchors,
+      interior_rooms: interiorRooms,
+    });
+  }
+
+  function makeUniqueRoomName(baseName: string) {
+    if (!anchors[baseName]) return baseName;
+
+    let index = 2;
+    while (anchors[baseName + ' ' + index]) index += 1;
+    return baseName + ' ' + index;
+  }
+
+  function clearRoomNameDraft(roomName: string) {
+    setRoomNameDrafts((current) => {
+      const next = { ...current };
+      delete next[roomName];
+      return next;
+    });
+  }
+
+  function commitRoomName(currentRoom: string) {
+    const nextRoom = (roomNameDrafts[currentRoom] ?? currentRoom).trim();
+
+    if (!nextRoom || nextRoom === currentRoom) {
+      clearRoomNameDraft(currentRoom);
+      return;
+    }
+
+    if (anchors[nextRoom]) return;
+
+    updateAnchors(
+      Object.fromEntries(
+        rooms.map(([room, range]) => [
+          room === currentRoom ? nextRoom : room,
+          range,
+        ])
+      )
+    );
+    clearRoomNameDraft(currentRoom);
+  }
+
+  function updateRoomMedian(room: string, value: string) {
+    const dollars = value.trim() === '' ? 0 : Number(value);
+    if (!Number.isFinite(dollars) || dollars < 0) return;
+
+    const median = Math.round(dollars * 100);
+    updateAnchors({
+      ...anchors,
+      [room]: {
+        min: Math.round(median * 0.85),
+        median,
+        max: Math.round(median * 1.15),
+      },
+    });
+  }
+
+  function addRoomAnchor() {
+    const room = makeUniqueRoomName('New Room');
+    updateAnchors({
+      ...anchors,
+      [room]: { min: 0, median: 0, max: 0 },
+    });
+    setRoomNameDrafts((current) => ({ ...current, [room]: room }));
+  }
+
+  function deleteRoomAnchor(roomToDelete: string) {
+    updateAnchors(
+      Object.fromEntries(rooms.filter(([room]) => room !== roomToDelete))
+    );
+  }
 
   return (
     <section className="space-y-4">
-      <SectionHeading
-        title="Detailed Estimate Anchors"
-        subtitle="Set the base room prices used by Detailed Estimate. Room flat rate presets stay separate."
-      />
-      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
-        <table className="w-full min-w-[420px] text-sm">
-          <thead>
-            <tr className="border-pm-border bg-pm-surface border-b">
-              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
-                Room
-              </th>
-              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
-                Base price
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rooms.map(([room, range]) => (
-              <tr
-                key={room}
-                className="border-pm-border border-b last:border-0"
-              >
-                <td className="text-pm-body px-4 py-3 font-medium">{room}</td>
-                <td className="px-4 py-3 text-right">
-                  <div className="relative inline-flex items-center">
-                    <span className="text-pm-secondary absolute left-3 text-sm">
+      <div className="border-pm-border rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <SectionHeading
+            title="Detailed Estimate Anchors"
+            subtitle="Set the base room prices used by Detailed Estimate. Tap a room name or amount to edit it directly."
+          />
+          <button
+            type="button"
+            onClick={addRoomAnchor}
+            className="border-pm-teal/50 text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed bg-white px-4 text-base font-medium sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            Add Room Anchor
+          </button>
+        </div>
+      </div>
+
+      {rooms.length === 0 ? (
+        <div className="border-pm-border bg-pm-surface/50 rounded-2xl border border-dashed p-6 text-center sm:p-8">
+          <div className="mx-auto max-w-md space-y-3">
+            <h4 className="text-pm-body text-base font-semibold">
+              No room anchors yet
+            </h4>
+            <p className="text-pm-secondary text-sm leading-6">
+              Add a room anchor to set default detailed estimate pricing for
+              bedrooms, kitchens, or custom work areas.
+            </p>
+            <button
+              type="button"
+              onClick={addRoomAnchor}
+              className="border-pm-teal/50 text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed bg-white px-4 text-base font-medium sm:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Add Room Anchor
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {rooms.map(([room, range]) => (
+            <div
+              key={room}
+              className="border-pm-border rounded-2xl border bg-white p-4 shadow-sm transition-colors hover:border-pm-teal-mid/50 sm:p-5"
+            >
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_52px] lg:items-end">
+                <div className="space-y-2">
+                  <label
+                    htmlFor={'room-anchor-' + room}
+                    className="text-pm-secondary text-sm font-medium"
+                  >
+                    Room anchor
+                  </label>
+                  <input
+                    id={'room-anchor-' + room}
+                    value={roomNameDrafts[room] ?? room}
+                    onChange={(event) =>
+                      setRoomNameDrafts((current) => ({
+                        ...current,
+                        [room]: event.target.value,
+                      }))
+                    }
+                    onBlur={() => commitRoomName(room)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        commitRoomName(room);
+                      }
+                    }}
+                    className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-12 w-full rounded-xl border bg-white px-3 text-base font-medium focus:ring-2 focus:outline-none"
+                    aria-label={'Room anchor name for ' + room}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor={'room-anchor-price-' + room}
+                    className="text-pm-secondary text-sm font-medium"
+                  >
+                    Base price
+                  </label>
+                  <div className="relative">
+                    <span className="text-pm-secondary pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-base font-semibold">
                       $
                     </span>
                     <NumericInput
+                      id={'room-anchor-price-' + room}
                       inputMode="numeric"
                       value={Math.round(range.median / 100).toString()}
                       sanitize={sanitizeIntegerInput}
-                      onValueChange={(value) => {
-                        const dollars = value.trim() === '' ? 0 : Number(value);
-                        if (!Number.isFinite(dollars) || dollars < 0) return;
-                        const median = Math.max(0, Math.round(dollars * 100));
-                        onChange({
-                          ...rates.detailed_estimate_anchors,
-                          interior_rooms: {
-                            ...rates.detailed_estimate_anchors.interior_rooms,
-                            [room]: {
-                              min: Math.round(median * 0.85),
-                              median,
-                              max: Math.round(median * 1.15),
-                            },
-                          },
-                        });
-                      }}
-                      className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-10 w-28 rounded-lg border bg-white py-2 pr-3 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                      onValueChange={(value) => updateRoomMedian(room, value)}
+                      className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-12 w-full rounded-xl border bg-white py-2 pr-3 pl-8 text-base font-semibold tabular-nums focus:ring-2 focus:outline-none"
+                      aria-label={'Base price for ' + room}
                     />
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label={'Delete ' + room + ' room anchor'}
+                  onClick={() => deleteRoomAnchor(room)}
+                  className="border-pm-coral/30 text-pm-coral hover:bg-pm-coral-light inline-flex h-12 w-full items-center justify-center rounded-xl border bg-white lg:w-12"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="ml-2 text-base font-medium lg:sr-only">
+                    Delete
+                  </span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -1338,6 +1504,8 @@ function ExteriorRatesSection({
                         <RateValueDisplay
                           value={rates[surface][coating]}
                           unit={EXTERIOR_SURFACE_UNITS[surface]}
+                          onClick={() => onSurfaceEditToggle(surface)}
+                          ariaLabel={`Edit ${EXTERIOR_SURFACE_LABELS[surface]} ${EXTERIOR_COATING_LABELS[coating]} rate`}
                         />
                       )}
                     </td>
@@ -1422,6 +1590,8 @@ function ExteriorRatesSection({
                         <RateValueDisplay
                           value={surface.rates[coating]}
                           unit={surface.unit}
+                          onClick={() => onCustomEditToggle(surface.id)}
+                          ariaLabel={`Edit ${surface.label} ${EXTERIOR_COATING_LABELS[coating]} rate`}
                         />
                       )}
                     </td>

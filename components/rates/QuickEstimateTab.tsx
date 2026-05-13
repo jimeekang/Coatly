@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { useId, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import type { QuickEstimateSettings, QuickEstimateRoom } from '@/lib/rate-settings';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -181,6 +181,8 @@ interface QuickEstimateTabProps {
 export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) {
   const [customLabel, setCustomLabel] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const generatedRoomIdPrefix = useId();
+  const nextRoomIdRef = useRef(settings.rooms.length);
 
   function handleMultiplierChange(
     group: 'coating_multipliers' | 'condition_multipliers',
@@ -207,8 +209,9 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
   }
 
   function addRoomFromTemplate(label: string) {
+    nextRoomIdRef.current += 1;
     const newRoom: QuickEstimateRoom = {
-      id: `room-${Date.now()}`,
+      id: `${generatedRoomIdPrefix}-room-${nextRoomIdRef.current}`,
       label,
       enabled_surfaces: ['walls', 'ceiling', 'trim'],
       sizes: {

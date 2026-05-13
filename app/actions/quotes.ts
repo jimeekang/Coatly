@@ -63,7 +63,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
-import type { QuoteCreateInput } from '@/lib/supabase/validators';
+import type { Json } from '@/lib/supabase/types';
+import { MATERIAL_ITEM_CATEGORIES, type MaterialItemCategory, type QuoteCreateInput } from '@/lib/supabase/validators';
 import { formatAUD, formatDate } from '@/utils/format';
 
 type QuoteListRow = {
@@ -168,6 +169,16 @@ function jsonObjectOrEmpty(value: unknown) {
   return value != null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function jsonColumnValue(value: unknown): Json {
+  return value == null ? {} : (value as Json);
+}
+
+function materialItemCategoryOrOther(category: string): MaterialItemCategory {
+  return MATERIAL_ITEM_CATEGORIES.includes(category as MaterialItemCategory)
+    ? (category as MaterialItemCategory)
+    : 'other';
 }
 
 const QUOTE_CUSTOMER_SELECT =
@@ -1432,8 +1443,7 @@ export async function createQuote(
     pricing_snapshot:
       interiorEstimate?.snapshot ?? exteriorEstimateResult?.snapshot ?? {},
     pricing_method: pricingMethod,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing_method_inputs: resolvedPricingInputs as any,
+    pricing_method_inputs: resolvedPricingInputs as Json,
   };
 
   let { data: quote, error: quoteError } = await supabase
@@ -2107,13 +2117,10 @@ export async function duplicateQuote(
     estimate_category: sourceQuote.estimate_category ?? undefined,
     property_type: sourceQuote.property_type ?? undefined,
     estimate_mode: sourceQuote.estimate_mode ?? undefined,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    estimate_context: (sourceQuote.estimate_context ?? {}) as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing_snapshot: (sourceQuote.pricing_snapshot ?? {}) as any,
+    estimate_context: jsonColumnValue(sourceQuote.estimate_context),
+    pricing_snapshot: jsonColumnValue(sourceQuote.pricing_snapshot),
     pricing_method: sourceQuote.pricing_method ?? undefined,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing_method_inputs: sourceQuote.pricing_method_inputs as any,
+    pricing_method_inputs: sourceQuote.pricing_method_inputs as Json | null,
   };
 
   let { data: newQuote, error: insertError } = await supabase
@@ -2160,8 +2167,7 @@ export async function duplicateQuote(
           unit: item.unit,
           unit_price_cents: item.unit_price_cents,
           total_cents: item.total_cents,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          metadata: (item.metadata ?? {}) as any,
+          metadata: jsonColumnValue(item.metadata),
           sort_order: index,
         }))
       );
@@ -2225,8 +2231,7 @@ export async function duplicateQuote(
           quote_id: newQuoteId,
           material_item_id: item.material_item_id ?? null,
           name: item.name,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          category: item.category as any,
+          category: materialItemCategoryOrOther(item.category),
           unit: item.unit,
           quantity: item.quantity,
           unit_price_cents: item.unit_price_cents,
@@ -2538,8 +2543,7 @@ export async function updateQuote(
     pricing_snapshot:
       interiorEstimate?.snapshot ?? exteriorEstimateResult?.snapshot ?? {},
     pricing_method: pricingMethod,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing_method_inputs: resolvedPricingInputs as any,
+    pricing_method_inputs: resolvedPricingInputs as Json,
   };
 
   let { error: updateError } = await supabase

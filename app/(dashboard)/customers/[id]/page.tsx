@@ -32,7 +32,7 @@ export default async function CustomerDetailPage({ params }: Props) {
       <div className="flex items-center gap-3 mb-6">
         <Link
           href="/customers"
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-pm-surface text-pm-secondary active:bg-pm-border transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-low text-on-surface-variant active:bg-surface-container-high transition-colors"
           aria-label="Back to customers"
         >
           <svg
@@ -50,9 +50,9 @@ export default async function CustomerDetailPage({ params }: Props) {
           </svg>
         </Link>
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-pm-body truncate">{customer.name}</h1>
+          <h1 className="text-2xl font-bold text-on-surface truncate">{customer.name}</h1>
           {customer.company_name && (
-            <p className="text-sm text-pm-secondary truncate">{customer.company_name}</p>
+            <p className="text-sm text-on-surface-variant truncate">{customer.company_name}</p>
           )}
         </div>
       </div>

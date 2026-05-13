@@ -41,8 +41,16 @@ const FIELD = 'h-12 w-full rounded-xl border border-pm-border bg-white px-4 text
 const LABEL = 'mb-1.5 block text-sm font-medium text-pm-body';
 type RoomRef = '' | `${number}`;
 
-function inferAnchorRoomType(name: string): InteriorRoomType {
+function inferAnchorRoomType(
+  name: string,
+  rateSettings?: UserRateSettings | null
+): InteriorRoomType {
   const normalized = name.trim().toLowerCase();
+  const customAnchor = Object.keys(
+    rateSettings?.detailed_estimate_anchors?.interior_rooms ?? {}
+  ).find((roomType) => roomType.toLowerCase() === normalized);
+  if (customAnchor) return customAnchor;
+
   const matched = INTERIOR_ROOM_TYPES.find(
     (roomType) => roomType.toLowerCase() === normalized
   );
@@ -284,7 +292,13 @@ export function InteriorEstimateBuilder({
                     value={room.name}
                     onChange={(event) => {
                       const name = event.target.value;
-                      setRoom(index, { name, anchor_room_type: inferAnchorRoomType(name) });
+                      setRoom(index, {
+                        name,
+                        anchor_room_type: inferAnchorRoomType(
+                          name,
+                          rateSettings
+                        ),
+                      });
                     }}
                     className={`${FIELD} flex-1`}
                     placeholder="e.g. Master Bedroom"

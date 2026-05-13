@@ -1,5 +1,5 @@
 import { DEFAULT_COVERAGE_PER_LITRE, STANDARD_DOOR_AREA_M2, STANDARD_WINDOW_AREA_M2 } from '@/config/constants';
-import type { DayRateInputs, RoomRateInputs, ManualInputs, QuickInputs, SelectedQuickRoom } from '@/types/quote';
+import type { DayRateInputs, RoomRateInputs, ManualInputs, QuickInputs } from '@/types/quote';
 import type { RoomRatePreset, UserRateSettings } from '@/lib/rate-settings';
 
 /**
