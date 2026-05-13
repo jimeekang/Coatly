@@ -55,6 +55,7 @@ import {
   calculateManualQuote,
   calculateQuickEstimate,
   getRoomRateBaseline,
+  snapshotQuickEstimateInputs,
 } from '@/utils/calculations';
 import { QuickEstimateBuilder } from '@/components/quotes/QuickEstimateBuilder';
 import {
@@ -252,6 +253,10 @@ function buildInitialAdvancedEstimate(
         include_trim: room.include_trim,
         include_doors: false,
         include_windows: false,
+        source_rate_item_id: room.source_rate_item_id,
+        source_rate_item_version: room.source_rate_item_version,
+        source_rate_item_label: room.source_rate_item_label,
+        rate_snapshot_version: room.rate_snapshot_version,
       })),
       doors: estimateContext.opening_items
         .filter((item) => item.opening_type === 'door')
@@ -363,6 +368,10 @@ function buildAdvancedEstimatePayload(
       include_walls: room.include_walls,
       include_ceiling: room.include_ceiling,
       include_trim: room.include_trim,
+      source_rate_item_id: room.source_rate_item_id,
+      source_rate_item_version: room.source_rate_item_version,
+      source_rate_item_label: room.source_rate_item_label,
+      rate_snapshot_version: room.rate_snapshot_version,
     })),
     opening_items: [
       ...estimate.doors
@@ -1259,6 +1268,9 @@ export function QuoteForm({
     const working_days = normalizeWorkingDays(intVal(form.working_days, 1));
 
     if (pricingStrategy === 'detailed_quick') {
+      const quickSnapshot = rateSettings
+        ? snapshotQuickEstimateInputs(quickInputs, rateSettings)
+        : quickInputs;
       payload = {
         customer_id: form.customer_id,
         customer_address,
@@ -1276,7 +1288,7 @@ export function QuoteForm({
         pricing_method: 'detailed_quick',
         pricing_method_inputs: {
           method: 'detailed_quick' as const,
-          inputs: quickInputs,
+          inputs: quickSnapshot,
         },
       };
     } else if (pricingStrategy === 'day_rate') {

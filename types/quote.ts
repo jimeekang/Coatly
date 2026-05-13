@@ -39,6 +39,10 @@ export interface ManualInputs {
 /** Quick Estimate: one selected room card in the 4-step wizard */
 export interface SelectedQuickRoom {
   room_id: string;
+  source_rate_item_id?: string;
+  source_rate_item_version?: number;
+  source_rate_item_label?: string;
+  rate_snapshot_version?: 1;
   label: string;
   size: 'small' | 'medium' | 'large';
   selected_surfaces: ('walls' | 'ceiling' | 'trim')[];

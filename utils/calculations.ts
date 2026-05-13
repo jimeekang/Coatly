@@ -161,53 +161,135 @@ export interface QuickEstimateResult extends PricingResult {
   rooms: QuickEstimateRoomResult[];
 }
 
+export const QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION = 1;
+
+function getQuickEstimateCoatingPct(
+  inputs: Pick<QuickInputs, 'global_coating'>,
+  rateSettings: UserRateSettings
+): number {
+  const { coating_multipliers } = rateSettings.quick_estimate;
+  if (inputs.global_coating === 'one_coat_refresh') {
+    return coating_multipliers.one_coat_refresh_pct;
+  }
+  if (inputs.global_coating === 'three_coats_new_plaster') {
+    return coating_multipliers.three_coats_new_plaster_pct;
+  }
+  return coating_multipliers.two_coats_repaint_pct;
+}
+
+function getQuickEstimateConditionPct(
+  inputs: Pick<QuickInputs, 'global_condition'>,
+  rateSettings: UserRateSettings
+): number {
+  const { condition_multipliers } = rateSettings.quick_estimate;
+  if (inputs.global_condition === 'good') return condition_multipliers.good_pct;
+  if (inputs.global_condition === 'poor') return condition_multipliers.poor_pct;
+  return condition_multipliers.average_pct;
+}
+
+function safeMultiplier(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) && value != null && value >= 0 ? value : fallback;
+}
+
+function quickRoomBaseSubtotal(room: QuickInputs['rooms'][number]): number {
+  return (
+    (room.selected_surfaces.includes('walls') ? room.walls_cents : 0) +
+    (room.selected_surfaces.includes('ceiling') ? room.ceiling_cents : 0) +
+    (room.selected_surfaces.includes('trim') ? room.trim_cents : 0)
+  );
+}
+
+export function calculateQuickEstimateRoomTotal(
+  room: QuickInputs['rooms'][number],
+  coatingPct: number,
+  conditionPct: number
+): number {
+  return Math.round(
+    quickRoomBaseSubtotal(room) * (coatingPct / 100) * (conditionPct / 100)
+  );
+}
+
+function isSnapshotQuickRoom(room: QuickInputs['rooms'][number]): boolean {
+  return (
+    room.rate_snapshot_version === QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION ||
+    room.source_rate_item_id != null
+  );
+}
+
+export function snapshotQuickEstimateInputs(
+  inputs: QuickInputs,
+  rateSettings: UserRateSettings
+): QuickInputs {
+  const coatingPct = getQuickEstimateCoatingPct(inputs, rateSettings);
+  const conditionPct = getQuickEstimateConditionPct(inputs, rateSettings);
+
+  return {
+    ...inputs,
+    rooms: inputs.rooms.map((room) => ({
+      ...room,
+      rate_snapshot_version: QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,
+      coating_multiplier_pct: coatingPct,
+      condition_multiplier_pct: conditionPct,
+      total_cents: calculateQuickEstimateRoomTotal(
+        room,
+        coatingPct,
+        conditionPct
+      ),
+    })),
+  };
+}
+
+export function normalizeQuickEstimateInputsForCalculation(
+  inputs: QuickInputs,
+  rateSettings: UserRateSettings
+): QuickInputs {
+  const fallbackCoatingPct = getQuickEstimateCoatingPct(inputs, rateSettings);
+  const fallbackConditionPct = getQuickEstimateConditionPct(
+    inputs,
+    rateSettings
+  );
+
+  return {
+    ...inputs,
+    rooms: inputs.rooms.map((room) => {
+      const useStoredSnapshot = isSnapshotQuickRoom(room);
+      const coatingPct = useStoredSnapshot
+        ? safeMultiplier(room.coating_multiplier_pct, fallbackCoatingPct)
+        : fallbackCoatingPct;
+      const conditionPct = useStoredSnapshot
+        ? safeMultiplier(room.condition_multiplier_pct, fallbackConditionPct)
+        : fallbackConditionPct;
+
+      return {
+        ...room,
+        coating_multiplier_pct: coatingPct,
+        condition_multiplier_pct: conditionPct,
+        total_cents: calculateQuickEstimateRoomTotal(
+          room,
+          coatingPct,
+          conditionPct
+        ),
+      };
+    }),
+  };
+}
+
 /**
  * Calculate quote price using the detailed_quick method.
- * Per-room: surface prices × (coating_pct/100) × (condition_pct/100).
+ * Per-room: quote snapshot surface prices × multipliers.
  * GST and labour/material split use the painter's pricing settings.
  */
 export function calculateQuickEstimate(
   inputs: QuickInputs,
   rateSettings: UserRateSettings
 ): QuickEstimateResult {
-  const { coating_multipliers, condition_multipliers } = rateSettings.quick_estimate;
+  const normalizedInputs = normalizeQuickEstimateInputsForCalculation(
+    inputs,
+    rateSettings
+  );
 
-  const coatingPct =
-    inputs.global_coating === 'one_coat_refresh'
-      ? coating_multipliers.one_coat_refresh_pct
-      : inputs.global_coating === 'three_coats_new_plaster'
-        ? coating_multipliers.three_coats_new_plaster_pct
-        : coating_multipliers.two_coats_repaint_pct;
-
-  const conditionPct =
-    inputs.global_condition === 'good'
-      ? condition_multipliers.good_pct
-      : inputs.global_condition === 'poor'
-        ? condition_multipliers.poor_pct
-        : condition_multipliers.average_pct;
-
-  const rooms: QuickEstimateRoomResult[] = inputs.rooms.map((room) => {
-    const template = rateSettings.quick_estimate.rooms.find(
-      (r) => r.id === room.room_id
-    );
-    const sizeRates = template?.sizes[room.size] ?? {
-      walls_cents: room.walls_cents,
-      ceiling_cents: room.ceiling_cents,
-      trim_cents: room.trim_cents,
-    };
-
-    const walls_cents = sizeRates.walls_cents;
-    const ceiling_cents = sizeRates.ceiling_cents;
-    const trim_cents = sizeRates.trim_cents;
-
-    const base_subtotal_cents =
-      (room.selected_surfaces.includes('walls') ? walls_cents : 0) +
-      (room.selected_surfaces.includes('ceiling') ? ceiling_cents : 0) +
-      (room.selected_surfaces.includes('trim') ? trim_cents : 0);
-
-    const total_cents = Math.round(
-      base_subtotal_cents * (coatingPct / 100) * (conditionPct / 100)
-    );
+  const rooms: QuickEstimateRoomResult[] = normalizedInputs.rooms.map((room) => {
+    const base_subtotal_cents = quickRoomBaseSubtotal(room);
 
     return {
       room_id: room.room_id,
@@ -215,13 +297,13 @@ export function calculateQuickEstimate(
       size: room.size,
       selected_surfaces: room.selected_surfaces,
       notes: room.notes,
-      walls_cents,
-      ceiling_cents,
-      trim_cents,
+      walls_cents: room.walls_cents,
+      ceiling_cents: room.ceiling_cents,
+      trim_cents: room.trim_cents,
       base_subtotal_cents,
-      coating_multiplier_pct: coatingPct,
-      condition_multiplier_pct: conditionPct,
-      total_cents,
+      coating_multiplier_pct: room.coating_multiplier_pct,
+      condition_multiplier_pct: room.condition_multiplier_pct,
+      total_cents: room.total_cents,
     };
   });
 

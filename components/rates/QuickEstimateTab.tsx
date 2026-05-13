@@ -199,7 +199,10 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
 
   function handleRoomUpdate(index: number, updated: QuickEstimateRoom) {
     const rooms = [...settings.rooms];
-    rooms[index] = updated;
+    rooms[index] = {
+      ...updated,
+      version: (settings.rooms[index]?.version ?? 1) + 1,
+    };
     onChange({ ...settings, rooms });
   }
 
@@ -212,6 +215,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
     nextRoomIdRef.current += 1;
     const newRoom: QuickEstimateRoom = {
       id: `${generatedRoomIdPrefix}-room-${nextRoomIdRef.current}`,
+      version: 1,
       label,
       enabled_surfaces: ['walls', 'ceiling', 'trim'],
       sizes: {

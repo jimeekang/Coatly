@@ -40,6 +40,7 @@ import type { UserRateSettings } from '@/lib/rate-settings';
 const FIELD = 'h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-base text-pm-body';
 const LABEL = 'mb-1.5 block text-sm font-medium text-pm-body';
 type RoomRef = '' | `${number}`;
+const INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION = 1;
 
 function inferAnchorRoomType(
   name: string,
@@ -68,6 +69,10 @@ export type InteriorEstimateRoomFormState = {
   include_trim: boolean;
   include_doors: boolean;
   include_windows: boolean;
+  source_rate_item_id?: string;
+  source_rate_item_version?: number;
+  source_rate_item_label?: string;
+  rate_snapshot_version?: 1;
 };
 export type InteriorDoorFormState = {
   door_type: InteriorDoorType;
@@ -175,6 +180,47 @@ export function InteriorEstimateBuilder({
     setValue('rooms', value.rooms.map((room, roomIndex) => (roomIndex === index ? { ...room, ...patch } : room)));
   }
 
+  function isEmptyPlaceholderRoom(room: InteriorEstimateRoomFormState) {
+    return (
+      room.name.trim() === '' &&
+      room.length_m.trim() === '' &&
+      room.width_m.trim() === '' &&
+      room.height_m.trim() === '2.7' &&
+      room.include_walls &&
+      room.include_ceiling &&
+      !room.include_trim &&
+      !room.include_doors &&
+      !room.include_windows
+    );
+  }
+
+  function createRoomFromLibraryItem(
+    item: NonNullable<UserRateSettings['detailed_estimate_items']>['advanced_rooms'][number]
+  ): InteriorEstimateRoomFormState {
+    return {
+      ...createEmptyInteriorRoom(),
+      name: item.label,
+      anchor_room_type: item.anchor_room_type,
+      height_m: String(item.default_height_m),
+      include_walls: item.include_walls,
+      include_ceiling: item.include_ceiling,
+      include_trim: item.include_trim,
+      source_rate_item_id: item.id,
+      source_rate_item_version: item.version ?? 1,
+      source_rate_item_label: item.label,
+      rate_snapshot_version: INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION,
+    };
+  }
+
+  function addRoomFromLibraryItem(
+    item: NonNullable<UserRateSettings['detailed_estimate_items']>['advanced_rooms'][number]
+  ) {
+    const room = createRoomFromLibraryItem(item);
+    const shouldReplaceOnlyRoom =
+      value.rooms.length === 1 && isEmptyPlaceholderRoom(value.rooms[0]);
+    setValue('rooms', shouldReplaceOnlyRoom ? [room] : [...value.rooms, room]);
+  }
+
   function toggleScope(scope: InteriorScope) {
     const next = value.scope.includes(scope) ? value.scope.filter((item) => item !== scope) : [...value.scope, scope];
     setValue('scope', next.length > 0 ? next : [scope]);
@@ -197,6 +243,9 @@ export function InteriorEstimateBuilder({
       ? INTERIOR_WINDOW_TYPES.filter((type) => rateSettings.enabled_window_types.includes(type))
       : [...INTERIOR_WINDOW_TYPES]
   ) as InteriorWindowType[];
+  const advancedRoomItems = [
+    ...(rateSettings?.detailed_estimate_items?.advanced_rooms ?? []),
+  ].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <section className="space-y-4 rounded-2xl border border-pm-border bg-white p-4">
@@ -282,7 +331,23 @@ export function InteriorEstimateBuilder({
       {value.estimate_mode === 'specific_areas' ? (
         <>
           <div className="space-y-3 rounded-xl border border-pm-border bg-pm-surface/45 p-4">
-            <p className="text-sm font-semibold text-pm-body">Rooms</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-pm-body">Rooms</p>
+              {advancedRoomItems.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {advancedRoomItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => addRoomFromLibraryItem(item)}
+                      className="min-h-11 rounded-full border border-pm-border bg-white px-4 text-sm font-medium text-pm-body hover:border-pm-teal"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {value.rooms.map((room, index) => (
               <div key={`room-${index}`} className="space-y-3 rounded-xl border border-pm-border bg-white p-3">
                 {/* Row 1: Room name + delete */}

@@ -176,6 +176,40 @@ describe('parseUserRateSettings', () => {
     );
   });
 
+  it('parses advanced detailed estimate room library items from default rates json', () => {
+    const parsed = parseUserRateSettings({
+      detailed_estimate_items: {
+        advanced_rooms: [
+          {
+            id: 'adv-bedroom-repaint',
+            version: 3,
+            label: 'Bedroom repaint',
+            anchor_room_type: 'Bedroom 1',
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: false,
+            default_height_m: 2.7,
+            sort_order: 0,
+          },
+        ],
+      },
+    });
+
+    expect(parsed.detailed_estimate_items.advanced_rooms).toEqual([
+      {
+        id: 'adv-bedroom-repaint',
+        version: 3,
+        label: 'Bedroom repaint',
+        anchor_room_type: 'Bedroom 1',
+        include_walls: true,
+        include_ceiling: true,
+        include_trim: false,
+        default_height_m: 2.7,
+        sort_order: 0,
+      },
+    ]);
+  });
+
   it('falls back to defaults when given invalid JSON', () => {
     const parsed = parseUserRateSettings('not-an-object');
     expect(parsed.walls).toEqual(DEFAULT_RATE_SETTINGS.walls);

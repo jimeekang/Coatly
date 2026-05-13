@@ -252,4 +252,71 @@ describe('calculateQuickEstimate', () => {
     // base = walls(45000)+trim(20000)=65000; × 1.00 × 1.30 = 84500
     expect(r.total_cents).toBe(84500);
   });
+
+  it('uses selected room snapshot prices instead of current Price Rates template prices', () => {
+    const rates = makeSettings();
+    rates.quick_estimate.rooms[0].sizes.medium = {
+      walls_cents: 99900,
+      ceiling_cents: 99900,
+      trim_cents: 99900,
+    };
+    const inputs: QuickInputs = {
+      rooms: [
+        {
+          room_id: 'room-1',
+          source_rate_item_id: 'room-1',
+          source_rate_item_version: 1,
+          label: 'Bedroom',
+          size: 'medium',
+          selected_surfaces: ['walls'],
+          walls_cents: 30000,
+          ceiling_cents: 15000,
+          trim_cents: 15000,
+          coating_multiplier_pct: 100,
+          condition_multiplier_pct: 100,
+          total_cents: 30000,
+        },
+      ],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+
+    const result = calculateQuickEstimate(inputs, rates);
+
+    expect(result.rooms[0].walls_cents).toBe(30000);
+    expect(result.rooms[0].total_cents).toBe(30000);
+    expect(result.subtotal_cents).toBe(30000);
+  });
+
+  it('uses stored snapshot multipliers when Price Rates multipliers change later', () => {
+    const rates = makeSettings();
+    rates.quick_estimate.coating_multipliers.one_coat_refresh_pct = 50;
+    rates.quick_estimate.condition_multipliers.good_pct = 80;
+    const inputs: QuickInputs = {
+      rooms: [
+        {
+          room_id: 'room-1',
+          source_rate_item_id: 'room-1',
+          source_rate_item_version: 1,
+          label: 'Bedroom',
+          size: 'medium',
+          selected_surfaces: ['walls'],
+          walls_cents: 30000,
+          ceiling_cents: 15000,
+          trim_cents: 15000,
+          coating_multiplier_pct: 70,
+          condition_multiplier_pct: 90,
+          total_cents: 18900,
+        },
+      ],
+      global_coating: 'one_coat_refresh',
+      global_condition: 'good',
+    };
+
+    const result = calculateQuickEstimate(inputs, rates);
+
+    expect(result.rooms[0].coating_multiplier_pct).toBe(70);
+    expect(result.rooms[0].condition_multiplier_pct).toBe(90);
+    expect(result.rooms[0].total_cents).toBe(18900);
+  });
 });

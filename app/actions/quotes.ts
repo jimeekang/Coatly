@@ -46,6 +46,7 @@ import {
   calculateRoomRateQuote,
   calculateManualQuote,
   calculateQuickEstimate,
+  normalizeQuickEstimateInputsForCalculation,
 } from '@/utils/calculations';
 import type {
   DayRateInputs,
@@ -1306,7 +1307,10 @@ export async function createQuote(
     pricingMethod === 'detailed_quick' &&
     rawMethodInputs?.method === 'detailed_quick'
   ) {
-    const inputs: QuickInputs = rawMethodInputs.inputs;
+    const inputs = normalizeQuickEstimateInputsForCalculation(
+      rawMethodInputs.inputs as QuickInputs,
+      effectiveRates
+    );
     const result = calculateQuickEstimate(inputs, effectiveRates);
     const totals = composeQuoteTotals({
       base_subtotal_cents: result.subtotal_cents,
@@ -2366,7 +2370,10 @@ export async function updateQuote(
     pricingMethod === 'detailed_quick' &&
     rawMethodInputs?.method === 'detailed_quick'
   ) {
-    const inputs: QuickInputs = rawMethodInputs.inputs;
+    const inputs = normalizeQuickEstimateInputsForCalculation(
+      rawMethodInputs.inputs as QuickInputs,
+      effectiveRates
+    );
     const result = calculateQuickEstimate(inputs, effectiveRates);
     const totals = composeQuoteTotals({
       base_subtotal_cents: result.subtotal_cents,

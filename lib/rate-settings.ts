@@ -194,6 +194,7 @@ export type RoomRatePreset = {
 
 export type QuickEstimateRoom = {
   id: string;
+  version?: number;
   label: string;
   enabled_surfaces: ('walls' | 'ceiling' | 'trim')[];
   sizes: {
@@ -216,6 +217,24 @@ export type QuickEstimateSettings = {
     average_pct: number;
     poor_pct: number;
   };
+};
+
+// ─── Detailed Estimate item library types ────────────────────────────────────
+
+export type AdvancedEstimateRoomItem = {
+  id: string;
+  version?: number;
+  label: string;
+  anchor_room_type: string;
+  include_walls: boolean;
+  include_ceiling: boolean;
+  include_trim: boolean;
+  default_height_m: number;
+  sort_order: number;
+};
+
+export type DetailedEstimateItemsSettings = {
+  advanced_rooms: AdvancedEstimateRoomItem[];
 };
 
 // ─── Pricing Method Settings ──────────────────────────────────────────────────
@@ -339,6 +358,7 @@ export type UserRateSettings = {
   custom_exterior_surfaces: CustomExteriorSurfaceRate[];
   room_rate_presets: RoomRatePreset[];
   detailed_estimate_anchors: DetailedEstimateAnchors;
+  detailed_estimate_items: DetailedEstimateItemsSettings;
   pricing: PricingMethodSettings;
   exterior: ExteriorRateSettings;
   quick_estimate: QuickEstimateSettings;
@@ -441,6 +461,22 @@ const detailedEstimateAnchorsSchema = z.object({
   interior_rooms: z.record(z.string(), detailedEstimateAnchorRangeSchema),
 });
 
+const advancedEstimateRoomItemSchema = z.object({
+  id: z.string().min(1),
+  version: z.number().int().min(1).optional(),
+  label: z.string().trim().min(1),
+  anchor_room_type: z.string().trim().min(1),
+  include_walls: z.boolean(),
+  include_ceiling: z.boolean(),
+  include_trim: z.boolean(),
+  default_height_m: z.number().positive(),
+  sort_order: z.number().int().min(0),
+});
+
+const detailedEstimateItemsSchema = z.object({
+  advanced_rooms: z.array(advancedEstimateRoomItemSchema),
+});
+
 const quickEstimateSurfacePriceSchema = z.object({
   walls_cents: z.number().int().min(0),
   ceiling_cents: z.number().int().min(0),
@@ -449,6 +485,7 @@ const quickEstimateSurfacePriceSchema = z.object({
 
 const quickEstimateRoomSchema = z.object({
   id: z.string().min(1),
+  version: z.number().int().min(1).optional(),
   label: z.string().trim().min(1),
   enabled_surfaces: z.array(z.enum(['walls', 'ceiling', 'trim'])),
   sizes: z.object({
@@ -489,6 +526,7 @@ export const ratePresetSchema = z.object({
   custom_exterior_surfaces: z.array(customExteriorSurfaceRateSchema).optional(),
   room_rate_presets: z.array(roomRatePresetSchema).optional(),
   detailed_estimate_anchors: detailedEstimateAnchorsSchema.optional(),
+  detailed_estimate_items: detailedEstimateItemsSchema.optional(),
   pricing: pricingMethodSettingsSchema.optional(),
   exterior: exteriorRateSettingsSchema.optional(),
   quick_estimate: quickEstimateSchema.optional(),
@@ -513,6 +551,7 @@ const partialRatePresetSchema = z
       .optional(),
     room_rate_presets: z.array(roomRatePresetSchema).optional(),
     detailed_estimate_anchors: detailedEstimateAnchorsSchema.optional(),
+    detailed_estimate_items: detailedEstimateItemsSchema.optional(),
     pricing: pricingMethodSettingsSchema.optional(),
     exterior: exteriorRateSettingsSchema.optional(),
     quick_estimate: quickEstimateSchema.optional(),
@@ -579,6 +618,10 @@ export function buildDefaultQuickEstimateSettings(): QuickEstimateSettings {
   };
 }
 
+export function buildDefaultDetailedEstimateItemsSettings(): DetailedEstimateItemsSettings {
+  return { advanced_rooms: [] };
+}
+
 export function buildDefaultRateSettings(): UserRateSettings {
   const settings = {} as UserRateSettings;
   for (const surface of SURFACE_TYPES) {
@@ -597,6 +640,8 @@ export function buildDefaultRateSettings(): UserRateSettings {
   settings.custom_exterior_surfaces = [];
   settings.room_rate_presets = [];
   settings.detailed_estimate_anchors = buildDefaultDetailedEstimateAnchors();
+  settings.detailed_estimate_items =
+    buildDefaultDetailedEstimateItemsSettings();
   settings.pricing = { ...DEFAULT_PRICING_METHOD_SETTINGS };
   settings.exterior = buildDefaultExteriorRates();
   settings.quick_estimate = buildDefaultQuickEstimateSettings();
@@ -710,6 +755,17 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
       interior_rooms: {
         ...parsed.data.detailed_estimate_anchors.interior_rooms,
       },
+    };
+  }
+
+  if (parsed.data.detailed_estimate_items?.advanced_rooms) {
+    result.detailed_estimate_items = {
+      advanced_rooms: parsed.data.detailed_estimate_items.advanced_rooms.map(
+        (item) => ({
+          ...item,
+          version: item.version ?? 1,
+        })
+      ),
     };
   }
 

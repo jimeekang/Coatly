@@ -402,6 +402,10 @@ const interiorEstimateRoomSchema = z.object({
   include_walls: z.boolean(),
   include_ceiling: z.boolean(),
   include_trim: z.boolean(),
+  source_rate_item_id: z.string().optional(),
+  source_rate_item_version: z.number().int().min(1).optional(),
+  source_rate_item_label: z.string().optional(),
+  rate_snapshot_version: z.literal(1).optional(),
 });
 
 const interiorOpeningItemSchema = z
@@ -693,6 +697,10 @@ export const quoteCreateSchema = z.object({
       inputs: z.object({
         rooms: z.array(z.object({
           room_id: z.string(),
+          source_rate_item_id: z.string().optional(),
+          source_rate_item_version: z.number().int().min(1).optional(),
+          source_rate_item_label: z.string().optional(),
+          rate_snapshot_version: z.literal(1).optional(),
           label: z.string(),
           size: z.enum(['small', 'medium', 'large']),
           selected_surfaces: z.array(z.enum(['walls', 'ceiling', 'trim'])),

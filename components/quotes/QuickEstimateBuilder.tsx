@@ -6,6 +6,11 @@ import Link from 'next/link';
 import type { UserRateSettings, QuickEstimateRoom } from '@/lib/rate-settings';
 import type { QuickInputs, SelectedQuickRoom } from '@/types/quote';
 import { formatAUD } from '@/utils/format';
+import {
+  QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,
+  calculateQuickEstimateRoomTotal,
+  snapshotQuickEstimateInputs,
+} from '@/utils/calculations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,29 +75,35 @@ function calcRoomTotal(
   coatingPct: number,
   conditionPct: number
 ): number {
-  const base =
-    (room.selected_surfaces.includes('walls') ? room.walls_cents : 0) +
-    (room.selected_surfaces.includes('ceiling') ? room.ceiling_cents : 0) +
-    (room.selected_surfaces.includes('trim') ? room.trim_cents : 0);
-  return Math.round(base * (coatingPct / 100) * (conditionPct / 100));
+  return calculateQuickEstimateRoomTotal(room, coatingPct, conditionPct);
 }
 
 function makeRoomFromTemplate(
   template: QuickEstimateRoom,
-  size: 'small' | 'medium' | 'large'
+  size: 'small' | 'medium' | 'large',
+  coatingPct: number,
+  conditionPct: number
 ): SelectedQuickRoom {
   const sizeRates = template.sizes[size];
-  return {
+  const room: SelectedQuickRoom = {
     room_id: template.id,
+    source_rate_item_id: template.id,
+    source_rate_item_version: template.version ?? 1,
+    source_rate_item_label: template.label,
+    rate_snapshot_version: QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,
     label: template.label,
     size,
     selected_surfaces: [...template.enabled_surfaces],
     walls_cents: sizeRates.walls_cents,
     ceiling_cents: sizeRates.ceiling_cents,
     trim_cents: sizeRates.trim_cents,
-    coating_multiplier_pct: 100,
-    condition_multiplier_pct: 100,
-    total_cents: sizeRates.walls_cents + sizeRates.ceiling_cents + sizeRates.trim_cents,
+    coating_multiplier_pct: coatingPct,
+    condition_multiplier_pct: conditionPct,
+    total_cents: 0,
+  };
+  return {
+    ...room,
+    total_cents: calcRoomTotal(room, coatingPct, conditionPct),
   };
 }
 
@@ -256,7 +267,14 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
 
   function handleRoomUpdate(index: number, updated: SelectedQuickRoom) {
     const rooms = [...value.rooms];
-    rooms[index] = updated;
+    rooms[index] = {
+      ...updated,
+      total_cents: calcRoomTotal(
+        updated,
+        updated.coating_multiplier_pct,
+        updated.condition_multiplier_pct
+      ),
+    };
     onChange({ ...value, rooms });
   }
 
@@ -265,7 +283,12 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
   }
 
   function addRoom(template: QuickEstimateRoom) {
-    const newRoom = makeRoomFromTemplate(template, 'medium');
+    const newRoom = makeRoomFromTemplate(
+      template,
+      'medium',
+      coatingPct,
+      conditionPct
+    );
     onChange({ ...value, rooms: [...value.rooms, newRoom] });
   }
 
@@ -293,7 +316,16 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
             <button
               key={key}
               type="button"
-              onClick={() => onChange({ ...value, global_coating: key })}
+              onClick={() =>
+                onChange(
+                  rateSettings
+                    ? snapshotQuickEstimateInputs(
+                        { ...value, global_coating: key },
+                        rateSettings
+                      )
+                    : { ...value, global_coating: key }
+                )
+              }
               className={`flex flex-col items-center rounded-xl border px-2 py-2.5 text-center transition-colors ${
                 value.global_coating === key
                   ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'
@@ -372,7 +404,16 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
             <button
               key={key}
               type="button"
-              onClick={() => onChange({ ...value, global_condition: key })}
+              onClick={() =>
+                onChange(
+                  rateSettings
+                    ? snapshotQuickEstimateInputs(
+                        { ...value, global_condition: key },
+                        rateSettings
+                      )
+                    : { ...value, global_condition: key }
+                )
+              }
               className={`flex flex-col items-center rounded-xl border px-2 py-2.5 text-center transition-colors ${
                 value.global_condition === key
                   ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'

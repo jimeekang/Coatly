@@ -174,6 +174,10 @@ export type InteriorEstimateInput = {
     include_walls: boolean;
     include_ceiling: boolean;
     include_trim: boolean;
+    source_rate_item_id?: string;
+    source_rate_item_version?: number;
+    source_rate_item_label?: string;
+    rate_snapshot_version?: 1;
   }>;
   opening_items: Array<{
     opening_type: 'door' | 'window';
