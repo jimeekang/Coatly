@@ -81,13 +81,13 @@ function RoomCard({
   }
 
   return (
-    <div className="border-pm-border rounded-xl border bg-white">
+    <div className="border-outline rounded-2xl border bg-white">
       <div className="flex min-h-[44px] items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="text-pm-body flex items-center gap-2 text-sm font-medium"
+            className="text-on-surface flex items-center gap-2 text-sm font-medium"
           >
             {collapsed ? (
               <ChevronDown className="h-4 w-4" />
@@ -100,7 +100,7 @@ function RoomCard({
         <button
           type="button"
           onClick={onDelete}
-          className="text-pm-secondary hover:text-red-500 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="text-on-surface-variant hover:text-red-500 min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Delete room"
         >
           <Trash2 className="h-4 w-4" />
@@ -108,10 +108,10 @@ function RoomCard({
       </div>
 
       {!collapsed && (
-        <div className="border-pm-border border-t px-4 pb-4 pt-3">
+        <div className="border-outline border-t px-4 pb-4 pt-3">
           {/* Surface toggles */}
           <div className="mb-3 flex flex-wrap gap-2">
-            <span className="text-pm-secondary text-xs font-semibold">Surfaces:</span>
+            <span className="text-on-surface-variant text-xs font-semibold">Surfaces:</span>
             {(['walls', 'ceiling', 'trim'] as const).map((s) => (
               <button
                 key={s}
@@ -119,8 +119,8 @@ function RoomCard({
                 onClick={() => handleSurfaceToggle(s)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium min-h-[36px] transition-colors ${
                   room.enabled_surfaces.includes(s)
-                    ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'
-                    : 'border-pm-border text-pm-secondary'
+                    ? 'border-primary bg-primary/15 text-primary'
+                    : 'border-outline text-on-surface-variant'
                 }`}
               >
                 {SURFACE_LABELS[s]}
@@ -132,7 +132,7 @@ function RoomCard({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[340px] text-sm">
               <thead>
-                <tr className="text-pm-secondary text-xs">
+                <tr className="text-on-surface-variant text-xs">
                   <th className="pb-2 text-left font-semibold">Size</th>
                   {room.enabled_surfaces.map((s) => (
                     <th key={s} className="pb-2 text-right font-semibold">
@@ -141,21 +141,21 @@ function RoomCard({
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-pm-border divide-y">
+              <tbody className="divide-outline divide-y">
                 {(['small', 'medium', 'large'] as const).map((size) => (
                   <tr key={size}>
                     <td className="py-2 text-sm font-medium">{SIZE_LABELS[size]}</td>
                     {room.enabled_surfaces.map((s) => (
                       <td key={s} className="py-2 pl-2 text-right">
                         <div className="inline-flex items-center gap-1">
-                          <span className="text-pm-secondary text-xs">$</span>
+                          <span className="text-on-surface-variant text-xs">$</span>
                           <input
                             type="number"
                             min="0"
                             step="0.01"
                             defaultValue={centsToDisplay(room.sizes[size][`${s}_cents`])}
                             onBlur={(e) => handleSurfaceCentsChange(size, s, e.target.value)}
-                            className="border-pm-border w-20 rounded-lg border bg-white px-2 py-1.5 text-right text-sm"
+                            className="border-outline w-20 rounded-lg border bg-white px-2 py-1.5 text-right text-sm"
                           />
                         </div>
                       </td>
@@ -235,11 +235,13 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
   return (
     <div className="space-y-8">
       {/* Coating multipliers */}
-      <section className="border-pm-border rounded-2xl border bg-white p-4 sm:p-5">
-        <h4 className="text-pm-body mb-1 text-sm font-semibold">Coating Type Multipliers</h4>
-        <p className="text-pm-secondary mb-4 text-xs">
-          Applied to the room price based on number of coats. 2 coats is the baseline (100%, locked).
-        </p>
+      <section className="border-outline rounded-2xl border bg-white p-4 sm:p-5">
+        <div className="mb-4 flex flex-col gap-1">
+          <h3 className="text-on-surface text-base font-semibold">Coating Type Multipliers</h3>
+          <p className="text-on-surface-variant mt-0.5 text-sm">
+            Applied to the room price based on number of coats. 2 coats is the baseline (100%, locked).
+          </p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { key: 'one_coat_refresh_pct', label: '1 Coat Refresh', locked: false },
@@ -247,7 +249,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             { key: 'three_coats_new_plaster_pct', label: '3 Coats New Plaster', locked: false },
           ].map(({ key, label, locked }) => (
             <div key={key}>
-              <label className="text-pm-secondary mb-1 block text-xs font-medium">{label}</label>
+              <label className="text-on-surface-variant mb-1 block text-xs font-medium">{label}</label>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -256,13 +258,13 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                   disabled={locked}
                   value={settings.coating_multipliers[key as keyof typeof settings.coating_multipliers]}
                   onChange={(e) => !locked && handleMultiplierChange('coating_multipliers', key, e.target.value)}
-                  className={`border-pm-border w-20 rounded-lg border px-3 py-2 text-right text-sm ${
-                    locked ? 'bg-pm-surface text-pm-secondary cursor-not-allowed' : 'bg-white'
+                  className={`border-outline w-20 rounded-lg border px-3 py-2 text-right text-sm ${
+                    locked ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : 'bg-white'
                   }`}
                 />
-                <span className="text-pm-secondary text-sm">%</span>
+                <span className="text-on-surface-variant text-sm">%</span>
                 {locked && (
-                  <span className="text-pm-secondary ml-1 text-xs">🔒</span>
+                  <span className="text-on-surface-variant ml-1 text-xs">🔒</span>
                 )}
               </div>
             </div>
@@ -271,11 +273,13 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
       </section>
 
       {/* Condition multipliers */}
-      <section className="border-pm-border rounded-2xl border bg-white p-4 sm:p-5">
-        <h4 className="text-pm-body mb-1 text-sm font-semibold">Condition Multipliers</h4>
-        <p className="text-pm-secondary mb-4 text-xs">
-          Applied to the room price based on surface condition. Average is baseline (100%, locked).
-        </p>
+      <section className="border-outline rounded-2xl border bg-white p-4 sm:p-5">
+        <div className="mb-4 flex flex-col gap-1">
+          <h3 className="text-on-surface text-base font-semibold">Condition Multipliers</h3>
+          <p className="text-on-surface-variant mt-0.5 text-sm">
+            Applied to the room price based on surface condition. Average is baseline (100%, locked).
+          </p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { key: 'good_pct', label: 'Good', locked: false },
@@ -283,7 +287,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             { key: 'poor_pct', label: 'Poor', locked: false },
           ].map(({ key, label, locked }) => (
             <div key={key}>
-              <label className="text-pm-secondary mb-1 block text-xs font-medium">{label}</label>
+              <label className="text-on-surface-variant mb-1 block text-xs font-medium">{label}</label>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -292,13 +296,13 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                   disabled={locked}
                   value={settings.condition_multipliers[key as keyof typeof settings.condition_multipliers]}
                   onChange={(e) => !locked && handleMultiplierChange('condition_multipliers', key, e.target.value)}
-                  className={`border-pm-border w-20 rounded-lg border px-3 py-2 text-right text-sm ${
-                    locked ? 'bg-pm-surface text-pm-secondary cursor-not-allowed' : 'bg-white'
+                  className={`border-outline w-20 rounded-lg border px-3 py-2 text-right text-sm ${
+                    locked ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : 'bg-white'
                   }`}
                 />
-                <span className="text-pm-secondary text-sm">%</span>
+                <span className="text-on-surface-variant text-sm">%</span>
                 {locked && (
-                  <span className="text-pm-secondary ml-1 text-xs">🔒</span>
+                  <span className="text-on-surface-variant ml-1 text-xs">🔒</span>
                 )}
               </div>
             </div>
@@ -309,13 +313,13 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
       {/* Room list */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-pm-body text-sm font-semibold">
+          <h3 className="text-on-surface text-base font-semibold">
             Rooms ({settings.rooms.length})
-          </h4>
+          </h3>
         </div>
 
         {settings.rooms.length === 0 && (
-          <p className="text-pm-secondary rounded-xl border border-dashed p-4 text-sm text-center">
+          <p className="text-on-surface-variant rounded-xl border border-dashed p-4 text-sm text-center">
             No rooms yet. Add from templates below.
           </p>
         )}
@@ -333,15 +337,17 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
       </section>
 
       {/* Add room templates */}
-      <section className="border-pm-border rounded-2xl border bg-white p-4 sm:p-5">
-        <h4 className="text-pm-body mb-3 text-sm font-semibold">Add Room</h4>
+      <section className="border-outline rounded-2xl border bg-white p-4 sm:p-5">
+        <div className="mb-3 flex flex-col gap-1">
+          <h3 className="text-on-surface text-base font-semibold">Add Room</h3>
+        </div>
         <div className="flex flex-wrap gap-2">
           {ROOM_TEMPLATES.map((label) => (
             <button
               key={label}
               type="button"
               onClick={() => addRoomFromTemplate(label)}
-              className="border-pm-border text-pm-body hover:border-pm-teal hover:bg-pm-teal-pale/10 min-h-[36px] rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors"
+              className="border-outline text-on-surface hover:border-primary hover:bg-primary/5 min-h-[36px] rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors"
             >
               + {label}
             </button>
@@ -350,7 +356,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             <button
               type="button"
               onClick={() => setShowCustomInput(true)}
-              className="border-pm-teal text-pm-teal hover:bg-pm-teal-pale/20 min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+              className="border-primary text-primary hover:bg-primary/15 min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition-colors"
             >
               + Custom…
             </button>
@@ -363,19 +369,19 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                 onKeyDown={(e) => e.key === 'Enter' && addCustomRoom()}
                 placeholder="Room name"
                 autoFocus
-                className="border-pm-border rounded-lg border bg-white px-3 py-1.5 text-sm"
+                className="border-outline rounded-lg border bg-white px-3 py-1.5 text-sm"
               />
               <button
                 type="button"
                 onClick={addCustomRoom}
-                className="bg-pm-teal min-h-[36px] rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+                className="bg-primary min-h-[36px] rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
               >
                 Add
               </button>
               <button
                 type="button"
                 onClick={() => { setShowCustomInput(false); setCustomLabel(''); }}
-                className="text-pm-secondary text-xs"
+                className="text-on-surface-variant text-xs"
               >
                 Cancel
               </button>
