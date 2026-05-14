@@ -646,7 +646,7 @@ export function InvoiceForm({
                             key={percent}
                             type="button"
                             onClick={() => handleProgressPercentChange(String(percent))}
-                            className="inline-flex h-10 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-body transition-colors hover:bg-white"
+                            className="inline-flex min-h-11 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-body transition-colors hover:bg-white"
                           >
                             {percent}%
                           </button>
@@ -679,7 +679,7 @@ export function InvoiceForm({
                         setForm((prev) => ({ ...prev, due_date: buildDefaultDueDate() }));
                         setError(null);
                       }}
-                      className="inline-flex h-10 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-body transition-colors hover:bg-pm-surface"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-body transition-colors hover:bg-pm-surface"
                     >
                       Set +14 days
                     </button>
@@ -689,7 +689,7 @@ export function InvoiceForm({
                         setForm((prev) => ({ ...prev, due_date: '' }));
                         setError(null);
                       }}
-                      className="inline-flex h-10 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-secondary transition-colors hover:bg-pm-surface"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-secondary transition-colors hover:bg-pm-surface"
                     >
                       Clear
                     </button>
