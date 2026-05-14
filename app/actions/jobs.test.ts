@@ -10,6 +10,7 @@ const {
   getSubscriptionSnapshotForUserMock,
   getGoogleBusyDatesForUserMock,
   syncBookedJobToGoogleCalendarMock,
+  deleteGoogleCalendarEventForJobMock,
 } = vi.hoisted(() => ({
   redirectMock: vi.fn(),
   revalidatePathMock: vi.fn(),
@@ -23,6 +24,7 @@ const {
   getSubscriptionSnapshotForUserMock: vi.fn(),
   getGoogleBusyDatesForUserMock: vi.fn(),
   syncBookedJobToGoogleCalendarMock: vi.fn(),
+  deleteGoogleCalendarEventForJobMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -51,6 +53,7 @@ vi.mock('@/lib/subscription/access', () => ({
 }));
 
 vi.mock('@/lib/google-calendar/service', () => ({
+  deleteGoogleCalendarEventForJob: deleteGoogleCalendarEventForJobMock,
   getGoogleBusyDatesForUser: getGoogleBusyDatesForUserMock,
   syncBookedJobToGoogleCalendar: syncBookedJobToGoogleCalendarMock,
 }));
@@ -146,6 +149,10 @@ describe('jobs actions', () => {
     });
     syncBookedJobToGoogleCalendarMock.mockResolvedValue({
       synced: false,
+      error: null,
+    });
+    deleteGoogleCalendarEventForJobMock.mockResolvedValue({
+      deleted: false,
       error: null,
     });
   });
@@ -1438,6 +1445,80 @@ describe('bookJobFromPublicQuote', () => {
     expect(result.jobId).toBeNull();
   });
 
+  it('returns error when Google Calendar availability cannot be confirmed', async () => {
+    const insertMock = vi.fn();
+    getGoogleBusyDatesForUserMock.mockResolvedValue({
+      blockedDates: [],
+      error: 'Google Calendar is unavailable',
+    });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              makeQuoteTokenQuery({
+                id: 'quote-google-error',
+                status: 'approved',
+                working_days: 2,
+                user_id: 'uid-1',
+                customer_id: 'customer-1',
+                title: 'Calendar check',
+                quote_number: 'Q-009',
+              })
+            ),
+          };
+        }
+        if (table === 'jobs') return { insert: insertMock };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('token-google-error', '2026-04-15');
+
+    expect(result.error).toMatch(/calendar availability/i);
+    expect(result.jobId).toBeNull();
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it('returns error when the selected range is busy in Google Calendar', async () => {
+    const insertMock = vi.fn();
+    getGoogleBusyDatesForUserMock.mockResolvedValue({
+      blockedDates: ['2026-04-16'],
+      error: null,
+    });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              makeQuoteTokenQuery({
+                id: 'quote-google-busy',
+                status: 'approved',
+                working_days: 2,
+                user_id: 'uid-1',
+                customer_id: 'customer-1',
+                title: 'Calendar busy',
+                quote_number: 'Q-010',
+              })
+            ),
+          };
+        }
+        if (table === 'jobs') return { insert: insertMock };
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
+    });
+
+    const result = await bookJobFromPublicQuote('token-google-busy', '2026-04-15');
+
+    expect(result.error).toMatch(/not available/i);
+    expect(result.jobId).toBeNull();
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
   it('returns error when start date is in the past', async () => {
     createAdminClientMock.mockReturnValue({
       from: vi.fn((table: string) => {
@@ -1660,6 +1741,40 @@ describe('getAvailableDatesForToken', () => {
     expect(result.error).toBeNull();
     expect(result.blockedDates).toEqual(['2026-04-20', '2026-04-21', '2026-04-22']);
     expect(getGoogleBusyDatesForUserMock).toHaveBeenCalled();
+  });
+
+  it('returns error when Google Calendar availability lookup fails', async () => {
+    getGoogleBusyDatesForUserMock.mockResolvedValue({
+      blockedDates: [],
+      error: 'Google Calendar timeout',
+    });
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue(
+              makeQuoteTokenQuery({
+                id: 'quote-google-error',
+                status: 'approved',
+                working_days: 2,
+                user_id: 'uid-1',
+              })
+            ),
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ blocked_date: '2026-04-20' }],
+        error: null,
+      }),
+    });
+
+    const result = await getAvailableDatesForToken('token-google-error');
+
+    expect(result.error).toMatch(/calendar availability/i);
+    expect(result.blockedDates).toEqual([]);
   });
 
   it('returns error for unapproved quote', async () => {

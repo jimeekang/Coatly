@@ -76,6 +76,43 @@ describe('interiorEstimateSchema', () => {
     expect(parsed.success).toBe(true);
     expect(parsed.data?.wall_paint_system).toBe('refresh_1coat');
   });
+
+  it('preserves advanced room library source metadata in room snapshots', () => {
+    const parsed = interiorEstimateSchema.safeParse({
+      property_type: 'apartment',
+      estimate_mode: 'specific_areas',
+      condition: 'fair',
+      scope: ['walls'],
+      property_details: {},
+      rooms: [
+        {
+          name: 'Bedroom repaint',
+          anchor_room_type: 'Bedroom 1',
+          room_type: 'interior',
+          length_m: null,
+          width_m: null,
+          height_m: 2.7,
+          include_walls: true,
+          include_ceiling: true,
+          include_trim: false,
+          source_rate_item_id: 'adv-bedroom-repaint',
+          source_rate_item_version: 2,
+          source_rate_item_label: 'Bedroom repaint',
+          rate_snapshot_version: 1,
+        },
+      ],
+      opening_items: [],
+      trim_items: [],
+    });
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.rooms[0]).toMatchObject({
+      source_rate_item_id: 'adv-bedroom-repaint',
+      source_rate_item_version: 2,
+      source_rate_item_label: 'Bedroom repaint',
+      rate_snapshot_version: 1,
+    });
+  });
 });
 
 describe('quoteCreateSchema', () => {

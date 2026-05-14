@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition, type ElementType } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Zap, Layers, CalendarDays, PenLine, Home, Trees } from 'lucide-react';
 import {
   NumericInput,
   sanitizeIntegerInput,
@@ -47,13 +48,17 @@ import type {
   DayRateInputs,
   RoomRateInputs,
   ManualInputs,
+  QuickInputs,
 } from '@/types/quote';
 import {
   calculateDayRateQuote,
   calculateRoomRateQuote,
   calculateManualQuote,
+  calculateQuickEstimate,
   getRoomRateBaseline,
+  snapshotQuickEstimateInputs,
 } from '@/utils/calculations';
+import { QuickEstimateBuilder } from '@/components/quotes/QuickEstimateBuilder';
 import {
   InteriorEstimateBuilder,
   createEmptyInteriorEstimateState,
@@ -76,17 +81,17 @@ import { calculateExteriorEstimate } from '@/lib/exterior-estimates';
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const FIELD =
-  'h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-base text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30';
-const LABEL = 'mb-1.5 block text-sm font-medium text-pm-body';
+  'h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
+const LABEL = 'mb-1.5 block text-sm font-semibold text-on-surface';
 const TEXTAREA =
-  'w-full rounded-xl border border-pm-border bg-white px-4 py-3 text-base text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30';
+  'w-full rounded-xl border border-outline-variant bg-white px-4 py-3 text-base text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type EstimateMode = 'quick' | 'advanced';
 
 /** Which high-level pricing strategy the user has chosen */
-type PricingStrategy = 'hybrid' | 'day_rate' | 'room_rate' | 'manual';
+type PricingStrategy = 'hybrid' | 'day_rate' | 'room_rate' | 'manual' | 'detailed_quick';
 
 const ROOM_TYPES = [
   'bedroom',
@@ -168,7 +173,7 @@ type SummaryLine = {
 function normalizePreferredPricingStrategy(
   method?: PricingMethod | null
 ): PricingStrategy {
-  if (method === 'day_rate' || method === 'room_rate' || method === 'manual') {
+  if (method === 'day_rate' || method === 'room_rate' || method === 'manual' || method === 'detailed_quick') {
     return method;
   }
 
@@ -249,6 +254,10 @@ function buildInitialAdvancedEstimate(
         include_trim: room.include_trim,
         include_doors: false,
         include_windows: false,
+        source_rate_item_id: room.source_rate_item_id,
+        source_rate_item_version: room.source_rate_item_version,
+        source_rate_item_label: room.source_rate_item_label,
+        rate_snapshot_version: room.rate_snapshot_version,
       })),
       doors: estimateContext.opening_items
         .filter((item) => item.opening_type === 'door')
@@ -360,6 +369,10 @@ function buildAdvancedEstimatePayload(
       include_walls: room.include_walls,
       include_ceiling: room.include_ceiling,
       include_trim: room.include_trim,
+      source_rate_item_id: room.source_rate_item_id,
+      source_rate_item_version: room.source_rate_item_version,
+      source_rate_item_label: room.source_rate_item_label,
+      rate_snapshot_version: room.rate_snapshot_version,
     })),
     opening_items: [
       ...estimate.doors
@@ -485,10 +498,10 @@ function PricingSummaryPanel({
 
   return (
     <div className="space-y-4">
-      <section className="border-pm-border rounded-2xl border bg-white p-4 shadow-sm">
+      <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
+            <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Quote Number
             </p>
             {isEditingNumber ? (
@@ -504,16 +517,16 @@ function PricingSummaryPanel({
                     setIsEditingNumber(false);
                   }
                 }}
-                className="border-pm-teal-mid text-pm-body focus:ring-pm-teal-pale/30 mt-1 w-full rounded-lg border bg-white px-2 py-1 text-lg font-semibold focus:ring-2 focus:outline-none"
+                className="border-primary text-on-surface focus:ring-primary/20 mt-1 w-full rounded-lg border bg-white px-2 py-1 text-lg font-semibold focus:ring-2 focus:outline-none"
               />
             ) : (
               <button
                 type="button"
                 onClick={() => isEditable && setIsEditingNumber(true)}
                 className={[
-                  'text-pm-body mt-1 flex items-center gap-1.5 text-lg font-semibold',
+                  'text-on-surface mt-1 flex items-center gap-1.5 text-lg font-semibold',
                   isEditable
-                    ? 'hover:text-pm-teal cursor-pointer rounded-lg px-0 transition-colors'
+                    ? 'hover:text-primary cursor-pointer rounded-lg px-0 transition-colors'
                     : 'cursor-default',
                 ].join(' ')}
                 title={isEditable ? 'Click to edit quote number' : undefined}
@@ -530,7 +543,7 @@ function PricingSummaryPanel({
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-pm-secondary"
+                    className="text-on-surface-variant"
                   >
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -539,21 +552,21 @@ function PricingSummaryPanel({
               </button>
             )}
           </div>
-          <div className="bg-pm-teal-light rounded-xl px-3 py-2 text-right">
-            <p className="text-pm-teal-mid text-xs font-medium tracking-wide uppercase">
+          <div className="bg-primary-container rounded-xl px-3 py-2 text-right">
+            <p className="text-primary text-xs font-medium tracking-wide uppercase">
               Estimate Total
             </p>
-            <p className="text-pm-teal mt-1 text-lg font-semibold">
+            <p className="text-primary mt-1 text-lg font-semibold">
               {formatAUD(total)}
             </p>
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="border-pm-border bg-pm-surface rounded-xl border px-3 py-3">
-            <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
+          <div className="border-outline-variant bg-surface-container rounded-xl border px-3 py-3">
+            <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Active Method
             </p>
-            <p className="text-pm-body mt-1 text-sm font-medium">
+            <p className="text-on-surface mt-1 text-sm font-medium">
               {activeMethodLabel}
             </p>
           </div>
@@ -561,20 +574,18 @@ function PricingSummaryPanel({
         </div>
       </section>
 
-      <section className="border-pm-border rounded-2xl border bg-white p-4 shadow-sm">
-        <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
-          Price Summary
-        </h3>
-        <p className="text-pm-secondary mt-0.5 text-xs">
-          Live internal pricing while you build the quote.
-        </p>
+      <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm">
+        <div className="mb-3">
+          <h3 className="text-on-surface text-base font-bold leading-snug">Price Summary</h3>
+          <p className="text-on-surface-variant mt-0.5 text-xs">Live internal pricing while you build the quote.</p>
+        </div>
 
         {roomLines.length > 0 && (
-          <div className="border-pm-border mt-4 space-y-2 border-b pb-4">
+          <div className="border-outline-variant mt-4 space-y-2 border-b pb-4">
             {roomLines.map((room) => (
               <div key={room.label} className="flex justify-between text-sm">
-                <span className="text-pm-body">{room.label}</span>
-                <span className="text-pm-body font-medium">
+                <span className="text-on-surface">{room.label}</span>
+                <span className="text-on-surface font-medium">
                   {formatAUD(room.value)}
                 </span>
               </div>
@@ -588,22 +599,22 @@ function PricingSummaryPanel({
               key={line.label}
               className={[
                 'flex justify-between text-sm',
-                line.emphasize ? 'border-pm-border border-t pt-2' : '',
+                line.emphasize ? 'border-outline-variant border-t pt-2' : '',
               ].join(' ')}
             >
               <span
                 className={
                   line.emphasize
-                    ? 'text-pm-body font-semibold'
-                    : 'text-pm-secondary'
+                    ? 'text-on-surface font-semibold'
+                    : 'text-on-surface-variant'
                 }
               >
                 {line.label}
               </span>
               <span
                 className={[
-                  line.emphasize ? 'text-pm-teal font-bold' : 'text-pm-body',
-                  line.negative ? 'text-pm-coral-mid' : '',
+                  line.emphasize ? 'text-primary font-bold' : 'text-on-surface',
+                  line.negative ? 'text-error' : '',
                 ].join(' ')}
               >
                 {line.value > 0 &&
@@ -620,24 +631,24 @@ function PricingSummaryPanel({
         </div>
 
         {/* Discount & Deposit editors */}
-        <div className="border-pm-border mt-4 space-y-2 border-t pt-4">
+        <div className="border-outline-variant mt-4 space-y-2 border-t pt-4">
           {/* Discount */}
           {showDiscountEditor ? (
-            <div className="border-pm-coral/30 bg-pm-coral-pale/10 rounded-xl border p-3">
+            <div className="border-error/30 bg-error-container/20 rounded-xl border p-3">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-pm-coral-mid text-xs font-semibold">
+                <span className="text-error text-xs font-semibold">
                   Discount
                 </span>
                 <button
                   type="button"
                   onClick={onDiscountToggle}
-                  className="text-pm-secondary hover:text-pm-coral-mid text-xs transition-colors"
+                  className="text-on-surface-variant hover:text-error text-xs transition-colors"
                 >
                   Remove
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-pm-secondary text-sm">$</span>
+                <span className="text-on-surface-variant text-sm">$</span>
                 <input
                   type="number"
                   min="0"
@@ -645,10 +656,10 @@ function PricingSummaryPanel({
                   value={discountInput}
                   onChange={(e) => onDiscountInputChange(e.target.value)}
                   placeholder="0.00"
-                  className="border-pm-border text-pm-body focus:border-pm-coral focus:ring-pm-coral/20 h-10 flex-1 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline-variant text-on-surface focus:border-error focus:ring-error/20 h-10 flex-1 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                 />
                 {discountCents > 0 && (
-                  <span className="text-pm-coral-mid text-sm font-medium">
+                  <span className="text-error text-sm font-medium">
                     -{formatAUD(discountCents)}
                   </span>
                 )}
@@ -658,7 +669,7 @@ function PricingSummaryPanel({
             <button
               type="button"
               onClick={onDiscountToggle}
-              className="border-pm-border text-pm-secondary hover:border-pm-coral/50 hover:text-pm-coral-mid flex w-full items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm transition-colors"
+              className="border-outline-variant text-on-surface-variant hover:border-error/50 hover:text-error flex w-full items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -681,15 +692,15 @@ function PricingSummaryPanel({
 
           {/* Deposit */}
           {showDepositEditor ? (
-            <div className="border-pm-teal-mid/30 bg-pm-teal-pale/10 rounded-xl border p-3">
+            <div className="border-primary/30 bg-primary/10 rounded-xl border p-3">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-pm-teal-mid text-xs font-semibold">
+                <span className="text-primary text-xs font-semibold">
                   Deposit Required
                 </span>
                 <button
                   type="button"
                   onClick={onDepositToggle}
-                  className="text-pm-secondary hover:text-pm-coral-mid text-xs transition-colors"
+                  className="text-on-surface-variant hover:text-error text-xs transition-colors"
                 >
                   Remove
                 </button>
@@ -703,11 +714,11 @@ function PricingSummaryPanel({
                   value={depositInput}
                   onChange={(e) => onDepositInputChange(e.target.value)}
                   placeholder="50"
-                  className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-10 w-20 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-10 w-20 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                 />
-                <span className="text-pm-secondary text-sm">% of total</span>
+                <span className="text-on-surface-variant text-sm">% of total</span>
                 {depositPercent > 0 && (
-                  <span className="text-pm-teal ml-auto text-sm font-medium">
+                  <span className="text-primary ml-auto text-sm font-medium">
                     = {formatAUD(Math.round((total * depositPercent) / 100))}
                   </span>
                 )}
@@ -717,7 +728,7 @@ function PricingSummaryPanel({
             <button
               type="button"
               onClick={onDepositToggle}
-              className="border-pm-border text-pm-secondary hover:border-pm-teal-mid/50 hover:text-pm-teal-mid flex w-full items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm transition-colors"
+              className="border-outline-variant text-on-surface-variant hover:border-primary/50 hover:text-primary flex w-full items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -878,6 +889,24 @@ export function QuoteForm({
     return { labor_cents: 0, material_cents: 0 };
   });
 
+  // Quick estimate method state
+  const [quickInputs, setQuickInputs] = useState<QuickInputs>(() => {
+    const saved = defaultValues?.pricing_method_inputs;
+    if (
+      saved &&
+      saved.method === 'detailed_quick' &&
+      saved.inputs &&
+      typeof saved.inputs === 'object'
+    ) {
+      return saved.inputs as QuickInputs;
+    }
+    return {
+      rooms: [],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+  });
+
   // Materials & Services line items (library picker)
   const [lineItems, setLineItems] = useState<QuoteLineItemFormInput[]>(
     defaultValues?.line_items ?? []
@@ -1023,8 +1052,10 @@ export function QuoteForm({
     if (pricingStrategy === 'room_rate')
       return calculateRoomRateQuote({ rooms: roomRateItems });
     if (pricingStrategy === 'manual') return calculateManualQuote(manualInputs);
+    if (pricingStrategy === 'detailed_quick' && rateSettings)
+      return calculateQuickEstimate(quickInputs, rateSettings);
     return null;
-  }, [pricingStrategy, dayRateState, roomRateItems, manualInputs]);
+  }, [pricingStrategy, dayRateState, roomRateItems, manualInputs, quickInputs, rateSettings]);
   const composedMethodPreview = useMemo(() => {
     if (!methodPreview) return null;
     return composeQuoteTotals({
@@ -1093,7 +1124,7 @@ export function QuoteForm({
     }
 
     if (
-      (pricingStrategy === 'room_rate' || pricingStrategy === 'manual') &&
+      (pricingStrategy === 'detailed_quick' || pricingStrategy === 'room_rate' || pricingStrategy === 'manual') &&
       methodPreview &&
       composedMethodPreview
     ) {
@@ -1171,6 +1202,9 @@ export function QuoteForm({
     (pricingStrategy === 'day_rate' ||
       pricingStrategy === 'manual' ||
       (pricingStrategy === 'room_rate' && roomRateItems.length > 0) ||
+      (pricingStrategy === 'detailed_quick' &&
+        quickInputs.rooms.length > 0 &&
+        quickInputs.rooms.every((r) => r.selected_surfaces.length > 0)) ||
       (pricingStrategy === 'hybrid' &&
         (quoteScope === 'exterior'
           ? (exteriorPreview?.subtotal_cents ?? 0) > 0
@@ -1232,7 +1266,31 @@ export function QuoteForm({
     const customer_address = selectedProperty?.address ?? undefined;
     const working_days = normalizeWorkingDays(intVal(form.working_days, 1));
 
-    if (pricingStrategy === 'day_rate') {
+    if (pricingStrategy === 'detailed_quick') {
+      const quickSnapshot = rateSettings
+        ? snapshotQuickEstimateInputs(quickInputs, rateSettings)
+        : quickInputs;
+      payload = {
+        customer_id: form.customer_id,
+        customer_address,
+        title: form.title.trim(),
+        status: form.status,
+        valid_until: form.valid_until,
+        working_days,
+        complexity: 'standard',
+        labour_margin_percent: 0,
+        material_margin_percent: 0,
+        notes: form.notes,
+        internal_notes: form.internal_notes,
+        rooms: [],
+        line_items: allLineItems,
+        pricing_method: 'detailed_quick',
+        pricing_method_inputs: {
+          method: 'detailed_quick' as const,
+          inputs: quickSnapshot,
+        },
+      };
+    } else if (pricingStrategy === 'day_rate') {
       payload = {
         customer_id: form.customer_id,
         customer_address,
@@ -1493,11 +1551,11 @@ export function QuoteForm({
           </div>
 
           {/* Quote details */}
-          <section className="border-pm-border rounded-2xl border bg-white p-4">
-            <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
-              Quote Details
-            </h3>
-            <div className="mt-4 grid gap-4">
+          <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+            <div className="mb-4">
+              <h3 className="text-on-surface text-base font-bold leading-snug">Quote Details</h3>
+            </div>
+            <div className="grid gap-4">
               <div>
                 <label htmlFor="customer_id" className={LABEL}>
                   Customer
@@ -1517,12 +1575,12 @@ export function QuoteForm({
                   ))}
                 </select>
                 {selectedCustomer && (
-                  <div className="border-pm-border bg-pm-surface text-pm-body mt-3 rounded-xl border px-4 py-3 text-sm">
-                    <p className="text-pm-body font-medium">
+                  <div className="border-outline-variant bg-surface-container text-on-surface mt-3 rounded-xl border px-4 py-3 text-sm">
+                    <p className="text-on-surface font-medium">
                       {selectedCustomer.company_name || selectedCustomer.name}
                     </p>
                     {customerEmailOptions.length > 0 && (
-                      <p className="text-pm-secondary mt-1 break-all">
+                      <p className="text-on-surface-variant mt-1 break-all">
                         {customerEmailOptions[0]}
                         {customerEmailOptions.length > 1 && (
                           <span className="ml-1 text-xs whitespace-nowrap">
@@ -1535,7 +1593,7 @@ export function QuoteForm({
                       <div className="mt-3">
                         <label
                           htmlFor="customer_property"
-                          className="text-pm-secondary mb-1 block text-xs font-semibold tracking-wide uppercase"
+                          className="text-on-surface-variant mb-1 block text-xs font-semibold tracking-wide uppercase"
                         >
                           Property
                         </label>
@@ -1546,7 +1604,7 @@ export function QuoteForm({
                             setSelectedPropertyIndex(event.target.value);
                             setError(null);
                           }}
-                          className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                          className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                         >
                           {customerPropertyOptions.map((property, index) => (
                             <option
@@ -1558,20 +1616,20 @@ export function QuoteForm({
                           ))}
                         </select>
                         {selectedProperty?.notes && (
-                          <p className="text-pm-secondary mt-1 text-xs">
+                          <p className="text-on-surface-variant mt-1 text-xs">
                             {selectedProperty.notes}
                           </p>
                         )}
                       </div>
                     ) : (
-                      <p className="text-pm-secondary mt-2 text-xs">
+                      <p className="text-on-surface-variant mt-2 text-xs">
                         No saved property for this customer.
                       </p>
                     )}
                   </div>
                 )}
                 {showSendQuoteButton && selectedCustomer && !canSendQuote && (
-                  <p className="text-pm-coral-dark mt-2 text-xs">
+                  <p className="text-error mt-2 text-xs">
                     No email on file — add one to this customer to enable Send
                     Quote.
                   </p>
@@ -1633,15 +1691,15 @@ export function QuoteForm({
                       }));
                     }}
                     aria-describedby="working_days_help"
-                    className="border-pm-border text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-12 w-full rounded-xl border bg-white pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
+                    className="border-outline-variant text-on-surface placeholder-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
                   />
-                  <span className="text-pm-secondary pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
+                  <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                     days
                   </span>
                 </div>
                 <p
                   id="working_days_help"
-                  className="text-pm-secondary mt-1 text-xs"
+                  className="text-on-surface-variant mt-1 text-xs"
                 >
                   Used after approval when the client chooses their booking
                   start date.
@@ -1651,47 +1709,86 @@ export function QuoteForm({
           </section>
 
           {/* Pricing method selector */}
-          <section className="border-pm-border rounded-2xl border bg-white p-4">
-            <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
-              Pricing Method
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
+          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
+            <div className="mb-4">
+              <h3 className="text-base font-bold leading-snug text-on-surface">Pricing Method</h3>
+              <p className="mt-0.5 text-sm text-on-surface-variant">
+                Choose how you want to calculate this quote.
+              </p>
+            </div>
+            <div
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+              role="tablist"
+              aria-label="Pricing method"
+            >
               {(
                 [
-                  ['hybrid', '📐', 'Detailed estimate'],
-                  ['day_rate', '📅', 'Labour × days'],
-                  ['room_rate', '🏠', 'Room flat rate'],
-                  ['manual', '✏️', 'Direct input'],
-                ] as [PricingStrategy, string, string][]
-              ).map(([method, icon, label]) => (
-                <button
-                  key={method}
-                  type="button"
-                  onClick={() => {
-                    setPricingStrategy(method);
-                    setError(null);
-                  }}
-                  className={[
-                    'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors',
-                    pricingStrategy === method
-                      ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'
-                      : 'border-pm-border text-pm-body hover:border-pm-teal-mid',
-                  ].join(' ')}
-                >
-                  <span>{icon}</span>
-                  <span>{label}</span>
-                </button>
-              ))}
+                  ['detailed_quick', Zap, 'Quick', 'Pick rooms & scope'],
+                  ['hybrid', Layers, 'Detailed', 'Area-based estimate'],
+                  ['day_rate', CalendarDays, 'By day', 'Labour × days'],
+                  ['manual', PenLine, 'Manual', 'Direct price entry'],
+                ] as [PricingStrategy, ElementType, string, string][]
+              ).map(([method, Icon, label, desc]) => {
+                const isActive = pricingStrategy === method;
+                return (
+                  <button
+                    key={method}
+                    role="tab"
+                    aria-selected={isActive}
+                    type="button"
+                    onClick={() => {
+                      setPricingStrategy(method);
+                      setError(null);
+                    }}
+                    className={`group relative flex h-full flex-col gap-2 rounded-xl border px-3 py-3 text-left transition-all duration-150 ${
+                      isActive
+                        ? 'border-primary bg-primary text-on-primary shadow-sm'
+                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-outline hover:bg-surface-container-low'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
+                        isActive
+                          ? 'border-on-primary/30 bg-on-primary/15 text-on-primary'
+                          : 'border-outline-variant bg-surface-container text-on-surface-variant'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm font-bold leading-snug">
+                        {label}
+                      </span>
+                      <span
+                        className={`text-xs leading-snug ${
+                          isActive ? 'text-on-primary/80' : 'text-on-surface-variant'
+                        }`}
+                      >
+                        {desc}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="border-pm-border bg-pm-surface/45 text-pm-secondary mt-3 rounded-xl border px-4 py-3 text-sm">
-              {pricingStrategy === 'hybrid' ? (
+            <p className="mt-3 text-xs text-on-surface-variant">
+              {pricingStrategy === 'detailed_quick' ? (
                 <>
-                  Using Detailed Estimate Anchors from Price Rates.
+                  Pick rooms, sizes &amp; scope — ~30 sec.{' '}
                   <Link
                     href="/price-rates"
-                    className="text-pm-teal font-medium underline underline-offset-2"
+                    className="font-medium text-primary underline underline-offset-2"
                   >
-                    {' '}
+                    Edit room prices
+                  </Link>
+                </>
+              ) : pricingStrategy === 'hybrid' ? (
+                <>
+                  Using Detailed Estimate Anchors from Price Rates.{' '}
+                  <Link
+                    href="/price-rates"
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
                     Edit Price Rates
                   </Link>
                 </>
@@ -1700,46 +1797,57 @@ export function QuoteForm({
                   Using default rates from Price Rates.{' '}
                   <Link
                     href="/price-rates"
-                    className="text-pm-teal font-medium underline underline-offset-2"
+                    className="font-medium text-primary underline underline-offset-2"
                   >
                     Edit default rates
                   </Link>
                 </>
               )}
-            </div>
+            </p>
           </section>
 
           {/* Interior / Exterior scope toggle — only for detailed estimate */}
           {pricingStrategy === 'hybrid' && (
-            <section className="border-pm-border rounded-2xl border bg-white p-4">
-              <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
-                Job Scope
-              </h3>
-              <div className="border-pm-border bg-pm-surface inline-flex gap-1 rounded-xl border p-1">
+            <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+              <div className="mb-3 flex flex-wrap items-center gap-3">
+                <h3 className="text-on-surface text-base font-bold leading-snug">Job Scope</h3>
+              </div>
+              <div className="border-outline-variant bg-surface-container-low inline-flex gap-0.5 rounded-xl border p-0.5">
                 {(['interior', 'exterior'] as const).map((scope) => (
                   <button
                     key={scope}
                     type="button"
                     onClick={() => setQuoteScope(scope)}
-                    className={`rounded-lg px-6 py-2 text-sm font-semibold transition-colors ${
+                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
                       quoteScope === scope
-                        ? 'text-pm-teal bg-white shadow-sm'
-                        : 'text-pm-secondary hover:text-pm-body'
+                        ? 'bg-white text-on-surface shadow-sm'
+                        : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
-                    {scope === 'interior' ? 'Interior' : 'Exterior'}
+                    {scope === 'interior' ? <><Home className={`h-3.5 w-3.5 ${quoteScope === scope ? 'text-primary' : ''}`} />Interior</> : <><Trees className={`h-3.5 w-3.5 ${quoteScope === scope ? 'text-primary' : ''}`} />Exterior</>}
                   </button>
                 ))}
               </div>
             </section>
           )}
 
+          {/* Quick estimate builder */}
+          {pricingStrategy === 'detailed_quick' && (
+            <section>
+              <QuickEstimateBuilder
+                rateSettings={rateSettings ?? null}
+                value={quickInputs}
+                onChange={setQuickInputs}
+              />
+            </section>
+          )}
+
           {/* Day rate inputs */}
           {pricingStrategy === 'day_rate' && (
-            <section className="border-pm-border rounded-2xl border bg-white p-4">
-              <h3 className="text-pm-secondary mb-4 text-sm font-semibold tracking-wide uppercase">
-                Labour × Days
-              </h3>
+            <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+              <div className="mb-4">
+                <h3 className="text-on-surface text-base font-bold leading-snug">Labour × Days</h3>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={LABEL}>Number of days</label>
@@ -1796,7 +1904,7 @@ export function QuoteForm({
                             material_method: m,
                           }))
                         }
-                        className="accent-pm-teal"
+                        className="accent-primary"
                       />
                       {m === 'percentage' ? '% of labour' : 'Flat amount'}
                     </label>
@@ -1815,15 +1923,15 @@ export function QuoteForm({
                           material_percent: parseInt(e.target.value, 10) || 0,
                         }))
                       }
-                      className="border-pm-border w-20 rounded-xl border bg-white px-3 py-2.5 text-center text-base"
+                      className="border-outline-variant w-20 rounded-xl border bg-white px-3 py-2.5 text-center text-base"
                     />
-                    <span className="text-pm-secondary text-sm">
+                    <span className="text-on-surface-variant text-sm">
                       % of labour
                     </span>
                   </div>
                 ) : (
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="text-pm-secondary text-sm">$</span>
+                    <span className="text-on-surface-variant text-sm">$</span>
                     <NumericInput
                       inputMode="numeric"
                       value={(
@@ -1842,12 +1950,12 @@ export function QuoteForm({
                           material_flat_cents: Math.round(nextValue * 100),
                         }));
                       }}
-                      className="border-pm-border w-32 rounded-xl border bg-white px-3 py-2.5 text-base"
+                      className="border-outline-variant w-32 rounded-xl border bg-white px-3 py-2.5 text-base"
                     />
                   </div>
                 )}
               </div>
-              <div className="bg-pm-teal-pale/20 text-pm-teal mt-4 rounded-xl px-4 py-3 text-sm">
+              <div className="bg-primary/15 text-primary mt-4 rounded-xl px-4 py-3 text-sm">
                 Labour:{' '}
                 {formatAUD(dayRateState.days * dayRateState.daily_rate_cents)}{' '}
                 (ex-GST)
@@ -1855,18 +1963,25 @@ export function QuoteForm({
             </section>
           )}
 
-          {/* Room rate inputs */}
+          {/* Room rate inputs — legacy method, shown read-only for existing quotes */}
           {pricingStrategy === 'room_rate' && (
-            <section className="border-pm-border rounded-2xl border bg-white p-4">
-              <h3 className="text-pm-secondary mb-4 text-sm font-semibold tracking-wide uppercase">
-                Room Flat Rates
+            <section className="border-outline-variant rounded-2xl border bg-white p-4">
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                <span className="mt-0.5 shrink-0">⚠️</span>
+                <span>
+                  <span className="font-semibold">Room Flat Rate is no longer available</span>{' '}
+                  for new quotes. Switch to <strong>Quick estimate</strong> for a faster, more accurate result.
+                </span>
+              </div>
+              <h3 className="text-on-surface mb-4 text-base font-bold leading-snug">
+                Room Flat Rates (read-only)
               </h3>
               {roomRatePresets.length > 0 && (
-                <div className="border-pm-teal/25 bg-pm-teal-pale/10 mb-4 rounded-xl border p-3">
-                  <p className="text-pm-teal text-xs font-semibold tracking-wide uppercase">
+                <div className="border-primary/25 bg-primary/10 mb-4 rounded-xl border p-3">
+                  <p className="text-primary text-xs font-semibold tracking-wide uppercase">
                     Saved Room Presets
                   </p>
-                  <p className="text-pm-secondary mt-1 text-xs">
+                  <p className="text-on-surface-variant mt-1 text-xs">
                     Add your saved room presets directly into this quote, then
                     adjust the flat rate if needed.
                   </p>
@@ -1882,7 +1997,7 @@ export function QuoteForm({
                             preset.rate_cents
                           )
                         }
-                        className="border-pm-teal/30 text-pm-body hover:border-pm-teal hover:bg-pm-teal-pale/20 rounded-full border bg-white px-3 py-1.5 text-xs font-medium"
+                        className="border-primary/30 text-on-surface hover:border-primary hover:bg-primary/15 rounded-full border bg-white px-3 py-1.5 text-xs font-medium"
                       >
                         {preset.title} · {preset.sqm} sqm ·{' '}
                         {formatAUD(preset.rate_cents)}
@@ -1895,7 +2010,7 @@ export function QuoteForm({
                 {roomRateItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="border-pm-border rounded-xl border p-3"
+                    className="border-outline-variant rounded-xl border p-3"
                   >
                     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                       <input
@@ -1909,7 +2024,7 @@ export function QuoteForm({
                           )
                         }
                         placeholder="Room name"
-                        className="border-pm-border rounded-lg border bg-white px-3 py-2 text-sm"
+                        className="border-outline-variant rounded-lg border bg-white px-3 py-2 text-sm"
                       />
                       <select
                         value={item.room_type}
@@ -1926,7 +2041,7 @@ export function QuoteForm({
                             )
                           )
                         }
-                        className="border-pm-border rounded-lg border bg-white px-2 py-1.5 text-sm"
+                        className="border-outline-variant rounded-lg border bg-white px-2 py-1.5 text-sm"
                       >
                         {ROOM_TYPES.map((t) => (
                           <option key={t} value={t}>
@@ -1954,7 +2069,7 @@ export function QuoteForm({
                             )
                           );
                         }}
-                        className="border-pm-border rounded-lg border bg-white px-2 py-1.5 text-sm"
+                        className="border-outline-variant rounded-lg border bg-white px-2 py-1.5 text-sm"
                       >
                         {ROOM_SIZES.map((s) => (
                           <option key={s} value={s}>
@@ -1963,7 +2078,7 @@ export function QuoteForm({
                         ))}
                       </select>
                       <div className="flex items-center gap-1">
-                        <span className="text-pm-secondary text-sm">$</span>
+                        <span className="text-on-surface-variant text-sm">$</span>
                         <NumericInput
                           inputMode="numeric"
                           value={(item.rate_cents / 100).toFixed(0)}
@@ -1986,7 +2101,7 @@ export function QuoteForm({
                               )
                             );
                           }}
-                          className="border-pm-border w-24 rounded-lg border bg-white px-2 py-1.5 text-sm"
+                          className="border-outline-variant w-24 rounded-lg border bg-white px-2 py-1.5 text-sm"
                         />
                       </div>
                     </div>
@@ -1998,7 +2113,7 @@ export function QuoteForm({
                             prev.filter((_, i) => i !== idx)
                           )
                         }
-                        className="text-pm-secondary hover:text-pm-coral text-sm"
+                        className="text-on-surface-variant hover:text-error text-sm"
                       >
                         Remove
                       </button>
@@ -2010,7 +2125,7 @@ export function QuoteForm({
                 <button
                   type="button"
                   onClick={addManualRoomRateItem}
-                  className="border-pm-teal text-pm-teal hover:bg-pm-teal-pale/10 flex items-center gap-1.5 rounded-xl border border-dashed px-4 py-2.5 text-sm font-semibold"
+                  className="border-primary text-primary hover:bg-primary/10 flex items-center gap-1.5 rounded-xl border border-dashed px-4 py-2.5 text-sm font-semibold"
                 >
                   + Add Custom Room
                 </button>
@@ -2020,10 +2135,10 @@ export function QuoteForm({
 
           {/* Manual direct input */}
           {pricingStrategy === 'manual' && (
-            <section className="border-pm-border rounded-2xl border bg-white p-4">
-              <h3 className="text-pm-secondary mb-4 text-sm font-semibold tracking-wide uppercase">
-                Direct Price Entry
-              </h3>
+            <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+              <div className="mb-4">
+                <h3 className="text-on-surface text-base font-bold leading-snug">Direct Price Entry</h3>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className={LABEL}>Labour cost ($, ex-GST)</label>
@@ -2075,7 +2190,7 @@ export function QuoteForm({
           {pricingStrategy === 'hybrid' && quoteScope === 'interior' && (
             <>
               {/* Mode toggle — Quick vs Advanced */}
-              <div className="border-pm-border flex overflow-hidden rounded-xl border bg-white">
+              <div className="border-outline-variant flex overflow-hidden rounded-xl border bg-white">
                 <button
                   type="button"
                   onClick={() => {
@@ -2085,8 +2200,8 @@ export function QuoteForm({
                   className={[
                     'flex flex-1 flex-col items-center gap-0.5 py-3 text-sm font-semibold transition-colors',
                     estimateMode === 'quick'
-                      ? 'bg-pm-teal text-white'
-                      : 'text-pm-secondary hover:text-pm-body',
+                      ? 'bg-primary text-white'
+                      : 'text-on-surface-variant hover:text-on-surface',
                   ].join(' ')}
                 >
                   <span className="text-base">⚡</span>
@@ -2101,8 +2216,8 @@ export function QuoteForm({
                   className={[
                     'flex flex-1 flex-col items-center gap-0.5 py-3 text-sm font-semibold transition-colors',
                     estimateMode === 'advanced'
-                      ? 'bg-pm-teal text-white'
-                      : 'text-pm-secondary hover:text-pm-body',
+                      ? 'bg-primary text-white'
+                      : 'text-on-surface-variant hover:text-on-surface',
                   ].join(' ')}
                 >
                   <span className="text-base">🔧</span>
@@ -2159,11 +2274,11 @@ export function QuoteForm({
           />
 
           {/* Notes */}
-          <section className="border-pm-border rounded-2xl border bg-white p-4">
-            <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
-              Notes
-            </h3>
-            <div className="mt-4 grid gap-4">
+          <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+            <div className="mb-4">
+              <h3 className="text-on-surface text-base font-bold leading-snug">Notes</h3>
+            </div>
+            <div className="grid gap-4">
               <div>
                 <label htmlFor="notes" className={LABEL}>
                   Client Notes
@@ -2197,17 +2312,14 @@ export function QuoteForm({
 
           {/* Markup Settings */}
           {pricingStrategy === 'hybrid' && (
-            <section className="border-pm-border rounded-2xl border bg-white p-4">
-              <div>
-                <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
-                  Markup
-                </h3>
-                <p className="text-pm-secondary mt-0.5 text-xs">
-                  Applies to the detailed estimate only. Internal only — not
-                  visible on the quote PDF.
+            <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+              <div className="mb-4">
+                <h3 className="text-on-surface text-base font-bold leading-snug">Markup</h3>
+                <p className="text-on-surface-variant mt-0.5 text-sm">
+                  Applies to the detailed estimate only. Internal only — not visible on the quote PDF.
                 </p>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="labour_markup" className={LABEL}>
                     Labour Markup
@@ -2222,9 +2334,9 @@ export function QuoteForm({
                       step="1"
                       value={form.labour_markup}
                       onChange={handleChange}
-                      className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-12 w-full rounded-xl border bg-white pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
+                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
                     />
-                    <span className="text-pm-secondary pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
+                    <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                       %
                     </span>
                   </div>
@@ -2243,9 +2355,9 @@ export function QuoteForm({
                       step="1"
                       value={form.material_markup}
                       onChange={handleChange}
-                      className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-12 w-full rounded-xl border bg-white pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
+                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
                     />
-                    <span className="text-pm-secondary pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
+                    <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                       %
                     </span>
                   </div>
@@ -2256,8 +2368,8 @@ export function QuoteForm({
 
           {/* Validation error */}
           {error && (
-            <div className="border-pm-coral bg-pm-coral-light rounded-lg border px-4 py-3">
-              <p className="text-pm-coral-dark text-sm">{error}</p>
+            <div className="border-error bg-error-container rounded-lg border px-4 py-3">
+              <p className="text-error text-sm">{error}</p>
             </div>
           )}
         </div>
@@ -2293,10 +2405,10 @@ export function QuoteForm({
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
+                <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
                   Send Quote
                 </p>
-                <h3 className="text-pm-body mt-1 text-xl font-semibold">
+                <h3 className="text-on-surface mt-1 text-xl font-semibold">
                   Review before sending
                 </h3>
               </div>
@@ -2304,7 +2416,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="border-pm-border text-pm-secondary h-10 rounded-lg border px-3 text-sm font-medium disabled:opacity-50"
+                className="border-outline-variant text-on-surface-variant h-10 rounded-lg border px-3 text-sm font-medium disabled:opacity-50"
               >
                 Close
               </button>
@@ -2333,49 +2445,49 @@ export function QuoteForm({
                     </option>
                   ))}
                 </select>
-                <p className="text-pm-secondary mt-1 text-xs">
+                <p className="text-on-surface-variant mt-1 text-xs">
                   Choose from emails saved on this customer.
                 </p>
               </div>
 
-              <div className="border-pm-border bg-pm-surface rounded-xl border px-4 py-3">
-                <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
+              <div className="border-outline-variant bg-surface-container rounded-xl border px-4 py-3">
+                <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
                   Customer
                 </p>
-                <p className="text-pm-body mt-1 font-medium">
+                <p className="text-on-surface mt-1 font-medium">
                   {selectedCustomer.company_name || selectedCustomer.name}
                 </p>
                 {selectedProperty?.address && (
-                  <p className="text-pm-secondary mt-1 text-sm">
+                  <p className="text-on-surface-variant mt-1 text-sm">
                     {selectedProperty.address}
                   </p>
                 )}
               </div>
 
-              <div className="border-pm-border rounded-xl border bg-white px-4 py-3">
-                <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
+              <div className="border-outline-variant rounded-xl border bg-white px-4 py-3">
+                <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
                   Quote Content
                 </p>
-                <p className="text-pm-body mt-1 font-medium">
+                <p className="text-on-surface mt-1 font-medium">
                   {sendDialog.payload.title}
                 </p>
-                <p className="text-pm-secondary mt-1 text-sm">
+                <p className="text-on-surface-variant mt-1 text-sm">
                   Valid until {sendDialog.payload.valid_until}
                 </p>
-                <p className="text-pm-secondary mt-1 text-sm">
+                <p className="text-on-surface-variant mt-1 text-sm">
                   Booking duration: {sendDialog.payload.working_days ?? 1} day
                   {(sendDialog.payload.working_days ?? 1) !== 1 ? 's' : ''}
                 </p>
                 {sendDialog.payload.notes && (
-                  <p className="bg-pm-surface text-pm-body mt-3 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap">
+                  <p className="bg-surface-container text-on-surface mt-3 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap">
                     {sendDialog.payload.notes}
                   </p>
                 )}
-                <div className="bg-pm-teal-light mt-3 flex items-center justify-between rounded-lg px-3 py-2">
-                  <span className="text-pm-teal text-sm font-medium">
+                <div className="bg-primary-container mt-3 flex items-center justify-between rounded-lg px-3 py-2">
+                  <span className="text-primary text-sm font-medium">
                     Estimated total
                   </span>
-                  <span className="text-pm-teal text-base font-semibold">
+                  <span className="text-primary text-base font-semibold">
                     {formatAUD(displayTotal)}
                   </span>
                 </div>
@@ -2387,7 +2499,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="border-pm-border text-pm-body h-12 rounded-xl border bg-white px-4 text-sm font-medium disabled:opacity-50"
+                className="border-outline-variant text-on-surface h-12 rounded-xl border bg-white px-4 text-sm font-medium disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -2395,7 +2507,7 @@ export function QuoteForm({
                 type="button"
                 onClick={handleConfirmSendQuote}
                 disabled={isPending || !sendDialog.email}
-                className="bg-pm-teal h-12 rounded-xl px-4 text-sm font-semibold text-white disabled:opacity-50"
+                className="bg-on-surface hover:bg-on-surface/90 h-12 rounded-xl px-4 text-sm font-semibold text-white transition-colors disabled:opacity-50"
               >
                 {isPending && activeSubmitIntent === 'send_email'
                   ? 'Sending...'
@@ -2406,28 +2518,28 @@ export function QuoteForm({
         </div>
       )}
 
-      {/* Sticky footer CTA — sits above the dashboard bottom tab bar (h-20) on mobile */}
-      <div className="border-pm-border fixed right-0 bottom-20 left-0 z-10 border-t bg-white px-4 pt-4 pb-4 md:bottom-0 md:left-64 md:pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex w-full max-w-lg justify-center">
+      {/* Sticky footer CTA — sits above the dashboard bottom tab bar (h-16) on mobile */}
+      <div className="border-outline-variant fixed right-0 bottom-16 left-0 z-10 border-t bg-white/95 px-3 pt-3 pb-3 backdrop-blur-sm sm:px-4 md:bottom-0 md:left-[72px] md:px-6 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:left-64">
+        <div className="mx-auto flex w-full max-w-lg justify-center lg:max-w-6xl">
           {showSendQuoteButton ? (
-            <div className="w-full space-y-2">
+            <div className="w-full space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
               <button
                 type="button"
                 onClick={handleOpenSendDialog}
                 disabled={isPending || !canSubmit || !canSendQuote}
-                className="bg-pm-teal h-12 w-full rounded-xl px-4 text-base font-semibold text-white disabled:opacity-50"
+                className="bg-on-surface hover:bg-on-surface/90 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white transition-colors disabled:opacity-50 lg:flex-[1.6]"
               >
                 {isPending && activeSubmitIntent === 'send_email'
                   ? 'Sending...'
                   : 'Send Quote to Client'}
               </button>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-1">
                 <button
                   type="submit"
                   data-submit-intent="save"
                   onClick={() => setActiveSubmitIntent('save')}
                   disabled={isPending || !canSubmit}
-                  className="border-pm-teal text-pm-teal h-11 rounded-xl border bg-white px-4 text-sm font-semibold disabled:opacity-50"
+                  className="border-outline-variant text-on-surface hover:bg-surface-container inline-flex h-11 items-center justify-center rounded-xl border bg-white px-4 text-sm font-semibold transition-colors disabled:opacity-50 lg:flex-1"
                 >
                   {isPending && activeSubmitIntent === 'save'
                     ? 'Saving...'
@@ -2437,7 +2549,7 @@ export function QuoteForm({
                   type="button"
                   onClick={() => (onCancel ? onCancel() : router.back())}
                   disabled={isPending}
-                  className="border-pm-border text-pm-body h-11 rounded-xl border bg-white px-4 text-sm font-medium disabled:opacity-50"
+                  className="border-outline-variant text-on-surface-variant hover:text-on-surface inline-flex h-11 items-center justify-center rounded-xl border bg-white px-4 text-sm font-medium transition-colors disabled:opacity-50 lg:flex-1"
                 >
                   {cancelLabel}
                 </button>
@@ -2449,7 +2561,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => (onCancel ? onCancel() : router.back())}
                 disabled={isPending}
-                className="border-pm-border text-pm-body h-14 rounded-xl border bg-white px-4 text-base font-medium disabled:opacity-50"
+                className="border-outline-variant text-on-surface-variant hover:text-on-surface inline-flex h-14 items-center justify-center rounded-xl border bg-white px-4 text-base font-medium transition-colors disabled:opacity-50"
               >
                 {cancelLabel}
               </button>
@@ -2457,7 +2569,7 @@ export function QuoteForm({
                 type="submit"
                 data-submit-intent="save"
                 disabled={isPending || !canSubmit}
-                className="bg-pm-teal h-14 rounded-xl px-4 text-base font-semibold text-white disabled:opacity-50"
+                className="bg-on-surface hover:bg-on-surface/90 inline-flex h-14 items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white transition-colors disabled:opacity-50"
               >
                 {isPending ? 'Saving...' : submitLabel}
               </button>

@@ -3,34 +3,44 @@ import type { NextRequest } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { mapInvoiceDetail } from '@/lib/invoices';
 import { createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import { getBusinessDocumentBranding } from '@/lib/businesses';
 import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const invoiceId = searchParams.get('id');
+  const publicToken = searchParams.get('token')?.trim() ?? null;
 
-  if (!invoiceId) {
-    return NextResponse.json({ error: 'Invoice ID required' }, { status: 400 });
+  if (!invoiceId && !publicToken) {
+    return NextResponse.json(
+      { error: 'Invoice ID or token required' },
+      { status: 400 }
+    );
   }
 
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (publicToken && !UUID_RE.test(publicToken)) {
+    return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+  }
 
-  if (!user) {
+  const supabase = publicToken ? createAdminClient() : await createServerClient();
+  const user = publicToken ? null : (await supabase.auth.getUser()).data.user;
+
+  if (!publicToken && !user) {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
 
   // Fetch invoice with customer and line items
-  const { data: invoice, error } = await supabase
+  const invoiceQuery = supabase
     .from('invoices')
-    .select('*, customer:customers!invoices_customer_user_fk(*), line_items:invoice_line_items(*)')
-    .eq('id', invoiceId)
-    .eq('user_id', user.id)
-    .single();
+    .select('*, customer:customers!invoices_customer_user_fk(*), line_items:invoice_line_items(*)');
+  const { data: invoice, error } = publicToken
+    ? await invoiceQuery.eq('public_share_token', publicToken).single()
+    : await invoiceQuery.eq('id', invoiceId ?? '').eq('user_id', user!.id).single();
 
   if (error || !invoice) {
     return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
@@ -39,8 +49,8 @@ export async function GET(request: NextRequest) {
   // Fetch business profile
   const { data: businessBranding } = await getBusinessDocumentBranding(
     supabase,
-    user.id,
-    user.email ?? null
+    invoice.user_id,
+    user?.email ?? null
   );
   const logoUrl = await createStorageObjectDataUrl(
     supabase,
@@ -115,7 +125,7 @@ export async function GET(request: NextRequest) {
       businessName: businessBranding?.name || 'My Painting Business',
       abn: invoiceData.business_abn ?? businessBranding?.abn ?? null,
       phone: businessBranding?.phone ?? null,
-      email: businessBranding?.email ?? user.email ?? null,
+      email: businessBranding?.email ?? user?.email ?? null,
       paymentTerms: invoiceData.payment_terms,
       bankDetails: invoiceData.bank_details,
       logoUrl,

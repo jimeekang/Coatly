@@ -244,7 +244,7 @@ describe('generateAIDraft', () => {
         entity: 'invoice',
         prompt: 'Create a 30% deposit invoice for Harbor Cafe repaint',
         customers: expect.arrayContaining([
-          expect.objectContaining({ id: 'customer-1', address: '128 Beach Street, Manly, NSW, 2095' }),
+          expect.objectContaining({ id: 'customer-1' }),
         ]),
         quotes: expect.arrayContaining([
           expect.objectContaining({ id: 'quote-1', quote_number: 'QUO-0007' }),
@@ -252,5 +252,106 @@ describe('generateAIDraft', () => {
       })
     );
     expect(result.data?.invoice?.customer_id).toBe('customer-1');
+  });
+
+  it('does not pass raw customer contact PII into the AI draft context', async () => {
+    isAIDraftConfiguredMock.mockReturnValue(true);
+    generateWorkspaceDraftMock.mockResolvedValue({
+      entity: 'customer',
+      summary: 'Prepared a draft customer.',
+      warnings: [],
+      customer: {
+        name: 'Sarah Johnson',
+        company_name: 'Harbor Cafe',
+        email: '',
+        phone: '',
+        address_line1: '',
+        city: '',
+        state: '',
+        postcode: '',
+      },
+      quote: null,
+      invoice: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: {
+                    name: 'Coatly Co',
+                    email: 'owner@example.com',
+                    phone: '0412 111 222',
+                    address: '1 Test St, Sydney NSW 2000',
+                  },
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'customer-1',
+                    name: 'Sarah Johnson',
+                    company_name: 'Harbor Cafe',
+                    email: 'sarah@example.com',
+                    phone: '0412 555 012',
+                    address_line1: '128 Beach Street',
+                    city: 'Manly',
+                    state: 'NSW',
+                    postcode: '2095',
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({ data: [] }),
+            }),
+          };
+        }
+
+        if (table === 'ai_usage_events') {
+          return {
+            insert: vi.fn().mockResolvedValue({ error: null }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    await generateAIDraft({
+      entity: 'customer',
+      prompt: 'Create a new customer for Harbor Cafe',
+    });
+
+    const aiInput = generateWorkspaceDraftMock.mock.calls[0]?.[0];
+    const serializedInput = JSON.stringify(aiInput);
+    expect(serializedInput).not.toContain('sarah@example.com');
+    expect(serializedInput).not.toContain('0412 555 012');
+    expect(serializedInput).not.toContain('128 Beach Street');
+    expect(serializedInput).not.toContain('owner@example.com');
   });
 });

@@ -1,10 +1,12 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(python3 -c ':*)"
-    ]
-  },
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ':*)",
+      "mcp__claude_ai_Supabase__generate_typescript_types",
+      "Bash(grep -rn \"formatCurrency\\\\|formatDollars\\\\|toDollars\\\\|\\\\$.*toFixed\" /Users/jimee/Desktop/Project/Coatly/components/quotes/QuoteForm.tsx)"
+    ]
   }
 }

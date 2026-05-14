@@ -224,6 +224,21 @@ describe('QuoteForm', () => {
     ).toBeDisabled();
   });
 
+  it('aligns the fixed action footer with the dashboard content area', () => {
+    render(<QuoteForm customers={[CUSTOMER]} showSendQuoteButton />);
+
+    const sendButton = screen.getByRole('button', {
+      name: 'Send Quote to Client',
+    });
+    const footer = sendButton.closest('.fixed');
+    const footerContent = sendButton.closest('.mx-auto');
+
+    expect(footer).toHaveClass('bottom-16');
+    expect(footer).toHaveClass('px-3', 'sm:px-4', 'md:px-6');
+    expect(footer).toHaveClass('md:left-[72px]', 'lg:left-64');
+    expect(footerContent).toHaveClass('max-w-lg', 'lg:max-w-6xl');
+  });
+
   it('lets users pick a customer property for the quote snapshot', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -257,6 +272,62 @@ describe('QuoteForm', () => {
     expect(
       screen.getByRole('button', { name: 'Apartment' })
     ).toBeInTheDocument();
+  });
+
+  it('copies advanced room library items into the quote snapshot', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const rateSettings = buildDefaultRateSettings();
+    rateSettings.detailed_estimate_items.advanced_rooms = [
+      {
+        id: 'adv-bedroom-repaint',
+        version: 2,
+        label: 'Bedroom repaint',
+        anchor_room_type: 'Bedroom 1',
+        include_walls: true,
+        include_ceiling: true,
+        include_trim: false,
+        default_height_m: 2.7,
+        sort_order: 0,
+      },
+    ];
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        onSubmit={onSubmit}
+        rateSettings={rateSettings}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Bedroom repaint quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
+    await user.click(screen.getByRole('button', { name: /Advanced/i }));
+    await user.click(screen.getByRole('button', { name: 'Bedroom repaint' }));
+
+    expect(screen.getByLabelText('Room Name')).toHaveValue('Bedroom repaint');
+
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+
+    const payload = onSubmit.mock.calls[0][0];
+    expect(payload.interior_estimate.rooms).toEqual([
+      expect.objectContaining({
+        name: 'Bedroom repaint',
+        anchor_room_type: 'Bedroom 1',
+        height_m: 2.7,
+        include_walls: true,
+        include_ceiling: true,
+        include_trim: false,
+        source_rate_item_id: 'adv-bedroom-repaint',
+        source_rate_item_version: 2,
+        source_rate_item_label: 'Bedroom repaint',
+        rate_snapshot_version: 1,
+      }),
+    ]);
   });
 
   it('pre-fills advanced mode when defaultValues has rooms', () => {
@@ -384,7 +455,8 @@ describe('QuoteForm', () => {
 
     render(<QuoteForm customers={[CUSTOMER]} rateSettings={rateSettings} />);
 
-    expect(screen.getByRole('button', { name: /Quick/i })).toBeInTheDocument();
+    // "Quick" estimateMode toggle button (inside hybrid/detailed-estimate mode)
+    expect(screen.getAllByRole('button', { name: /Quick/i }).length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Labour Markup')).toBeInTheDocument();
   });
 
@@ -448,7 +520,7 @@ describe('QuoteForm', () => {
     render(<QuoteForm customers={[CUSTOMER]} />);
 
     expect(screen.getByLabelText('Labour Markup')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Labour.*days/i }));
+    await user.click(screen.getByRole('tab', { name: /By day.*Labour.*days/i }));
     expect(screen.queryByLabelText('Labour Markup')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Materials Markup')).not.toBeInTheDocument();
   });
@@ -458,7 +530,7 @@ describe('QuoteForm', () => {
 
     render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
 
-    await user.click(screen.getByRole('button', { name: /Labour.*days/i }));
+    await user.click(screen.getByRole('tab', { name: /By day.*Labour.*days/i }));
 
     expect(getEstimateTotalsCents()).toEqual([114400]);
 

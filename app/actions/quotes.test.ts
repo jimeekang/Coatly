@@ -1524,6 +1524,187 @@ describe('updateQuote', () => {
     );
   });
 
+  it('re-inserts Quick Estimate items when updating a detailed quick quote', async () => {
+    const captured: {
+      quoteUpdate?: Record<string, unknown>;
+      estimateItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-1',
+                  quote_number: 'QUO-0010',
+                  customer_id: '550e8400-e29b-41d4-a716-446655440000',
+                },
+                error: null,
+              }),
+            })),
+            update: vi.fn((payload) => {
+              captured.quoteUpdate = payload;
+              return {
+                error: null,
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          const invoiceQuery = {
+            count: 0,
+            error: null,
+            eq: vi.fn().mockReturnThis(),
+          };
+          return {
+            select: vi.fn(() => invoiceQuery),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: {
+                  id: '550e8400-e29b-41d4-a716-446655440000',
+                  email: 'client@example.com',
+                  emails: ['client@example.com'],
+                  address_line1: '128 Beach Street',
+                  address_line2: null,
+                  city: 'Manly',
+                  state: 'NSW',
+                  postcode: '2095',
+                  properties: [],
+                },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { default_rates: {} },
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+            insert: vi.fn(async (payload) => {
+              captured.estimateItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Updated quick estimate',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [],
+      pricing_method: 'detailed_quick',
+      pricing_method_inputs: {
+        method: 'detailed_quick',
+        inputs: {
+          global_coating: 'two_coats_repaint',
+          global_condition: 'average',
+          rooms: [
+            {
+              room_id: 'bedroom',
+              label: 'Bedroom',
+              size: 'medium',
+              selected_surfaces: ['walls', 'ceiling'],
+              walls_cents: 120000,
+              ceiling_cents: 35000,
+              trim_cents: 20000,
+              coating_multiplier_pct: 100,
+              condition_multiplier_pct: 100,
+              total_cents: 155000,
+            },
+          ],
+        },
+      },
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteUpdate).toMatchObject({
+      pricing_method: 'detailed_quick',
+      subtotal_cents: 155000,
+    });
+    expect(captured.estimateItemsInsert).toEqual([
+      expect.objectContaining({
+        quote_id: 'quote-1',
+        category: 'quick_estimate',
+        label: 'Bedroom',
+        unit: 'room',
+        unit_price_cents: 155000,
+        total_cents: 155000,
+        size: 'medium',
+        selected_surfaces: ['walls', 'ceiling'],
+        coating_multiplier_pct: 100,
+        condition_multiplier_pct: 100,
+        item_notes: null,
+        metadata: {
+          room_id: 'bedroom',
+          global_coating: 'two_coats_repaint',
+          global_condition: 'average',
+        },
+        sort_order: 0,
+      }),
+    ]);
+  });
+
   it('falls back when the quotes customer snapshot columns are missing during edit save', async () => {
     const captured: {
       firstQuoteUpdate?: Record<string, unknown>;
@@ -1774,6 +1955,159 @@ describe('updateQuote', () => {
       error:
         'This quote can no longer be edited because an invoice already exists for it.',
     });
+  });
+
+  it('checks custom quote number conflicts before deleting existing relations', async () => {
+    const quoteEstimateItemsDeleteMock = vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    }));
+    const quoteLineItemsDeleteMock = vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    }));
+    let quotesSelectCalls = 0;
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn(() => {
+              quotesSelectCalls += 1;
+              if (quotesSelectCalls === 1) {
+                return {
+                  eq: vi.fn().mockReturnThis(),
+                  single: vi.fn().mockResolvedValue({
+                    data: {
+                      id: 'quote-1',
+                      quote_number: 'QUO-0009',
+                      customer_id: 'customer-1',
+                    },
+                    error: null,
+                  }),
+                };
+              }
+
+              return {
+                eq: vi.fn().mockReturnThis(),
+                neq: vi.fn().mockReturnThis(),
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: { id: 'quote-conflict' },
+                  error: null,
+                }),
+              };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => ({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            })),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: {
+                  id: 'customer-1',
+                  email: 'client@example.com',
+                  emails: ['client@example.com'],
+                  address_line1: '128 Beach Street',
+                  address_line2: null,
+                  city: 'Manly',
+                  state: 'NSW',
+                  postcode: '2095',
+                  properties: [],
+                },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            delete: quoteEstimateItemsDeleteMock,
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            delete: quoteLineItemsDeleteMock,
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      quote_number: 'QUO-0010',
+      title: 'Apartment repaint',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: '',
+      internal_notes: '',
+      rooms: [
+        {
+          name: 'Living Room',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              coating_type: 'repaint_2coat',
+              area_m2: 35,
+              rate_per_m2_cents: 1800,
+              notes: '',
+            },
+          ],
+        },
+      ],
+      line_items: [],
+    });
+
+    expect(result).toEqual({
+      error: 'Quote number "QUO-0010" is already in use.',
+    });
+    expect(quoteEstimateItemsDeleteMock).not.toHaveBeenCalled();
+    expect(quoteLineItemsDeleteMock).not.toHaveBeenCalled();
   });
 });
 
@@ -2172,7 +2506,7 @@ describe('public quote access', () => {
 
     const result = await setPublicQuoteOptionalLineItemSelection(formData);
 
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ error: null, selectedIds: ['line-1', 'line-2'] });
     expect(captured.lineItemUpdate).toEqual({ is_selected: true });
     expect(captured.quoteUpdate).toEqual({
       subtotal_cents: 83000,
@@ -2295,7 +2629,7 @@ describe('public quote access', () => {
 
     const result = await approvePublicQuote(formData);
 
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ error: null });
     expect(captured.quoteUpdate).toMatchObject({
       status: 'approved',
       approved_by_name: 'Alex Harper',
@@ -2394,7 +2728,7 @@ describe('public quote access', () => {
 
     const result = await rejectPublicQuote(formData);
 
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ error: null });
     expect(captured.quoteUpdate).toMatchObject({
       status: 'rejected',
     });

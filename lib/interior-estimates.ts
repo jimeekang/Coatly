@@ -75,7 +75,9 @@ export type InteriorStoreys = (typeof INTERIOR_STOREYS)[number];
 export type InteriorPaintSystem = (typeof INTERIOR_PAINT_SYSTEMS)[number];
 export type InteriorWallPaintSystem =
   (typeof INTERIOR_WALL_PAINT_SYSTEMS)[number];
-export type InteriorRoomType = (typeof INTERIOR_ROOM_TYPES)[number];
+export type InteriorRoomType =
+  | (typeof INTERIOR_ROOM_TYPES)[number]
+  | (string & {});
 export type InteriorDoorType = (typeof INTERIOR_DOOR_TYPES)[number];
 export type InteriorDoorScope = (typeof INTERIOR_DOOR_SCOPES)[number];
 export type InteriorWindowType = (typeof INTERIOR_WINDOW_TYPES)[number];
@@ -172,6 +174,10 @@ export type InteriorEstimateInput = {
     include_walls: boolean;
     include_ceiling: boolean;
     include_trim: boolean;
+    source_rate_item_id?: string;
+    source_rate_item_version?: number;
+    source_rate_item_label?: string;
+    rate_snapshot_version?: 1;
   }>;
   opening_items: Array<{
     opening_type: 'door' | 'window';
@@ -768,7 +774,8 @@ function getSpecificAreaRoomAnchor(
     propertyType === 'apartment'
       ? INTERIOR_ESTIMATE_ANCHORS.apartment.specific_areas.rooms
       : INTERIOR_ESTIMATE_ANCHORS.house.specific_areas.rooms;
-  const fallback = defaults[roomType];
+  const fallback =
+    defaults[roomType as keyof typeof defaults] ?? defaults.Other;
 
   return {
     min: fallback.min * 100,

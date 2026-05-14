@@ -2,6 +2,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getInvoiceDraftFromQuote, getInvoiceFormOptions } from '@/app/actions/invoices';
 import { InvoiceCreateScreen } from '@/components/invoices/InvoiceCreateScreen';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { BackButton } from '@/components/layout/BackButton';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveSubscriptionSnapshotForUser } from '@/lib/subscription/server';
 
@@ -38,28 +40,12 @@ export default async function NewInvoicePage({
   return (
     <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
       <div className="mb-6 flex items-center gap-3">
-        <Link
-          href="/invoices"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors hover:bg-pm-teal-light hover:text-pm-teal"
-          aria-label="Back to invoices"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </Link>
+        <BackButton href="/invoices" label="Back to invoices" />
         <div>
-          <h1 className="text-[22px] font-semibold text-pm-body">New Invoice</h1>
-          <p className="mt-0.5 text-sm text-pm-secondary">
+          <h1 className="text-2xl font-extrabold tracking-tight text-on-surface sm:text-[28px]">
+            New Invoice
+          </h1>
+          <p className="mt-0.5 text-sm text-on-surface-variant">
             Create a draft, compare it against the linked quote, and keep payment details ready
             for sending.
           </p>
@@ -67,18 +53,16 @@ export default async function NewInvoicePage({
       </div>
 
       {pageError ? (
-        <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{pageError}</p>
-        </div>
+        <ErrorAlert>{pageError}</ErrorAlert>
       ) : customers.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-pm-border bg-pm-surface px-5 py-8">
-          <h2 className="text-base font-semibold text-pm-body">Add a customer first</h2>
-          <p className="mt-1 text-sm text-pm-secondary">
+        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-5 py-8">
+          <h2 className="text-base font-semibold text-on-surface">Add a customer first</h2>
+          <p className="mt-1 text-sm text-on-surface-variant">
             Invoices are linked to a saved customer in your workspace.
           </p>
           <Link
             href="/customers/new"
-            className="mt-4 inline-flex h-11 items-center rounded-lg bg-pm-teal px-4 text-sm font-medium text-white transition-colors hover:bg-pm-teal-hover"
+            className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
           >
             Go to New Customer
           </Link>

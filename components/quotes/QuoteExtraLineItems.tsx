@@ -161,15 +161,15 @@ export function QuoteExtraLineItems({
     .reduce((sum, item) => sum + item.unit_price_cents, 0);
 
   return (
-    <section className="rounded-2xl border border-pm-border bg-white p-4">
+    <section className="rounded-2xl border border-outline-variant bg-white p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
           Line Items
         </h3>
         <button
           type="button"
           onClick={addItem}
-          className="flex items-center gap-1.5 rounded-lg border border-pm-border bg-white px-3 py-2 text-xs font-semibold text-pm-body hover:border-pm-teal-mid hover:text-pm-teal"
+          className="flex items-center gap-1.5 rounded-lg border border-outline-variant bg-white px-3 py-2 text-xs font-semibold text-on-surface hover:border-primary hover:text-primary"
         >
           <Plus className="h-3.5 w-3.5" />
           Add Line Item
@@ -177,7 +177,7 @@ export function QuoteExtraLineItems({
       </div>
 
       {value.length === 0 ? (
-        <p className="mt-3 text-sm text-pm-secondary">
+        <p className="mt-3 text-sm text-on-surface-variant">
           Add custom line items — e.g. travel fee, specialty coat, or optional upgrades the client can choose.
         </p>
       ) : (
@@ -189,7 +189,7 @@ export function QuoteExtraLineItems({
                 'rounded-xl border p-3',
                 item.is_optional
                   ? 'border-amber-200 bg-amber-50/40'
-                  : 'border-pm-border bg-pm-surface/40',
+                  : 'border-outline-variant bg-surface-container/40',
               ].join(' ')}
             >
               <div className="flex items-start gap-2">
@@ -200,7 +200,7 @@ export function QuoteExtraLineItems({
                     value={item.name}
                     onChange={(e) => updateItem(item._key, { name: e.target.value })}
                     placeholder="Item name"
-                    className="h-9 w-full rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body placeholder:text-pm-secondary/60 focus:border-pm-teal-mid focus:outline-none"
+                    className="h-9 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none"
                     aria-label="Line item name"
                   />
 
@@ -214,8 +214,8 @@ export function QuoteExtraLineItems({
                     }
 
                     return (
-                      <div className="rounded-lg border border-pm-teal/20 bg-pm-teal-pale/10 p-2">
-                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-pm-teal">
+                      <div className="rounded-lg border border-primary/20 bg-primary/10 p-2">
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-primary">
                           Suggested From Saved Services
                         </p>
                         <div className="space-y-2">
@@ -224,17 +224,17 @@ export function QuoteExtraLineItems({
                               key={suggestion.id}
                               type="button"
                               onClick={() => applySuggestedItem(item._key, suggestion)}
-                              className="flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-pm-teal/15 bg-white px-3 py-2 text-left hover:border-pm-teal-mid hover:bg-pm-teal-pale/10"
+                              className="flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-primary/15 bg-white px-3 py-2 text-left hover:border-primary hover:bg-primary/10"
                             >
                               <span className="min-w-0">
-                                <span className="block truncate text-sm font-medium text-pm-body">
+                                <span className="block truncate text-sm font-medium text-on-surface">
                                   {suggestion.name}
                                 </span>
-                                <span className="block truncate text-xs text-pm-secondary">
+                                <span className="block truncate text-xs text-on-surface-variant">
                                   {formatAUD(suggestion.unit_price_cents)} / {suggestion.unit}
                                 </span>
                               </span>
-                              <span className="shrink-0 text-xs font-semibold text-pm-teal">
+                              <span className="shrink-0 text-xs font-semibold text-primary">
                                 Autofill
                               </span>
                             </button>
@@ -250,14 +250,14 @@ export function QuoteExtraLineItems({
                     value={item.notes}
                     onChange={(e) => updateItem(item._key, { notes: e.target.value })}
                     placeholder="Description (optional)"
-                    className="h-9 w-full rounded-lg border border-pm-border bg-white px-3 text-sm text-pm-body placeholder:text-pm-secondary/60 focus:border-pm-teal-mid focus:outline-none"
+                    className="h-9 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none"
                     aria-label="Line item description"
                   />
 
                   {/* Price + Optional toggle */}
                   <div className="flex items-center gap-3">
                     <div className="relative flex-1">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-pm-secondary">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-on-surface-variant">
                         $
                       </span>
                       <NumericInput
@@ -273,17 +273,17 @@ export function QuoteExtraLineItems({
                             unit_price_cents: Math.round(parsed * 100),
                           });
                         }}
-                        className="h-9 w-full rounded-lg border border-pm-border bg-white pl-7 pr-3 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none"
+                        className="h-9 w-full rounded-lg border border-outline-variant bg-white pl-7 pr-3 text-sm text-on-surface focus:border-primary focus:outline-none"
                         aria-label="Line item price"
                       />
                     </div>
 
-                    <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-pm-body">
+                    <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-on-surface">
                       <input
                         type="checkbox"
                         checked={item.is_optional}
                         onChange={(e) => updateItem(item._key, { is_optional: e.target.checked })}
-                        className="h-4 w-4 rounded border-pm-border accent-amber-500"
+                        className="h-4 w-4 rounded border-outline-variant accent-amber-500"
                         aria-label={`${item.name || 'Line item'} optional`}
                       />
                       Optional
@@ -301,7 +301,7 @@ export function QuoteExtraLineItems({
                 <button
                   type="button"
                   onClick={() => removeItem(item._key)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-pm-secondary hover:bg-pm-coral-light hover:text-pm-coral-dark"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error"
                   aria-label={`Remove ${item.name || 'line item'}`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -312,11 +312,11 @@ export function QuoteExtraLineItems({
 
           {/* Subtotal */}
           {(includedSubtotal > 0 || optionalSubtotal > 0) && (
-            <div className="rounded-xl bg-pm-teal-pale/20 px-4 py-3 space-y-1">
+            <div className="rounded-xl bg-primary/15 px-4 py-3 space-y-1">
               {includedSubtotal > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-pm-secondary">Included subtotal (ex GST)</span>
-                  <span className="font-semibold text-pm-body">{formatAUD(includedSubtotal)}</span>
+                  <span className="text-on-surface-variant">Included subtotal (ex GST)</span>
+                  <span className="font-semibold text-on-surface">{formatAUD(includedSubtotal)}</span>
                 </div>
               )}
               {optionalSubtotal > 0 && (

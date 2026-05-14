@@ -22,6 +22,30 @@ function getCurrentSydneyDate() {
   }).format(new Date());
 }
 
+async function recordAIUsage(input: {
+  supabase: Awaited<ReturnType<typeof createServerClient>>;
+  userId: string;
+  action: string;
+  status: 'completed' | 'failed';
+  startedAt: number;
+  errorMessage?: string;
+}) {
+  try {
+    await input.supabase.from('ai_usage_events').insert({
+      user_id: input.userId,
+      action: input.action,
+      provider: 'google',
+      model: 'gemini-2.5-flash',
+      status: input.status,
+      latency_ms: Date.now() - input.startedAt,
+      error_message: input.errorMessage ?? null,
+      metadata: { entity: input.action },
+    });
+  } catch {
+    // Usage logging must never block the draft workflow.
+  }
+}
+
 export async function generateAIDraft(input: {
   entity: WorkspaceDraftEntity;
   prompt: string;
@@ -79,7 +103,10 @@ export async function generateAIDraft(input: {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(25),
-  ]);
+    ]);
+
+  const startedAt = Date.now();
+  const action = `ai_draft_${input.entity}`;
 
   try {
     const data = await generateWorkspaceDraft({
@@ -89,9 +116,9 @@ export async function generateAIDraft(input: {
       business: business
         ? {
             name: business.name,
-            email: business.email,
-            phone: business.phone,
-            address: business.address,
+            email: null,
+            phone: null,
+            address: null,
           }
         : null,
       customers:
@@ -99,16 +126,9 @@ export async function generateAIDraft(input: {
           id: customer.id,
           name: customer.name,
           company_name: customer.company_name,
-          email: customer.email,
-          phone: customer.phone,
-          address: [
-            customer.address_line1,
-            customer.city,
-            customer.state,
-            customer.postcode,
-          ]
-            .filter(Boolean)
-            .join(', ') || null,
+          email: null,
+          phone: null,
+          address: null,
         })) ?? [],
       quotes:
         quotes?.map((quote) => {
@@ -129,10 +149,26 @@ export async function generateAIDraft(input: {
         }) ?? [],
     });
 
+    await recordAIUsage({
+      supabase,
+      userId: user.id,
+      action,
+      status: 'completed',
+      startedAt,
+    });
+
     return { data, error: null };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'AI draft could not be generated.';
+    await recordAIUsage({
+      supabase,
+      userId: user.id,
+      action,
+      status: 'failed',
+      startedAt,
+      errorMessage: message,
+    });
     return { data: null, error: message };
   }
 }

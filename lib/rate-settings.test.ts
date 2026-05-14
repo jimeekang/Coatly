@@ -176,6 +176,40 @@ describe('parseUserRateSettings', () => {
     );
   });
 
+  it('parses advanced detailed estimate room library items from default rates json', () => {
+    const parsed = parseUserRateSettings({
+      detailed_estimate_items: {
+        advanced_rooms: [
+          {
+            id: 'adv-bedroom-repaint',
+            version: 3,
+            label: 'Bedroom repaint',
+            anchor_room_type: 'Bedroom 1',
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: false,
+            default_height_m: 2.7,
+            sort_order: 0,
+          },
+        ],
+      },
+    });
+
+    expect(parsed.detailed_estimate_items.advanced_rooms).toEqual([
+      {
+        id: 'adv-bedroom-repaint',
+        version: 3,
+        label: 'Bedroom repaint',
+        anchor_room_type: 'Bedroom 1',
+        include_walls: true,
+        include_ceiling: true,
+        include_trim: false,
+        default_height_m: 2.7,
+        sort_order: 0,
+      },
+    ]);
+  });
+
   it('falls back to defaults when given invalid JSON', () => {
     const parsed = parseUserRateSettings('not-an-object');
     expect(parsed.walls).toEqual(DEFAULT_RATE_SETTINGS.walls);
@@ -316,5 +350,80 @@ describe('parseUserRateSettings', () => {
     expect(roundTripped.custom_exterior_surfaces).toEqual(
       original.custom_exterior_surfaces
     );
+  });
+});
+// ─── hydrateQuickEstimate / splitToSurfaces ───────────────────────────────────
+
+import {
+  splitToSurfaces,
+  hydrateQuickEstimate,
+  buildDefaultQuickEstimateSettings,
+  DEFAULT_QUICK_ROOM_LABELS,
+} from '@/lib/rate-settings';
+
+describe('splitToSurfaces', () => {
+  it('splits 100000 into 50/25/25', () => {
+    const result = splitToSurfaces(100000);
+    expect(result.walls_cents).toBe(50000);
+    expect(result.ceiling_cents).toBe(25000);
+    expect(result.trim_cents).toBe(25000);
+  });
+
+  it('total is preserved (no off-by-one)', () => {
+    const total = 100001;
+    const r = splitToSurfaces(total);
+    expect(r.walls_cents + r.ceiling_cents + r.trim_cents).toBe(total);
+  });
+});
+
+describe('hydrateQuickEstimate', () => {
+  it('returns default templates when no presets', () => {
+    const result = hydrateQuickEstimate([]);
+    expect(result.rooms).toHaveLength(DEFAULT_QUICK_ROOM_LABELS.length);
+    expect(result.rooms[0].sizes.medium.walls_cents).toBe(0);
+  });
+
+  it('seeds from presets when available', () => {
+    const presets = [
+      { id: 'p1', title: 'Bedroom', sqm: 15, rate_cents: 40000 },
+      { id: 'p2', title: 'Bathroom', sqm: 8, rate_cents: 30000 },
+    ];
+    const result = hydrateQuickEstimate(presets);
+    expect(result.rooms).toHaveLength(2);
+    expect(result.rooms[0].label).toBe('Bedroom');
+    // medium = splitToSurfaces(40000) → walls=20000, ceiling=10000, trim=10000
+    expect(result.rooms[0].sizes.medium.walls_cents).toBe(20000);
+    // small = splitToSurfaces(round(40000 * 0.8)) = splitToSurfaces(32000)
+    expect(result.rooms[0].sizes.small.walls_cents).toBe(16000);
+    // large = splitToSurfaces(round(40000 * 1.25)) = splitToSurfaces(50000)
+    expect(result.rooms[0].sizes.large.walls_cents).toBe(25000);
+  });
+
+  it('has correct baseline multipliers regardless of presets', () => {
+    const result = hydrateQuickEstimate([]);
+    expect(result.coating_multipliers.one_coat_refresh_pct).toBe(70);
+    expect(result.coating_multipliers.two_coats_repaint_pct).toBe(100);
+    expect(result.coating_multipliers.three_coats_new_plaster_pct).toBe(140);
+    expect(result.condition_multipliers.good_pct).toBe(90);
+    expect(result.condition_multipliers.average_pct).toBe(100);
+    expect(result.condition_multipliers.poor_pct).toBe(130);
+  });
+});
+
+describe('parseUserRateSettings — quick_estimate hydration', () => {
+  it('hydrates quick_estimate from presets when absent from JSON', () => {
+    const settings = parseUserRateSettings({
+      room_rate_presets: [
+        { id: 'p1', title: 'Master Bedroom', sqm: 20, rate_cents: 50000 },
+      ],
+    });
+    expect(settings.quick_estimate.rooms[0].label).toBe('Master Bedroom');
+  });
+
+  it('uses stored quick_estimate when present in JSON', () => {
+    const stored = buildDefaultQuickEstimateSettings();
+    stored.rooms[0].label = 'Custom Room';
+    const settings = parseUserRateSettings({ quick_estimate: stored });
+    expect(settings.quick_estimate.rooms[0].label).toBe('Custom Room');
   });
 });

@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import BusinessProfileForm from '@/components/settings/BusinessProfileForm';
 import GoogleCalendarCard from '@/components/settings/GoogleCalendarCard';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import {
+  PageHeader,
+  PrimaryActionLink,
+} from '@/components/layout/PageHeader';
 import { getGoogleCalendarIntegrationSummary } from '@/lib/google-calendar/service';
 import { getBusinessProfile } from '@/lib/businesses';
 import { createServerClient } from '@/lib/supabase/server';
@@ -34,24 +38,22 @@ export default async function SettingsPage({
 
   if (error || !business) {
     return (
-      <div className="rounded-2xl border border-pm-coral bg-pm-coral-light px-5 py-4 text-sm text-pm-coral-dark">
-        {error ?? 'Business settings could not be loaded.'}
+      <div className="mx-auto max-w-4xl">
+        <ErrorAlert>{error ?? 'Business settings could not be loaded.'}</ErrorAlert>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-10">
-      <div>
-        <h2 className="text-2xl font-bold text-pm-body">Business Settings</h2>
-        <p className="mt-1 text-sm text-pm-secondary">
-          Manage the business details shown on your quotes and invoices.
-        </p>
-      </div>
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 sm:gap-10">
+      <PageHeader
+        title="Business Settings"
+        subtitle="Manage the business details shown on your quotes and invoices."
+      />
 
       <BusinessProfileForm defaultValues={business} />
 
-      <hr className="border-pm-border" />
+      <hr className="border-outline-variant" />
 
       <GoogleCalendarCard
         integration={googleCalendar}
@@ -59,42 +61,31 @@ export default async function SettingsPage({
         successMessage={calendarSuccess}
       />
 
-      <hr className="border-pm-border" />
+      <hr className="border-outline-variant" />
 
-      <section className="rounded-2xl border border-pm-border bg-white p-5">
+      <section className="rounded-2xl border border-outline-variant bg-surface-container p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-pm-body">Price Rates</h3>
-            <p className="mt-1 text-sm text-pm-secondary">
+            <h3 className="text-lg font-semibold text-on-surface">Price Rates</h3>
+            <p className="mt-1 text-sm text-on-surface-variant">
               Configure your default rates for surfaces, doors and windows — and control which options appear in the estimator.
             </p>
           </div>
-          <Link
-            href="/price-rates"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-pm-teal px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
-          >
-            Manage rates
-          </Link>
+          <PrimaryActionLink href="/price-rates">Manage rates</PrimaryActionLink>
         </div>
       </section>
 
-      <hr className="border-pm-border" />
+      <hr className="border-outline-variant" />
 
-      <section className="rounded-2xl border border-pm-border bg-white p-5">
+      <section className="rounded-2xl border border-outline-variant bg-surface-container p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-pm-body">Billing & subscription</h3>
-            <p className="mt-1 text-sm text-pm-secondary">
+            <h3 className="text-lg font-semibold text-on-surface">Billing & subscription</h3>
+            <p className="mt-1 text-sm text-on-surface-variant">
               Manage your plan, billing portal, payment method, and cancellation options.
             </p>
           </div>
-
-          <Link
-            href="/settings/billing"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-pm-teal px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
-          >
-            Open billing
-          </Link>
+          <PrimaryActionLink href="/settings/billing">Open billing</PrimaryActionLink>
         </div>
       </section>
     </div>

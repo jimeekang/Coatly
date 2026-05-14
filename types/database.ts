@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_events: {
+        Row: {
+          action: string
+          created_at: string
+          error_message: string | null
+          id: string
+          input_tokens: number
+          latency_ms: number | null
+          metadata: Json
+          model: string | null
+          output_tokens: number
+          provider: string
+          request_id: string | null
+          status: string
+          total_tokens: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_tokens?: number
+          latency_ms?: number | null
+          metadata?: Json
+          model?: string | null
+          output_tokens?: number
+          provider?: string
+          request_id?: string | null
+          status?: string
+          total_tokens?: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_tokens?: number
+          latency_ms?: number | null
+          metadata?: Json
+          model?: string | null
+          output_tokens?: number
+          provider?: string
+          request_id?: string | null
+          status?: string
+          total_tokens?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       businesses: {
         Row: {
           abn: string | null
@@ -275,6 +326,7 @@ export type Database = {
           paid_date: string | null
           payment_method: string | null
           payment_terms: string | null
+          public_share_token: string | null
           quote_id: string | null
           status: string
           subtotal_cents: number
@@ -300,6 +352,7 @@ export type Database = {
           paid_date?: string | null
           payment_method?: string | null
           payment_terms?: string | null
+          public_share_token?: string | null
           quote_id?: string | null
           status?: string
           subtotal_cents?: number
@@ -325,6 +378,7 @@ export type Database = {
           paid_date?: string | null
           payment_method?: string | null
           payment_terms?: string | null
+          public_share_token?: string | null
           quote_id?: string | null
           status?: string
           subtotal_cents?: number
@@ -346,6 +400,65 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "quotes"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_reminder_events: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          error_message: string | null
+          id: string
+          invoice_id: string
+          last_attempted_at: string | null
+          metadata: Json
+          reminder_type: string
+          resend_message_id: string | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invoice_id: string
+          last_attempted_at?: string | null
+          metadata?: Json
+          reminder_type: string
+          resend_message_id?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invoice_id?: string
+          last_attempted_at?: string | null
+          metadata?: Json
+          reminder_type?: string
+          resend_message_id?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_reminder_events_invoice_user_fk"
+            columns: ["invoice_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -585,12 +698,17 @@ export type Database = {
       quote_estimate_items: {
         Row: {
           category: string
+          coating_multiplier_pct: number | null
+          condition_multiplier_pct: number | null
           created_at: string
           id: string
+          item_notes: string | null
           label: string
           metadata: Json
           quantity: number
           quote_id: string
+          selected_surfaces: Json | null
+          size: string | null
           sort_order: number
           total_cents: number
           unit: string
@@ -599,12 +717,17 @@ export type Database = {
         }
         Insert: {
           category: string
+          coating_multiplier_pct?: number | null
+          condition_multiplier_pct?: number | null
           created_at?: string
           id?: string
+          item_notes?: string | null
           label: string
           metadata?: Json
           quantity?: number
           quote_id: string
+          selected_surfaces?: Json | null
+          size?: string | null
           sort_order?: number
           total_cents?: number
           unit?: string
@@ -613,12 +736,17 @@ export type Database = {
         }
         Update: {
           category?: string
+          coating_multiplier_pct?: number | null
+          condition_multiplier_pct?: number | null
           created_at?: string
           id?: string
+          item_notes?: string | null
           label?: string
           metadata?: Json
           quantity?: number
           quote_id?: string
+          selected_surfaces?: Json | null
+          size?: string | null
           sort_order?: number
           total_cents?: number
           unit?: string
@@ -834,6 +962,59 @@ export type Database = {
         }
         Relationships: []
       }
+      public_quote_events: {
+        Row: {
+          actor_email: string | null
+          actor_name: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          ip_hash: string | null
+          metadata: Json
+          public_share_token: string | null
+          quote_id: string
+          user_agent_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          actor_email?: string | null
+          actor_name?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json
+          public_share_token?: string | null
+          quote_id: string
+          user_agent_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          actor_email?: string | null
+          actor_name?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json
+          public_share_token?: string | null
+          quote_id?: string
+          user_agent_hash?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_quote_events_quote_user_fk"
+            columns: ["quote_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           approval_signature: string | null
@@ -858,6 +1039,9 @@ export type Database = {
           pricing_method_inputs: Json | null
           pricing_snapshot: Json
           property_type: string | null
+          public_share_expires_at: string | null
+          public_share_revoked_at: string | null
+          public_share_revoked_reason: string | null
           public_share_token: string
           quote_number: string
           status: string
@@ -893,6 +1077,9 @@ export type Database = {
           pricing_method_inputs?: Json | null
           pricing_snapshot?: Json
           property_type?: string | null
+          public_share_expires_at?: string | null
+          public_share_revoked_at?: string | null
+          public_share_revoked_reason?: string | null
           public_share_token?: string
           quote_number: string
           status?: string
@@ -928,6 +1115,9 @@ export type Database = {
           pricing_method_inputs?: Json | null
           pricing_snapshot?: Json
           property_type?: string | null
+          public_share_expires_at?: string | null
+          public_share_revoked_at?: string | null
+          public_share_revoked_reason?: string | null
           public_share_token?: string
           quote_number?: string
           status?: string
@@ -1071,6 +1261,15 @@ export type Database = {
       get_user_active_quote_count: {
         Args: { user_uuid: string }
         Returns: number
+      }
+      update_invoice_with_line_items: {
+        Args: {
+          p_invoice: Json
+          p_invoice_id: string
+          p_line_items: Json
+          p_user_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

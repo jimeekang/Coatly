@@ -15,6 +15,11 @@ interface PublicDatePickerStepProps {
   initialBlockedDates?: string[];
   initialWorkingDays?: number;
   initialLoadError?: string | null;
+  initialAvailabilityStatus?: 'ready' | 'degraded' | 'unavailable';
+  initialAvailabilityMessage?: string | null;
+  contractorName?: string | null;
+  contractorPhone?: string | null;
+  contractorEmail?: string | null;
 }
 
 function formatDateYMD(date: Date): string {
@@ -71,6 +76,11 @@ export function PublicDatePickerStep({
   initialBlockedDates = [],
   initialWorkingDays = workingDays,
   initialLoadError = null,
+  initialAvailabilityStatus,
+  initialAvailabilityMessage = null,
+  contractorName = null,
+  contractorPhone = null,
+  contractorEmail = null,
 }: PublicDatePickerStepProps) {
   const today = formatDateYMD(new Date());
 
@@ -84,6 +94,12 @@ export function PublicDatePickerStep({
   const [resolvedWorkingDays, setResolvedWorkingDays] = useState(initialWorkingDays);
   const [isLoadingDates, setIsLoadingDates] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(initialLoadError);
+  const [availabilityStatus, setAvailabilityStatus] = useState<'ready' | 'degraded' | 'unavailable'>(
+    initialAvailabilityStatus ?? (initialLoadError ? 'unavailable' : 'ready'),
+  );
+  const [availabilityMessage, setAvailabilityMessage] = useState<string | null>(
+    initialAvailabilityMessage,
+  );
   const [isBooking, startBookingTransition] = useTransition();
   const [bookError, setBookError] = useState<string | null>(null);
   const [bookedResult, setBookedResult] = useState<{ startDate: string; endDate: string } | null>(null);
@@ -94,9 +110,14 @@ export function PublicDatePickerStep({
     const result = await getAvailableDatesForToken(token);
     if (result.error) {
       setLoadError(result.error);
+      setAvailabilityStatus('unavailable');
+      setAvailabilityMessage(null);
+      setSelectedStart(null);
     } else {
       setBlockedDates(new Set(result.blockedDates));
       setResolvedWorkingDays(result.workingDays ?? workingDays);
+      setAvailabilityStatus('ready');
+      setAvailabilityMessage(null);
     }
     setIsLoadingDates(false);
   }, [token, workingDays]);
@@ -151,6 +172,7 @@ export function PublicDatePickerStep({
   }
 
   function handleDayClick(dateStr: string) {
+    if (availabilityStatus !== 'ready' || loadError) return;
     if (dateStr < today) return;
     if (!allowNonWorkingDates && isNswNonWorkingDate(dateStr)) return;
     if (blockedDates.has(dateStr) || rangeHasBlockedDate(dateStr)) return;
@@ -172,7 +194,7 @@ export function PublicDatePickerStep({
   }
 
   function handleBook() {
-    if (!selectedStart) return;
+    if (!selectedStart || availabilityStatus !== 'ready' || loadError) return;
     setBookError(null);
 
     startBookingTransition(async () => {
@@ -238,6 +260,11 @@ export function PublicDatePickerStep({
   const selectedEndDate = selectedStart
     ? buildBookingRange(selectedStart, resolvedWorkingDays, allowNonWorkingDates).endDate
     : null;
+  const isAvailabilityUnavailable = availabilityStatus !== 'ready' || Boolean(loadError);
+  const availabilityErrorMessage =
+    availabilityMessage ??
+    loadError ??
+    'We cannot confirm calendar availability right now.';
 
   // ── Date picker UI ──
   return (
@@ -274,15 +301,43 @@ export function PublicDatePickerStep({
       <div className="rounded-2xl border border-pm-border bg-white p-4 shadow-sm">
         {isLoadingDates ? (
           <CalendarSkeleton />
-        ) : loadError ? (
-          <div className="space-y-3">
-            <p className="text-sm text-pm-coral-dark">{loadError}</p>
+        ) : isAvailabilityUnavailable ? (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-pm-coral/30 bg-pm-coral-light/50 px-4 py-3">
+              <p className="text-sm font-semibold text-pm-coral-dark">
+                Online booking is paused
+              </p>
+              <p className="mt-1 text-sm text-pm-coral-dark">
+                {availabilityErrorMessage} Please contact{' '}
+                {contractorName ?? 'the painter'} to confirm a suitable start date.
+              </p>
+            </div>
+            {(contractorPhone || contractorEmail) && (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {contractorPhone && (
+                  <a
+                    href={`tel:${contractorPhone}`}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-semibold text-pm-body shadow-sm"
+                  >
+                    Call contractor
+                  </a>
+                )}
+                {contractorEmail && (
+                  <a
+                    href={`mailto:${contractorEmail}`}
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-semibold text-pm-body shadow-sm"
+                  >
+                    Email contractor
+                  </a>
+                )}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => void loadAvailableDates()}
-              className="text-sm font-medium text-pm-teal hover:underline"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-pm-teal px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-pm-teal-hover"
             >
-              Try again
+              Check availability again
             </button>
           </div>
         ) : (
@@ -450,7 +505,7 @@ export function PublicDatePickerStep({
 
           <button
             type="button"
-            disabled={isBooking}
+            disabled={isBooking || isAvailabilityUnavailable}
             onClick={handleBook}
             className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-pm-teal px-6 py-4 text-base font-bold text-white shadow-sm transition-all hover:bg-pm-teal-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-pm-border"
           >

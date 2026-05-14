@@ -26,7 +26,7 @@ export default async function EditInvoicePage({ params }: Props) {
       <div className="mb-6 flex items-center gap-3">
         <Link
           href={`/invoices/${invoice.id}`}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors active:bg-pm-border"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors active:bg-surface-container-high"
           aria-label="Back to invoice"
         >
           <svg
@@ -44,14 +44,14 @@ export default async function EditInvoicePage({ params }: Props) {
           </svg>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-pm-body">Edit Invoice</h1>
-          <p className="mt-0.5 text-sm text-pm-secondary">{invoice.invoice_number}</p>
+          <h1 className="text-2xl font-bold text-on-surface">Edit Invoice</h1>
+          <p className="mt-0.5 text-sm text-on-surface-variant">{invoice.invoice_number}</p>
         </div>
       </div>
 
       {formError ? (
-        <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{formError}</p>
+        <div className="rounded-lg border border-error bg-error-container px-4 py-3">
+          <p className="text-sm text-on-error-container">{formError}</p>
         </div>
       ) : (
         <InvoiceForm

@@ -45,11 +45,14 @@ import {
   calculateDayRateQuote,
   calculateRoomRateQuote,
   calculateManualQuote,
+  calculateQuickEstimate,
+  normalizeQuickEstimateInputsForCalculation,
 } from '@/utils/calculations';
 import type {
   DayRateInputs,
   RoomRateInputs,
   ManualInputs,
+  QuickInputs,
   PricingMethodInputs,
 } from '@/types/quote';
 import {
@@ -61,7 +64,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
-import type { QuoteCreateInput } from '@/lib/supabase/validators';
+import type { Json } from '@/lib/supabase/types';
+import { MATERIAL_ITEM_CATEGORIES, type MaterialItemCategory, type QuoteCreateInput } from '@/lib/supabase/validators';
 import { formatAUD, formatDate } from '@/utils/format';
 
 type QuoteListRow = {
@@ -166,6 +170,39 @@ function jsonObjectOrEmpty(value: unknown) {
   return value != null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function jsonColumnValue(value: unknown): Json {
+  return value == null ? {} : (value as Json);
+}
+
+function materialItemCategoryOrOther(category: string): MaterialItemCategory {
+  return MATERIAL_ITEM_CATEGORIES.includes(category as MaterialItemCategory)
+    ? (category as MaterialItemCategory)
+    : 'other';
+}
+
+function buildQuickEstimateItemRows(quoteId: string, inputs: QuickInputs) {
+  return inputs.rooms.map((room, index) => ({
+    quote_id: quoteId,
+    category: 'quick_estimate',
+    label: room.label,
+    quantity: 1,
+    unit: 'room',
+    unit_price_cents: room.total_cents,
+    total_cents: room.total_cents,
+    size: room.size,
+    selected_surfaces: room.selected_surfaces,
+    coating_multiplier_pct: room.coating_multiplier_pct,
+    condition_multiplier_pct: room.condition_multiplier_pct,
+    item_notes: room.notes ?? null,
+    metadata: {
+      room_id: room.room_id,
+      global_coating: inputs.global_coating,
+      global_condition: inputs.global_condition,
+    },
+    sort_order: index,
+  }));
 }
 
 const QUOTE_CUSTOMER_SELECT =
@@ -1290,6 +1327,27 @@ export async function createQuote(
       ...totals,
     };
   } else if (
+    pricingMethod === 'detailed_quick' &&
+    rawMethodInputs?.method === 'detailed_quick'
+  ) {
+    const inputs = normalizeQuickEstimateInputsForCalculation(
+      rawMethodInputs.inputs as QuickInputs,
+      effectiveRates
+    );
+    const result = calculateQuickEstimate(inputs, effectiveRates);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'detailed_quick', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (
     pricingMethod === 'room_rate' &&
     rawMethodInputs?.method === 'room_rate'
   ) {
@@ -1412,8 +1470,7 @@ export async function createQuote(
     pricing_snapshot:
       interiorEstimate?.snapshot ?? exteriorEstimateResult?.snapshot ?? {},
     pricing_method: pricingMethod,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing_method_inputs: resolvedPricingInputs as any,
+    pricing_method_inputs: resolvedPricingInputs as Json,
   };
 
   let { data: quote, error: quoteError } = await supabase
@@ -1476,6 +1533,25 @@ export async function createQuote(
           .eq('id', quote.id)
           .eq('user_id', user.id);
         return { error: estimateItemsError.message };
+      }
+    }
+  } else if (
+    pricingMethod === 'detailed_quick' &&
+    resolvedPricingInputs?.method === 'detailed_quick'
+  ) {
+    const quickRooms = resolvedPricingInputs.inputs.rooms;
+    if (quickRooms.length > 0) {
+      const { error: quickItemsError } = await supabase
+        .from('quote_estimate_items')
+        .insert(buildQuickEstimateItemRows(quote.id, resolvedPricingInputs.inputs));
+
+      if (quickItemsError) {
+        await supabase
+          .from('quotes')
+          .delete()
+          .eq('id', quote.id)
+          .eq('user_id', user.id);
+        return { error: quickItemsError.message };
       }
     }
   } else {
@@ -1695,12 +1771,12 @@ export async function setQuoteOptionalLineItemSelection(
 
 export async function setPublicQuoteOptionalLineItemSelection(
   formData: FormData
-): Promise<void> {
+): Promise<{ error: string | null; selectedIds: string[] }> {
   const quoteToken = formData.get('quoteToken');
   const lineItemId = formData.get('lineItemId');
 
   if (typeof quoteToken !== 'string' || typeof lineItemId !== 'string') {
-    return;
+    return { error: 'Invalid quote add-on selection.', selectedIds: [] };
   }
 
   const isSelected = parseBooleanFormValue(formData.get('isSelected'));
@@ -1720,7 +1796,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
       valid_until: quote.valid_until,
     }) !== 'sent'
   ) {
-    return;
+    return { error: 'This quote is no longer available for add-on changes.', selectedIds: [] };
   }
 
   const linkedInvoicesResult = await getLinkedInvoiceCountForQuote(
@@ -1728,7 +1804,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
     quote.id
   );
   if (linkedInvoicesResult.error || linkedInvoicesResult.count > 0) {
-    return;
+    return { error: 'This quote already has a linked invoice.', selectedIds: [] };
   }
 
   const { data: lineItems, error: lineItemsError } = await supabase
@@ -1738,13 +1814,13 @@ export async function setPublicQuoteOptionalLineItemSelection(
     .order('sort_order', { ascending: true });
 
   if (lineItemsError) {
-    return;
+    return { error: lineItemsError.message, selectedIds: [] };
   }
 
   const target = lineItems?.find((item) => item.id === lineItemId) ?? null;
 
   if (!target || !target.is_optional) {
-    return;
+    return { error: 'Add-on item was not found.', selectedIds: [] };
   }
 
   const { error: updateLineItemError } = await supabase
@@ -1754,7 +1830,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
     .eq('quote_id', quote.id);
 
   if (updateLineItemError) {
-    return;
+    return { error: updateLineItemError.message, selectedIds: [] };
   }
 
   const currentIncludedLineItemsSubtotal = calculateQuoteLineItemsSubtotal(
@@ -1799,15 +1875,28 @@ export async function setPublicQuoteOptionalLineItemSelection(
     .eq('public_share_token', quoteToken);
 
   if (updateQuoteError) {
-    return;
+    await supabase
+      .from('quote_line_items')
+      .update({ is_selected: target.is_selected })
+      .eq('id', lineItemId)
+      .eq('quote_id', quote.id);
+    return { error: updateQuoteError.message, selectedIds: [] };
   }
 
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quote.id}`);
+  return {
+    error: null,
+    selectedIds: (lineItems ?? [])
+      .filter((item) => (item.id === lineItemId ? isSelected : item.is_selected))
+      .map((item) => item.id),
+  };
 }
 
-export async function approvePublicQuote(formData: FormData): Promise<void> {
+export async function approvePublicQuote(
+  formData: FormData
+): Promise<{ error: string | null }> {
   const quoteToken = parseTrimmedFormValue(formData.get('quoteToken'));
   const approvedByName = parseTrimmedFormValue(formData.get('approvedByName'));
   const approvedByEmail = parseTrimmedFormValue(
@@ -1823,11 +1912,11 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
     !approvedByEmail ||
     !approvalSignature
   ) {
-    return;
+    return { error: 'Name, email, and signature are required.' };
   }
 
   if (!isValidEmail(approvedByEmail)) {
-    return;
+    return { error: 'Enter a valid email address.' };
   }
 
   const supabase = createAdminClient();
@@ -1861,7 +1950,7 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
       valid_until: quote.valid_until,
     }) !== 'sent'
   ) {
-    return;
+    return { error: 'This quote is no longer available for approval.' };
   }
 
   const approvedAt = new Date().toISOString();
@@ -1879,7 +1968,7 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
     .eq('public_share_token', quoteToken);
 
   if (updateQuoteError) {
-    return;
+    return { error: updateQuoteError.message };
   }
 
   const customer = resolveQuoteCustomerSummary({
@@ -1913,9 +2002,12 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quote.id}`);
+  return { error: null };
 }
 
-export async function rejectPublicQuote(formData: FormData): Promise<void> {
+export async function rejectPublicQuote(
+  formData: FormData
+): Promise<{ error: string | null }> {
   const quoteToken = parseTrimmedFormValue(formData.get('quoteToken'));
   const rejectedByName = parseTrimmedFormValue(formData.get('rejectedByName'));
   const rejectedByEmail = parseTrimmedFormValue(
@@ -1923,11 +2015,11 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
   ).toLowerCase();
 
   if (!quoteToken || !rejectedByName || !rejectedByEmail) {
-    return;
+    return { error: 'Name and email are required to decline this quote.' };
   }
 
   if (!isValidEmail(rejectedByEmail)) {
-    return;
+    return { error: 'Enter a valid email address.' };
   }
 
   const supabase = createAdminClient();
@@ -1950,7 +2042,7 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
       valid_until: quote.valid_until,
     }) !== 'sent'
   ) {
-    return;
+    return { error: 'This quote is no longer available for decline.' };
   }
 
   const { error: updateQuoteError } = await supabase
@@ -1962,12 +2054,13 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
     .eq('public_share_token', quoteToken);
 
   if (updateQuoteError) {
-    return;
+    return { error: updateQuoteError.message };
   }
 
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quote.id}`);
+  return { error: null };
 }
 
 export async function duplicateQuote(
@@ -2047,13 +2140,10 @@ export async function duplicateQuote(
     estimate_category: sourceQuote.estimate_category ?? undefined,
     property_type: sourceQuote.property_type ?? undefined,
     estimate_mode: sourceQuote.estimate_mode ?? undefined,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    estimate_context: (sourceQuote.estimate_context ?? {}) as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing_snapshot: (sourceQuote.pricing_snapshot ?? {}) as any,
+    estimate_context: jsonColumnValue(sourceQuote.estimate_context),
+    pricing_snapshot: jsonColumnValue(sourceQuote.pricing_snapshot),
     pricing_method: sourceQuote.pricing_method ?? undefined,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing_method_inputs: sourceQuote.pricing_method_inputs as any,
+    pricing_method_inputs: sourceQuote.pricing_method_inputs as Json | null,
   };
 
   let { data: newQuote, error: insertError } = await supabase
@@ -2100,8 +2190,7 @@ export async function duplicateQuote(
           unit: item.unit,
           unit_price_cents: item.unit_price_cents,
           total_cents: item.total_cents,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          metadata: (item.metadata ?? {}) as any,
+          metadata: jsonColumnValue(item.metadata),
           sort_order: index,
         }))
       );
@@ -2165,8 +2254,7 @@ export async function duplicateQuote(
           quote_id: newQuoteId,
           material_item_id: item.material_item_id ?? null,
           name: item.name,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          category: item.category as any,
+          category: materialItemCategoryOrOther(item.category),
           unit: item.unit,
           quantity: item.quantity,
           unit_price_cents: item.unit_price_cents,
@@ -2298,6 +2386,27 @@ export async function updateQuote(
       ...totals,
     };
   } else if (
+    pricingMethod === 'detailed_quick' &&
+    rawMethodInputs?.method === 'detailed_quick'
+  ) {
+    const inputs = normalizeQuickEstimateInputsForCalculation(
+      rawMethodInputs.inputs as QuickInputs,
+      effectiveRates
+    );
+    const result = calculateQuickEstimate(inputs, effectiveRates);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'detailed_quick', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (
     pricingMethod === 'room_rate' &&
     rawMethodInputs?.method === 'room_rate'
   ) {
@@ -2368,23 +2477,6 @@ export async function updateQuote(
     preview = calculateQuotePreview(parsed.data);
   }
 
-  // Delete old relations
-  const { data: oldRooms } = await supabase
-    .from('quote_rooms')
-    .select('id')
-    .eq('quote_id', quoteId);
-
-  const oldRoomIds = oldRooms?.map((r) => r.id) ?? [];
-  if (oldRoomIds.length > 0) {
-    await supabase
-      .from('quote_room_surfaces')
-      .delete()
-      .in('room_id', oldRoomIds);
-    await supabase.from('quote_rooms').delete().eq('quote_id', quoteId);
-  }
-  await supabase.from('quote_estimate_items').delete().eq('quote_id', quoteId);
-  await supabase.from('quote_line_items').delete().eq('quote_id', quoteId);
-
   // Resolve quote number — allow custom override if different from existing
   let resolvedQuoteNumber = existing.quote_number;
   if (
@@ -2406,6 +2498,43 @@ export async function updateQuote(
     }
     resolvedQuoteNumber = parsed.data.quote_number;
   }
+
+  // Delete old relations only after validations that can fail without touching quote details.
+  const { data: oldRooms, error: oldRoomsError } = await supabase
+    .from('quote_rooms')
+    .select('id')
+    .eq('quote_id', quoteId);
+
+  if (oldRoomsError) {
+    return { error: oldRoomsError.message };
+  }
+
+  const oldRoomIds = oldRooms?.map((r) => r.id) ?? [];
+  if (oldRoomIds.length > 0) {
+    const { error: surfacesDeleteError } = await supabase
+      .from('quote_room_surfaces')
+      .delete()
+      .in('room_id', oldRoomIds);
+    if (surfacesDeleteError) return { error: surfacesDeleteError.message };
+
+    const { error: roomsDeleteError } = await supabase
+      .from('quote_rooms')
+      .delete()
+      .eq('quote_id', quoteId);
+    if (roomsDeleteError) return { error: roomsDeleteError.message };
+  }
+
+  const { error: estimateItemsDeleteError } = await supabase
+    .from('quote_estimate_items')
+    .delete()
+    .eq('quote_id', quoteId);
+  if (estimateItemsDeleteError) return { error: estimateItemsDeleteError.message };
+
+  const { error: lineItemsDeleteError } = await supabase
+    .from('quote_line_items')
+    .delete()
+    .eq('quote_id', quoteId);
+  if (lineItemsDeleteError) return { error: lineItemsDeleteError.message };
 
   // Update the quote record
   const quoteUpdatePayload = {
@@ -2440,8 +2569,7 @@ export async function updateQuote(
     pricing_snapshot:
       interiorEstimate?.snapshot ?? exteriorEstimateResult?.snapshot ?? {},
     pricing_method: pricingMethod,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pricing_method_inputs: resolvedPricingInputs as any,
+    pricing_method_inputs: resolvedPricingInputs as Json,
   };
 
   let { error: updateError } = await supabase
@@ -2496,6 +2624,17 @@ export async function updateQuote(
         }))
       );
     if (estimateItemsError) return { error: estimateItemsError.message };
+  } else if (
+    pricingMethod === 'detailed_quick' &&
+    resolvedPricingInputs?.method === 'detailed_quick'
+  ) {
+    const quickRooms = resolvedPricingInputs.inputs.rooms;
+    if (quickRooms.length > 0) {
+      const { error: quickItemsError } = await supabase
+        .from('quote_estimate_items')
+        .insert(buildQuickEstimateItemRows(quoteId, resolvedPricingInputs.inputs));
+      if (quickItemsError) return { error: quickItemsError.message };
+    }
   } else {
     for (const [roomIndex, room] of preview.rooms.entries()) {
       const { data: insertedRoom, error: roomError } = await supabase

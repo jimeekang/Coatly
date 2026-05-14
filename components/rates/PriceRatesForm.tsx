@@ -10,8 +10,9 @@ import {
   PencilRuler,
   Plus,
   Save,
-  Settings2,
   Trash2,
+  Trees,
+  Zap,
 } from 'lucide-react';
 import {
   NumericInput,
@@ -30,7 +31,6 @@ import {
   EXTERIOR_SURFACE_UNITS,
   EXTERIOR_SURFACES,
   PRICING_METHOD_LABELS,
-  PRICING_METHODS,
   RATE_DOOR_TYPE_LABELS,
   RATE_DOOR_TYPES,
   TRIM_COATING_TYPES,
@@ -42,6 +42,7 @@ import {
   WINDOW_SCOPES,
   WINDOW_TYPE_LABELS,
   WINDOW_TYPES,
+  type AdvancedEstimateRoomItem,
   type CustomExteriorSurfaceRate,
   type DoorScope,
   type ExteriorCoatingType,
@@ -53,11 +54,14 @@ import {
   type RoomRatePreset,
   type SqmSurfaceType,
   type TrimPaintSystem,
+  type QuickEstimateSettings,
   type UserRateSettings,
   type WindowScope,
   type WindowType,
 } from '@/lib/rate-settings';
+import { INTERIOR_ROOM_TYPES } from '@/lib/interior-estimates';
 import type { PricingMethod } from '@/types/quote';
+import { QuickEstimateTab } from '@/components/rates/QuickEstimateTab';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,14 +104,14 @@ function PriceInput({
 }) {
   return (
     <div className="relative inline-flex items-center">
-      <span className="text-pm-secondary absolute left-3 text-sm">$</span>
+      <span className="text-on-surface-variant absolute left-3 text-sm">$</span>
       <NumericInput
         value={centsToDisplay(value)}
         sanitize={sanitizeDecimalInput}
         onValueChange={onChange}
-        className={`${width} border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-11 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none`}
+        className={`${width} border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none`}
       />
-      <span className="text-pm-secondary ml-1.5 text-xs">{unit}</span>
+      <span className="text-on-surface-variant ml-1.5 text-xs">{unit}</span>
     </div>
   );
 }
@@ -124,36 +128,68 @@ function OfferCheckbox({
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="border-pm-border accent-pm-teal h-4 w-4 rounded"
+      className="border-outline accent-primary h-4 w-4 rounded"
     />
   );
 }
 
 function SectionHeading({
+  eyebrow,
   title,
   subtitle,
 }: {
+  eyebrow?: string;
   title: string;
   subtitle?: string;
 }) {
   return (
-    <div className="mb-4 flex flex-col gap-1">
-      <h3 className="text-pm-body text-base font-semibold">{title}</h3>
+    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      {eyebrow && (
+        <p className="text-primary mb-1 text-[10px] font-bold tracking-[0.14em] uppercase">
+          {eyebrow}
+        </p>
+      )}
+      <h3 className="text-on-surface text-base font-bold leading-snug">{title}</h3>
       {subtitle && (
-        <p className="text-pm-secondary mt-0.5 text-sm">{subtitle}</p>
+        <p className="text-on-surface-variant mt-0.5 max-w-xl text-sm leading-relaxed">{subtitle}</p>
       )}
     </div>
   );
 }
 
-function RateValueDisplay({ value, unit }: { value: number; unit: string }) {
-  return (
-    <div className="border-pm-border bg-pm-surface/55 text-pm-body inline-flex min-h-11 items-center justify-center rounded-lg border px-3 text-sm font-semibold">
+function RateValueDisplay({
+  value,
+  unit,
+  onClick,
+  ariaLabel,
+}: {
+  value: number;
+  unit: string;
+  onClick?: () => void;
+  ariaLabel?: string;
+}) {
+  const content = (
+    <>
       ${(value / 100).toFixed(2)}
-      <span className="text-pm-secondary ml-1.5 text-xs font-medium">
+      <span className="text-on-surface-variant ml-1.5 text-xs font-medium">
         {unit}
       </span>
-    </div>
+    </>
+  );
+  const className =
+    'border-outline bg-surface-container-low/55 text-on-surface inline-flex min-h-11 items-center justify-center rounded-lg border px-3 text-sm font-semibold';
+
+  if (!onClick) return <div className={className}>{content}</div>;
+
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={`${className} hover:border-primary hover:bg-primary/10 cursor-pointer transition-colors`}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -173,7 +209,7 @@ function RateRowActions({
       <button
         type="button"
         onClick={onEditToggle}
-        className="border-pm-border text-pm-body hover:border-pm-teal-mid hover:text-pm-teal inline-flex h-10 items-center gap-1.5 rounded-xl border bg-white px-3 text-xs font-medium"
+        className="border-outline text-on-surface hover:border-primary hover:text-primary inline-flex h-10 items-center gap-1.5 rounded-xl border bg-white px-3 text-xs font-medium"
       >
         {isEditing ? (
           <Check className="h-3.5 w-3.5" />
@@ -186,7 +222,7 @@ function RateRowActions({
         type="button"
         aria-label={deleteLabel}
         onClick={onDelete}
-        className="border-pm-coral/30 text-pm-coral hover:bg-pm-coral-light inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-white"
+        className="border-error/30 text-error hover:bg-error-container inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-white"
       >
         <Trash2 className="h-4 w-4" />
       </button>
@@ -205,7 +241,7 @@ function AddRateItemButton({
     <button
       type="button"
       onClick={onClick}
-      className="border-pm-teal/50 text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed bg-white px-4 text-sm font-medium"
+      className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed bg-white px-4 text-sm font-medium"
     >
       <Plus className="h-4 w-4" />
       {label}
@@ -215,7 +251,7 @@ function AddRateItemButton({
 
 function RateSectionStatus({ label }: { label: string }) {
   return (
-    <div className="border-pm-border bg-pm-surface text-pm-secondary inline-flex h-11 items-center justify-center rounded-xl border px-4 text-sm font-medium">
+    <div className="border-outline bg-surface-container-low text-on-surface-variant inline-flex h-11 items-center justify-center rounded-xl border px-4 text-sm font-medium">
       {label}
     </div>
   );
@@ -249,37 +285,40 @@ function WallCeilingRatesSection({
   );
 
   return (
-    <section>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
+          eyebrow="Interior · per m²"
           title="Wall & Ceiling Rates"
           subtitle="Default rate per sqm for walls and ceiling by coating type."
         />
-        {hiddenSurface ? (
-          <AddRateItemButton
-            label={`Add ${SQM_SURFACE_TYPE_LABELS[hiddenSurface]}`}
-            onClick={() => onSurfaceToggle(hiddenSurface, true)}
-          />
-        ) : (
-          <RateSectionStatus label="All surfaces active" />
-        )}
-      </div>
-      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
+        <div className="flex shrink-0 items-center gap-2">
+          {hiddenSurface ? (
+            <AddRateItemButton
+              label={`Add ${SQM_SURFACE_TYPE_LABELS[hiddenSurface]}`}
+              onClick={() => onSurfaceToggle(hiddenSurface, true)}
+            />
+          ) : (
+            <RateSectionStatus label="All surfaces active" />
+          )}
+        </div>
+      </header>
+      <div className="border-outline-variant overflow-x-auto rounded-xl border">
         <table className="w-full min-w-[520px] text-sm">
           <thead>
-            <tr className="border-pm-border bg-pm-surface border-b">
-              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
+            <tr className="border-outline-variant bg-surface-container-low border-b">
+              <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
                 Surface
               </th>
               {WALL_CEILING_COATING_TYPES.map((c) => (
                 <th
                   key={c}
-                  className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase"
+                  className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase"
                 >
                   {COATING_LABELS[c]}
                 </th>
               ))}
-              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
+              <th className="text-on-surface-variant px-4 py-2.5 text-right text-[10px] font-bold tracking-[0.12em] uppercase">
                 Actions
               </th>
             </tr>
@@ -288,9 +327,9 @@ function WallCeilingRatesSection({
             {activeSurfaces.map((surface, i) => (
               <tr
                 key={surface}
-                className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                className={i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/40'}
               >
-                <td className="text-pm-body px-4 py-3 font-medium">
+                <td className="text-on-surface px-4 py-3 font-medium">
                   {SQM_SURFACE_TYPE_LABELS[surface]}
                 </td>
                 {WALL_CEILING_COATING_TYPES.map((coating) => (
@@ -305,6 +344,8 @@ function WallCeilingRatesSection({
                       <RateValueDisplay
                         value={rates[surface][coating]}
                         unit="/sqm"
+                        onClick={() => onEditToggle(surface)}
+                        ariaLabel={`Edit ${SQM_SURFACE_TYPE_LABELS[surface]} ${COATING_LABELS[coating]} rate`}
                       />
                     )}
                   </td>
@@ -323,7 +364,7 @@ function WallCeilingRatesSection({
               <tr>
                 <td
                   colSpan={5}
-                  className="text-pm-secondary px-4 py-8 text-center text-sm"
+                  className="text-on-surface-variant px-4 py-8 text-center text-sm"
                 >
                   No wall or ceiling rates are active. Use Add Surface to
                   restore one.
@@ -357,37 +398,40 @@ function TrimRatesSection({
   const isTrimActive = rates.enabled_surface_types.includes('trim');
 
   return (
-    <section>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
-          title="Skirting Rates"
-          subtitle="Trim, skirting, and similar metre-based work. New plaster is not available here."
+          eyebrow="Interior · per metre"
+          title="Skirting & Trim Rates"
+          subtitle="Trim, skirting, and similar metre-based work."
         />
-        {isTrimActive ? (
-          <RateSectionStatus label="Skirting active" />
-        ) : (
-          <AddRateItemButton
-            label="Add Skirting"
-            onClick={() => onSurfaceToggle('trim', true)}
-          />
-        )}
-      </div>
-      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
+        <div className="flex shrink-0 items-center gap-2">
+          {isTrimActive ? (
+            <RateSectionStatus label="Skirting active" />
+          ) : (
+            <AddRateItemButton
+              label="Add Skirting"
+              onClick={() => onSurfaceToggle('trim', true)}
+            />
+          )}
+        </div>
+      </header>
+      <div className="border-outline-variant overflow-x-auto rounded-xl border">
         <table className="w-full min-w-[420px] text-sm">
           <thead>
-            <tr className="border-pm-border bg-pm-surface border-b">
-              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
+            <tr className="border-outline-variant bg-surface-container-low border-b">
+              <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
                 Surface
               </th>
               {TRIM_COATING_TYPES.map((coating) => (
                 <th
                   key={coating}
-                  className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase"
+                  className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase"
                 >
                   {COATING_LABELS[coating]}
                 </th>
               ))}
-              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
+              <th className="text-on-surface-variant px-4 py-2.5 text-right text-[10px] font-bold tracking-[0.12em] uppercase">
                 Actions
               </th>
             </tr>
@@ -395,7 +439,7 @@ function TrimRatesSection({
           <tbody>
             {isTrimActive ? (
               <tr className="bg-white">
-                <td className="text-pm-body px-4 py-3 font-medium">
+                <td className="text-on-surface px-4 py-3 font-medium">
                   {SQM_SURFACE_TYPE_LABELS.trim}
                 </td>
                 {TRIM_COATING_TYPES.map((coating) => (
@@ -410,6 +454,8 @@ function TrimRatesSection({
                       <RateValueDisplay
                         value={rates.trim[coating]}
                         unit="/sqm"
+                        onClick={() => onEditToggle('trim')}
+                        ariaLabel={`Edit Skirting ${COATING_LABELS[coating]} rate`}
                       />
                     )}
                   </td>
@@ -427,7 +473,7 @@ function TrimRatesSection({
               <tr>
                 <td
                   colSpan={4}
-                  className="text-pm-secondary px-4 py-8 text-center text-sm"
+                  className="text-on-surface-variant px-4 py-8 text-center text-sm"
                 >
                   Skirting rates are hidden. Use Add Skirting to restore them.
                 </td>
@@ -467,44 +513,47 @@ function DoorRatesSection({
   );
 
   return (
-    <section>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
+          eyebrow="Interior · per door"
           title="Door Rates"
-          subtitle="Per-door pricing by type and scope. Delete hides a door type from new quotes."
+          subtitle="Flat rates per door, by type and scope."
         />
-        {hiddenDoorType ? (
-          <AddRateItemButton
-            label={`Add ${RATE_DOOR_TYPE_LABELS[hiddenDoorType]}`}
-            onClick={() => onDoorTypeToggle(hiddenDoorType, true)}
-          />
-        ) : (
-          <RateSectionStatus label="All door types active" />
-        )}
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {hiddenDoorType ? (
+            <AddRateItemButton
+              label={`Add ${RATE_DOOR_TYPE_LABELS[hiddenDoorType]}`}
+              onClick={() => onDoorTypeToggle(hiddenDoorType, true)}
+            />
+          ) : (
+            <RateSectionStatus label="All door types active" />
+          )}
+        </div>
+      </header>
 
       {/* Door scope availability */}
-      <div className="border-pm-border mb-4 overflow-x-auto rounded-2xl border bg-white">
-        <div className="border-pm-border bg-pm-surface border-b px-4 py-2.5">
-          <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
+      <div className="border-outline-variant mb-4 overflow-x-auto rounded-xl border">
+        <div className="border-outline-variant bg-surface-container-low border-b px-4 py-2.5">
+          <p className="text-on-surface-variant text-[10px] font-bold tracking-[0.12em] uppercase">
             Available Scopes (applies to all door types)
           </p>
         </div>
         <table className="w-full min-w-[480px] text-sm">
           <thead>
-            <tr className="border-pm-border bg-pm-surface/50 border-b">
-              <th className="text-pm-secondary px-4 py-2 text-left text-xs font-medium">
+            <tr className="border-outline-variant bg-surface-container-low border-b">
+              <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
                 Scope
               </th>
               {TRIM_PAINT_SYSTEMS.map((ps) => (
                 <th
                   key={ps}
-                  className="text-pm-secondary px-4 py-2 text-center text-xs font-medium"
+                  className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase"
                 >
                   {TRIM_PAINT_SYSTEM_LABELS[ps]}
                 </th>
               ))}
-              <th className="text-pm-secondary px-4 py-2 text-center text-xs font-medium">
+              <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
                 Offer
               </th>
             </tr>
@@ -513,9 +562,9 @@ function DoorRatesSection({
             {DOOR_SCOPES.map((scope, i) => (
               <tr
                 key={scope}
-                className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                className={i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/40'}
               >
-                <td className="text-pm-body px-4 py-3 font-medium">
+                <td className="text-on-surface px-4 py-3 font-medium">
                   {DOOR_SCOPE_LABELS[scope]}
                 </td>
                 {TRIM_PAINT_SYSTEMS.map((ps) => (
@@ -550,10 +599,10 @@ function DoorRatesSection({
           return (
             <div
               key={doorType}
-              className="border-pm-border overflow-x-auto rounded-2xl border bg-white"
+              className="border-outline-variant overflow-x-auto rounded-xl border"
             >
-              <div className="border-pm-border bg-pm-surface flex items-center justify-between border-b px-4 py-2.5">
-                <span className="text-pm-body text-sm font-semibold">
+              <div className="border-outline-variant bg-surface-container-low flex items-center justify-between border-b px-4 py-2.5">
+                <span className="text-on-surface text-sm font-semibold">
                   {RATE_DOOR_TYPE_LABELS[doorType]}
                 </span>
                 <RateRowActions
@@ -565,14 +614,14 @@ function DoorRatesSection({
               </div>
               <table className="w-full min-w-[480px] text-sm">
                 <thead>
-                  <tr className="border-pm-border bg-pm-surface/50 border-b">
-                    <th className="text-pm-secondary px-4 py-2 text-left text-xs font-medium">
+                  <tr className="border-outline-variant bg-surface-container-low border-b">
+                    <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
                       Scope
                     </th>
                     {TRIM_PAINT_SYSTEMS.map((ps) => (
                       <th
                         key={ps}
-                        className="text-pm-secondary px-4 py-2 text-center text-xs font-medium"
+                        className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase"
                       >
                         {TRIM_PAINT_SYSTEM_LABELS[ps]}
                       </th>
@@ -583,9 +632,9 @@ function DoorRatesSection({
                   {DOOR_SCOPES.map((scope, i) => (
                     <tr
                       key={scope}
-                      className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                      className={i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/40'}
                     >
-                      <td className="text-pm-body px-4 py-2.5 font-medium">
+                      <td className="text-on-surface px-4 py-3 font-medium">
                         {DOOR_SCOPE_LABELS[scope]}
                       </td>
                       {TRIM_PAINT_SYSTEMS.map((ps) => (
@@ -602,6 +651,8 @@ function DoorRatesSection({
                             <RateValueDisplay
                               value={rates.door_unit_rates[ps][doorType][scope]}
                               unit="/door"
+                              onClick={() => onDoorTypeEditToggle(doorType)}
+                              ariaLabel={`Edit ${RATE_DOOR_TYPE_LABELS[doorType]} ${DOOR_SCOPE_LABELS[scope]} ${TRIM_PAINT_SYSTEM_LABELS[ps]} rate`}
                             />
                           )}
                         </td>
@@ -614,7 +665,7 @@ function DoorRatesSection({
           );
         })}
         {rates.enabled_door_types.length === 0 && (
-          <div className="border-pm-border text-pm-secondary rounded-2xl border border-dashed bg-white p-8 text-center text-sm">
+          <div className="border-outline text-on-surface-variant rounded-2xl border border-dashed bg-white p-8 text-center text-sm">
             No door rates are active. Use Add Door Type to restore one.
           </div>
         )}
@@ -648,21 +699,24 @@ function WindowRatesSection({
   );
 
   return (
-    <section>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
+          eyebrow="Interior · per window"
           title="Window Rates"
-          subtitle="Per-window pricing by type and scope. Delete hides a window type from new quotes."
+          subtitle="Flat rates per window — interior side, sill, and reveal."
         />
-        {hiddenWindowType ? (
-          <AddRateItemButton
-            label={`Add ${WINDOW_TYPE_LABELS[hiddenWindowType]}`}
-            onClick={() => onWindowTypeToggle(hiddenWindowType, true)}
-          />
-        ) : (
-          <RateSectionStatus label="All window types active" />
-        )}
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {hiddenWindowType ? (
+            <AddRateItemButton
+              label={`Add ${WINDOW_TYPE_LABELS[hiddenWindowType]}`}
+              onClick={() => onWindowTypeToggle(hiddenWindowType, true)}
+            />
+          ) : (
+            <RateSectionStatus label="All window types active" />
+          )}
+        </div>
+      </header>
       <div className="space-y-3">
         {WINDOW_TYPES.filter((type) =>
           rates.enabled_window_types.includes(type)
@@ -671,10 +725,10 @@ function WindowRatesSection({
           return (
             <div
               key={type}
-              className="border-pm-border overflow-x-auto rounded-2xl border bg-white"
+              className="border-outline-variant overflow-x-auto rounded-xl border"
             >
-              <div className="border-pm-border bg-pm-surface flex items-center justify-between border-b px-4 py-2.5">
-                <span className="text-pm-body text-sm font-semibold">
+              <div className="border-outline-variant bg-surface-container-low flex items-center justify-between border-b px-4 py-2.5">
+                <span className="text-on-surface text-sm font-semibold">
                   {WINDOW_TYPE_LABELS[type]}
                 </span>
                 <RateRowActions
@@ -686,14 +740,14 @@ function WindowRatesSection({
               </div>
               <table className="w-full min-w-[480px] text-sm">
                 <thead>
-                  <tr className="border-pm-border bg-pm-surface/50 border-b">
-                    <th className="text-pm-secondary px-4 py-2 text-left text-xs font-medium">
+                  <tr className="border-outline-variant bg-surface-container-low border-b">
+                    <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
                       Scope
                     </th>
                     {TRIM_PAINT_SYSTEMS.map((ps) => (
                       <th
                         key={ps}
-                        className="text-pm-secondary px-4 py-2 text-center text-xs font-medium"
+                        className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase"
                       >
                         {TRIM_PAINT_SYSTEM_LABELS[ps]}
                       </th>
@@ -704,9 +758,9 @@ function WindowRatesSection({
                   {WINDOW_SCOPES.map((scope, i) => (
                     <tr
                       key={scope}
-                      className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                      className={i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/40'}
                     >
-                      <td className="text-pm-body px-4 py-2.5 font-medium">
+                      <td className="text-on-surface px-4 py-3 font-medium">
                         {WINDOW_SCOPE_LABELS[scope]}
                       </td>
                       {TRIM_PAINT_SYSTEMS.map((ps) => (
@@ -723,6 +777,8 @@ function WindowRatesSection({
                             <RateValueDisplay
                               value={rates.window_unit_rates[ps][type][scope]}
                               unit="/window"
+                              onClick={() => onWindowTypeEditToggle(type)}
+                              ariaLabel={`Edit ${WINDOW_TYPE_LABELS[type]} ${WINDOW_SCOPE_LABELS[scope]} ${TRIM_PAINT_SYSTEM_LABELS[ps]} rate`}
                             />
                           )}
                         </td>
@@ -735,7 +791,7 @@ function WindowRatesSection({
           );
         })}
         {rates.enabled_window_types.length === 0 && (
-          <div className="border-pm-border text-pm-secondary rounded-2xl border border-dashed bg-white p-8 text-center text-sm">
+          <div className="border-outline text-on-surface-variant rounded-2xl border border-dashed bg-white p-8 text-center text-sm">
             No window rates are active. Use Add Window Type to restore one.
           </div>
         )}
@@ -754,20 +810,23 @@ function DayRateTab({
   onChange: (patch: Partial<PricingMethodSettings>) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <SectionHeading
-        title="Day Rate Settings"
-        subtitle="Set your default labour rate and how material costs are calculated when pricing by the day."
-      />
-      <div className="border-pm-border space-y-5 rounded-2xl border bg-white p-5">
+    <div className="space-y-4">
+      <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+        <header className="mb-5">
+          <SectionHeading
+            title="Day Rate"
+            subtitle="Used when pricing by labour days. We multiply the day rate by estimated days to produce a quote line."
+          />
+        </header>
+      <div className="space-y-5">
         {/* Daily labour rate */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-pm-body mb-1.5 block text-sm font-medium">
+            <label className="text-on-surface mb-1.5 block text-sm font-medium">
               Daily labour rate
             </label>
             <div className="relative inline-flex items-center">
-              <span className="text-pm-secondary absolute left-3 text-sm">
+              <span className="text-on-surface-variant absolute left-3 text-sm">
                 $
               </span>
               <NumericInput
@@ -780,21 +839,21 @@ function DayRateTab({
                     onChange({ daily_rate_cents: Math.round(nextValue * 100) });
                   }
                 }}
-                className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
               />
-              <span className="text-pm-secondary ml-1.5 text-xs">/day</span>
+              <span className="text-on-surface-variant ml-1.5 text-xs">/day</span>
             </div>
-            <p className="text-pm-secondary mt-1 text-xs">
+            <p className="text-on-surface-variant mt-1 text-xs">
               Your total labour earnings per day
             </p>
           </div>
 
           <div>
-            <label className="text-pm-body mb-1.5 block text-sm font-medium">
+            <label className="text-on-surface mb-1.5 block text-sm font-medium">
               Target daily earnings
             </label>
             <div className="relative inline-flex items-center">
-              <span className="text-pm-secondary absolute left-3 text-sm">
+              <span className="text-on-surface-variant absolute left-3 text-sm">
                 $
               </span>
               <NumericInput
@@ -819,26 +878,26 @@ function DayRateTab({
                     });
                   }
                 }}
-                className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
               />
-              <span className="text-pm-secondary ml-1.5 text-xs">/day</span>
+              <span className="text-on-surface-variant ml-1.5 text-xs">/day</span>
             </div>
-            <p className="text-pm-secondary mt-1 text-xs">
+            <p className="text-on-surface-variant mt-1 text-xs">
               Used in the internal profitability review after a quote is saved.
             </p>
           </div>
         </div>
 
         {/* Material cost method */}
-        <div className="border-pm-border border-t pt-4">
-          <label className="text-pm-body mb-2 block text-sm font-medium">
+        <div className="border-outline border-t pt-4">
+          <label className="text-on-surface mb-2 block text-sm font-medium">
             Material cost calculation
           </label>
           <div className="flex items-center gap-4">
             {(['percentage', 'flat'] as MaterialCostMethod[]).map((method) => (
               <label
                 key={method}
-                className="text-pm-body flex cursor-pointer items-center gap-2 text-sm"
+                className="text-on-surface flex cursor-pointer items-center gap-2 text-sm"
               >
                 <input
                   type="radio"
@@ -846,7 +905,7 @@ function DayRateTab({
                   value={method}
                   checked={pricing.material_cost_method === method}
                   onChange={() => onChange({ material_cost_method: method })}
-                  className="accent-pm-teal"
+                  className="accent-primary"
                 />
                 {method === 'percentage'
                   ? '% of labour cost'
@@ -871,15 +930,16 @@ function DayRateTab({
                     onChange({ material_cost_percent: nextValue });
                   }
                 }}
-                className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-20 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
+                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-20 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
               />
-              <span className="text-pm-secondary text-sm">
+              <span className="text-on-surface-variant text-sm">
                 % of labour cost
               </span>
             </div>
           )}
         </div>
       </div>
+      </section>
     </div>
   );
 }
@@ -916,9 +976,9 @@ function RoomPresetForm({
   }
 
   return (
-    <div className="border-pm-teal/40 bg-pm-teal-pale/10 flex flex-wrap items-end gap-3 rounded-2xl border p-4">
+    <div className="border-primary/40 bg-primary/5 flex flex-wrap items-end gap-3 rounded-2xl border p-4">
       <div className="min-w-[160px] flex-1">
-        <label className="text-pm-secondary mb-1 block text-xs font-medium">
+        <label className="text-on-surface-variant mb-1 block text-xs font-medium">
           Room name
         </label>
         <input
@@ -926,11 +986,11 @@ function RoomPresetForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Master Bedroom"
-          className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+          className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:outline-none"
         />
       </div>
       <div>
-        <label className="text-pm-secondary mb-1 block text-xs font-medium">
+        <label className="text-on-surface-variant mb-1 block text-xs font-medium">
           Size (sqm)
         </label>
         <div className="relative inline-flex items-center">
@@ -940,23 +1000,23 @@ function RoomPresetForm({
             sanitize={sanitizeDecimalInput}
             onValueChange={setSqm}
             placeholder="20"
-            className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-24 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
+            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-24 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
           />
-          <span className="text-pm-secondary ml-1.5 text-xs">sqm</span>
+          <span className="text-on-surface-variant ml-1.5 text-xs">sqm</span>
         </div>
       </div>
       <div>
-        <label className="text-pm-secondary mb-1 block text-xs font-medium">
+        <label className="text-on-surface-variant mb-1 block text-xs font-medium">
           Flat rate
         </label>
         <div className="relative inline-flex items-center">
-          <span className="text-pm-secondary absolute left-3 text-sm">$</span>
+          <span className="text-on-surface-variant absolute left-3 text-sm">$</span>
           <NumericInput
             value={rate}
             sanitize={sanitizeDecimalInput}
             onValueChange={setRate}
             placeholder="450"
-            className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-28 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-28 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
           />
         </div>
       </div>
@@ -964,14 +1024,14 @@ function RoomPresetForm({
         <button
           type="button"
           onClick={handleSave}
-          className="bg-pm-teal hover:bg-pm-teal-hover inline-flex h-9 items-center rounded-xl px-4 text-sm font-semibold text-white"
+          className="bg-primary hover:bg-primary/90 inline-flex h-9 items-center rounded-xl px-4 text-sm font-semibold text-white"
         >
           {submitLabel}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="border-pm-border text-pm-body hover:bg-pm-surface inline-flex h-9 items-center rounded-xl border bg-white px-4 text-sm font-medium"
+          className="border-outline text-on-surface hover:bg-surface-container-low inline-flex h-9 items-center rounded-xl border bg-white px-4 text-sm font-medium"
         >
           Cancel
         </button>
@@ -999,28 +1059,36 @@ function RoomRateTab({
   const presets = rates.room_rate_presets;
 
   return (
+    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <SectionHeading
+          title="Room Rate Presets"
+          subtitle="Flat-rate per room — select when creating quotes to quickly price by room."
+        />
+        <div className="flex shrink-0 items-center gap-2">
+          {!isAdding && (
+            <AddRateItemButton label="Add Room Preset" onClick={() => setIsAdding(true)} />
+          )}
+        </div>
+      </header>
     <div className="space-y-4">
-      <SectionHeading
-        title="Room Rate Presets"
-        subtitle="Define your standard room rates. Select them when creating quotes to quickly price by room."
-      />
 
       {/* Preset list */}
       {presets.length > 0 && (
-        <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
+        <div className="border-outline-variant overflow-x-auto rounded-xl border">
           <table className="w-full min-w-[480px] text-sm">
             <thead>
-              <tr className="border-pm-border bg-pm-surface border-b">
-                <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
+              <tr className="border-outline-variant bg-surface-container-low border-b">
+                <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
                   Room
                 </th>
-                <th className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase">
+                <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
                   Size
                 </th>
-                <th className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase">
+                <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
                   Flat Rate
                 </th>
-                <th className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase">
+                <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
                   $/sqm
                 </th>
                 <th className="px-4 py-3" />
@@ -1049,18 +1117,18 @@ function RoomRateTab({
                 ) : (
                   <tr
                     key={preset.id}
-                    className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                    className={i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/40'}
                   >
-                    <td className="text-pm-body px-4 py-3 font-medium">
+                    <td className="text-on-surface px-4 py-3 font-medium">
                       {preset.title}
                     </td>
-                    <td className="text-pm-secondary px-4 py-3 text-center">
+                    <td className="text-on-surface-variant px-4 py-3 text-center">
                       {preset.sqm} sqm
                     </td>
-                    <td className="text-pm-body px-4 py-3 text-center font-medium">
+                    <td className="text-on-surface px-4 py-3 text-center font-medium">
                       ${(preset.rate_cents / 100).toFixed(2)}
                     </td>
-                    <td className="text-pm-secondary px-4 py-3 text-center text-xs">
+                    <td className="text-on-surface-variant px-4 py-3 text-center text-xs">
                       {preset.sqm > 0
                         ? `$${(preset.rate_cents / preset.sqm / 100).toFixed(2)}`
                         : '—'}
@@ -1073,14 +1141,14 @@ function RoomRateTab({
                             setEditingId(preset.id);
                             setIsAdding(false);
                           }}
-                          className="border-pm-border text-pm-body hover:bg-pm-surface rounded-lg border bg-white px-3 py-1.5 text-xs font-medium"
+                          className="border-outline text-on-surface hover:bg-surface-container-low rounded-lg border bg-white px-3 py-1.5 text-xs font-medium"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => onDelete(preset.id)}
-                          className="border-pm-coral/30 text-pm-coral hover:bg-pm-coral-light inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-medium"
+                          className="border-error/30 text-error hover:bg-error-container inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-medium"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete
@@ -1097,11 +1165,11 @@ function RoomRateTab({
 
       {/* Empty state */}
       {presets.length === 0 && !isAdding && (
-        <div className="border-pm-border rounded-2xl border bg-white p-8 text-center">
-          <p className="text-pm-body text-sm font-medium">
+        <div className="border-outline rounded-2xl border bg-white p-8 text-center">
+          <p className="text-on-surface text-sm font-medium">
             No room presets yet
           </p>
-          <p className="text-pm-secondary mt-1 text-xs">
+          <p className="text-on-surface-variant mt-1 text-xs">
             Add your standard rooms to quickly price jobs by room rate.
           </p>
         </div>
@@ -1120,21 +1188,8 @@ function RoomRateTab({
         />
       )}
 
-      {/* Add button */}
-      {!isAdding && (
-        <button
-          type="button"
-          onClick={() => {
-            setIsAdding(true);
-            setEditingId(null);
-          }}
-          className="border-pm-teal/50 text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10 inline-flex h-10 items-center gap-2 rounded-xl border border-dashed bg-white px-4 text-sm font-medium"
-        >
-          <Plus className="h-4 w-4" />
-          Add Room
-        </button>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
 
@@ -1142,21 +1197,187 @@ function RoomRateTab({
 
 function ManualTab() {
   return (
-    <div className="space-y-4">
-      <SectionHeading
-        title="Manual Pricing"
-        subtitle="Enter labour and material costs directly when creating a quote."
-      />
-      <div className="border-pm-border rounded-2xl border bg-white p-6 text-center">
-        <p className="text-pm-body text-sm font-medium">
-          No preset rates needed
+    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <header className="mb-5">
+        <SectionHeading
+          title="Manual Quoting"
+          subtitle="No default rates. You'll enter line items and prices by hand on each quote — useful for one-offs, commercial work, or jobs that don't fit a template."
+        />
+      </header>
+      <div className="border-outline-variant rounded-xl border border-dashed bg-surface-container-low/40 p-10 text-center">
+        <p className="text-on-surface text-sm font-semibold">
+          Nothing to configure here.
         </p>
-        <p className="text-pm-secondary mt-1 text-xs">
-          With manual pricing, you enter the exact labour and material costs for
-          each job. No default rates are required.
+        <p className="text-on-surface-variant mt-1.5 text-xs">
+          Manual quotes draw from your Material / Service catalogue at quote-time.
         </p>
       </div>
-    </div>
+    </section>
+  );
+}
+
+// ─── Detailed Estimate advanced room item library ────────────────────────────
+
+function AdvancedRoomItemsSection({
+  items,
+  onAdd,
+  onUpdate,
+  onDelete,
+}: {
+  items: AdvancedEstimateRoomItem[];
+  onAdd: () => void;
+  onUpdate: (id: string, patch: Partial<AdvancedEstimateRoomItem>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const sortedItems = [...items].sort((a, b) => a.sort_order - b.sort_order);
+
+  return (
+    <section className="space-y-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <SectionHeading
+          title="Advanced Room Items"
+          subtitle="Create reusable room presets for New Quote advanced detailed estimates. Quotes copy these values when added."
+        />
+        <AddRateItemButton label="Add Advanced Room Item" onClick={onAdd} />
+      </div>
+
+      {sortedItems.length === 0 ? (
+        <div className="border-outline bg-surface-container-low/50 rounded-2xl border border-dashed p-6 text-center sm:p-8">
+          <div className="mx-auto max-w-md space-y-3">
+            <h4 className="text-on-surface text-base font-semibold">
+              No advanced room items yet
+            </h4>
+            <p className="text-on-surface-variant text-sm leading-6">
+              Add reusable rooms such as Bedroom repaint, Bathroom ceiling, or
+              Feature wall. They appear in New Quote Advanced mode.
+            </p>
+            <AddRateItemButton label="Add Advanced Room Item" onClick={onAdd} />
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {sortedItems.map((item) => (
+            <div
+              key={item.id}
+              className="border-outline rounded-2xl border bg-white p-4 shadow-sm sm:p-5"
+            >
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_140px_52px] lg:items-end">
+                <div className="space-y-2">
+                  <label
+                    htmlFor={'advanced-room-item-' + item.id}
+                    className="text-on-surface-variant text-sm font-medium"
+                  >
+                    Item name
+                  </label>
+                  <input
+                    id={'advanced-room-item-' + item.id}
+                    value={item.label}
+                    onChange={(event) =>
+                      onUpdate(item.id, { label: event.target.value })
+                    }
+                    onBlur={() =>
+                      onUpdate(item.id, {
+                        label: item.label.trim() || 'Advanced room item',
+                      })
+                    }
+                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-base font-medium focus:ring-2 focus:outline-none"
+                    aria-label={'Advanced room item name for ' + item.label}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor={'advanced-room-anchor-' + item.id}
+                    className="text-on-surface-variant text-sm font-medium"
+                  >
+                    Anchor
+                  </label>
+                  <select
+                    id={'advanced-room-anchor-' + item.id}
+                    value={item.anchor_room_type}
+                    onChange={(event) =>
+                      onUpdate(item.id, {
+                        anchor_room_type: event.target.value,
+                      })
+                    }
+                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                  >
+                    {INTERIOR_ROOM_TYPES.map((roomType) => (
+                      <option key={roomType} value={roomType}>
+                        {roomType}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor={'advanced-room-height-' + item.id}
+                    className="text-on-surface-variant text-sm font-medium"
+                  >
+                    Height
+                  </label>
+                  <NumericInput
+                    id={'advanced-room-height-' + item.id}
+                    inputMode="decimal"
+                    value={String(item.default_height_m)}
+                    sanitize={sanitizeDecimalInput}
+                    onValueChange={(value) => {
+                      const height = Number(value);
+                      if (Number.isFinite(height) && height > 0) {
+                        onUpdate(item.id, { default_height_m: height });
+                      }
+                    }}
+                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                    aria-label={'Default height for ' + item.label}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  aria-label={'Delete ' + item.label + ' advanced room item'}
+                  onClick={() => onDelete(item.id)}
+                  className="border-error/30 text-error hover:bg-error-container inline-flex h-12 w-full items-center justify-center rounded-xl border bg-white lg:w-12"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="ml-2 text-base font-medium lg:sr-only">
+                    Delete
+                  </span>
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-medium text-on-surface-variant">
+                  Default surfaces
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { key: 'include_walls', label: 'Walls' },
+                      { key: 'include_ceiling', label: 'Ceiling' },
+                      { key: 'include_trim', label: 'Trim' },
+                    ] as const
+                  ).map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => onUpdate(item.id, { [key]: !item[key] })}
+                      className={`min-h-11 rounded-full border px-4 text-sm font-medium ${
+                        item[key]
+                          ? 'border-primary bg-primary text-white'
+                          : 'border-outline bg-white text-on-surface'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1169,67 +1390,184 @@ function DetailedEstimateAnchorsTab({
   rates: UserRateSettings;
   onChange: (anchors: UserRateSettings['detailed_estimate_anchors']) => void;
 }) {
-  const rooms = Object.entries(rates.detailed_estimate_anchors.interior_rooms);
+  const anchors = rates.detailed_estimate_anchors.interior_rooms;
+  const rooms = Object.entries(anchors);
+  const [roomNameDrafts, setRoomNameDrafts] = useState<
+    Partial<Record<string, string>>
+  >({});
+
+  function updateAnchors(interiorRooms: typeof anchors) {
+    onChange({
+      ...rates.detailed_estimate_anchors,
+      interior_rooms: interiorRooms,
+    });
+  }
+
+  function makeUniqueRoomName(baseName: string) {
+    if (!anchors[baseName]) return baseName;
+
+    let index = 2;
+    while (anchors[baseName + ' ' + index]) index += 1;
+    return baseName + ' ' + index;
+  }
+
+  function clearRoomNameDraft(roomName: string) {
+    setRoomNameDrafts((current) => {
+      const next = { ...current };
+      delete next[roomName];
+      return next;
+    });
+  }
+
+  function commitRoomName(currentRoom: string) {
+    const nextRoom = (roomNameDrafts[currentRoom] ?? currentRoom).trim();
+
+    if (!nextRoom || nextRoom === currentRoom) {
+      clearRoomNameDraft(currentRoom);
+      return;
+    }
+
+    if (anchors[nextRoom]) return;
+
+    updateAnchors(
+      Object.fromEntries(
+        rooms.map(([room, range]) => [
+          room === currentRoom ? nextRoom : room,
+          range,
+        ])
+      )
+    );
+    clearRoomNameDraft(currentRoom);
+  }
+
+  function updateRoomMedian(room: string, value: string) {
+    const dollars = value.trim() === '' ? 0 : Number(value);
+    if (!Number.isFinite(dollars) || dollars < 0) return;
+
+    const median = Math.round(dollars * 100);
+    updateAnchors({
+      ...anchors,
+      [room]: {
+        min: Math.round(median * 0.85),
+        median,
+        max: Math.round(median * 1.15),
+      },
+    });
+  }
+
+  function addRoomAnchor() {
+    const room = makeUniqueRoomName('New Room');
+    updateAnchors({
+      ...anchors,
+      [room]: { min: 0, median: 0, max: 0 },
+    });
+    setRoomNameDrafts((current) => ({ ...current, [room]: room }));
+  }
+
+  function deleteRoomAnchor(roomToDelete: string) {
+    updateAnchors(
+      Object.fromEntries(rooms.filter(([room]) => room !== roomToDelete))
+    );
+  }
 
   return (
     <section className="space-y-4">
-      <SectionHeading
-        title="Detailed Estimate Anchors"
-        subtitle="Set the base room prices used by Detailed Estimate. Room flat rate presets stay separate."
-      />
-      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
-        <table className="w-full min-w-[420px] text-sm">
-          <thead>
-            <tr className="border-pm-border bg-pm-surface border-b">
-              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
-                Room
-              </th>
-              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
-                Base price
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rooms.map(([room, range]) => (
-              <tr
-                key={room}
-                className="border-pm-border border-b last:border-0"
-              >
-                <td className="text-pm-body px-4 py-3 font-medium">{room}</td>
-                <td className="px-4 py-3 text-right">
-                  <div className="relative inline-flex items-center">
-                    <span className="text-pm-secondary absolute left-3 text-sm">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <SectionHeading
+          title="Detailed Estimate Anchors"
+          subtitle="Set the base room prices used by Detailed Estimate. Room flat rate presets stay separate."
+        />
+        <AddRateItemButton label="Add Room Anchor" onClick={addRoomAnchor} />
+      </div>
+
+      {rooms.length === 0 ? (
+        <div className="border-outline bg-surface-container-low/50 rounded-2xl border border-dashed p-6 text-center sm:p-8">
+          <div className="mx-auto max-w-md space-y-3">
+            <h4 className="text-on-surface text-base font-semibold">
+              No room anchors yet
+            </h4>
+            <p className="text-on-surface-variant text-sm leading-6">
+              Add a room anchor to set default detailed estimate pricing for
+              bedrooms, kitchens, or custom work areas.
+            </p>
+            <AddRateItemButton label="Add Room Anchor" onClick={addRoomAnchor} />
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {rooms.map(([room, range]) => (
+            <div
+              key={room}
+              className="border-outline rounded-2xl border bg-white p-4 shadow-sm transition-colors hover:border-primary/50 sm:p-5"
+            >
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_52px] lg:items-end">
+                <div className="space-y-2">
+                  <label
+                    htmlFor={'room-anchor-' + room}
+                    className="text-on-surface-variant text-sm font-medium"
+                  >
+                    Room anchor
+                  </label>
+                  <input
+                    id={'room-anchor-' + room}
+                    value={roomNameDrafts[room] ?? room}
+                    onChange={(event) =>
+                      setRoomNameDrafts((current) => ({
+                        ...current,
+                        [room]: event.target.value,
+                      }))
+                    }
+                    onBlur={() => commitRoomName(room)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        commitRoomName(room);
+                      }
+                    }}
+                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-base font-medium focus:ring-2 focus:outline-none"
+                    aria-label={'Room anchor name for ' + room}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor={'room-anchor-price-' + room}
+                    className="text-on-surface-variant text-sm font-medium"
+                  >
+                    Base price
+                  </label>
+                  <div className="relative">
+                    <span className="text-on-surface-variant pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-base font-semibold">
                       $
                     </span>
                     <NumericInput
+                      id={'room-anchor-price-' + room}
                       inputMode="numeric"
                       value={Math.round(range.median / 100).toString()}
                       sanitize={sanitizeIntegerInput}
-                      onValueChange={(value) => {
-                        const dollars = value.trim() === '' ? 0 : Number(value);
-                        if (!Number.isFinite(dollars) || dollars < 0) return;
-                        const median = Math.max(0, Math.round(dollars * 100));
-                        onChange({
-                          ...rates.detailed_estimate_anchors,
-                          interior_rooms: {
-                            ...rates.detailed_estimate_anchors.interior_rooms,
-                            [room]: {
-                              min: Math.round(median * 0.85),
-                              median,
-                              max: Math.round(median * 1.15),
-                            },
-                          },
-                        });
-                      }}
-                      className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-10 w-28 rounded-lg border bg-white py-2 pr-3 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                      onValueChange={(value) => updateRoomMedian(room, value)}
+                      className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white py-2 pr-3 pl-8 text-base font-semibold tabular-nums focus:ring-2 focus:outline-none"
+                      aria-label={'Base price for ' + room}
                     />
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label={'Delete ' + room + ' room anchor'}
+                  onClick={() => deleteRoomAnchor(room)}
+                  className="border-error/30 text-error hover:bg-error-container inline-flex h-12 w-full items-center justify-center rounded-xl border bg-white lg:w-12"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="ml-2 text-base font-medium lg:sr-only">
+                    Delete
+                  </span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -1287,25 +1625,25 @@ function ExteriorRatesSection({
         />
         <AddRateItemButton label="Add Custom Surface" onClick={onCustomAdd} />
       </div>
-      <div className="border-pm-border overflow-x-auto rounded-2xl border bg-white">
+      <div className="border-outline-variant overflow-x-auto rounded-xl border">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
-            <tr className="border-pm-border bg-pm-surface border-b">
-              <th className="text-pm-secondary px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase">
+            <tr className="border-outline-variant bg-surface-container-low border-b">
+              <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
                 Surface
               </th>
-              <th className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase">
+              <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
                 Unit
               </th>
               {EXTERIOR_COATING_TYPES.map((c) => (
                 <th
                   key={c}
-                  className="text-pm-secondary px-4 py-3 text-center text-xs font-semibold tracking-wide uppercase"
+                  className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase"
                 >
                   {EXTERIOR_COATING_LABELS[c]}
                 </th>
               ))}
-              <th className="text-pm-secondary px-4 py-3 text-right text-xs font-semibold tracking-wide uppercase">
+              <th className="text-on-surface-variant px-4 py-2.5 text-right text-[10px] font-bold tracking-[0.12em] uppercase">
                 Actions
               </th>
             </tr>
@@ -1316,12 +1654,12 @@ function ExteriorRatesSection({
               return (
                 <tr
                   key={surface}
-                  className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}
+                  className={i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/40'}
                 >
-                  <td className="text-pm-body px-4 py-3 font-medium">
+                  <td className="text-on-surface px-4 py-3 font-medium">
                     {EXTERIOR_SURFACE_LABELS[surface]}
                   </td>
-                  <td className="text-pm-secondary px-4 py-3 text-center text-xs">
+                  <td className="text-on-surface-variant px-4 py-3 text-center text-xs">
                     {EXTERIOR_SURFACE_UNITS[surface]}
                   </td>
                   {EXTERIOR_COATING_TYPES.map((coating) => (
@@ -1336,6 +1674,8 @@ function ExteriorRatesSection({
                         <RateValueDisplay
                           value={rates[surface][coating]}
                           unit={EXTERIOR_SURFACE_UNITS[surface]}
+                          onClick={() => onSurfaceEditToggle(surface)}
+                          ariaLabel={`Edit ${EXTERIOR_SURFACE_LABELS[surface]} ${EXTERIOR_COATING_LABELS[coating]} rate`}
                         />
                       )}
                     </td>
@@ -1359,10 +1699,10 @@ function ExteriorRatesSection({
                   className={
                     (visibleSurfaces.length + index) % 2 === 0
                       ? 'bg-white'
-                      : 'bg-pm-surface/40'
+                      : 'bg-surface-container-low/40'
                   }
                 >
-                  <td className="text-pm-body px-4 py-3 font-medium">
+                  <td className="text-on-surface px-4 py-3 font-medium">
                     {isEditing ? (
                       <input
                         value={surface.label}
@@ -1372,15 +1712,15 @@ function ExteriorRatesSection({
                           })
                         }
                         placeholder="Surface name"
-                        className="border-pm-border text-pm-body focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 h-11 w-full min-w-40 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                        className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full min-w-40 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                       />
                     ) : (
                       surface.label
                     )}
                   </td>
-                  <td className="text-pm-secondary px-4 py-3 text-center text-xs">
+                  <td className="text-on-surface-variant px-4 py-3 text-center text-xs">
                     {isEditing ? (
-                      <div className="border-pm-border bg-pm-surface inline-flex rounded-xl border p-1">
+                      <div className="border-outline bg-surface-container-low inline-flex rounded-xl border p-1">
                         {EXTERIOR_RATE_UNITS.map((unit) => (
                           <button
                             key={unit}
@@ -1388,8 +1728,8 @@ function ExteriorRatesSection({
                             onClick={() => onCustomUpdate(surface.id, { unit })}
                             className={`h-9 rounded-lg px-3 text-xs font-medium ${
                               surface.unit === unit
-                                ? 'text-pm-teal bg-white shadow-sm'
-                                : 'text-pm-secondary hover:text-pm-body'
+                                ? 'text-primary bg-white shadow-sm'
+                                : 'text-on-surface-variant hover:text-on-surface'
                             }`}
                           >
                             {unit}
@@ -1420,6 +1760,8 @@ function ExteriorRatesSection({
                         <RateValueDisplay
                           value={surface.rates[coating]}
                           unit={surface.unit}
+                          onClick={() => onCustomEditToggle(surface.id)}
+                          ariaLabel={`Edit ${surface.label} ${EXTERIOR_COATING_LABELS[coating]} rate`}
                         />
                       )}
                     </td>
@@ -1439,7 +1781,7 @@ function ExteriorRatesSection({
               <tr>
                 <td
                   colSpan={6}
-                  className="text-pm-secondary px-4 py-8 text-center text-sm"
+                  className="text-on-surface-variant px-4 py-8 text-center text-sm"
                 >
                   No exterior surface rates are active. Add a custom surface or
                   restore a standard one.
@@ -1456,7 +1798,7 @@ function ExteriorRatesSection({
               key={surface}
               type="button"
               onClick={() => onSurfaceToggle(surface, true)}
-              className="border-pm-teal/50 text-pm-teal hover:border-pm-teal hover:bg-pm-teal-pale/10 inline-flex h-10 items-center gap-1.5 rounded-xl border border-dashed bg-white px-3 text-xs font-medium"
+              className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-10 items-center gap-1.5 rounded-xl border border-dashed bg-white px-3 text-xs font-medium"
             >
               <Plus className="h-3.5 w-3.5" />
               Restore {EXTERIOR_SURFACE_LABELS[surface]}
@@ -1524,12 +1866,16 @@ function ExteriorTab({
 
 // ─── Method tab icons ─────────────────────────────────────────────────────────
 
-/** Pricing methods shown in the settings UI. sqm_rate is normalized to hybrid. */
-const DISPLAY_PRICING_METHODS = PRICING_METHODS.filter(
-  (m) => m !== 'sqm_rate'
-) as Exclude<PricingMethod, 'sqm_rate'>[];
+/** Pricing methods shown in the settings UI. sqm_rate and room_rate hidden. */
+const DISPLAY_PRICING_METHODS: Exclude<PricingMethod, 'sqm_rate' | 'room_rate'>[] = [
+  'detailed_quick',
+  'hybrid',
+  'day_rate',
+  'manual',
+];
 
 const METHOD_ICONS: Record<PricingMethod, typeof PencilRuler> = {
+  detailed_quick: Zap,
   hybrid: PencilRuler,
   sqm_rate: PencilRuler,
   day_rate: CalendarDays,
@@ -1538,7 +1884,8 @@ const METHOD_ICONS: Record<PricingMethod, typeof PencilRuler> = {
 };
 
 const METHOD_DESCRIPTIONS: Record<PricingMethod, string> = {
-  hybrid: 'Detailed estimate anchors and rates',
+  detailed_quick: 'Pick rooms, sizes & scope. ~30 sec',
+  hybrid: 'Measure walls in sqm. ~5 min',
   sqm_rate: 'Detailed estimate anchors and rates',
   day_rate: 'Labour days × daily rate',
   room_rate: 'Flat rate per room',
@@ -1687,6 +2034,71 @@ export function PriceRatesForm({
         : prev.enabled_window_types.filter((t) => t !== type),
     }));
     if (!enabled) clearRateItemEditing(`window:${type}`);
+  }
+
+  // ── Quick estimate handler ───────────────────────────────────────────────────
+  function handleQuickEstimateChange(quick_estimate: QuickEstimateSettings) {
+    setSaved(false);
+    setRates((prev) => ({ ...prev, quick_estimate }));
+  }
+
+  // ── Advanced detailed estimate room library handlers ───────────────────────
+  function handleAdvancedRoomItemAdd() {
+    const item: AdvancedEstimateRoomItem = {
+      id: createClientId('advanced-room'),
+      version: 1,
+      label: 'New advanced room',
+      anchor_room_type: 'Living Room',
+      include_walls: true,
+      include_ceiling: true,
+      include_trim: false,
+      default_height_m: 2.7,
+      sort_order: rates.detailed_estimate_items.advanced_rooms.length,
+    };
+
+    setSaved(false);
+    setRates((prev) => ({
+      ...prev,
+      detailed_estimate_items: {
+        ...prev.detailed_estimate_items,
+        advanced_rooms: [
+          ...prev.detailed_estimate_items.advanced_rooms,
+          item,
+        ],
+      },
+    }));
+  }
+
+  function handleAdvancedRoomItemUpdate(
+    id: string,
+    patch: Partial<AdvancedEstimateRoomItem>
+  ) {
+    setSaved(false);
+    setRates((prev) => ({
+      ...prev,
+      detailed_estimate_items: {
+        ...prev.detailed_estimate_items,
+        advanced_rooms: prev.detailed_estimate_items.advanced_rooms.map(
+          (item) =>
+            item.id === id
+              ? { ...item, ...patch, version: (item.version ?? 1) + 1 }
+              : item
+        ),
+      },
+    }));
+  }
+
+  function handleAdvancedRoomItemDelete(id: string) {
+    setSaved(false);
+    setRates((prev) => ({
+      ...prev,
+      detailed_estimate_items: {
+        ...prev.detailed_estimate_items,
+        advanced_rooms: prev.detailed_estimate_items.advanced_rooms.filter(
+          (item) => item.id !== id
+        ),
+      },
+    }));
   }
 
   // ── Room rate preset handlers (auto-save to DB) ──────────────────────────────
@@ -1863,7 +2275,7 @@ export function PriceRatesForm({
   }
 
   // ── Submit ───────────────────────────────────────────────────────────────────
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const nextRates: UserRateSettings = {
       ...rates,
@@ -1878,80 +2290,87 @@ export function PriceRatesForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* ── Method tabs ─────────────────────────────────────────────────────── */}
-      <div className="border-pm-border rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Settings2 className="text-pm-teal h-4 w-4" />
-          <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
-            Preferred Pricing Method
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {DISPLAY_PRICING_METHODS.map((m) => {
-            const isActive = activeTab === m;
-            const MethodIcon = METHOD_ICONS[m];
-            return (
-              <button
-                key={m}
-                type="button"
-                onClick={() => handleTabChange(m)}
-                className={`flex min-h-28 flex-col items-start gap-2 rounded-2xl border px-4 py-3 text-left transition-colors ${
+      {/* ── Method nav ──────────────────────────────────────────────────────── */}
+      <div
+        className="method-nav-grid grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4"
+        role="tablist"
+        aria-label="Pricing method"
+      >
+        {DISPLAY_PRICING_METHODS.map((m) => {
+          const isActive = activeTab === m;
+          const MethodIcon = METHOD_ICONS[m];
+          const isPreferred = m === 'hybrid';
+          return (
+            <button
+              key={m}
+              role="tab"
+              aria-selected={isActive}
+              type="button"
+              onClick={() => handleTabChange(m)}
+              className={`relative flex items-start gap-2.5 rounded-xl border px-3 py-3 text-left transition-all duration-150 sm:gap-3 sm:px-4 ${
+                isActive
+                  ? 'border-on-surface bg-on-surface text-white shadow-sm'
+                  : 'border-outline-variant bg-white hover:border-outline hover:-translate-y-px'
+              }`}
+            >
+              <span
+                className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
                   isActive
-                    ? 'border-pm-teal bg-pm-teal-light/60 shadow-sm'
-                    : 'border-pm-border hover:border-pm-teal-mid hover:bg-pm-teal-pale/10 bg-white'
+                    ? 'border-white/20 bg-white/10 text-white'
+                    : 'border-outline-variant bg-surface-container text-on-surface-variant'
                 }`}
               >
+                <MethodIcon className="h-4 w-4" />
+              </span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <span className={`text-sm font-bold leading-snug ${isActive ? 'text-white' : 'text-on-surface'}`}>
+                    {PRICING_METHOD_LABELS[m]}
+                  </span>
+                  {isPreferred && (
+                    <span
+                      className={`rounded-full px-1.5 py-px text-[9px] font-extrabold tracking-wider uppercase ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-primary/10 text-primary'
+                      }`}
+                    >
+                      Preferred
+                    </span>
+                  )}
+                  {isActive && !isPreferred && (
+                    <span className="rounded-full bg-white/20 px-1.5 py-px text-[9px] font-extrabold tracking-wider text-white uppercase">
+                      Default
+                    </span>
+                  )}
+                </span>
                 <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                    isActive
-                      ? 'bg-pm-teal text-white'
-                      : 'bg-pm-surface text-pm-secondary'
+                  className={`hidden text-xs leading-snug sm:block ${
+                    isActive ? 'text-white/70' : 'text-on-surface-variant'
                   }`}
                 >
-                  <MethodIcon className="h-5 w-5" />
-                </span>
-                <span
-                  className={`text-sm font-semibold ${isActive ? 'text-pm-teal' : 'text-pm-body'}`}
-                >
-                  {PRICING_METHOD_LABELS[m]}
-                </span>
-                <span className="text-pm-secondary text-xs">
                   {METHOD_DESCRIPTIONS[m]}
                 </span>
-                {isActive && (
-                  <span className="bg-pm-teal mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-widest text-white uppercase">
-                    Default
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      <section className="border-pm-border bg-pm-surface/45 rounded-2xl border p-4">
-        <h3 className="text-pm-body text-sm font-semibold">
-          How These Settings Apply
-        </h3>
-        <div className="text-pm-secondary mt-3 grid gap-3 text-sm sm:grid-cols-2">
-          <p>
-            Detailed Estimate, day rate, and room rate settings control the
-            defaults used when starting new quotes.
-          </p>
-          <p>
-            Saved door and window rates now flow into the quick and detailed
-            estimate engine. Surface sqm rates are used as a multiplier on the
-            anchor-based estimate.
-          </p>
-        </div>
-      </section>
+      {/* ── Quick Estimate ───────────────────────────────────────────────────── */}
+      {activeTab === 'detailed_quick' && (
+        <QuickEstimateTab
+          settings={rates.quick_estimate}
+          onChange={handleQuickEstimateChange}
+        />
+      )}
 
       {/* ── Day Rate: no scope distinction ──────────────────────────────────── */}
       {activeTab === 'day_rate' && (
         <DayRateTab pricing={rates.pricing} onChange={handlePricingChange} />
       )}
 
-      {/* ── Room Rate: interior only ─────────────────────────────────────────── */}
+      {/* ── Room Rate: interior only (legacy, hidden from tab bar) ───────────── */}
       {activeTab === 'room_rate' && (
         <RoomRateTab
           rates={rates}
@@ -1967,33 +2386,47 @@ export function PriceRatesForm({
       {/* ── Detailed Estimate: Interior / Exterior scope toggle ─────────────── */}
       {activeTab === 'hybrid' && (
         <>
-          <div>
-            <p className="text-pm-secondary mb-3 text-xs font-semibold tracking-wide uppercase">
-              Job Scope
-            </p>
-            <div className="border-pm-border bg-pm-surface inline-flex gap-1 rounded-xl border p-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <div
+              className="border-outline-variant bg-surface-container-low inline-flex gap-0.5 rounded-xl border p-0.5"
+              role="tablist"
+              aria-label="Job scope"
+            >
               {(['interior', 'exterior'] as const).map((scope) => {
                 const isActive = activeScope === scope;
+                const Icon = scope === 'interior' ? Home : Trees;
                 return (
                   <button
                     key={scope}
+                    role="tab"
+                    aria-selected={isActive}
                     type="button"
                     onClick={() => setActiveScope(scope)}
-                    className={`rounded-lg px-5 py-2 text-sm font-semibold transition-colors ${
+                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
                       isActive
-                        ? 'text-pm-teal bg-white shadow-sm'
-                        : 'text-pm-secondary hover:text-pm-body'
+                        ? 'bg-white text-on-surface shadow-sm'
+                        : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
+                    <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-primary' : ''}`} />
                     {scope === 'interior' ? 'Interior' : 'Exterior'}
                   </button>
                 );
               })}
             </div>
+            <p className="text-on-surface-variant text-xs">
+              Rates pre-fill on every quote — you can tweak per-job.
+            </p>
           </div>
 
           {activeScope === 'interior' && (
             <div className="space-y-10">
+              <AdvancedRoomItemsSection
+                items={rates.detailed_estimate_items.advanced_rooms}
+                onAdd={handleAdvancedRoomItemAdd}
+                onUpdate={handleAdvancedRoomItemUpdate}
+                onDelete={handleAdvancedRoomItemDelete}
+              />
               <DetailedEstimateAnchorsTab
                 rates={rates}
                 onChange={handleDetailedEstimateAnchorsChange}
@@ -2067,27 +2500,31 @@ export function PriceRatesForm({
         </>
       )}
 
-      {/* ── Status messages ─────────────────────────────────────────────────── */}
-      {error && (
-        <p className="border-pm-coral bg-pm-coral-light text-pm-coral-dark rounded-xl border px-4 py-3 text-sm">
-          {error}
-        </p>
-      )}
-      {saved && (
-        <p className="border-pm-teal bg-pm-teal-pale/20 text-pm-teal rounded-xl border px-4 py-3 text-sm">
-          Rates saved successfully.
-        </p>
-      )}
-
       {/* ── Sticky save bar ─────────────────────────────────────────────────── */}
-      <div className="border-pm-border sticky bottom-4 flex items-center justify-between rounded-2xl border bg-white/90 px-5 py-3 shadow-sm backdrop-blur-sm">
-        <p className="text-pm-secondary text-xs">
-          Selecting a tab sets your default pricing method for new quotes.
-        </p>
+      <div className="border-outline-variant sticky bottom-4 z-10 flex items-center justify-between gap-4 rounded-2xl border bg-white/92 px-5 py-3.5 shadow-md backdrop-blur-sm">
+        <div className="flex items-center gap-2 text-xs">
+          {error && (
+            <span className="text-error flex items-center gap-1.5">
+              <span className="bg-error h-1.5 w-1.5 rounded-full" />
+              {error}
+            </span>
+          )}
+          {saved && !error && (
+            <span className="text-primary flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5" />
+              Rates saved
+            </span>
+          )}
+          {!saved && !error && (
+            <span className="text-on-surface-variant">
+              Changes save when you click Save Rates.
+            </span>
+          )}
+        </div>
         <button
           type="submit"
           disabled={isPending}
-          className="bg-pm-teal hover:bg-pm-teal-hover ml-4 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
+          className="bg-on-surface hover:bg-on-surface/90 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           {isPending ? 'Saving…' : 'Save Rates'}

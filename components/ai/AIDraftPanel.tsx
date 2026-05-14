@@ -30,17 +30,20 @@ export function AIDraftPanel({
   canApply,
 }: AIDraftPanelProps) {
   return (
-    <section className="mb-6 rounded-2xl border border-pm-teal-light bg-gradient-to-br from-pm-teal-light to-white p-4">
+    <section className="mb-6 rounded-2xl border border-primary-container/40 bg-gradient-to-br from-primary-container/30 to-surface p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-pm-teal-hover">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
             AI Draft
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-pm-body">
+          <h2 className="mt-1 text-lg font-semibold text-on-surface">
             Describe the {entityLabel.toLowerCase()} in plain English
           </h2>
-          <p className="mt-1 text-sm text-pm-secondary">
+          <p className="mt-1 text-sm text-on-surface-variant">
             AI prepares a structured draft only. You still review the form before saving.
+          </p>
+          <p className="mt-2 rounded-xl border border-primary-container/40 bg-surface-container-lowest/80 px-3 py-2 text-xs text-on-surface-variant">
+            AI may use business, customer, and job context to draft this form. Check all details before applying or saving.
           </p>
         </div>
       </div>
@@ -51,7 +54,7 @@ export function AIDraftPanel({
           onChange={(event) => onPromptChange(event.target.value)}
           rows={4}
           placeholder={placeholder}
-          className="w-full rounded-xl border border-pm-teal-light bg-white px-4 py-3 text-base text-pm-body placeholder:text-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+          className="w-full rounded-xl border border-primary-container/50 bg-surface-container-lowest px-4 py-3 text-base text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
       </div>
 
@@ -61,7 +64,7 @@ export function AIDraftPanel({
             key={example}
             type="button"
             onClick={() => onPromptChange(example)}
-            className="rounded-full border border-pm-teal-light bg-white px-3 py-1.5 text-xs font-medium text-pm-teal-hover transition-colors hover:bg-pm-teal-light"
+            className="min-h-9 rounded-full border border-primary-container/50 bg-surface-container-lowest px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary-container/30 active:bg-primary-container/50"
           >
             {example}
           </button>
@@ -69,8 +72,8 @@ export function AIDraftPanel({
       </div>
 
       {(summary || warnings.length > 0 || error) && (
-        <div className="mt-4 rounded-xl border border-pm-border bg-white px-4 py-3">
-          {summary && <p className="text-sm font-medium text-pm-body">{summary}</p>}
+        <div className="mt-4 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3">
+          {summary && <p className="text-sm font-medium text-on-surface">{summary}</p>}
           {warnings.length > 0 && (
             <ul className="mt-2 space-y-1 text-sm text-amber-700">
               {warnings.map((warning) => (
@@ -78,16 +81,16 @@ export function AIDraftPanel({
               ))}
             </ul>
           )}
-          {error && <p className="mt-2 text-sm text-pm-coral-dark">{error}</p>}
+          {error && <p className="mt-2 text-sm text-error">{error}</p>}
         </div>
       )}
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
         <button
           type="button"
           onClick={onGenerate}
           disabled={pending || !prompt.trim()}
-          className="flex-1 rounded-xl bg-pm-teal px-4 py-3 text-sm font-semibold text-white transition-colors active:bg-pm-teal-hover disabled:opacity-50"
+          className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? 'Generating…' : 'Generate Draft'}
         </button>
@@ -95,7 +98,7 @@ export function AIDraftPanel({
           type="button"
           onClick={onApply}
           disabled={!canApply || pending}
-          className="flex-1 rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-medium text-pm-body transition-colors active:bg-pm-surface disabled:opacity-50"
+          className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-outline-variant bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high active:bg-outline-variant disabled:cursor-not-allowed disabled:opacity-50"
         >
           Apply to Form
         </button>

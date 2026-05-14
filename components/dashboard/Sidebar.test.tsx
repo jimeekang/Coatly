@@ -24,11 +24,10 @@ describe('DashboardSidebar', () => {
     const links = within(bottomNavigation).getAllByRole('link');
 
     expect(links.map((link) => link.textContent)).toEqual([
-      'Dashboard',
+      'Home',
       'Schedule',
       'Quotes',
       'Invoices',
-      'Customers',
       'Settings',
     ]);
     expect(within(bottomNavigation).getByRole('link', { name: /Schedule/i })).toHaveAttribute(

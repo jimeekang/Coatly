@@ -209,29 +209,31 @@ export function QuoteCreateScreen({
           <p className="mt-1 text-xs text-on-surface-variant">
             Reuse the rooms, margins, and line items next time.
           </p>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               type="text"
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder="Template name (e.g. 2-bed interior standard)"
-              className="h-12 flex-1 rounded-lg border border-outline-variant px-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="min-h-11 flex-1 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
-            <button
-              type="button"
-              onClick={handleSaveTemplate}
-              disabled={isSavingTemplate || !templateName.trim()}
-              className="h-12 rounded-lg bg-primary px-4 text-sm font-medium text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"
-            >
-              {isSavingTemplate ? 'Saving…' : 'Save Template'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPendingSavePayload(null)}
-              className="h-12 rounded-lg border border-outline-variant px-4 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container"
-            >
-              Skip
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleSaveTemplate}
+                disabled={isSavingTemplate || !templateName.trim()}
+                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-5"
+              >
+                {isSavingTemplate ? 'Saving…' : 'Save Template'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingSavePayload(null)}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high active:bg-outline-variant sm:px-5"
+              >
+                Skip
+              </button>
+            </div>
           </div>
           {saveTemplateError && (
             <p className="mt-2 text-xs text-error">{saveTemplateError}</p>

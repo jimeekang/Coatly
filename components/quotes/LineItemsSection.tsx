@@ -65,7 +65,7 @@ function QuantityInput({
           onChange(nextQuantity);
         }
       }}
-      className="h-9 w-20 rounded-lg border border-pm-border bg-white px-2 text-center text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none"
+      className="h-9 w-20 rounded-lg border border-outline-variant bg-white px-2 text-center text-sm text-on-surface focus:border-primary focus:outline-none"
       aria-label={`${entry.name} quantity`}
     />
   );
@@ -107,15 +107,15 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
 
   return (
     <>
-      <section className="rounded-2xl border border-pm-border bg-white p-4">
+      <section className="rounded-2xl border border-outline-variant bg-white p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
             Materials &amp; Services
           </h3>
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-pm-teal px-3 py-2 text-xs font-semibold text-white"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Item
@@ -126,7 +126,7 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="mt-4 flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-pm-border py-6 text-pm-secondary hover:border-pm-teal-mid hover:text-pm-teal"
+            className="mt-4 flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant py-6 text-on-surface-variant hover:border-primary hover:text-primary"
           >
             <ShoppingBag className="h-7 w-7" strokeWidth={1.5} />
             <span className="text-sm font-medium">Add paints, supplies, and services</span>
@@ -136,33 +136,33 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
             {entries.map((entry, index) => (
               <div
                 key={entry._key}
-                className="rounded-xl border border-pm-border bg-pm-surface/40 px-3 py-3"
+                className="rounded-xl border border-outline-variant bg-surface-container/40 px-3 py-3"
               >
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-pm-body">{entry.name}</p>
-                    <p className="mt-0.5 text-xs text-pm-secondary">
+                    <p className="truncate text-sm font-medium text-on-surface">{entry.name}</p>
+                    <p className="mt-0.5 text-xs text-on-surface-variant">
                       {formatAUD(entry.unit_price_cents)} / {entry.unit}
                     </p>
                     {entry.notes && (
-                      <p className="mt-1 text-xs text-pm-secondary">{entry.notes}</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">{entry.notes}</p>
                     )}
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemove(index)}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-pm-secondary hover:bg-pm-coral-light hover:text-pm-coral-dark"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error"
                     aria-label={`Remove ${entry.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2 border-t border-pm-border/70 pt-3">
+                <div className="mt-3 flex items-center gap-2 border-t border-outline-variant/70 pt-3">
                   <label className="sr-only">Quantity</label>
                   <QuantityInput entry={entry} onChange={(quantity) => handleQtyChange(index, quantity)} />
-                  <span className="text-xs text-pm-secondary">{entry.unit}</span>
-                  <span className="ml-2 text-sm font-semibold text-pm-body">
+                  <span className="text-xs text-on-surface-variant">{entry.unit}</span>
+                  <span className="ml-2 text-sm font-semibold text-on-surface">
                     {formatAUD(entry.total_cents)}
                   </span>
                 </div>
@@ -170,18 +170,18 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
             ))}
 
             {/* Subtotal */}
-            <div className="mt-1 rounded-xl bg-pm-teal-pale/20 px-4 py-3">
+            <div className="mt-1 rounded-xl bg-primary/15 px-4 py-3">
               <div className="flex justify-between text-sm">
-                <span className="text-pm-secondary">Items subtotal (ex GST)</span>
-                <span className="font-semibold text-pm-body">{formatAUD(subtotal)}</span>
+                <span className="text-on-surface-variant">Items subtotal (ex GST)</span>
+                <span className="font-semibold text-on-surface">{formatAUD(subtotal)}</span>
               </div>
               <div className="flex justify-between text-xs mt-1">
-                <span className="text-pm-secondary">GST (10%)</span>
-                <span className="text-pm-secondary">{formatAUD(gst)}</span>
+                <span className="text-on-surface-variant">GST (10%)</span>
+                <span className="text-on-surface-variant">{formatAUD(gst)}</span>
               </div>
-              <div className="flex justify-between text-sm mt-1.5 border-t border-pm-teal/20 pt-1.5">
-                <span className="font-semibold text-pm-body">Items total (inc GST)</span>
-                <span className="font-bold text-pm-teal">{formatAUD(subtotal + gst)}</span>
+              <div className="flex justify-between text-sm mt-1.5 border-t border-primary/20 pt-1.5">
+                <span className="font-semibold text-on-surface">Items total (inc GST)</span>
+                <span className="font-bold text-primary">{formatAUD(subtotal + gst)}</span>
               </div>
             </div>
           </div>

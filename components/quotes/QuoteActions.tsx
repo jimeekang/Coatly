@@ -184,7 +184,7 @@ export function QuoteActions({
             type="button"
             onClick={handleConvertToJob}
             disabled={anyPending}
-            className="border-pm-border text-pm-body hover:bg-pm-surface inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border bg-white px-5 text-sm font-semibold transition-colors disabled:opacity-50"
+            className="border-outline-variant text-on-surface hover:bg-surface-container inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border bg-white px-5 text-sm font-semibold transition-colors disabled:opacity-50"
           >
             {jobPending ? (
               <>
@@ -438,9 +438,9 @@ function DeleteModal({
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </div>
-        <h2 className="text-pm-body text-lg font-bold">Delete Quote?</h2>
-        <p className="text-pm-secondary mt-1.5 text-sm">
-          <span className="text-pm-body font-semibold">{quoteNumber}</span> will
+        <h2 className="text-on-surface text-lg font-bold">Delete Quote?</h2>
+        <p className="text-on-surface-variant mt-1.5 text-sm">
+          <span className="text-on-surface font-semibold">{quoteNumber}</span> will
           be permanently deleted. This cannot be undone.
         </p>
         {error && (
@@ -467,7 +467,7 @@ function DeleteModal({
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="border-pm-border bg-pm-surface text-pm-body hover:bg-pm-border inline-flex min-h-12 w-full items-center justify-center rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60"
+            className="border-outline-variant bg-surface-container text-on-surface hover:bg-outline-variant inline-flex min-h-12 w-full items-center justify-center rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60"
           >
             Cancel
           </button>

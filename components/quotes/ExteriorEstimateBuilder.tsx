@@ -63,7 +63,7 @@ export function buildExteriorEstimatePayload(state: ExteriorEstimateFormState) {
   };
 }
 
-const LABEL = 'mb-1.5 block text-sm font-medium text-pm-body';
+const LABEL = 'mb-1.5 block text-sm font-medium text-on-surface';
 
 function rateUnitToQuantityUnit(unit: string) {
   return unit.replace(/^\//, '');
@@ -146,7 +146,7 @@ export function ExteriorEstimateBuilder({
   const visibleRowCount = visibleSurfaces.length + visibleCustomSurfaces.length;
 
   return (
-    <section className="space-y-4 rounded-2xl border border-pm-border bg-white p-4">
+    <section className="space-y-4 rounded-2xl border border-outline-variant bg-white p-4">
       {/* Coating type */}
       <div>
         <label className={LABEL}>Coating System</label>
@@ -159,8 +159,8 @@ export function ExteriorEstimateBuilder({
               aria-pressed={value.coating === coating}
               className={`min-h-11 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                 value.coating === coating
-                  ? 'border-pm-teal bg-pm-teal text-white'
-                  : 'border-pm-border bg-white text-pm-body hover:border-pm-teal-mid'
+                  ? 'border-primary bg-primary text-white'
+                  : 'border-outline-variant bg-white text-on-surface hover:border-primary'
               }`}
             >
               {EXTERIOR_COATING_LABELS[coating]}
@@ -172,20 +172,20 @@ export function ExteriorEstimateBuilder({
       {/* Surface quantities */}
       <div className="space-y-3">
         <p className={LABEL}>Surface Quantities</p>
-        <div className="overflow-x-auto rounded-xl border border-pm-border">
+        <div className="overflow-x-auto rounded-xl border border-outline-variant">
           <table className="w-full min-w-[480px] text-sm">
             <thead>
-              <tr className="border-b border-pm-border bg-pm-surface">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+              <tr className="border-b border-outline-variant bg-surface-container">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                   Surface
                 </th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                <th className="px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                   Qty
                 </th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                <th className="px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                   Rate
                 </th>
-                <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-pm-secondary">
+                <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                   Total
                 </th>
                 <th className="w-20 px-2 py-2.5" />
@@ -194,7 +194,7 @@ export function ExteriorEstimateBuilder({
             <tbody>
               {visibleRowCount === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-pm-secondary">
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-on-surface-variant">
                     No surfaces — restore one below.
                   </td>
                 </tr>
@@ -210,8 +210,8 @@ export function ExteriorEstimateBuilder({
                   const isEditing = editingLabel === surface;
 
                   return (
-                    <tr key={surface} className={i % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
-                      <td className="px-4 py-2.5 font-medium text-pm-body">
+                    <tr key={surface} className={i % 2 === 0 ? 'bg-white' : 'bg-surface-container/40'}>
+                      <td className="px-4 py-2.5 font-medium text-on-surface">
                         {isEditing ? (
                           <input
                             autoFocus
@@ -222,7 +222,7 @@ export function ExteriorEstimateBuilder({
                               if (e.key === 'Enter') commitEdit(surface);
                               if (e.key === 'Escape') setEditingLabel(null);
                             }}
-                            className="w-full rounded-lg border border-pm-teal-mid bg-white px-2 py-1 text-sm text-pm-body focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                            className="w-full rounded-lg border border-primary bg-white px-2 py-1 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         ) : (
                           <span>{displayLabel}</span>
@@ -241,15 +241,15 @@ export function ExteriorEstimateBuilder({
                               })
                             }
                             placeholder="0"
-                            className="w-24 rounded-lg border border-pm-border bg-white py-2 px-3 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                            className="w-24 rounded-lg border border-outline-variant bg-white py-2 px-3 text-right text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
-                          <span className="text-xs text-pm-secondary">{unit}</span>
+                          <span className="text-xs text-on-surface-variant">{unit}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-center text-xs text-pm-secondary">
+                      <td className="px-4 py-2.5 text-center text-xs text-on-surface-variant">
                         {formatAUD(rate)}/{unit}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-pm-body">
+                      <td className="px-4 py-2.5 text-right font-medium text-on-surface">
                         {lineTotal > 0 ? formatAUD(lineTotal) : '—'}
                       </td>
                       <td className="px-2 py-2 text-center">
@@ -257,7 +257,7 @@ export function ExteriorEstimateBuilder({
                           <button
                             type="button"
                             onClick={() => startEdit(surface)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-pm-border bg-white text-pm-secondary hover:border-pm-teal-mid hover:text-pm-teal transition-colors"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-outline-variant bg-white text-on-surface-variant hover:border-primary hover:text-primary transition-colors"
                             title="Edit name"
                           >
                             <Pencil size={13} />
@@ -265,7 +265,7 @@ export function ExteriorEstimateBuilder({
                           <button
                             type="button"
                             onClick={() => deleteSurface(surface)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-pm-border bg-white text-pm-secondary hover:border-pm-coral/50 hover:text-pm-coral transition-colors"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-outline-variant bg-white text-on-surface-variant hover:border-error/50 hover:text-error transition-colors"
                             title="Remove surface"
                           >
                             <Trash2 size={13} />
@@ -283,8 +283,8 @@ export function ExteriorEstimateBuilder({
                   const lineTotal = Number.isFinite(qty) && qty > 0 ? Math.round(qty * rate) : 0;
 
                   return (
-                    <tr key={surface.id} className={(visibleSurfaces.length + index) % 2 === 0 ? 'bg-white' : 'bg-pm-surface/40'}>
-                      <td className="px-4 py-2.5 font-medium text-pm-body">
+                    <tr key={surface.id} className={(visibleSurfaces.length + index) % 2 === 0 ? 'bg-white' : 'bg-surface-container/40'}>
+                      <td className="px-4 py-2.5 font-medium text-on-surface">
                         {surface.label}
                       </td>
                       <td className="px-4 py-2 text-center">
@@ -300,22 +300,22 @@ export function ExteriorEstimateBuilder({
                               })
                             }
                             placeholder="0"
-                            className="w-24 rounded-lg border border-pm-border bg-white py-2 px-3 text-right text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+                            className="w-24 rounded-lg border border-outline-variant bg-white py-2 px-3 text-right text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
-                          <span className="text-xs text-pm-secondary">{unit}</span>
+                          <span className="text-xs text-on-surface-variant">{unit}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-center text-xs text-pm-secondary">
+                      <td className="px-4 py-2.5 text-center text-xs text-on-surface-variant">
                         {formatAUD(rate)}/{unit}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-pm-body">
+                      <td className="px-4 py-2.5 text-right font-medium text-on-surface">
                         {lineTotal > 0 ? formatAUD(lineTotal) : '—'}
                       </td>
                       <td className="px-2 py-2 text-center">
                         <button
                           type="button"
                           onClick={() => deleteCustomSurface(surface.id)}
-                          className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg border border-pm-border bg-white text-pm-secondary hover:border-pm-coral/50 hover:text-pm-coral transition-colors"
+                          className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg border border-outline-variant bg-white text-on-surface-variant hover:border-error/50 hover:text-error transition-colors"
                           title="Remove surface"
                         >
                           <Trash2 size={13} />
@@ -333,15 +333,15 @@ export function ExteriorEstimateBuilder({
 
       {/* Restore hidden surfaces */}
       {(hiddenSurfaces.length > 0 || hiddenCustomSurfaces.length > 0) && (
-        <div className="rounded-xl border border-dashed border-pm-border p-3">
-          <p className="mb-2 text-xs font-medium text-pm-secondary">Removed — tap to restore</p>
+        <div className="rounded-xl border border-dashed border-outline-variant p-3">
+          <p className="mb-2 text-xs font-medium text-on-surface-variant">Removed — tap to restore</p>
           <div className="flex flex-wrap gap-2">
             {hiddenSurfaces.map((surface) => (
               <button
                 key={surface}
                 type="button"
                 onClick={() => restoreSurface(surface)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-pm-border bg-white px-3 py-1.5 text-xs font-medium text-pm-secondary hover:border-pm-teal hover:text-pm-teal transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-white px-3 py-1.5 text-xs font-medium text-on-surface-variant hover:border-primary hover:text-primary transition-colors"
               >
                 <RotateCcw size={11} />
                 {value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface]}
@@ -352,7 +352,7 @@ export function ExteriorEstimateBuilder({
                 key={surface.id}
                 type="button"
                 onClick={() => restoreCustomSurface(surface.id)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-pm-border bg-white px-3 py-1.5 text-xs font-medium text-pm-secondary hover:border-pm-teal hover:text-pm-teal transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-white px-3 py-1.5 text-xs font-medium text-on-surface-variant hover:border-primary hover:text-primary transition-colors"
               >
                 <RotateCcw size={11} />
                 {surface.label}
@@ -364,7 +364,7 @@ export function ExteriorEstimateBuilder({
 
       {/* Live total */}
       {preview.subtotal_cents > 0 && (
-        <div className="rounded-xl bg-pm-teal-pale/20 px-4 py-3 text-sm text-pm-teal">
+        <div className="rounded-xl bg-primary/15 px-4 py-3 text-sm text-primary">
           Exterior estimate: {formatAUD(preview.subtotal_cents)} ex-GST
           &nbsp;·&nbsp;
           {formatAUD(preview.total_cents)} inc-GST

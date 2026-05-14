@@ -2,7 +2,6 @@ import { PAINT_RATES } from '@/config/paint-rates';
 import { z } from 'zod';
 import {
   buildDefaultDetailedEstimateAnchors,
-  DETAILED_ESTIMATE_INTERIOR_ROOM_KEYS,
   type DetailedEstimateAnchors,
 } from '@/lib/detailed-estimate-anchors';
 import type { PricingMethod } from '@/types/quote';
@@ -191,6 +190,53 @@ export type RoomRatePreset = {
   rate_cents: number;
 };
 
+// ─── Quick Estimate types ─────────────────────────────────────────────────────
+
+export type QuickEstimateRoom = {
+  id: string;
+  version?: number;
+  label: string;
+  enabled_surfaces: ('walls' | 'ceiling' | 'trim')[];
+  sizes: {
+    small: { walls_cents: number; ceiling_cents: number; trim_cents: number };
+    medium: { walls_cents: number; ceiling_cents: number; trim_cents: number };
+    large: { walls_cents: number; ceiling_cents: number; trim_cents: number };
+  };
+  sort_order: number;
+};
+
+export type QuickEstimateSettings = {
+  rooms: QuickEstimateRoom[];
+  coating_multipliers: {
+    one_coat_refresh_pct: number;
+    two_coats_repaint_pct: number;
+    three_coats_new_plaster_pct: number;
+  };
+  condition_multipliers: {
+    good_pct: number;
+    average_pct: number;
+    poor_pct: number;
+  };
+};
+
+// ─── Detailed Estimate item library types ────────────────────────────────────
+
+export type AdvancedEstimateRoomItem = {
+  id: string;
+  version?: number;
+  label: string;
+  anchor_room_type: string;
+  include_walls: boolean;
+  include_ceiling: boolean;
+  include_trim: boolean;
+  default_height_m: number;
+  sort_order: number;
+};
+
+export type DetailedEstimateItemsSettings = {
+  advanced_rooms: AdvancedEstimateRoomItem[];
+};
+
 // ─── Pricing Method Settings ──────────────────────────────────────────────────
 
 export const PRICING_METHODS = [
@@ -199,6 +245,7 @@ export const PRICING_METHODS = [
   'room_rate',
   'manual',
   'hybrid',
+  'detailed_quick',
 ] as const;
 
 export const PRICING_METHOD_LABELS: Record<PricingMethod, string> = {
@@ -207,6 +254,7 @@ export const PRICING_METHOD_LABELS: Record<PricingMethod, string> = {
   room_rate: 'Room Rate',
   manual: 'Manual',
   hybrid: 'Detailed Estimate',
+  detailed_quick: 'Quick Estimate',
 };
 
 // ─── Exterior rate types ──────────────────────────────────────────────────────
@@ -310,8 +358,10 @@ export type UserRateSettings = {
   custom_exterior_surfaces: CustomExteriorSurfaceRate[];
   room_rate_presets: RoomRatePreset[];
   detailed_estimate_anchors: DetailedEstimateAnchors;
+  detailed_estimate_items: DetailedEstimateItemsSettings;
   pricing: PricingMethodSettings;
   exterior: ExteriorRateSettings;
+  quick_estimate: QuickEstimateSettings;
 };
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
@@ -366,7 +416,7 @@ const windowUnitRatesSchema = z.object({
 
 const pricingMethodSettingsSchema = z.object({
   preferred_pricing_method: z
-    .enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid'])
+    .enum(['day_rate', 'sqm_rate', 'room_rate', 'manual', 'hybrid', 'detailed_quick'])
     .optional(),
   daily_rate_cents: z.number().int().min(0).optional(),
   material_cost_method: z.enum(['percentage', 'flat']).optional(),
@@ -411,6 +461,55 @@ const detailedEstimateAnchorsSchema = z.object({
   interior_rooms: z.record(z.string(), detailedEstimateAnchorRangeSchema),
 });
 
+const advancedEstimateRoomItemSchema = z.object({
+  id: z.string().min(1),
+  version: z.number().int().min(1).optional(),
+  label: z.string().trim().min(1),
+  anchor_room_type: z.string().trim().min(1),
+  include_walls: z.boolean(),
+  include_ceiling: z.boolean(),
+  include_trim: z.boolean(),
+  default_height_m: z.number().positive(),
+  sort_order: z.number().int().min(0),
+});
+
+const detailedEstimateItemsSchema = z.object({
+  advanced_rooms: z.array(advancedEstimateRoomItemSchema),
+});
+
+const quickEstimateSurfacePriceSchema = z.object({
+  walls_cents: z.number().int().min(0),
+  ceiling_cents: z.number().int().min(0),
+  trim_cents: z.number().int().min(0),
+});
+
+const quickEstimateRoomSchema = z.object({
+  id: z.string().min(1),
+  version: z.number().int().min(1).optional(),
+  label: z.string().trim().min(1),
+  enabled_surfaces: z.array(z.enum(['walls', 'ceiling', 'trim'])),
+  sizes: z.object({
+    small: quickEstimateSurfacePriceSchema,
+    medium: quickEstimateSurfacePriceSchema,
+    large: quickEstimateSurfacePriceSchema,
+  }),
+  sort_order: z.number().int().min(0),
+});
+
+const quickEstimateSchema = z.object({
+  rooms: z.array(quickEstimateRoomSchema),
+  coating_multipliers: z.object({
+    one_coat_refresh_pct: z.number().min(0),
+    two_coats_repaint_pct: z.number().min(0),
+    three_coats_new_plaster_pct: z.number().min(0),
+  }),
+  condition_multipliers: z.object({
+    good_pct: z.number().min(0),
+    average_pct: z.number().min(0),
+    poor_pct: z.number().min(0),
+  }),
+});
+
 export const ratePresetSchema = z.object({
   walls: ratePresetSurfaceSchema,
   ceiling: ratePresetSurfaceSchema,
@@ -427,8 +526,10 @@ export const ratePresetSchema = z.object({
   custom_exterior_surfaces: z.array(customExteriorSurfaceRateSchema).optional(),
   room_rate_presets: z.array(roomRatePresetSchema).optional(),
   detailed_estimate_anchors: detailedEstimateAnchorsSchema.optional(),
+  detailed_estimate_items: detailedEstimateItemsSchema.optional(),
   pricing: pricingMethodSettingsSchema.optional(),
   exterior: exteriorRateSettingsSchema.optional(),
+  quick_estimate: quickEstimateSchema.optional(),
 });
 
 const partialRatePresetSchema = z
@@ -450,8 +551,10 @@ const partialRatePresetSchema = z
       .optional(),
     room_rate_presets: z.array(roomRatePresetSchema).optional(),
     detailed_estimate_anchors: detailedEstimateAnchorsSchema.optional(),
+    detailed_estimate_items: detailedEstimateItemsSchema.optional(),
     pricing: pricingMethodSettingsSchema.optional(),
     exterior: exteriorRateSettingsSchema.optional(),
+    quick_estimate: quickEstimateSchema.optional(),
   })
   .partial();
 
@@ -474,6 +577,51 @@ export const SQM_SURFACE_TYPE_LABELS: Record<SqmSurfaceType, string> = {
 
 // ─── Build defaults ───────────────────────────────────────────────────────────
 
+export const DEFAULT_QUICK_ROOM_LABELS = [
+  'Master Bedroom (with ensuite)',
+  'Master Bedroom (without ensuite)',
+  'Bedroom',
+  'Bathroom',
+  'Living Room',
+  'Kitchen',
+  'Hallway',
+  'Dining Room',
+  'Study',
+  'Laundry',
+] as const;
+
+const EMPTY_SURFACE_PRICE = { walls_cents: 0, ceiling_cents: 0, trim_cents: 0 };
+
+export function buildDefaultQuickEstimateSettings(): QuickEstimateSettings {
+  return {
+    rooms: DEFAULT_QUICK_ROOM_LABELS.map((label, i) => ({
+      id: `default-${i}`,
+      label,
+      enabled_surfaces: ['walls', 'ceiling', 'trim'],
+      sizes: {
+        small: { ...EMPTY_SURFACE_PRICE },
+        medium: { ...EMPTY_SURFACE_PRICE },
+        large: { ...EMPTY_SURFACE_PRICE },
+      },
+      sort_order: i,
+    })),
+    coating_multipliers: {
+      one_coat_refresh_pct: 70,
+      two_coats_repaint_pct: 100,
+      three_coats_new_plaster_pct: 140,
+    },
+    condition_multipliers: {
+      good_pct: 90,
+      average_pct: 100,
+      poor_pct: 130,
+    },
+  };
+}
+
+export function buildDefaultDetailedEstimateItemsSettings(): DetailedEstimateItemsSettings {
+  return { advanced_rooms: [] };
+}
+
 export function buildDefaultRateSettings(): UserRateSettings {
   const settings = {} as UserRateSettings;
   for (const surface of SURFACE_TYPES) {
@@ -492,8 +640,11 @@ export function buildDefaultRateSettings(): UserRateSettings {
   settings.custom_exterior_surfaces = [];
   settings.room_rate_presets = [];
   settings.detailed_estimate_anchors = buildDefaultDetailedEstimateAnchors();
+  settings.detailed_estimate_items =
+    buildDefaultDetailedEstimateItemsSettings();
   settings.pricing = { ...DEFAULT_PRICING_METHOD_SETTINGS };
   settings.exterior = buildDefaultExteriorRates();
+  settings.quick_estimate = buildDefaultQuickEstimateSettings();
   return settings;
 }
 
@@ -600,12 +751,22 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
   }
 
   if (parsed.data.detailed_estimate_anchors?.interior_rooms) {
-    for (const room of DETAILED_ESTIMATE_INTERIOR_ROOM_KEYS) {
-      const range = parsed.data.detailed_estimate_anchors.interior_rooms[room];
-      if (range) {
-        result.detailed_estimate_anchors.interior_rooms[room] = range;
-      }
-    }
+    result.detailed_estimate_anchors = {
+      interior_rooms: {
+        ...parsed.data.detailed_estimate_anchors.interior_rooms,
+      },
+    };
+  }
+
+  if (parsed.data.detailed_estimate_items?.advanced_rooms) {
+    result.detailed_estimate_items = {
+      advanced_rooms: parsed.data.detailed_estimate_items.advanced_rooms.map(
+        (item) => ({
+          ...item,
+          version: item.version ?? 1,
+        })
+      ),
+    };
   }
 
   // Pricing method settings
@@ -640,7 +801,76 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
     }
   }
 
+  // Quick estimate settings — stored in DB; if missing, hydrate from room_rate_presets
+  if (parsed.data.quick_estimate) {
+    result.quick_estimate = parsed.data.quick_estimate as QuickEstimateSettings;
+  } else {
+    result.quick_estimate = hydrateQuickEstimate(result.room_rate_presets);
+  }
+
   return result;
+}
+
+// ─── Quick estimate hydration helpers ────────────────────────────────────────
+
+/** Split a flat room rate into walls/ceiling/trim: 50% / 25% / 25% */
+export function splitToSurfaces(total_cents: number): {
+  walls_cents: number;
+  ceiling_cents: number;
+  trim_cents: number;
+} {
+  const walls_cents = Math.round(total_cents * 0.5);
+  const ceiling_cents = Math.round(total_cents * 0.25);
+  const trim_cents = total_cents - walls_cents - ceiling_cents;
+  return { walls_cents, ceiling_cents, trim_cents };
+}
+
+/**
+ * Build QuickEstimateSettings from existing room_rate_presets (runtime hydration).
+ * If presets exist, seeds from them; otherwise uses default template rooms with $0 prices.
+ * This is only called when quick_estimate is absent from the DB JSON.
+ */
+export function hydrateQuickEstimate(
+  roomRatePresets: RoomRatePreset[]
+): QuickEstimateSettings {
+  const rooms: QuickEstimateRoom[] =
+    roomRatePresets.length > 0
+      ? roomRatePresets.map((preset, i) => ({
+          id: `hydrated-${preset.id}`,
+          label: preset.title,
+          enabled_surfaces: ['walls', 'ceiling', 'trim'],
+          sizes: {
+            small: splitToSurfaces(Math.round(preset.rate_cents * 0.8)),
+            medium: splitToSurfaces(preset.rate_cents),
+            large: splitToSurfaces(Math.round(preset.rate_cents * 1.25)),
+          },
+          sort_order: i,
+        }))
+      : DEFAULT_QUICK_ROOM_LABELS.map((label, i) => ({
+          id: `default-${i}`,
+          label,
+          enabled_surfaces: ['walls', 'ceiling', 'trim'],
+          sizes: {
+            small: { walls_cents: 0, ceiling_cents: 0, trim_cents: 0 },
+            medium: { walls_cents: 0, ceiling_cents: 0, trim_cents: 0 },
+            large: { walls_cents: 0, ceiling_cents: 0, trim_cents: 0 },
+          },
+          sort_order: i,
+        }));
+
+  return {
+    rooms,
+    coating_multipliers: {
+      one_coat_refresh_pct: 70,
+      two_coats_repaint_pct: 100,
+      three_coats_new_plaster_pct: 140,
+    },
+    condition_multipliers: {
+      good_pct: 90,
+      average_pct: 100,
+      poor_pct: 130,
+    },
+  };
 }
 
 // ─── Lookup helpers ───────────────────────────────────────────────────────────

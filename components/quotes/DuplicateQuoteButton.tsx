@@ -73,7 +73,7 @@ export function DuplicateQuoteButton({ quoteId, variant = 'full' }: Props) {
       type="button"
       onClick={handleDuplicate}
       disabled={isPending}
-      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-pm-border bg-white px-4 py-3 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface active:bg-pm-surface disabled:opacity-60"
+      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-outline-variant bg-white px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container active:bg-surface-container disabled:opacity-60"
     >
       {isPending ? (
         <>

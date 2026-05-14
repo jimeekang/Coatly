@@ -1,12 +1,17 @@
 ---
 name: test-writer
+owner: codex
 description: >
-  컴포넌트/함수/API route를 받아서 Vitest + Testing Library 테스트를 자동 작성하고 실행.
+  컴포넌트/함수/API route를 받아서 Vitest + Testing Library 단위/통합 테스트를 자동 작성하고 실행.
   "테스트 짜줘", "테스트 커버리지 추가해줘", "이 함수 테스트해줘",
   "테스트 실패하는데 고쳐줘" 요청에 반드시 이 skill을 사용할 것.
+  (Coatly 라우팅: 기능 테스트는 Codex 담당. 브라우저 QA / 시각 회귀는 Claude Code의 gstack-qa / gstack-design-review 사용)
 ---
 
-# Test Writer Skill
+# Test Writer Skill (Codex)
+
+> Codex 전용. 단위/통합/회귀 테스트 작성·실행. 브라우저 기반 시각 QA는 Claude Code 영역.
+> 라우팅 표 → [`../../../AGENTS.md`](../../../AGENTS.md)
 
 ## 작업 순서 (agent loop)
 

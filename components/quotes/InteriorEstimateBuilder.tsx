@@ -37,12 +37,21 @@ import {
 } from '@/lib/interior-estimates';
 import type { UserRateSettings } from '@/lib/rate-settings';
 
-const FIELD = 'h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-base text-pm-body';
-const LABEL = 'mb-1.5 block text-sm font-medium text-pm-body';
+const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface';
+const LABEL = 'mb-1.5 block text-sm font-medium text-on-surface';
 type RoomRef = '' | `${number}`;
+const INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION = 1;
 
-function inferAnchorRoomType(name: string): InteriorRoomType {
+function inferAnchorRoomType(
+  name: string,
+  rateSettings?: UserRateSettings | null
+): InteriorRoomType {
   const normalized = name.trim().toLowerCase();
+  const customAnchor = Object.keys(
+    rateSettings?.detailed_estimate_anchors?.interior_rooms ?? {}
+  ).find((roomType) => roomType.toLowerCase() === normalized);
+  if (customAnchor) return customAnchor;
+
   const matched = INTERIOR_ROOM_TYPES.find(
     (roomType) => roomType.toLowerCase() === normalized
   );
@@ -60,6 +69,10 @@ export type InteriorEstimateRoomFormState = {
   include_trim: boolean;
   include_doors: boolean;
   include_windows: boolean;
+  source_rate_item_id?: string;
+  source_rate_item_version?: number;
+  source_rate_item_label?: string;
+  rate_snapshot_version?: 1;
 };
 export type InteriorDoorFormState = {
   door_type: InteriorDoorType;
@@ -167,6 +180,47 @@ export function InteriorEstimateBuilder({
     setValue('rooms', value.rooms.map((room, roomIndex) => (roomIndex === index ? { ...room, ...patch } : room)));
   }
 
+  function isEmptyPlaceholderRoom(room: InteriorEstimateRoomFormState) {
+    return (
+      room.name.trim() === '' &&
+      room.length_m.trim() === '' &&
+      room.width_m.trim() === '' &&
+      room.height_m.trim() === '2.7' &&
+      room.include_walls &&
+      room.include_ceiling &&
+      !room.include_trim &&
+      !room.include_doors &&
+      !room.include_windows
+    );
+  }
+
+  function createRoomFromLibraryItem(
+    item: NonNullable<UserRateSettings['detailed_estimate_items']>['advanced_rooms'][number]
+  ): InteriorEstimateRoomFormState {
+    return {
+      ...createEmptyInteriorRoom(),
+      name: item.label,
+      anchor_room_type: item.anchor_room_type,
+      height_m: String(item.default_height_m),
+      include_walls: item.include_walls,
+      include_ceiling: item.include_ceiling,
+      include_trim: item.include_trim,
+      source_rate_item_id: item.id,
+      source_rate_item_version: item.version ?? 1,
+      source_rate_item_label: item.label,
+      rate_snapshot_version: INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION,
+    };
+  }
+
+  function addRoomFromLibraryItem(
+    item: NonNullable<UserRateSettings['detailed_estimate_items']>['advanced_rooms'][number]
+  ) {
+    const room = createRoomFromLibraryItem(item);
+    const shouldReplaceOnlyRoom =
+      value.rooms.length === 1 && isEmptyPlaceholderRoom(value.rooms[0]);
+    setValue('rooms', shouldReplaceOnlyRoom ? [room] : [...value.rooms, room]);
+  }
+
   function toggleScope(scope: InteriorScope) {
     const next = value.scope.includes(scope) ? value.scope.filter((item) => item !== scope) : [...value.scope, scope];
     setValue('scope', next.length > 0 ? next : [scope]);
@@ -189,15 +243,18 @@ export function InteriorEstimateBuilder({
       ? INTERIOR_WINDOW_TYPES.filter((type) => rateSettings.enabled_window_types.includes(type))
       : [...INTERIOR_WINDOW_TYPES]
   ) as InteriorWindowType[];
+  const advancedRoomItems = [
+    ...(rateSettings?.detailed_estimate_items?.advanced_rooms ?? []),
+  ].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
-    <section className="space-y-4 rounded-2xl border border-pm-border bg-white p-4">
+    <section className="space-y-4 rounded-2xl border border-outline-variant bg-white p-4">
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className={LABEL}>Property Type</label>
-          <div className="flex rounded-xl border border-pm-border bg-pm-surface p-1">
+          <div className="flex rounded-xl border border-outline-variant bg-surface-container p-1">
             {(['apartment', 'house'] as const).map((propertyType) => (
-              <button key={propertyType} type="button" onClick={() => setValue('property_type', propertyType)} className={`min-h-11 flex-1 rounded-lg text-sm font-medium ${value.property_type === propertyType ? 'bg-pm-teal text-white' : 'text-pm-secondary'}`}>
+              <button key={propertyType} type="button" onClick={() => setValue('property_type', propertyType)} className={`min-h-11 flex-1 rounded-lg text-sm font-medium ${value.property_type === propertyType ? 'bg-primary text-white' : 'text-on-surface-variant'}`}>
                 {propertyType === 'apartment' ? 'Apartment' : 'House'}
               </button>
             ))}
@@ -205,9 +262,9 @@ export function InteriorEstimateBuilder({
         </div>
         <div>
           <label className={LABEL}>Estimate Mode</label>
-          <div className="flex rounded-xl border border-pm-border bg-pm-surface p-1">
+          <div className="flex rounded-xl border border-outline-variant bg-surface-container p-1">
             {(['specific_areas', 'entire_property'] as const).map((mode) => (
-              <button key={mode} type="button" onClick={() => setValue('estimate_mode', mode)} className={`min-h-11 flex-1 rounded-lg text-sm font-medium ${value.estimate_mode === mode ? 'bg-pm-teal text-white' : 'text-pm-secondary'}`}>
+              <button key={mode} type="button" onClick={() => setValue('estimate_mode', mode)} className={`min-h-11 flex-1 rounded-lg text-sm font-medium ${value.estimate_mode === mode ? 'bg-primary text-white' : 'text-on-surface-variant'}`}>
                 {mode === 'specific_areas' ? 'Specific Areas' : 'Entire Property'}
               </button>
             ))}
@@ -226,7 +283,7 @@ export function InteriorEstimateBuilder({
           <label className={LABEL}>Scope</label>
           <div className="flex flex-wrap gap-2">
             {INTERIOR_SCOPE_OPTIONS.map((scope) => (
-              <button key={scope} type="button" onClick={() => toggleScope(scope)} className={`min-h-11 rounded-full border px-4 text-sm font-medium ${value.scope.includes(scope) ? 'border-pm-teal bg-pm-teal text-white' : 'border-pm-border bg-white text-pm-body'}`}>
+              <button key={scope} type="button" onClick={() => toggleScope(scope)} className={`min-h-11 rounded-full border px-4 text-sm font-medium ${value.scope.includes(scope) ? 'border-primary bg-primary text-white' : 'border-outline-variant bg-white text-on-surface'}`}>
                 {scope === 'trim' ? 'Trim / Skirting' : scope.charAt(0).toUpperCase() + scope.slice(1)}
               </button>
             ))}
@@ -245,8 +302,8 @@ export function InteriorEstimateBuilder({
               aria-pressed={value.wall_paint_system === paintSystem}
               className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
                 value.wall_paint_system === paintSystem
-                  ? 'border-pm-teal bg-pm-teal text-white'
-                  : 'border-pm-border bg-white text-pm-body'
+                  ? 'border-primary bg-primary text-white'
+                  : 'border-outline-variant bg-white text-on-surface'
               }`}
             >
               {INTERIOR_WALL_PAINT_SYSTEM_LABELS[paintSystem]}
@@ -273,10 +330,26 @@ export function InteriorEstimateBuilder({
 
       {value.estimate_mode === 'specific_areas' ? (
         <>
-          <div className="space-y-3 rounded-xl border border-pm-border bg-pm-surface/45 p-4">
-            <p className="text-sm font-semibold text-pm-body">Rooms</p>
+          <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container/50 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-on-surface">Rooms</p>
+              {advancedRoomItems.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {advancedRoomItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => addRoomFromLibraryItem(item)}
+                      className="min-h-11 rounded-full border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface hover:border-primary"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {value.rooms.map((room, index) => (
-              <div key={`room-${index}`} className="space-y-3 rounded-xl border border-pm-border bg-white p-3">
+              <div key={`room-${index}`} className="space-y-3 rounded-xl border border-outline-variant bg-white p-3">
                 {/* Row 1: Room name + delete */}
                 <div className="flex items-center gap-2">
                   <input
@@ -284,7 +357,13 @@ export function InteriorEstimateBuilder({
                     value={room.name}
                     onChange={(event) => {
                       const name = event.target.value;
-                      setRoom(index, { name, anchor_room_type: inferAnchorRoomType(name) });
+                      setRoom(index, {
+                        name,
+                        anchor_room_type: inferAnchorRoomType(
+                          name,
+                          rateSettings
+                        ),
+                      });
                     }}
                     className={`${FIELD} flex-1`}
                     placeholder="e.g. Master Bedroom"
@@ -293,7 +372,7 @@ export function InteriorEstimateBuilder({
                     type="button"
                     aria-label="Remove room"
                     onClick={() => setValue('rooms', value.rooms.length === 1 ? [createEmptyInteriorRoom()] : value.rooms.filter((_, roomIndex) => roomIndex !== index))}
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-pm-border text-pm-secondary"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -302,7 +381,7 @@ export function InteriorEstimateBuilder({
                 {/* Row 2: L × W × H compact 3-col */}
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="mb-1 block text-xs text-pm-secondary">Length (m)</label>
+                    <label className="mb-1 block text-xs text-on-surface-variant">Length (m)</label>
                     <NumericInput
                       aria-label="Length (m)"
                       inputMode="decimal"
@@ -314,7 +393,7 @@ export function InteriorEstimateBuilder({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-pm-secondary">Width (m)</label>
+                    <label className="mb-1 block text-xs text-on-surface-variant">Width (m)</label>
                     <NumericInput
                       aria-label="Width (m)"
                       inputMode="decimal"
@@ -326,7 +405,7 @@ export function InteriorEstimateBuilder({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-pm-secondary">Height (m)</label>
+                    <label className="mb-1 block text-xs text-on-surface-variant">Height (m)</label>
                     <NumericInput
                       aria-label="Height (m)"
                       inputMode="decimal"
@@ -341,7 +420,7 @@ export function InteriorEstimateBuilder({
 
                 {/* Row 4: Surface type toggles */}
                 <div>
-                  <p className="mb-1.5 text-xs font-medium text-pm-secondary">Surfaces</p>
+                  <p className="mb-1.5 text-xs font-medium text-on-surface-variant">Surfaces</p>
                   <div className="flex flex-wrap gap-2">
                     {(
                       [
@@ -356,7 +435,7 @@ export function InteriorEstimateBuilder({
                         key={key}
                         type="button"
                         onClick={() => setRoom(index, { [key]: !room[key] })}
-                        className={`h-11 rounded-full border px-4 text-sm font-medium ${room[key] ? 'border-pm-teal bg-pm-teal text-white' : 'border-pm-border bg-white text-pm-body'}`}
+                        className={`h-11 rounded-full border px-4 text-sm font-medium ${room[key] ? 'border-primary bg-primary text-white' : 'border-outline-variant bg-white text-on-surface'}`}
                       >
                         {label}
                       </button>
@@ -370,27 +449,27 @@ export function InteriorEstimateBuilder({
             <button
               type="button"
               onClick={() => setValue('rooms', [...value.rooms, createEmptyInteriorRoom()])}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-pm-border bg-white text-sm font-medium text-pm-body"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant bg-white text-sm font-medium text-on-surface"
             >
               <Plus size={16} />
               Add Room
             </button>
           </div>
 
-          <div className="space-y-3 rounded-xl border border-pm-border bg-pm-surface/45 p-4">
-            <div className="flex items-center justify-between"><p className="text-sm font-semibold text-pm-body">Doors</p><button type="button" onClick={() => setValue('doors', [...value.doors, createEmptyInteriorDoor()])} className="min-h-11 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body">Add Door</button></div>
+          <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container/50 p-4">
+            <div className="flex items-center justify-between"><p className="text-sm font-semibold text-on-surface">Doors</p><button type="button" onClick={() => setValue('doors', [...value.doors, createEmptyInteriorDoor()])} className="min-h-11 rounded-xl border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface">Add Door</button></div>
             {value.doors.map((door, index) => {
               const activeDoorType = availableDoorTypes.includes(door.door_type) ? door.door_type : availableDoorTypes[0];
               const activeDoorScope = availableDoorScopes.includes(door.scope) ? door.scope : availableDoorScopes[0];
-              return <div key={`door-${index}`} className="grid gap-3 md:grid-cols-4"><select value={activeDoorType} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, door_type: event.target.value as InteriorDoorType } : item))} className={FIELD}>{availableDoorTypes.map((type) => <option key={type} value={type}>{INTERIOR_DOOR_TYPE_LABELS[type]}</option>)}</select><select value={activeDoorScope} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorDoorScope } : item))} className={FIELD}>{availableDoorScopes.map((scope) => <option key={scope} value={scope}>{INTERIOR_DOOR_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={door.quantity} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('doors', value.doors.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-secondary">Remove</button></div>;
+              return <div key={`door-${index}`} className="grid gap-3 md:grid-cols-4"><select value={activeDoorType} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, door_type: event.target.value as InteriorDoorType } : item))} className={FIELD}>{availableDoorTypes.map((type) => <option key={type} value={type}>{INTERIOR_DOOR_TYPE_LABELS[type]}</option>)}</select><select value={activeDoorScope} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorDoorScope } : item))} className={FIELD}>{availableDoorScopes.map((scope) => <option key={scope} value={scope}>{INTERIOR_DOOR_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={door.quantity} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('doors', value.doors.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-outline-variant px-4 text-sm font-medium text-on-surface-variant">Remove</button></div>;
             })}
           </div>
 
-          <div className="space-y-3 rounded-xl border border-pm-border bg-pm-surface/45 p-4">
-            <div className="flex items-center justify-between"><p className="text-sm font-semibold text-pm-body">Windows</p><button type="button" onClick={() => setValue('windows', [...value.windows, createEmptyInteriorWindow()])} className="min-h-11 rounded-xl border border-pm-border bg-white px-4 text-sm font-medium text-pm-body">Add Window</button></div>
+          <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container/50 p-4">
+            <div className="flex items-center justify-between"><p className="text-sm font-semibold text-on-surface">Windows</p><button type="button" onClick={() => setValue('windows', [...value.windows, createEmptyInteriorWindow()])} className="min-h-11 rounded-xl border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface">Add Window</button></div>
             {value.windows.map((windowItem, index) => {
               const activeWindowType = availableWindowTypes.includes(windowItem.window_type) ? windowItem.window_type : availableWindowTypes[0];
-              return <div key={`window-${index}`} className="grid gap-3 md:grid-cols-4"><select value={activeWindowType} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, window_type: event.target.value as InteriorWindowType } : item))} className={FIELD}>{availableWindowTypes.map((type) => <option key={type} value={type}>{INTERIOR_WINDOW_TYPE_LABELS[type]}</option>)}</select><select value={windowItem.scope} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorWindowScope } : item))} className={FIELD}>{INTERIOR_WINDOW_SCOPES.map((scope) => <option key={scope} value={scope}>{INTERIOR_WINDOW_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={windowItem.quantity} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('windows', value.windows.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-secondary">Remove</button></div>;
+              return <div key={`window-${index}`} className="grid gap-3 md:grid-cols-4"><select value={activeWindowType} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, window_type: event.target.value as InteriorWindowType } : item))} className={FIELD}>{availableWindowTypes.map((type) => <option key={type} value={type}>{INTERIOR_WINDOW_TYPE_LABELS[type]}</option>)}</select><select value={windowItem.scope} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorWindowScope } : item))} className={FIELD}>{INTERIOR_WINDOW_SCOPES.map((scope) => <option key={scope} value={scope}>{INTERIOR_WINDOW_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={windowItem.quantity} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('windows', value.windows.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-outline-variant px-4 text-sm font-medium text-on-surface-variant">Remove</button></div>;
             })}
           </div>
 

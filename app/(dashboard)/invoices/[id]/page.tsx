@@ -53,7 +53,7 @@ export default async function InvoiceDetailPage({ params }: Props) {
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/invoices"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-pm-surface text-pm-secondary transition-colors active:bg-pm-border"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors active:bg-surface-container-high"
           aria-label="Back to invoices"
         >
           <svg
@@ -71,10 +71,10 @@ export default async function InvoiceDetailPage({ params }: Props) {
           </svg>
         </Link>
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold text-pm-body">
+          <h1 className="truncate text-2xl font-bold text-on-surface">
             {invoice.invoice_number}
           </h1>
-          <p className="truncate text-sm text-pm-secondary">
+          <p className="truncate text-sm text-on-surface-variant">
             {invoice.customer.name} · {invoice.invoice_type} · {invoice.status}
           </p>
         </div>

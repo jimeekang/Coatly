@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   DollarSign,
+  Home,
 } from 'lucide-react';
 import { signOut } from '@/app/actions/auth';
 import type { SubscriptionSnapshot } from '@/lib/subscription/access';
@@ -36,11 +37,10 @@ const navItems: NavItem[] = [
 ];
 
 const mobileTabItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/quotes', label: 'Quotes', icon: FileText },
   { href: '/invoices', label: 'Invoices', icon: Receipt },
-  { href: '/customers', label: 'Customers', icon: Users },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -52,49 +52,6 @@ function isActive(href: string, pathname: string) {
   return pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'));
 }
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  return (
-    <nav className="flex flex-col gap-0.5 flex-1" aria-label="Main navigation">
-      {navItems.map(({ href, label, icon: Icon }) => {
-        const active = isActive(href, pathname);
-        return (
-          <Link
-            key={href}
-            href={href}
-            onClick={onNavigate}
-            aria-current={active ? 'page' : undefined}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
-              active
-                ? 'bg-surface-container-high text-on-surface font-bold border border-outline-variant shadow-xs'
-                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-medium border border-transparent'
-            }`}
-          >
-            <Icon
-              className={`h-4 w-4 flex-shrink-0 ${active ? 'text-primary' : ''}`}
-              strokeWidth={active ? 2.5 : 1.75}
-            />
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
-function LogoutButton() {
-  return (
-    <form action={signOut} className="mt-2">
-      <button
-        type="submit"
-        className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container transition-colors w-full"
-        aria-label="Logout"
-      >
-        <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
-        Logout
-      </button>
-    </form>
-  );
-}
 
 export default function DashboardSidebar({
   businessName,
@@ -111,26 +68,72 @@ export default function DashboardSidebar({
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
-      <aside className="hidden md:flex w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50 border-r border-outline-variant">
-        {/* Logo */}
-        <div className="mb-8 px-4 pt-2">
-          <h1 className="text-xl font-extrabold tracking-tight text-on-surface" style={{ letterSpacing: '-0.02em' }}>Coatly</h1>
-          <p className="text-[10px] font-bold tracking-[0.14em] text-on-surface-variant uppercase mt-0.5">
-            Painter Workspace
-          </p>
+      {/* ── Desktop/Tablet sidebar ── */}
+      <aside className="hidden md:flex md:w-[72px] lg:w-64 flex-col bg-surface-container-low md:px-2 md:py-4 lg:p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50 border-r border-outline-variant shrink-0">
+        {/* Logo — icon always, wordmark lg+ only */}
+        <div className="mb-6 md:flex md:justify-center lg:justify-start lg:px-4 lg:pt-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-primary flex-shrink-0 flex items-center justify-center">
+              <span className="text-on-primary text-[11px] font-extrabold leading-none">C</span>
+            </div>
+            <div className="hidden lg:block">
+              <h1 className="text-xl font-extrabold tracking-tight text-on-surface" style={{ letterSpacing: '-0.02em' }}>Coatly</h1>
+              <p className="text-[10px] font-bold tracking-[0.14em] text-on-surface-variant uppercase mt-0.5">
+                Painter Workspace
+              </p>
+            </div>
+          </div>
         </div>
 
-        <NavLinks pathname={activePathname} />
-        <LogoutButton />
+        {/* Nav */}
+        <nav className="flex flex-col gap-0.5 flex-1" aria-label="Main navigation">
+          {navItems.map(({ href, label, icon: Icon }) => {
+            const active = isActive(href, activePathname);
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={label}
+                aria-current={active ? 'page' : undefined}
+                className={`flex items-center md:justify-center lg:justify-start gap-3 md:px-0 lg:px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
+                  active
+                    ? 'bg-surface-container-high text-on-surface font-bold border border-outline-variant shadow-xs'
+                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-medium border border-transparent'
+                }`}
+              >
+                <Icon
+                  className={`h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0 ${active ? 'text-primary' : ''}`}
+                  strokeWidth={active ? 2.5 : 1.75}
+                />
+                <span className="hidden lg:inline">{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-        {/* User card */}
-        <div className="mt-auto px-4 py-4 bg-surface-container-high rounded-xl border border-outline-variant">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary text-sm font-bold flex-shrink-0">
+        {/* Logout */}
+        <form action={signOut} className="mt-2">
+          <button
+            type="submit"
+            title="Logout"
+            className="flex items-center md:justify-center lg:justify-start gap-3 md:px-0 lg:px-4 py-3 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container transition-colors w-full"
+            aria-label="Logout"
+          >
+            <LogOut className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" strokeWidth={1.75} />
+            <span className="hidden lg:inline">Logout</span>
+          </button>
+        </form>
+
+        {/* User card — avatar only on tablet, full card on desktop */}
+        <div className="mt-2 md:flex md:justify-center lg:block lg:px-4 lg:py-4 lg:bg-surface-container-high lg:rounded-xl lg:border lg:border-outline-variant">
+          <div className="flex items-center md:justify-center lg:justify-start gap-3">
+            <div
+              title={businessName}
+              className="w-9 h-9 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary text-sm font-bold flex-shrink-0"
+            >
               {businessName.slice(0, 2).toUpperCase()}
             </div>
-            <div className="min-w-0">
+            <div className="hidden lg:block min-w-0">
               <p className="text-xs font-bold text-on-surface truncate">{businessName}</p>
               <p
                 className={`text-[11px] uppercase tracking-widest font-semibold ${
@@ -163,7 +166,7 @@ export default function DashboardSidebar({
 
       {/* ── Mobile bottom tab bar ── */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/90 backdrop-blur-md border-t border-outline-variant flex h-16"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/90 backdrop-blur-md border-t border-outline-variant grid grid-cols-5 h-16"
         aria-label="Bottom navigation"
       >
         {mobileTabItems.map(({ href, label, icon: Icon }) => {
@@ -172,19 +175,17 @@ export default function DashboardSidebar({
             <Link
               key={href}
               href={href}
-              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 text-[9px] font-semibold uppercase transition-colors active:scale-95 duration-150 ${
-                active
-                  ? 'text-primary bg-primary/10 rounded-lg mx-0.5'
-                  : 'text-on-surface-variant hover:text-primary'
+              className={`flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 duration-150 ${
+                active ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
               }`}
               aria-current={active ? 'page' : undefined}
             >
               <Icon
-                className={`h-[18px] w-[18px] ${active ? 'text-primary' : 'text-on-surface-variant'}`}
-                strokeWidth={active ? 2.5 : 1.75}
+                className={`h-[22px] w-[22px] ${active ? 'text-primary' : 'text-on-surface-variant'}`}
+                strokeWidth={active ? 2.25 : 1.75}
                 aria-hidden="true"
               />
-              <span className="max-w-full truncate">{label}</span>
+              <span className="truncate">{label}</span>
             </Link>
           );
         })}

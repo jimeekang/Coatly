@@ -1,6 +1,6 @@
 import { DEFAULT_COVERAGE_PER_LITRE, STANDARD_DOOR_AREA_M2, STANDARD_WINDOW_AREA_M2 } from '@/config/constants';
-import type { DayRateInputs, RoomRateInputs, ManualInputs } from '@/types/quote';
-import type { RoomRatePreset } from '@/lib/rate-settings';
+import type { DayRateInputs, RoomRateInputs, ManualInputs, QuickInputs } from '@/types/quote';
+import type { RoomRatePreset, UserRateSettings } from '@/lib/rate-settings';
 
 /**
  * Calculate total wall area for a rectangular room (4 walls).
@@ -138,6 +138,183 @@ export function calculateRoomRateQuote(inputs: RoomRateInputs): PricingResult {
   const total_cents = subtotal_cents + gst_cents;
 
   return { subtotal_cents, gst_cents, total_cents, labor_cents, material_cents };
+}
+
+// ─── Quick Estimate calculator ────────────────────────────────────────────────
+
+export interface QuickEstimateRoomResult {
+  room_id: string;
+  label: string;
+  size: 'small' | 'medium' | 'large';
+  selected_surfaces: ('walls' | 'ceiling' | 'trim')[];
+  notes?: string;
+  walls_cents: number;
+  ceiling_cents: number;
+  trim_cents: number;
+  base_subtotal_cents: number;
+  coating_multiplier_pct: number;
+  condition_multiplier_pct: number;
+  total_cents: number;
+}
+
+export interface QuickEstimateResult extends PricingResult {
+  rooms: QuickEstimateRoomResult[];
+}
+
+export const QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION = 1;
+
+function getQuickEstimateCoatingPct(
+  inputs: Pick<QuickInputs, 'global_coating'>,
+  rateSettings: UserRateSettings
+): number {
+  const { coating_multipliers } = rateSettings.quick_estimate;
+  if (inputs.global_coating === 'one_coat_refresh') {
+    return coating_multipliers.one_coat_refresh_pct;
+  }
+  if (inputs.global_coating === 'three_coats_new_plaster') {
+    return coating_multipliers.three_coats_new_plaster_pct;
+  }
+  return coating_multipliers.two_coats_repaint_pct;
+}
+
+function getQuickEstimateConditionPct(
+  inputs: Pick<QuickInputs, 'global_condition'>,
+  rateSettings: UserRateSettings
+): number {
+  const { condition_multipliers } = rateSettings.quick_estimate;
+  if (inputs.global_condition === 'good') return condition_multipliers.good_pct;
+  if (inputs.global_condition === 'poor') return condition_multipliers.poor_pct;
+  return condition_multipliers.average_pct;
+}
+
+function safeMultiplier(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) && value != null && value >= 0 ? value : fallback;
+}
+
+function quickRoomBaseSubtotal(room: QuickInputs['rooms'][number]): number {
+  return (
+    (room.selected_surfaces.includes('walls') ? room.walls_cents : 0) +
+    (room.selected_surfaces.includes('ceiling') ? room.ceiling_cents : 0) +
+    (room.selected_surfaces.includes('trim') ? room.trim_cents : 0)
+  );
+}
+
+export function calculateQuickEstimateRoomTotal(
+  room: QuickInputs['rooms'][number],
+  coatingPct: number,
+  conditionPct: number
+): number {
+  return Math.round(
+    quickRoomBaseSubtotal(room) * (coatingPct / 100) * (conditionPct / 100)
+  );
+}
+
+function isSnapshotQuickRoom(room: QuickInputs['rooms'][number]): boolean {
+  return (
+    room.rate_snapshot_version === QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION ||
+    room.source_rate_item_id != null
+  );
+}
+
+export function snapshotQuickEstimateInputs(
+  inputs: QuickInputs,
+  rateSettings: UserRateSettings
+): QuickInputs {
+  const coatingPct = getQuickEstimateCoatingPct(inputs, rateSettings);
+  const conditionPct = getQuickEstimateConditionPct(inputs, rateSettings);
+
+  return {
+    ...inputs,
+    rooms: inputs.rooms.map((room) => ({
+      ...room,
+      rate_snapshot_version: QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,
+      coating_multiplier_pct: coatingPct,
+      condition_multiplier_pct: conditionPct,
+      total_cents: calculateQuickEstimateRoomTotal(
+        room,
+        coatingPct,
+        conditionPct
+      ),
+    })),
+  };
+}
+
+export function normalizeQuickEstimateInputsForCalculation(
+  inputs: QuickInputs,
+  rateSettings: UserRateSettings
+): QuickInputs {
+  const fallbackCoatingPct = getQuickEstimateCoatingPct(inputs, rateSettings);
+  const fallbackConditionPct = getQuickEstimateConditionPct(
+    inputs,
+    rateSettings
+  );
+
+  return {
+    ...inputs,
+    rooms: inputs.rooms.map((room) => {
+      const useStoredSnapshot = isSnapshotQuickRoom(room);
+      const coatingPct = useStoredSnapshot
+        ? safeMultiplier(room.coating_multiplier_pct, fallbackCoatingPct)
+        : fallbackCoatingPct;
+      const conditionPct = useStoredSnapshot
+        ? safeMultiplier(room.condition_multiplier_pct, fallbackConditionPct)
+        : fallbackConditionPct;
+
+      return {
+        ...room,
+        coating_multiplier_pct: coatingPct,
+        condition_multiplier_pct: conditionPct,
+        total_cents: calculateQuickEstimateRoomTotal(
+          room,
+          coatingPct,
+          conditionPct
+        ),
+      };
+    }),
+  };
+}
+
+/**
+ * Calculate quote price using the detailed_quick method.
+ * Per-room: quote snapshot surface prices × multipliers.
+ * GST and labour/material split use the painter's pricing settings.
+ */
+export function calculateQuickEstimate(
+  inputs: QuickInputs,
+  rateSettings: UserRateSettings
+): QuickEstimateResult {
+  const normalizedInputs = normalizeQuickEstimateInputsForCalculation(
+    inputs,
+    rateSettings
+  );
+
+  const rooms: QuickEstimateRoomResult[] = normalizedInputs.rooms.map((room) => {
+    const base_subtotal_cents = quickRoomBaseSubtotal(room);
+
+    return {
+      room_id: room.room_id,
+      label: room.label,
+      size: room.size,
+      selected_surfaces: room.selected_surfaces,
+      notes: room.notes,
+      walls_cents: room.walls_cents,
+      ceiling_cents: room.ceiling_cents,
+      trim_cents: room.trim_cents,
+      base_subtotal_cents,
+      coating_multiplier_pct: room.coating_multiplier_pct,
+      condition_multiplier_pct: room.condition_multiplier_pct,
+      total_cents: room.total_cents,
+    };
+  });
+
+  const subtotal_cents = rooms.reduce((sum, r) => sum + r.total_cents, 0);
+  const labourSharePct = rateSettings.pricing.material_cost_percent;
+  const labor_cents = Math.round(subtotal_cents * (1 - labourSharePct / 100));
+  const material_cents = subtotal_cents - labor_cents;
+  const gst_cents = Math.round(subtotal_cents * 0.1);
+  const total_cents = subtotal_cents + gst_cents;
+
+  return { subtotal_cents, gst_cents, total_cents, labor_cents, material_cents, rooms };
 }
 
 /**

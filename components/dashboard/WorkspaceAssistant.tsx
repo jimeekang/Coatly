@@ -171,6 +171,9 @@ export function WorkspaceAssistant({
               One prompt can find customers, quotes, and invoices or prepare a form draft
               for review before saving.
             </p>
+            <p className="mt-2 rounded-xl border border-white/70 bg-white/75 px-3 py-2 text-xs text-pm-secondary">
+              AI may use business, customer, quote, and invoice context. Review drafts before saving or sending.
+            </p>
           </div>
         </div>
 

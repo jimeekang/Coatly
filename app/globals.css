@@ -72,7 +72,24 @@
   --color-success-container: #E6F4F0;
   --color-on-success-container: #064E3B;
 
-  /* ── Legacy pm-* aliases ── */
+  /* ── Legacy pm-* aliases ──
+   * @deprecated Use Material Design 3 tokens above instead:
+   *   pm-teal        → primary
+   *   pm-teal-hover  → primary/90 (or use opacity)
+   *   pm-teal-light  → success-container (#E6F4F0 match)
+   *   pm-teal-mid    → primary-container
+   *   pm-teal-pale   → primary-fixed
+   *   pm-coral       → error
+   *   pm-coral-light → error-container
+   *   pm-coral-dark  → on-error-container
+   *   pm-body        → on-surface
+   *   pm-secondary   → on-surface-variant
+   *   pm-border      → outline
+   *   pm-surface     → surface-container-low
+   *   pm-warning     → warning
+   * Migration tracked in docs/DESIGN_CONSISTENCY_AUDIT.md (P0-2).
+   * New code MUST use MD3 tokens. ESLint warns on pm-* usage.
+   */
   --color-pm-teal: #0D8068;
   --color-pm-teal-hover: #0B6E5A;
   --color-pm-teal-light: #E6F4F0;

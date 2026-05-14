@@ -1,8 +1,13 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getQuotes } from '@/app/actions/quotes';
 import { QuoteTable } from '@/components/quotes/QuoteTable';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import {
+  PageHeader,
+  PrimaryActionLink,
+  SecondaryActionLink,
+} from '@/components/layout/PageHeader';
 import { getMonthlyActiveQuoteUsageForCurrentUser } from '@/lib/supabase/request-context';
 
 export const metadata: Metadata = { title: 'Quotes' };
@@ -13,24 +18,17 @@ export default async function QuotesPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold tracking-tight text-on-surface sm:text-4xl">Quotes</h1>
-          <p className="mt-1 text-sm text-on-surface-variant font-medium">
-            Save and review customer quotes from your workspace.
-          </p>
-        </div>
-        <Link
-          href="/quotes/new"
-          className={`inline-flex min-h-11 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-bold tracking-tight shadow-sm transition-colors sm:px-5 ${
-            quoteUsage?.reached
-              ? 'border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high'
-              : 'bg-primary text-on-primary hover:opacity-90'
-          }`}
-        >
-          {quoteUsage?.reached ? 'View Starter Limit' : 'New Quote'}
-        </Link>
-      </div>
+      <PageHeader
+        title="Quotes"
+        subtitle="Save and review customer quotes from your workspace."
+        action={
+          quoteUsage?.reached ? (
+            <SecondaryActionLink href="/quotes/new">View Starter Limit</SecondaryActionLink>
+          ) : (
+            <PrimaryActionLink href="/quotes/new">+ New Quote</PrimaryActionLink>
+          )
+        }
+      />
 
       {quoteUsage && quoteUsage.limit !== null && (
         quoteUsage.reached ? (
@@ -57,9 +55,7 @@ export default async function QuotesPage() {
       )}
 
       {error ? (
-        <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3">
-          <p className="text-sm text-on-error-container">{error}</p>
-        </div>
+        <ErrorAlert>{error}</ErrorAlert>
       ) : (
         <QuoteTable quotes={data} />
       )}

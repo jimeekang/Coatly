@@ -16,10 +16,7 @@ export type DetailedEstimateAnchorRange = {
 };
 
 export type DetailedEstimateAnchors = {
-  interior_rooms: Record<
-    DetailedEstimateInteriorRoom,
-    DetailedEstimateAnchorRange
-  >;
+  interior_rooms: Record<string, DetailedEstimateAnchorRange>;
 };
 
 export function buildDefaultDetailedEstimateAnchors(): DetailedEstimateAnchors {
