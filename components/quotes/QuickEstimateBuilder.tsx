@@ -149,7 +149,7 @@ function RoomCard({
   const availableSurfaces = template?.enabled_surfaces ?? (['walls', 'ceiling', 'trim'] as const);
 
   return (
-    <div className={`rounded-xl border bg-white ${allUnchecked ? 'border-amber-300' : 'border-pm-border'}`}>
+    <div className={`rounded-xl border bg-white ${allUnchecked ? 'border-amber-300' : 'border-outline-variant'}`}>
       {/* Header row */}
       <div className="flex min-h-[52px] items-center gap-3 px-4 py-2">
         <button
@@ -158,11 +158,11 @@ function RoomCard({
           className="flex flex-1 items-center gap-2 text-left"
         >
           {expanded ? (
-            <ChevronUp className="h-4 w-4 shrink-0 text-pm-secondary" />
+            <ChevronUp className="h-4 w-4 shrink-0 text-on-surface-variant" />
           ) : (
-            <ChevronDown className="h-4 w-4 shrink-0 text-pm-secondary" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-on-surface-variant" />
           )}
-          <span className="text-sm font-semibold text-pm-body flex-1">{room.label}</span>
+          <span className="text-sm font-semibold text-on-surface flex-1">{room.label}</span>
         </button>
 
         {/* Size chips */}
@@ -174,8 +174,8 @@ function RoomCard({
               onClick={() => handleSizeChange(s)}
               className={`min-h-[32px] min-w-[32px] rounded-lg border px-2 py-1 text-xs font-semibold transition-colors ${
                 room.size === s
-                  ? 'border-pm-teal bg-pm-teal text-white'
-                  : 'border-pm-border text-pm-secondary hover:border-pm-teal'
+                  ? 'border-primary bg-primary text-white'
+                  : 'border-outline-variant text-on-surface-variant hover:border-primary'
               }`}
             >
               {SIZE_LABELS[s]}
@@ -184,7 +184,7 @@ function RoomCard({
         </div>
 
         {/* Price */}
-        <span className={`min-w-[64px] text-right text-sm font-bold ${allUnchecked ? 'text-amber-500' : 'text-pm-body'}`}>
+        <span className={`min-w-[64px] text-right text-sm font-bold ${allUnchecked ? 'text-amber-500' : 'text-on-surface'}`}>
           {formatAUD(total)}
         </span>
 
@@ -192,7 +192,7 @@ function RoomCard({
         <button
           type="button"
           onClick={onDelete}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-pm-secondary hover:text-red-500"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-red-500"
           aria-label="Remove room"
         >
           <Trash2 className="h-4 w-4" />
@@ -201,10 +201,10 @@ function RoomCard({
 
       {/* Expanded detail */}
       {expanded && (
-        <div className="border-t border-pm-border px-4 pb-3 pt-3 space-y-3">
+        <div className="border-t border-outline-variant px-4 pb-3 pt-3 space-y-3">
           {/* Surface toggles */}
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs font-semibold text-pm-secondary">Surfaces:</span>
+            <span className="text-xs font-semibold text-on-surface-variant">Surfaces:</span>
             {(['walls', 'ceiling', 'trim'] as const).map((s) => {
               const isAvailable = availableSurfaces.includes(s);
               if (!isAvailable) return null;
@@ -216,8 +216,8 @@ function RoomCard({
                   onClick={() => handleSurfaceToggle(s)}
                   className={`min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                     isSelected
-                      ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'
-                      : 'border-pm-border text-pm-secondary hover:border-pm-teal'
+                      ? 'border-primary bg-primary/15 text-primary'
+                      : 'border-outline-variant text-on-surface-variant hover:border-primary'
                   }`}
                 >
                   {SURFACE_LABELS[s]}
@@ -231,7 +231,7 @@ function RoomCard({
 
           {/* Notes */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-pm-secondary">
+            <label className="mb-1 block text-xs font-medium text-on-surface-variant">
               Notes (optional)
             </label>
             <input
@@ -239,7 +239,7 @@ function RoomCard({
               value={room.notes ?? ''}
               onChange={(e) => onUpdate({ ...room, notes: e.target.value || undefined })}
               placeholder="e.g. skip wardrobe wall"
-              className="w-full rounded-lg border border-pm-border bg-white px-3 py-2 text-sm focus:border-pm-teal-mid focus:outline-none"
+              className="w-full rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </div>
         </div>
@@ -309,8 +309,8 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
       )}
 
       {/* Coating type */}
-      <section className="border-pm-border rounded-2xl border bg-white p-4">
-        <h4 className="mb-3 text-sm font-semibold text-pm-body">Coating Type</h4>
+      <section className="border-outline-variant rounded-2xl border bg-white p-4">
+        <h4 className="mb-3 text-sm font-semibold text-on-surface">Coating Type</h4>
         <div className="grid grid-cols-3 gap-2">
           {COATING_OPTIONS.map(({ key, label, sublabel }) => (
             <button
@@ -328,12 +328,12 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
               }
               className={`flex flex-col items-center rounded-xl border px-2 py-2.5 text-center transition-colors ${
                 value.global_coating === key
-                  ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'
-                  : 'border-pm-border text-pm-body hover:border-pm-teal-mid'
+                  ? 'border-primary bg-primary/15 text-primary'
+                  : 'border-outline-variant text-on-surface hover:border-primary'
               }`}
             >
               <span className="text-sm font-bold">{label}</span>
-              <span className="text-xs text-pm-secondary mt-0.5">{sublabel}</span>
+              <span className="text-xs text-on-surface-variant mt-0.5">{sublabel}</span>
             </button>
           ))}
         </div>
@@ -342,13 +342,13 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
       {/* Room list */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-pm-body">
+          <h4 className="text-sm font-semibold text-on-surface">
             Rooms{value.rooms.length > 0 && ` (${value.rooms.length})`}
           </h4>
         </div>
 
         {value.rooms.length === 0 && (
-          <p className="rounded-xl border border-dashed border-pm-border px-4 py-5 text-center text-sm text-pm-secondary">
+          <p className="rounded-xl border border-dashed border-outline-variant px-4 py-5 text-center text-sm text-on-surface-variant">
             No rooms added yet. Pick from the list below.
           </p>
         )}
@@ -373,8 +373,8 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
 
       {/* Add room */}
       {!isNotConfigured && (
-        <section className="border-pm-border rounded-2xl border bg-white p-4">
-          <h4 className="mb-3 text-sm font-semibold text-pm-body">
+        <section className="border-outline-variant rounded-2xl border bg-white p-4">
+          <h4 className="mb-3 text-sm font-semibold text-on-surface">
             <Plus className="inline h-4 w-4 mr-1" />
             Add Room
           </h4>
@@ -384,7 +384,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
                 key={template.id}
                 type="button"
                 onClick={() => addRoom(template)}
-                className="border-pm-border text-pm-body hover:border-pm-teal hover:bg-pm-teal-pale/10 min-h-[36px] rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors"
+                className="border-outline-variant text-on-surface hover:border-primary hover:bg-primary/10 min-h-[36px] rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors"
               >
                 + {template.label}
               </button>
@@ -394,9 +394,9 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
       )}
 
       {/* Condition */}
-      <section className="border-pm-border rounded-2xl border bg-white p-4">
-        <h4 className="mb-1 text-sm font-semibold text-pm-body">Surface Condition</h4>
-        <p className="mb-3 text-xs text-pm-secondary">
+      <section className="border-outline-variant rounded-2xl border bg-white p-4">
+        <h4 className="mb-1 text-sm font-semibold text-on-surface">Surface Condition</h4>
+        <p className="mb-3 text-xs text-on-surface-variant">
           How much prep work is needed?
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -416,12 +416,12 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
               }
               className={`flex flex-col items-center rounded-xl border px-2 py-2.5 text-center transition-colors ${
                 value.global_condition === key
-                  ? 'border-pm-teal bg-pm-teal-pale/20 text-pm-teal'
-                  : 'border-pm-border text-pm-body hover:border-pm-teal-mid'
+                  ? 'border-primary bg-primary/15 text-primary'
+                  : 'border-outline-variant text-on-surface hover:border-primary'
               }`}
             >
               <span className="text-sm font-bold">{label}</span>
-              <span className="text-xs text-pm-secondary mt-0.5">{sublabel}</span>
+              <span className="text-xs text-on-surface-variant mt-0.5">{sublabel}</span>
             </button>
           ))}
         </div>
@@ -429,18 +429,18 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
 
       {/* Summary */}
       {value.rooms.length > 0 && (
-        <div className="border-pm-border rounded-2xl border bg-white p-4 space-y-2">
-          <div className="flex justify-between text-sm text-pm-secondary">
+        <div className="border-outline-variant rounded-2xl border bg-white p-4 space-y-2">
+          <div className="flex justify-between text-sm text-on-surface-variant">
             <span>Subtotal (ex-GST)</span>
-            <span className="font-medium text-pm-body">{formatAUD(subtotal)}</span>
+            <span className="font-medium text-on-surface">{formatAUD(subtotal)}</span>
           </div>
-          <div className="flex justify-between text-sm text-pm-secondary">
+          <div className="flex justify-between text-sm text-on-surface-variant">
             <span>GST (10%)</span>
-            <span className="font-medium text-pm-body">{formatAUD(gst)}</span>
+            <span className="font-medium text-on-surface">{formatAUD(gst)}</span>
           </div>
-          <div className="flex justify-between border-t border-pm-border pt-2 text-base font-bold text-pm-body">
+          <div className="flex justify-between border-t border-outline-variant pt-2 text-base font-bold text-on-surface">
             <span>Total inc-GST</span>
-            <span className="text-pm-teal">{formatAUD(total)}</span>
+            <span className="text-primary">{formatAUD(total)}</span>
           </div>
         </div>
       )}

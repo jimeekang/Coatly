@@ -106,8 +106,8 @@ function ToggleGroup<T extends string>({
             'flex-1 rounded-xl border font-medium transition-colors',
             size === 'sm' ? 'h-9 text-xs' : 'h-11 text-sm',
             value === opt
-              ? 'border-pm-teal bg-pm-teal text-white'
-              : 'border-pm-border bg-white text-pm-body hover:border-pm-teal-mid hover:bg-pm-teal-pale/20',
+              ? 'border-primary bg-primary text-white'
+              : 'border-outline-variant bg-white text-on-surface hover:border-primary hover:bg-primary/15',
           ].join(' ')}
         >
           {labels?.[opt] ?? opt}
@@ -134,17 +134,17 @@ function Counter({
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-pm-border bg-white text-lg font-bold text-pm-body disabled:opacity-30"
+        className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
         aria-label="Decrease"
       >
         −
       </button>
-      <span className="w-6 text-center text-sm font-semibold text-pm-body">{value}</span>
+      <span className="w-6 text-center text-sm font-semibold text-on-surface">{value}</span>
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-pm-border bg-white text-lg font-bold text-pm-body disabled:opacity-30"
+        className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
         aria-label="Increase"
       >
         +
@@ -169,14 +169,14 @@ function Toggle({
       className={[
         'flex h-11 items-center gap-3 rounded-xl border px-4 text-sm font-medium transition-colors',
         checked
-          ? 'border-pm-teal bg-pm-teal-light text-pm-teal'
-          : 'border-pm-border bg-white text-pm-secondary',
+          ? 'border-primary bg-primary-container text-primary'
+          : 'border-outline-variant bg-white text-on-surface-variant',
       ].join(' ')}
     >
       <span
         className={[
           'flex h-5 w-5 items-center justify-center rounded border-2 text-xs transition-colors',
-          checked ? 'border-pm-teal bg-pm-teal text-white' : 'border-pm-border bg-white',
+          checked ? 'border-primary bg-primary text-white' : 'border-outline-variant bg-white',
         ].join(' ')}
       >
         {checked ? '✓' : ''}
@@ -242,23 +242,23 @@ function RoomCard({
     availableWindowTypes.includes(room.window_type) ? room.window_type : availableWindowTypes[0];
 
   return (
-    <div className="rounded-2xl border border-pm-border bg-white">
+    <div className="rounded-2xl border border-outline-variant bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-pm-border px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-4 py-3">
         <input
           type="text"
           value={room.name}
           onChange={(e) => set('name', e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-base font-semibold text-pm-body outline-none placeholder:text-pm-secondary"
+          className="min-w-0 flex-1 bg-transparent text-base font-semibold text-on-surface outline-none placeholder:text-on-surface-variant"
           placeholder="Room name"
           maxLength={40}
         />
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-pm-teal">{formatAUD(estimatedPrice)}</span>
+          <span className="text-sm font-semibold text-primary">{formatAUD(estimatedPrice)}</span>
           <button
             type="button"
             onClick={onRemove}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-pm-secondary hover:bg-red-50 hover:text-red-500"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-red-50 hover:text-red-500"
             aria-label="Remove room"
           >
             ×
@@ -269,7 +269,7 @@ function RoomCard({
       <div className="space-y-4 p-4">
         {/* Size */}
         <div>
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-pm-secondary">
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
             Size
           </p>
           <ToggleGroup
@@ -282,7 +282,7 @@ function RoomCard({
 
         {/* Condition */}
         <div>
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-pm-secondary">
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
             Condition
           </p>
           <ToggleGroup
@@ -295,7 +295,7 @@ function RoomCard({
 
         {/* Scope — Walls / Ceiling / Trim */}
         <div>
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-pm-secondary">
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
             Scope
           </p>
           <div className="flex flex-wrap gap-2">
@@ -319,10 +319,10 @@ function RoomCard({
 
         {/* Trim options — only shown when include_trim is checked */}
         {room.include_trim && (
-          <div className="space-y-3 rounded-xl border border-pm-border bg-pm-bg p-3">
+          <div className="space-y-3 rounded-xl border border-outline-variant bg-pm-bg p-3">
             {/* Paint base for trim */}
             <div>
-              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-pm-secondary">
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
                 Paint Base (Trim)
               </p>
               <ToggleGroup
@@ -342,9 +342,9 @@ function RoomCard({
             />
 
             {/* Doors */}
-            <div className="rounded-xl border border-pm-border bg-white p-3">
+            <div className="rounded-xl border border-outline-variant bg-white p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-medium text-pm-body">Doors</p>
+                <p className="text-sm font-medium text-on-surface">Doors</p>
                 <Counter
                   value={room.door_count}
                   onChange={(v) => set('door_count', v)}
@@ -362,9 +362,9 @@ function RoomCard({
             </div>
 
             {/* Windows */}
-            <div className="rounded-xl border border-pm-border bg-white p-3">
+            <div className="rounded-xl border border-outline-variant bg-white p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-medium text-pm-body">Windows</p>
+                <p className="text-sm font-medium text-on-surface">Windows</p>
                 <Counter
                   value={room.window_count}
                   onChange={(v) => set('window_count', v)}
@@ -498,8 +498,8 @@ export function QuickQuoteBuilder({
   return (
     <div className="space-y-4">
       {/* Wall / Ceiling Coating — global for the whole job */}
-      <section className="rounded-2xl border border-pm-border bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+      <section className="rounded-2xl border border-outline-variant bg-white p-4">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
           Wall &amp; Ceiling Coating
         </h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -512,19 +512,19 @@ export function QuickQuoteBuilder({
               className={[
                 'flex flex-col rounded-xl border p-3 text-left transition-colors',
                 value.wall_paint_system === sys
-                  ? 'border-pm-teal bg-pm-teal-light'
-                  : 'border-pm-border bg-white hover:border-pm-teal-mid',
+                  ? 'border-primary bg-primary-container'
+                  : 'border-outline-variant bg-white hover:border-primary',
               ].join(' ')}
             >
               <span
                 className={[
                   'text-sm font-semibold',
-                  value.wall_paint_system === sys ? 'text-pm-teal' : 'text-pm-body',
+                  value.wall_paint_system === sys ? 'text-primary' : 'text-on-surface',
                 ].join(' ')}
               >
                 {INTERIOR_WALL_PAINT_SYSTEM_LABELS[sys]}
               </span>
-              <span className="mt-0.5 text-xs text-pm-secondary">
+              <span className="mt-0.5 text-xs text-on-surface-variant">
                 {sys === 'refresh_1coat'
                   ? 'Refresh coat for existing painted surfaces'
                   : sys === 'repaint_2coat'
@@ -549,8 +549,8 @@ export function QuickQuoteBuilder({
       ))}
 
       {/* Add room grid */}
-      <section className="rounded-2xl border border-dashed border-pm-border bg-pm-bg p-4">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+      <section className="rounded-2xl border border-dashed border-outline-variant bg-pm-bg p-4">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
           Add Room
         </h3>
         <div className="grid grid-cols-3 gap-2">
@@ -559,12 +559,12 @@ export function QuickQuoteBuilder({
               key={preset.anchor}
               type="button"
               onClick={() => addRoom(preset)}
-              className="flex flex-col items-center gap-1 rounded-xl border border-pm-border bg-white px-2 py-3 text-center transition-colors hover:border-pm-teal-mid hover:bg-pm-teal-pale/10 active:scale-95"
+              className="flex flex-col items-center gap-1 rounded-xl border border-outline-variant bg-white px-2 py-3 text-center transition-colors hover:border-primary hover:bg-primary/10 active:scale-95"
             >
               <span className="text-xl leading-none" role="img" aria-hidden>
                 {preset.emoji}
               </span>
-              <span className="text-xs font-medium text-pm-body leading-tight">
+              <span className="text-xs font-medium text-on-surface leading-tight">
                 {preset.label}
               </span>
             </button>
@@ -574,28 +574,28 @@ export function QuickQuoteBuilder({
 
       {/* Price summary + adjustment */}
       {value.rooms.length > 0 && (
-        <section className="rounded-2xl border border-pm-border bg-white p-4">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-pm-secondary">
+        <section className="rounded-2xl border border-outline-variant bg-white p-4">
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
             Estimate Totals
           </h3>
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
-              <dt className="text-pm-secondary">Subtotal</dt>
-              <dd className="font-medium text-pm-body">{formatAUD(preview.subtotal_cents)}</dd>
+              <dt className="text-on-surface-variant">Subtotal</dt>
+              <dd className="font-medium text-on-surface">{formatAUD(preview.subtotal_cents)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-pm-secondary">GST (10%)</dt>
-              <dd className="font-medium text-pm-body">{formatAUD(preview.gst_cents)}</dd>
+              <dt className="text-on-surface-variant">GST (10%)</dt>
+              <dd className="font-medium text-on-surface">{formatAUD(preview.gst_cents)}</dd>
             </div>
 
             {/* Adjustment row */}
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-pm-border p-3">
-              <dt className="text-sm font-medium text-pm-body">Adjustment</dt>
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant p-3">
+              <dt className="text-sm font-medium text-on-surface">Adjustment</dt>
               <dd className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => adjustBy(-STEP)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-pm-border bg-white text-base font-bold text-pm-body hover:border-pm-coral hover:bg-red-50 hover:text-pm-coral"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-error hover:bg-red-50 hover:text-error"
                   aria-label="Decrease by $50"
                 >
                   −
@@ -603,7 +603,7 @@ export function QuickQuoteBuilder({
                 <span
                   className={[
                     'w-20 text-center text-sm font-semibold',
-                    value.manual_adjustment_cents < 0 ? 'text-pm-coral' : value.manual_adjustment_cents > 0 ? 'text-pm-teal' : 'text-pm-secondary',
+                    value.manual_adjustment_cents < 0 ? 'text-error' : value.manual_adjustment_cents > 0 ? 'text-primary' : 'text-on-surface-variant',
                   ].join(' ')}
                 >
                   {value.manual_adjustment_cents === 0
@@ -613,7 +613,7 @@ export function QuickQuoteBuilder({
                 <button
                   type="button"
                   onClick={() => adjustBy(STEP)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-pm-border bg-white text-base font-bold text-pm-body hover:border-pm-teal-mid hover:bg-pm-teal-pale/20 hover:text-pm-teal"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-primary hover:bg-primary/15 hover:text-primary"
                   aria-label="Increase by $50"
                 >
                   +
@@ -621,9 +621,9 @@ export function QuickQuoteBuilder({
               </dd>
             </div>
 
-            <div className="flex items-center justify-between border-t border-pm-border pt-3">
-              <dt className="font-semibold text-pm-body">Total (inc. GST)</dt>
-              <dd className="text-base font-bold text-pm-body">
+            <div className="flex items-center justify-between border-t border-outline-variant pt-3">
+              <dt className="font-semibold text-on-surface">Total (inc. GST)</dt>
+              <dd className="text-base font-bold text-on-surface">
                 {formatAUD(preview.total_cents)}
               </dd>
             </div>

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getQuoteFormOptions } from '@/app/actions/quotes';
 import { getMaterialItemsForPicker } from '@/app/actions/materials';
@@ -6,6 +5,7 @@ import { listQuoteTemplates } from '@/app/actions/quote-templates';
 import { QuoteCreateScreen } from '@/components/quotes/QuoteCreateScreen';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { BackButton } from '@/components/layout/BackButton';
+import { PrimaryActionLink } from '@/components/layout/PageHeader';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server';
 
@@ -40,10 +40,10 @@ export default async function NewQuotePage({
   const quoteUsage = usageResult?.usage ?? null;
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-7xl">
+    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
       <div className="mb-6 flex items-center gap-3">
         <BackButton href="/quotes" label="Back to quotes" />
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-extrabold tracking-tight text-on-surface sm:text-[28px]">
             New Quote
           </h1>
@@ -54,7 +54,7 @@ export default async function NewQuotePage({
       </div>
 
       {quoteUsage && (
-        <div className="mb-6 rounded-2xl border border-outline-variant bg-surface-container px-4 py-4 shadow-sm">
+        <div className="mb-6 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
             Starter Usage
           </p>
@@ -76,12 +76,9 @@ export default async function NewQuotePage({
           <p className="mt-1 text-sm text-on-surface-variant">
             Quotes are linked to a saved customer in your workspace.
           </p>
-          <Link
-            href="/customers/new"
-            className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
-          >
-            Go to New Customer
-          </Link>
+          <PrimaryActionLink href="/customers/new" className="mt-4">
+            + New Customer
+          </PrimaryActionLink>
         </div>
       ) : (
         <QuoteCreateScreen

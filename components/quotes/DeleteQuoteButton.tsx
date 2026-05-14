@@ -75,9 +75,9 @@ export function DeleteQuoteButton({ quoteId, quoteNumber }: { quoteId: string; q
               </svg>
             </div>
 
-            <h2 className="text-lg font-bold text-pm-body">Delete Quote?</h2>
-            <p className="mt-1.5 text-sm text-pm-secondary">
-              <span className="font-semibold text-pm-body">{quoteNumber}</span> will be permanently
+            <h2 className="text-lg font-bold text-on-surface">Delete Quote?</h2>
+            <p className="mt-1.5 text-sm text-on-surface-variant">
+              <span className="font-semibold text-on-surface">{quoteNumber}</span> will be permanently
               deleted. This cannot be undone.
             </p>
 
@@ -118,7 +118,7 @@ export function DeleteQuoteButton({ quoteId, quoteNumber }: { quoteId: string; q
                 type="button"
                 onClick={() => setShowModal(false)}
                 disabled={isPending}
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-pm-border bg-pm-surface px-4 py-3 text-sm font-medium text-pm-body transition-colors hover:bg-pm-border disabled:opacity-60"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-outline-variant bg-surface-container px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-outline-variant disabled:opacity-60"
               >
                 Cancel
               </button>

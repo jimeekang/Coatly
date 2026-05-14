@@ -182,6 +182,29 @@ function materialItemCategoryOrOther(category: string): MaterialItemCategory {
     : 'other';
 }
 
+function buildQuickEstimateItemRows(quoteId: string, inputs: QuickInputs) {
+  return inputs.rooms.map((room, index) => ({
+    quote_id: quoteId,
+    category: 'quick_estimate',
+    label: room.label,
+    quantity: 1,
+    unit: 'room',
+    unit_price_cents: room.total_cents,
+    total_cents: room.total_cents,
+    size: room.size,
+    selected_surfaces: room.selected_surfaces,
+    coating_multiplier_pct: room.coating_multiplier_pct,
+    condition_multiplier_pct: room.condition_multiplier_pct,
+    item_notes: room.notes ?? null,
+    metadata: {
+      room_id: room.room_id,
+      global_coating: inputs.global_coating,
+      global_condition: inputs.global_condition,
+    },
+    sort_order: index,
+  }));
+}
+
 const QUOTE_CUSTOMER_SELECT =
   'customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, address_line2, city, state, postcode)';
 const QUOTE_LIST_SELECT = `id, user_id, customer_id, customer_email, customer_address, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
@@ -1520,28 +1543,7 @@ export async function createQuote(
     if (quickRooms.length > 0) {
       const { error: quickItemsError } = await supabase
         .from('quote_estimate_items')
-        .insert(
-          quickRooms.map((room, index) => ({
-            quote_id: quote.id,
-            category: 'quick_estimate',
-            label: room.label,
-            quantity: 1,
-            unit: 'room',
-            unit_price_cents: room.total_cents,
-            total_cents: room.total_cents,
-            size: room.size,
-            selected_surfaces: room.selected_surfaces,
-            coating_multiplier_pct: room.coating_multiplier_pct,
-            condition_multiplier_pct: room.condition_multiplier_pct,
-            item_notes: room.notes ?? null,
-            metadata: {
-              room_id: room.room_id,
-              global_coating: resolvedPricingInputs!.inputs.global_coating,
-              global_condition: resolvedPricingInputs!.inputs.global_condition,
-            },
-            sort_order: index,
-          }))
-        );
+        .insert(buildQuickEstimateItemRows(quote.id, resolvedPricingInputs.inputs));
 
       if (quickItemsError) {
         await supabase
@@ -2605,6 +2607,17 @@ export async function updateQuote(
         }))
       );
     if (estimateItemsError) return { error: estimateItemsError.message };
+  } else if (
+    pricingMethod === 'detailed_quick' &&
+    resolvedPricingInputs?.method === 'detailed_quick'
+  ) {
+    const quickRooms = resolvedPricingInputs.inputs.rooms;
+    if (quickRooms.length > 0) {
+      const { error: quickItemsError } = await supabase
+        .from('quote_estimate_items')
+        .insert(buildQuickEstimateItemRows(quoteId, resolvedPricingInputs.inputs));
+      if (quickItemsError) return { error: quickItemsError.message };
+    }
   } else {
     for (const [roomIndex, room] of preview.rooms.entries()) {
       const { data: insertedRoom, error: roomError } = await supabase

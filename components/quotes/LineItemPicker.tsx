@@ -108,22 +108,22 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
   // ── Browse library ─────────────────────────────────────────────────────────
   return (
     <PickerOverlay onClose={onClose}>
-      <div className="flex items-center justify-between pb-3 border-b border-pm-border">
-        <h2 className="text-base font-semibold text-pm-body">Add Item</h2>
-        <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-pm-secondary hover:bg-pm-surface">
+      <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
+        <h2 className="text-base font-semibold text-on-surface">Add Item</h2>
+        <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
           <X className="h-5 w-5" />
         </button>
       </div>
 
       {/* Search */}
       <div className="relative mt-3">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pm-secondary" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search items..."
-          className="h-11 w-full rounded-xl border border-pm-border bg-pm-surface pl-9 pr-4 text-sm focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+          className="h-11 w-full rounded-xl border border-outline-variant bg-surface-container pl-9 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           autoFocus
         />
       </div>
@@ -137,8 +137,8 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
             onClick={() => setCategoryFilter(cat)}
             className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               categoryFilter === cat
-                ? 'border-pm-teal bg-pm-teal text-white'
-                : 'border-pm-border bg-white text-pm-secondary hover:border-pm-teal-mid'
+                ? 'border-primary bg-primary text-white'
+                : 'border-outline-variant bg-white text-on-surface-variant hover:border-primary'
             }`}
           >
             {cat === 'all' ? 'All' : MATERIAL_ITEM_CATEGORY_LABELS[cat]}
@@ -150,8 +150,8 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
       <div className="mt-3 flex-1 overflow-y-auto space-y-1 max-h-64">
         {filtered.length === 0 ? (
           <div className="py-8 text-center">
-            <Package className="mx-auto h-8 w-8 text-pm-secondary/40" strokeWidth={1.5} />
-            <p className="mt-2 text-sm text-pm-secondary">
+            <Package className="mx-auto h-8 w-8 text-on-surface-variant/40" strokeWidth={1.5} />
+            <p className="mt-2 text-sm text-on-surface-variant">
               {libraryItems.length === 0 ? 'No saved items yet.' : 'No items match your search.'}
             </p>
           </div>
@@ -161,26 +161,26 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
               key={item.id}
               type="button"
               onClick={() => setMode({ configure: item })}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-pm-surface"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-surface-container"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-pm-body">{item.name}</p>
-                <p className="text-xs text-pm-secondary">
+                <p className="truncate text-sm font-medium text-on-surface">{item.name}</p>
+                <p className="text-xs text-on-surface-variant">
                   {MATERIAL_ITEM_CATEGORY_LABELS[item.category]} · {formatAUD(item.unit_price_cents)} / {item.unit}
                 </p>
               </div>
-              <Plus className="h-4 w-4 shrink-0 text-pm-teal" />
+              <Plus className="h-4 w-4 shrink-0 text-primary" />
             </button>
           ))
         )}
       </div>
 
       {/* Custom item CTA */}
-      <div className="mt-3 pt-3 border-t border-pm-border">
+      <div className="mt-3 pt-3 border-t border-outline-variant">
         <button
           type="button"
           onClick={() => setMode('custom')}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-pm-border py-3 text-sm font-medium text-pm-secondary hover:border-pm-teal-mid hover:text-pm-teal"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant py-3 text-sm font-medium text-on-surface-variant hover:border-primary hover:text-primary"
         >
           <Plus className="h-4 w-4" />
           Add Custom Item
@@ -224,22 +224,22 @@ function ConfigureItem({
 
   return (
     <>
-      <div className="flex items-center gap-2 pb-3 border-b border-pm-border">
-        <button type="button" onClick={onBack} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-pm-secondary hover:bg-pm-surface">
+      <div className="flex items-center gap-2 pb-3 border-b border-outline-variant">
+        <button type="button" onClick={onBack} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
           <X className="h-5 w-5" />
         </button>
-        <h2 className="text-base font-semibold text-pm-body truncate">{item.name}</h2>
+        <h2 className="text-base font-semibold text-on-surface truncate">{item.name}</h2>
       </div>
 
-      <div className="mt-4 rounded-xl bg-pm-surface px-4 py-3">
-        <p className="text-xs text-pm-secondary">{MATERIAL_ITEM_CATEGORY_LABELS[item.category]}</p>
-        <p className="mt-0.5 text-sm font-medium text-pm-body">
+      <div className="mt-4 rounded-xl bg-surface-container px-4 py-3">
+        <p className="text-xs text-on-surface-variant">{MATERIAL_ITEM_CATEGORY_LABELS[item.category]}</p>
+        <p className="mt-0.5 text-sm font-medium text-on-surface">
           {formatAUD(item.unit_price_cents)} / {item.unit}
         </p>
       </div>
 
       <div className="mt-4">
-        <label className="block text-sm font-medium text-pm-body mb-1.5">
+        <label className="block text-sm font-medium text-on-surface mb-1.5">
           Quantity ({item.unit})
         </label>
         <NumericInput
@@ -247,14 +247,14 @@ function ConfigureItem({
           inputMode={requiresWholeNumberQuantity(item.category) ? 'numeric' : 'decimal'}
           sanitize={requiresWholeNumberQuantity(item.category) ? sanitizeWholeNumberQuantityInput : sanitizeDecimalInput}
           onValueChange={setQtyDraft}
-          className="h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30"
+          className="h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           aria-label={`${item.name} quantity`}
         />
       </div>
 
-      <div className="mt-3 rounded-xl bg-pm-teal-pale/20 px-4 py-3 flex justify-between items-center">
-        <span className="text-sm text-pm-secondary">Subtotal</span>
-        <span className="text-base font-semibold text-pm-teal">
+      <div className="mt-3 rounded-xl bg-primary/15 px-4 py-3 flex justify-between items-center">
+        <span className="text-sm text-on-surface-variant">Subtotal</span>
+        <span className="text-base font-semibold text-primary">
           {formatAUD(Math.round(qty * item.unit_price_cents))}
         </span>
       </div>
@@ -263,7 +263,7 @@ function ConfigureItem({
         type="button"
         onClick={() => onAdd(qty)}
         disabled={!canAdd}
-        className="mt-4 h-12 w-full rounded-xl bg-pm-teal text-base font-semibold text-white disabled:opacity-50"
+        className="mt-4 h-12 w-full rounded-xl bg-primary text-base font-semibold text-white disabled:opacity-50"
       >
         Add to Quote
       </button>
@@ -294,7 +294,7 @@ function CustomItemForm({
     notes: '',
   });
 
-  const FIELD = 'h-12 w-full rounded-xl border border-pm-border bg-white px-4 text-base text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30';
+  const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
@@ -344,21 +344,21 @@ function CustomItemForm({
 
   return (
     <>
-      <div className="flex items-center gap-2 pb-3 border-b border-pm-border">
-        <button type="button" onClick={onBack} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-pm-secondary hover:bg-pm-surface">
+      <div className="flex items-center gap-2 pb-3 border-b border-outline-variant">
+        <button type="button" onClick={onBack} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
           <X className="h-5 w-5" />
         </button>
-        <h2 className="text-base font-semibold text-pm-body">Custom Item</h2>
+        <h2 className="text-base font-semibold text-on-surface">Custom Item</h2>
       </div>
 
       <div className="mt-4 space-y-3 overflow-y-auto flex-1">
         <div>
-          <label className="block text-sm font-medium text-pm-body mb-1.5">Item Name</label>
+          <label className="block text-sm font-medium text-on-surface mb-1.5">Item Name</label>
           <input name="name" type="text" value={form.name} onChange={handleChange} placeholder="e.g. Sugar soap, filler" className={FIELD} autoFocus />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-pm-body mb-1.5">Category</label>
+            <label className="block text-sm font-medium text-on-surface mb-1.5">Category</label>
             <select name="category" value={form.category} onChange={handleChange} className={`${FIELD} cursor-pointer`}>
               {MATERIAL_ITEM_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>{MATERIAL_ITEM_CATEGORY_LABELS[cat]}</option>
@@ -366,13 +366,13 @@ function CustomItemForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-pm-body mb-1.5">Unit</label>
+            <label className="block text-sm font-medium text-on-surface mb-1.5">Unit</label>
             <input name="unit" type="text" value={form.unit} onChange={handleChange} placeholder="item, L, hr" className={FIELD} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-pm-body mb-1.5">Quantity</label>
+            <label className="block text-sm font-medium text-on-surface mb-1.5">Quantity</label>
             <NumericInput
               name="quantity"
               value={form.quantity}
@@ -384,9 +384,9 @@ function CustomItemForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-pm-body mb-1.5">Unit Price</label>
+            <label className="block text-sm font-medium text-on-surface mb-1.5">Unit Price</label>
             <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-pm-secondary">$</span>
+              <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-on-surface-variant">$</span>
               <NumericInput
                 value={(form.unit_price_cents / 100).toFixed(2)}
                 sanitize={sanitizeDecimalInput}
@@ -408,9 +408,9 @@ function CustomItemForm({
         </div>
 
         {total > 0 && (
-          <div className="rounded-xl bg-pm-teal-pale/20 px-4 py-3 flex justify-between items-center">
-            <span className="text-sm text-pm-secondary">Subtotal</span>
-            <span className="text-base font-semibold text-pm-teal">{formatAUD(total)}</span>
+          <div className="rounded-xl bg-primary/15 px-4 py-3 flex justify-between items-center">
+            <span className="text-sm text-on-surface-variant">Subtotal</span>
+            <span className="text-base font-semibold text-primary">{formatAUD(total)}</span>
           </div>
         )}
       </div>
@@ -419,7 +419,7 @@ function CustomItemForm({
         type="button"
         onClick={handleSubmit}
         disabled={!canSubmit}
-        className="mt-4 h-12 w-full rounded-xl bg-pm-teal text-base font-semibold text-white disabled:opacity-50"
+        className="mt-4 h-12 w-full rounded-xl bg-primary text-base font-semibold text-white disabled:opacity-50"
       >
         Add to Quote
       </button>

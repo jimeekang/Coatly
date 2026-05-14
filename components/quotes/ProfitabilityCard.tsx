@@ -96,18 +96,18 @@ export function ProfitabilityCard({
   if (isRoomRate || !split) {
     if (!isRoomRate) return null;
     return (
-      <section className="rounded-xl border border-pm-border bg-white">
+      <section className="rounded-xl border border-outline-variant bg-white">
         {header}
         <div className="px-5 py-4">
-          <p className="text-sm text-pm-secondary">
+          <p className="text-sm text-on-surface-variant">
             Room rate pricing — cost breakdown not available.
           </p>
-          <p className="mt-1 text-xs text-pm-secondary">
+          <p className="mt-1 text-xs text-on-surface-variant">
             Room flat rates include your margin. To see a profit split, switch to Day Rate or Manual pricing.
           </p>
-          <div className="mt-3 flex justify-between border-t border-pm-border pt-3 text-sm">
-            <span className="text-pm-secondary">Quote value (ex-GST)</span>
-            <span className="font-medium text-pm-body">{formatAUD(quote.subtotal_cents)}</span>
+          <div className="mt-3 flex justify-between border-t border-outline-variant pt-3 text-sm">
+            <span className="text-on-surface-variant">Quote value (ex-GST)</span>
+            <span className="font-medium text-on-surface">{formatAUD(quote.subtotal_cents)}</span>
           </div>
         </div>
       </section>
@@ -127,32 +127,32 @@ export function ProfitabilityCard({
       : null;
 
   return (
-    <section className="rounded-xl border border-pm-border bg-white">
+    <section className="rounded-xl border border-outline-variant bg-white">
       {/* Header */}
       {header}
 
       {/* Cost breakdown */}
       <div className="space-y-2 px-5 py-4 text-sm">
         <div className="flex justify-between">
-          <span className="text-pm-secondary">Labour cost</span>
-          <span className="text-pm-body">{formatAUD(labor_cents)}</span>
+          <span className="text-on-surface-variant">Labour cost</span>
+          <span className="text-on-surface">{formatAUD(labor_cents)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-pm-secondary">Material cost</span>
-          <span className="text-pm-body">{formatAUD(material_cents)}</span>
+          <span className="text-on-surface-variant">Material cost</span>
+          <span className="text-on-surface">{formatAUD(material_cents)}</span>
         </div>
-        <div className="flex justify-between border-t border-pm-border pt-2">
-          <span className="font-medium text-pm-body">Total cost</span>
-          <span className="font-medium text-pm-body">{formatAUD(total_cost_cents)}</span>
+        <div className="flex justify-between border-t border-outline-variant pt-2">
+          <span className="font-medium text-on-surface">Total cost</span>
+          <span className="font-medium text-on-surface">{formatAUD(total_cost_cents)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-pm-secondary">Quote value (ex-GST)</span>
-          <span className="text-pm-body">{formatAUD(quote.subtotal_cents)}</span>
+          <span className="text-on-surface-variant">Quote value (ex-GST)</span>
+          <span className="text-on-surface">{formatAUD(quote.subtotal_cents)}</span>
         </div>
 
         {/* Profit line */}
-        <div className="flex items-center justify-between rounded-lg bg-pm-surface px-3 py-2.5">
-          <span className="font-semibold text-pm-body">Estimated profit</span>
+        <div className="flex items-center justify-between rounded-lg bg-surface-container px-3 py-2.5">
+          <span className="font-semibold text-on-surface">Estimated profit</span>
           <div className="flex items-center gap-2">
             <span className={`font-semibold ${profit_cents >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
               {profit_cents >= 0 ? '+' : ''}{formatAUD(profit_cents)}
@@ -163,7 +163,7 @@ export function ProfitabilityCard({
 
         {/* Days estimate */}
         {estimatedDays && (
-          <div className="flex justify-between text-xs text-pm-secondary">
+          <div className="flex justify-between text-xs text-on-surface-variant">
             <span>Estimated duration</span>
             <span>{estimatedDays} day{estimatedDays !== 1 ? 's' : ''}</span>
           </div>
