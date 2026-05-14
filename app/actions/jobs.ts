@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
+  deleteGoogleCalendarEventForJob,
   getGoogleBusyDatesForUser,
   syncBookedJobToGoogleCalendar,
 } from '@/lib/google-calendar/service';
@@ -784,6 +785,17 @@ export async function updateJob(
     return { error: validation.error };
   }
 
+  if (validation.parsed.status === 'cancelled') {
+    const googleDeleteResult = await deleteGoogleCalendarEventForJob({
+      supabase,
+      userId: user.id,
+      jobId: id,
+    });
+    if (googleDeleteResult.error) {
+      return { error: googleDeleteResult.error };
+    }
+  }
+
   const { error } = await supabase
     .from('jobs')
     .update({
@@ -809,6 +821,29 @@ export async function updateJob(
   ]);
   if (scheduleResult.error) {
     return { error: scheduleResult.error };
+  }
+
+  if (validation.parsed.status !== 'cancelled' && validation.quoteId) {
+    const { data: quote } = await supabase
+      .from('quotes')
+      .select('id, quote_number, title, customer_id')
+      .eq('id', validation.quoteId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (quote) {
+      await syncBookedJobToGoogleCalendar({
+        supabase,
+        userId: user.id,
+        jobId: id,
+        quoteId: quote.id,
+        quoteNumber: quote.quote_number,
+        quoteTitle: quote.title,
+        customerId: quote.customer_id,
+        startDate: validation.parsed.scheduled_date,
+        endDate: validation.parsed.scheduled_date,
+      });
+    }
   }
 
   revalidatePath('/jobs');
@@ -851,6 +886,15 @@ export async function deleteJob(id: string): Promise<{ error: string | null }> {
 
   if (!existingJob) {
     return { error: 'Job not found.' };
+  }
+
+  const googleDeleteResult = await deleteGoogleCalendarEventForJob({
+    supabase,
+    userId: user.id,
+    jobId: id,
+  });
+  if (googleDeleteResult.error) {
+    return { error: googleDeleteResult.error };
   }
 
   const { error } = await supabase.from('jobs').delete().eq('id', id).eq('user_id', user.id);

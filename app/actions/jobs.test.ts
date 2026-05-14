@@ -10,6 +10,7 @@ const {
   getSubscriptionSnapshotForUserMock,
   getGoogleBusyDatesForUserMock,
   syncBookedJobToGoogleCalendarMock,
+  deleteGoogleCalendarEventForJobMock,
 } = vi.hoisted(() => ({
   redirectMock: vi.fn(),
   revalidatePathMock: vi.fn(),
@@ -23,6 +24,7 @@ const {
   getSubscriptionSnapshotForUserMock: vi.fn(),
   getGoogleBusyDatesForUserMock: vi.fn(),
   syncBookedJobToGoogleCalendarMock: vi.fn(),
+  deleteGoogleCalendarEventForJobMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -51,6 +53,7 @@ vi.mock('@/lib/subscription/access', () => ({
 }));
 
 vi.mock('@/lib/google-calendar/service', () => ({
+  deleteGoogleCalendarEventForJob: deleteGoogleCalendarEventForJobMock,
   getGoogleBusyDatesForUser: getGoogleBusyDatesForUserMock,
   syncBookedJobToGoogleCalendar: syncBookedJobToGoogleCalendarMock,
 }));
@@ -146,6 +149,10 @@ describe('jobs actions', () => {
     });
     syncBookedJobToGoogleCalendarMock.mockResolvedValue({
       synced: false,
+      error: null,
+    });
+    deleteGoogleCalendarEventForJobMock.mockResolvedValue({
+      deleted: false,
       error: null,
     });
   });

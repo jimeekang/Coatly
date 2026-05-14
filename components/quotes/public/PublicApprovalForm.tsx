@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { approvePublicQuote, rejectPublicQuote } from '@/app/actions/quotes';
 import { SignaturePad } from './SignaturePad';
 
@@ -33,6 +34,7 @@ export function PublicApprovalForm({
   const [isPending, startTransition] = useTransition();
   const [isRejectPending, startRejectTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   const isSignatureImage = (sig: string | null) => sig?.startsWith('data:image') ?? false;
 
@@ -46,7 +48,12 @@ export function PublicApprovalForm({
     const fd = new FormData(e.currentTarget);
     fd.set('approvalSignature', signature);
     startTransition(async () => {
-      await approvePublicQuote(fd);
+      const result = await approvePublicQuote(fd);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
     });
   };
 
@@ -68,7 +75,12 @@ export function PublicApprovalForm({
     setError(null);
 
     startRejectTransition(async () => {
-      await rejectPublicQuote(fd);
+      const result = await rejectPublicQuote(fd);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
     });
   };
 

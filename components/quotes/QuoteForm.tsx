@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, type ElementType } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Zap, Layers, CalendarDays, PenLine, Home, Trees, Check } from 'lucide-react';
+import { Zap, Layers, CalendarDays, PenLine, Home, Trees } from 'lucide-react';
 import {
   NumericInput,
   sanitizeIntegerInput,
@@ -2518,28 +2518,28 @@ export function QuoteForm({
         </div>
       )}
 
-      {/* Sticky footer CTA — sits above the dashboard bottom tab bar (h-20) on mobile */}
-      <div className="border-outline-variant fixed right-0 bottom-20 left-0 z-10 border-t bg-white/95 px-4 pt-3 pb-3 backdrop-blur-sm md:bottom-0 md:left-64 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex w-full max-w-lg justify-center">
+      {/* Sticky footer CTA — sits above the dashboard bottom tab bar (h-16) on mobile */}
+      <div className="border-outline-variant fixed right-0 bottom-16 left-0 z-10 border-t bg-white/95 px-3 pt-3 pb-3 backdrop-blur-sm sm:px-4 md:bottom-0 md:left-[72px] md:px-6 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:left-64">
+        <div className="mx-auto flex w-full max-w-lg justify-center lg:max-w-6xl">
           {showSendQuoteButton ? (
-            <div className="w-full space-y-2">
+            <div className="w-full space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
               <button
                 type="button"
                 onClick={handleOpenSendDialog}
                 disabled={isPending || !canSubmit || !canSendQuote}
-                className="bg-on-surface hover:bg-on-surface/90 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white transition-colors disabled:opacity-50"
+                className="bg-on-surface hover:bg-on-surface/90 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white transition-colors disabled:opacity-50 lg:flex-[1.6]"
               >
                 {isPending && activeSubmitIntent === 'send_email'
                   ? 'Sending...'
                   : 'Send Quote to Client'}
               </button>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-1">
                 <button
                   type="submit"
                   data-submit-intent="save"
                   onClick={() => setActiveSubmitIntent('save')}
                   disabled={isPending || !canSubmit}
-                  className="border-outline-variant text-on-surface hover:bg-surface-container inline-flex h-11 items-center justify-center rounded-xl border bg-white px-4 text-sm font-semibold transition-colors disabled:opacity-50"
+                  className="border-outline-variant text-on-surface hover:bg-surface-container inline-flex h-11 items-center justify-center rounded-xl border bg-white px-4 text-sm font-semibold transition-colors disabled:opacity-50 lg:flex-1"
                 >
                   {isPending && activeSubmitIntent === 'save'
                     ? 'Saving...'
@@ -2549,7 +2549,7 @@ export function QuoteForm({
                   type="button"
                   onClick={() => (onCancel ? onCancel() : router.back())}
                   disabled={isPending}
-                  className="border-outline-variant text-on-surface-variant hover:text-on-surface inline-flex h-11 items-center justify-center rounded-xl border bg-white px-4 text-sm font-medium transition-colors disabled:opacity-50"
+                  className="border-outline-variant text-on-surface-variant hover:text-on-surface inline-flex h-11 items-center justify-center rounded-xl border bg-white px-4 text-sm font-medium transition-colors disabled:opacity-50 lg:flex-1"
                 >
                   {cancelLabel}
                 </button>

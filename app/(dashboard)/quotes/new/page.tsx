@@ -40,7 +40,7 @@ export default async function NewQuotePage({
   const quoteUsage = usageResult?.usage ?? null;
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
+    <div className="mx-auto w-full max-w-lg pt-4 lg:max-w-6xl">
       <div className="mb-6 flex items-center gap-3">
         <BackButton href="/quotes" label="Back to quotes" />
         <div className="min-w-0">

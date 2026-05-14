@@ -238,18 +238,18 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const nowIso = now.toISOString();
 
-  // D-3: due_date is exactly 3 days from now (±12h window), not yet sent, status = sent
+  // D-3: due_date is exactly 3 days from now, not yet sent, status = sent
   const dueSoonStart = new Date(now);
-  dueSoonStart.setDate(dueSoonStart.getDate() + 2);
+  dueSoonStart.setDate(dueSoonStart.getDate() + 3);
   dueSoonStart.setHours(0, 0, 0, 0);
 
   const dueSoonEnd = new Date(now);
   dueSoonEnd.setDate(dueSoonEnd.getDate() + 3);
   dueSoonEnd.setHours(23, 59, 59, 999);
 
-  // D+7: due_date was 7 days ago, not yet sent, status = sent or overdue
+  // D+7: due_date was exactly 7 days ago, not yet sent, status = sent or overdue
   const overdueStart = new Date(now);
-  overdueStart.setDate(overdueStart.getDate() - 8);
+  overdueStart.setDate(overdueStart.getDate() - 7);
   overdueStart.setHours(0, 0, 0, 0);
 
   const overdueEnd = new Date(now);

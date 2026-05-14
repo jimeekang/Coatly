@@ -146,6 +146,29 @@ async function fetchGoogleApi<T>(
   return payload as T;
 }
 
+async function sendGoogleApi(
+  accessToken: string,
+  path: string,
+  init?: RequestInit
+): Promise<void> {
+  const response = await fetch(`https://www.googleapis.com${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json',
+      ...(init?.headers ?? {}),
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+    throw new Error(payload?.error?.message ?? 'Google Calendar request failed.');
+  }
+}
+
 async function getStoredGoogleCalendarState(
   supabase: AppSupabaseClient,
   userId: string
@@ -649,6 +672,13 @@ export async function syncBookedJobToGoogleCalendar(input: {
     return { synced: false, error: null };
   }
 
+  const { data: existingJob } = await input.supabase
+    .from('jobs')
+    .select('google_calendar_event_id, google_calendar_id')
+    .eq('id', input.jobId)
+    .eq('user_id', input.userId)
+    .maybeSingle();
+
   const { data: customer, error: customerError } = await input.supabase
     .from('customers')
     .select('name, company_name, address_line1, address_line2, city, state, postcode')
@@ -679,13 +709,22 @@ export async function syncBookedJobToGoogleCalendar(input: {
     null;
 
   try {
+    const eventCalendarId =
+      existingJob?.google_calendar_id ?? access.settings.event_destination_calendar_id;
+    const eventPath = existingJob?.google_calendar_event_id
+      ? `/calendar/v3/calendars/${encodeURIComponent(
+          eventCalendarId
+        )}/events/${encodeURIComponent(
+          existingJob.google_calendar_event_id
+        )}?sendUpdates=none`
+      : `/calendar/v3/calendars/${encodeURIComponent(
+          access.settings.event_destination_calendar_id
+        )}/events?sendUpdates=none`;
     const payload = await fetchGoogleApi<{ id: string }>(
       access.accessToken,
-      `/calendar/v3/calendars/${encodeURIComponent(
-        access.settings.event_destination_calendar_id
-      )}/events?sendUpdates=none`,
+      eventPath,
       {
-        method: 'POST',
+        method: existingJob?.google_calendar_event_id ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -714,8 +753,8 @@ export async function syncBookedJobToGoogleCalendar(input: {
     await input.supabase
       .from('jobs')
       .update({
-        google_calendar_event_id: payload.id,
-        google_calendar_id: access.settings.event_destination_calendar_id,
+        google_calendar_event_id: payload.id ?? existingJob?.google_calendar_event_id ?? null,
+        google_calendar_id: eventCalendarId,
         schedule_source: 'google_booking_sync',
         google_sync_status: 'synced',
         google_sync_error: null,
@@ -738,5 +777,69 @@ export async function syncBookedJobToGoogleCalendar(input: {
       .eq('user_id', input.userId);
 
     return { synced: false, error: message };
+  }
+}
+
+export async function deleteGoogleCalendarEventForJob(input: {
+  supabase: AppSupabaseClient;
+  userId: string;
+  jobId: string;
+}) {
+  const access = await getGoogleCalendarAccessForUser(input.supabase, input.userId);
+
+  if (!access.ok) {
+    return { deleted: false, error: null };
+  }
+
+  const { data: job, error: jobError } = await input.supabase
+    .from('jobs')
+    .select('google_calendar_event_id, google_calendar_id')
+    .eq('id', input.jobId)
+    .eq('user_id', input.userId)
+    .maybeSingle();
+
+  if (jobError) {
+    return { deleted: false, error: jobError.message };
+  }
+
+  if (!job?.google_calendar_event_id) {
+    return { deleted: false, error: null };
+  }
+
+  const calendarId = job.google_calendar_id ?? access.settings.event_destination_calendar_id;
+
+  try {
+    await sendGoogleApi(
+      access.accessToken,
+      `/calendar/v3/calendars/${encodeURIComponent(
+        calendarId
+      )}/events/${encodeURIComponent(job.google_calendar_event_id)}?sendUpdates=none`,
+      { method: 'DELETE' }
+    );
+
+    await input.supabase
+      .from('jobs')
+      .update({
+        google_calendar_event_id: null,
+        google_calendar_id: null,
+        google_sync_status: 'not_synced',
+        google_sync_error: null,
+      })
+      .eq('id', input.jobId)
+      .eq('user_id', input.userId);
+
+    return { deleted: true, error: null };
+  } catch (error) {
+    const message = getSafeErrorMessage(error);
+    await input.supabase
+      .from('jobs')
+      .update({
+        google_sync_status: 'failed',
+        google_sync_error: message,
+      })
+      .eq('id', input.jobId)
+      .eq('user_id', input.userId);
+
+    return { deleted: false, error: message };
   }
 }

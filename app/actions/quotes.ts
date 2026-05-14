@@ -1771,12 +1771,12 @@ export async function setQuoteOptionalLineItemSelection(
 
 export async function setPublicQuoteOptionalLineItemSelection(
   formData: FormData
-): Promise<void> {
+): Promise<{ error: string | null; selectedIds: string[] }> {
   const quoteToken = formData.get('quoteToken');
   const lineItemId = formData.get('lineItemId');
 
   if (typeof quoteToken !== 'string' || typeof lineItemId !== 'string') {
-    return;
+    return { error: 'Invalid quote add-on selection.', selectedIds: [] };
   }
 
   const isSelected = parseBooleanFormValue(formData.get('isSelected'));
@@ -1796,7 +1796,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
       valid_until: quote.valid_until,
     }) !== 'sent'
   ) {
-    return;
+    return { error: 'This quote is no longer available for add-on changes.', selectedIds: [] };
   }
 
   const linkedInvoicesResult = await getLinkedInvoiceCountForQuote(
@@ -1804,7 +1804,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
     quote.id
   );
   if (linkedInvoicesResult.error || linkedInvoicesResult.count > 0) {
-    return;
+    return { error: 'This quote already has a linked invoice.', selectedIds: [] };
   }
 
   const { data: lineItems, error: lineItemsError } = await supabase
@@ -1814,13 +1814,13 @@ export async function setPublicQuoteOptionalLineItemSelection(
     .order('sort_order', { ascending: true });
 
   if (lineItemsError) {
-    return;
+    return { error: lineItemsError.message, selectedIds: [] };
   }
 
   const target = lineItems?.find((item) => item.id === lineItemId) ?? null;
 
   if (!target || !target.is_optional) {
-    return;
+    return { error: 'Add-on item was not found.', selectedIds: [] };
   }
 
   const { error: updateLineItemError } = await supabase
@@ -1830,7 +1830,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
     .eq('quote_id', quote.id);
 
   if (updateLineItemError) {
-    return;
+    return { error: updateLineItemError.message, selectedIds: [] };
   }
 
   const currentIncludedLineItemsSubtotal = calculateQuoteLineItemsSubtotal(
@@ -1875,15 +1875,28 @@ export async function setPublicQuoteOptionalLineItemSelection(
     .eq('public_share_token', quoteToken);
 
   if (updateQuoteError) {
-    return;
+    await supabase
+      .from('quote_line_items')
+      .update({ is_selected: target.is_selected })
+      .eq('id', lineItemId)
+      .eq('quote_id', quote.id);
+    return { error: updateQuoteError.message, selectedIds: [] };
   }
 
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quote.id}`);
+  return {
+    error: null,
+    selectedIds: (lineItems ?? [])
+      .filter((item) => (item.id === lineItemId ? isSelected : item.is_selected))
+      .map((item) => item.id),
+  };
 }
 
-export async function approvePublicQuote(formData: FormData): Promise<void> {
+export async function approvePublicQuote(
+  formData: FormData
+): Promise<{ error: string | null }> {
   const quoteToken = parseTrimmedFormValue(formData.get('quoteToken'));
   const approvedByName = parseTrimmedFormValue(formData.get('approvedByName'));
   const approvedByEmail = parseTrimmedFormValue(
@@ -1899,11 +1912,11 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
     !approvedByEmail ||
     !approvalSignature
   ) {
-    return;
+    return { error: 'Name, email, and signature are required.' };
   }
 
   if (!isValidEmail(approvedByEmail)) {
-    return;
+    return { error: 'Enter a valid email address.' };
   }
 
   const supabase = createAdminClient();
@@ -1937,7 +1950,7 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
       valid_until: quote.valid_until,
     }) !== 'sent'
   ) {
-    return;
+    return { error: 'This quote is no longer available for approval.' };
   }
 
   const approvedAt = new Date().toISOString();
@@ -1955,7 +1968,7 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
     .eq('public_share_token', quoteToken);
 
   if (updateQuoteError) {
-    return;
+    return { error: updateQuoteError.message };
   }
 
   const customer = resolveQuoteCustomerSummary({
@@ -1989,9 +2002,12 @@ export async function approvePublicQuote(formData: FormData): Promise<void> {
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quote.id}`);
+  return { error: null };
 }
 
-export async function rejectPublicQuote(formData: FormData): Promise<void> {
+export async function rejectPublicQuote(
+  formData: FormData
+): Promise<{ error: string | null }> {
   const quoteToken = parseTrimmedFormValue(formData.get('quoteToken'));
   const rejectedByName = parseTrimmedFormValue(formData.get('rejectedByName'));
   const rejectedByEmail = parseTrimmedFormValue(
@@ -1999,11 +2015,11 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
   ).toLowerCase();
 
   if (!quoteToken || !rejectedByName || !rejectedByEmail) {
-    return;
+    return { error: 'Name and email are required to decline this quote.' };
   }
 
   if (!isValidEmail(rejectedByEmail)) {
-    return;
+    return { error: 'Enter a valid email address.' };
   }
 
   const supabase = createAdminClient();
@@ -2026,7 +2042,7 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
       valid_until: quote.valid_until,
     }) !== 'sent'
   ) {
-    return;
+    return { error: 'This quote is no longer available for decline.' };
   }
 
   const { error: updateQuoteError } = await supabase
@@ -2038,12 +2054,13 @@ export async function rejectPublicQuote(formData: FormData): Promise<void> {
     .eq('public_share_token', quoteToken);
 
   if (updateQuoteError) {
-    return;
+    return { error: updateQuoteError.message };
   }
 
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quote.id}`);
+  return { error: null };
 }
 
 export async function duplicateQuote(

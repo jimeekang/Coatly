@@ -53,6 +53,7 @@ type InvoiceListRow = {
   paid_at: string | null;
   payment_method: string | null;
   notes: string | null;
+  public_share_token?: string | null;
   created_at: string;
   updated_at: string;
   customer:
@@ -939,6 +940,19 @@ export async function sendInvoice(id: string): Promise<{ error: string } | void>
     return { error: 'Customer email is required to send an invoice.' };
   }
 
+  const publicShareToken = invoice.public_share_token ?? crypto.randomUUID();
+  if (!invoice.public_share_token) {
+    const { error: tokenUpdateError } = await supabase
+      .from('invoices')
+      .update({ public_share_token: publicShareToken })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (tokenUpdateError) {
+      return { error: tokenUpdateError.message };
+    }
+  }
+
   const { data: businessBranding } = await getBusinessDocumentBranding(
     supabase,
     user.id,
@@ -972,7 +986,7 @@ export async function sendInvoice(id: string): Promise<{ error: string } | void>
     totalFormatted: formatAUD(invoiceDetail.total_cents),
     dueDate: invoiceDetail.due_date ? formatDate(invoiceDetail.due_date) : null,
     notes: invoiceDetail.notes,
-    pdfUrl: `${appUrl}/api/pdf/invoice?id=${invoiceDetail.id}`,
+    pdfUrl: `${appUrl}/api/pdf/invoice?token=${publicShareToken}`,
     pdfAttachment: Buffer.from(pdfBuffer),
   });
 

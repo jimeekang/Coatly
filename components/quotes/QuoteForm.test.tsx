@@ -224,6 +224,21 @@ describe('QuoteForm', () => {
     ).toBeDisabled();
   });
 
+  it('aligns the fixed action footer with the dashboard content area', () => {
+    render(<QuoteForm customers={[CUSTOMER]} showSendQuoteButton />);
+
+    const sendButton = screen.getByRole('button', {
+      name: 'Send Quote to Client',
+    });
+    const footer = sendButton.closest('.fixed');
+    const footerContent = sendButton.closest('.mx-auto');
+
+    expect(footer).toHaveClass('bottom-16');
+    expect(footer).toHaveClass('px-3', 'sm:px-4', 'md:px-6');
+    expect(footer).toHaveClass('md:left-[72px]', 'lg:left-64');
+    expect(footerContent).toHaveClass('max-w-lg', 'lg:max-w-6xl');
+  });
+
   it('lets users pick a customer property for the quote snapshot', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -505,7 +520,7 @@ describe('QuoteForm', () => {
     render(<QuoteForm customers={[CUSTOMER]} />);
 
     expect(screen.getByLabelText('Labour Markup')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Labour.*days/i }));
+    await user.click(screen.getByRole('tab', { name: /By day.*Labour.*days/i }));
     expect(screen.queryByLabelText('Labour Markup')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Materials Markup')).not.toBeInTheDocument();
   });
@@ -515,7 +530,7 @@ describe('QuoteForm', () => {
 
     render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
 
-    await user.click(screen.getByRole('button', { name: /Labour.*days/i }));
+    await user.click(screen.getByRole('tab', { name: /By day.*Labour.*days/i }));
 
     expect(getEstimateTotalsCents()).toEqual([114400]);
 

@@ -17,6 +17,17 @@ const {
   ),
   getSubscriptionSnapshotForUserMock: vi.fn(),
 }));
+const {
+  createStorageObjectDataUrlMock,
+  getBusinessDocumentBrandingMock,
+  renderToBufferMock,
+  sendInvoiceEmailMock,
+} = vi.hoisted(() => ({
+  createStorageObjectDataUrlMock: vi.fn(),
+  getBusinessDocumentBrandingMock: vi.fn(),
+  renderToBufferMock: vi.fn(),
+  sendInvoiceEmailMock: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
@@ -35,10 +46,41 @@ vi.mock('@/lib/subscription/access', () => ({
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
+vi.mock('@/lib/businesses', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/businesses')>(
+    '@/lib/businesses'
+  );
+
+  return {
+    ...actual,
+    getBusinessDocumentBranding: getBusinessDocumentBrandingMock,
+  };
+});
+
+vi.mock('@/lib/supabase/storage', () => ({
+  createStorageObjectDataUrl: createStorageObjectDataUrlMock,
+}));
+
+vi.mock('@/lib/email/resend', () => ({
+  sendInvoiceEmail: sendInvoiceEmailMock,
+}));
+
+vi.mock('@react-pdf/renderer', async () => {
+  const actual = await vi.importActual<typeof import('@react-pdf/renderer')>(
+    '@react-pdf/renderer'
+  );
+
+  return {
+    ...actual,
+    renderToBuffer: renderToBufferMock,
+  };
+});
+
 import {
   createInvoice,
   getInvoiceDraftFromQuote,
   markInvoiceAsPaid,
+  sendInvoice,
   updateInvoice,
 } from '@/app/actions/invoices';
 
@@ -50,6 +92,55 @@ function createFilterQuery<Result>(result: Result) {
     order: vi.fn().mockResolvedValue(result),
   };
 }
+
+const DRAFT_INVOICE_ROW = {
+  id: 'invoice-1',
+  user_id: 'user-1',
+  customer_id: 'customer-1',
+  quote_id: null,
+  invoice_number: 'INV-0001',
+  status: 'draft',
+  invoice_type: 'full',
+  subtotal_cents: 100000,
+  gst_cents: 10000,
+  total_cents: 110000,
+  amount_paid_cents: 0,
+  business_abn: null,
+  payment_terms: 'Payment due within 7 days',
+  bank_details: null,
+  due_date: '2026-04-30',
+  paid_date: null,
+  paid_at: null,
+  payment_method: null,
+  notes: null,
+  public_share_token: null,
+  created_at: '2026-04-01T00:00:00.000Z',
+  updated_at: '2026-04-01T00:00:00.000Z',
+  customer: {
+    id: 'customer-1',
+    name: 'Client One',
+    email: 'client@example.com',
+    phone: null,
+    address_line1: '12 Test St',
+    city: 'Sydney',
+    state: 'NSW',
+    postcode: '2000',
+  },
+  line_items: [
+    {
+      id: 'line-1',
+      invoice_id: 'invoice-1',
+      description: 'Interior repaint',
+      quantity: 1,
+      unit_price_cents: 100000,
+      gst_cents: 10000,
+      total_cents: 100000,
+      sort_order: 0,
+      created_at: '2026-04-01T00:00:00.000Z',
+      updated_at: '2026-04-01T00:00:00.000Z',
+    },
+  ],
+};
 
 describe('createInvoice', () => {
   beforeEach(() => {
@@ -831,6 +922,73 @@ describe('createInvoice', () => {
       },
     ]);
     expect(redirectMock).toHaveBeenCalledWith('/invoices/invoice-paid-1');
+  });
+});
+
+describe('sendInvoice', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    renderToBufferMock.mockResolvedValue(Buffer.from('%PDF-1.4'));
+    sendInvoiceEmailMock.mockResolvedValue({ error: null });
+    getBusinessDocumentBrandingMock.mockResolvedValue({
+      data: {
+        name: 'Paint Co',
+        abn: null,
+        phone: null,
+        email: 'owner@example.com',
+        logoPath: null,
+      },
+    });
+    createStorageObjectDataUrlMock.mockResolvedValue(null);
+  });
+
+  it('creates a public invoice token before emailing the customer PDF link', async () => {
+    const invoiceUpdates: Array<Record<string, unknown>> = [];
+    const invoiceUpdateQuery = {
+      eq: vi.fn().mockReturnThis(),
+    };
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: DRAFT_INVOICE_ROW,
+                error: null,
+              })
+            ),
+            update: vi.fn((payload: Record<string, unknown>) => {
+              invoiceUpdates.push(payload);
+              return invoiceUpdateQuery;
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await sendInvoice('invoice-1');
+    const tokenPayload = invoiceUpdates[0] ?? {};
+    const emailPayload = sendInvoiceEmailMock.mock.calls[0]?.[0] as
+      | { pdfUrl?: string }
+      | undefined;
+    const expectedAppUrl =
+      process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.coatly.com.au';
+
+    expect(result).toBeUndefined();
+    expect(tokenPayload.public_share_token).toEqual(expect.any(String));
+    expect(emailPayload?.pdfUrl).toBe(
+      `${expectedAppUrl}/api/pdf/invoice?token=${tokenPayload.public_share_token}`
+    );
+    expect(invoiceUpdates[1]).toEqual({ status: 'sent' });
+    expect(redirectMock).toHaveBeenCalledWith('/invoices/invoice-1');
   });
 });
 

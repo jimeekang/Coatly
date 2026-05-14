@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition, useOptimistic } from 'react';
+import { useTransition, useOptimistic, useState } from 'react';
 import { setPublicQuoteOptionalLineItemSelection } from '@/app/actions/quotes';
 import { formatAUD } from '@/utils/format';
 import { groupQuoteLineItemsByCategory } from '@/lib/quotes';
@@ -31,6 +31,7 @@ export function PublicOptionalItems({
   onSelectionsChange,
 }: PublicOptionalItemsProps) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const [optimisticItems, toggleOptimistic] = useOptimistic(
     items,
@@ -45,20 +46,22 @@ export function PublicOptionalItems({
     const next = !item.is_selected;
 
     startTransition(async () => {
+      setError(null);
       toggleOptimistic({ id: item.id, isSelected: next });
 
       const fd = new FormData();
       fd.append('quoteToken', quoteToken);
       fd.append('lineItemId', item.id);
       fd.append('isSelected', next ? 'true' : 'false');
-      await setPublicQuoteOptionalLineItemSelection(fd);
+      const result = await setPublicQuoteOptionalLineItemSelection(fd);
 
-      const nextSelected = new Set(
-        optimisticItems
-          .map((i) => (i.id === item.id ? { ...i, is_selected: next } : i))
-          .filter((i) => i.is_selected)
-          .map((i) => i.id)
-      );
+      if (result.error) {
+        toggleOptimistic({ id: item.id, isSelected: item.is_selected });
+        setError(result.error);
+        return;
+      }
+
+      const nextSelected = new Set(result.selectedIds);
       onSelectionsChange(nextSelected);
     });
   };
@@ -80,6 +83,12 @@ export function PublicOptionalItems({
 
   return (
     <div className="space-y-3">
+      {error && (
+        <div className="rounded-xl border border-pm-coral/30 bg-pm-coral-light/50 px-4 py-3 text-sm text-pm-coral-dark">
+          {error}
+        </div>
+      )}
+
       {/* Running total pill */}
       {selectedTotal > 0 && (
         <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-2.5">

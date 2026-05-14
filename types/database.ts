@@ -326,6 +326,7 @@ export type Database = {
           paid_date: string | null
           payment_method: string | null
           payment_terms: string | null
+          public_share_token: string | null
           quote_id: string | null
           status: string
           subtotal_cents: number
@@ -351,6 +352,7 @@ export type Database = {
           paid_date?: string | null
           payment_method?: string | null
           payment_terms?: string | null
+          public_share_token?: string | null
           quote_id?: string | null
           status?: string
           subtotal_cents?: number
@@ -376,6 +378,7 @@ export type Database = {
           paid_date?: string | null
           payment_method?: string | null
           payment_terms?: string | null
+          public_share_token?: string | null
           quote_id?: string | null
           status?: string
           subtotal_cents?: number

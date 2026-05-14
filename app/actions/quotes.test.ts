@@ -2506,7 +2506,7 @@ describe('public quote access', () => {
 
     const result = await setPublicQuoteOptionalLineItemSelection(formData);
 
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ error: null, selectedIds: ['line-1', 'line-2'] });
     expect(captured.lineItemUpdate).toEqual({ is_selected: true });
     expect(captured.quoteUpdate).toEqual({
       subtotal_cents: 83000,
@@ -2629,7 +2629,7 @@ describe('public quote access', () => {
 
     const result = await approvePublicQuote(formData);
 
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ error: null });
     expect(captured.quoteUpdate).toMatchObject({
       status: 'approved',
       approved_by_name: 'Alex Harper',
@@ -2728,7 +2728,7 @@ describe('public quote access', () => {
 
     const result = await rejectPublicQuote(formData);
 
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ error: null });
     expect(captured.quoteUpdate).toMatchObject({
       status: 'rejected',
     });
