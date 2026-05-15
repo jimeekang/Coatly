@@ -58,3 +58,4 @@ next-env.d.ts
 
 # Claude Code local session config (may contain API keys in permissions.allow)
 .claude/settings.local.json
+.claude/worktrees/
