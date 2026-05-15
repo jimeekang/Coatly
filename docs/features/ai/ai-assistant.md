@@ -1,6 +1,6 @@
-# Feature: AI Assistant (Phase 2)
+# Feature: AI Assistant
 
-> ⚠️ 이 기능은 Phase 2 예정. 기반 코드가 존재하지만 아직 프로덕션 준비 안 됨.
+> Phase 2 기능. Workspace Assistant와 Quote AI Draft는 구현되어 있으며, 남은 핵심 작업은 governance/usage control입니다.
 
 ## Overview
 
@@ -11,13 +11,14 @@ AI가 견적서 초안을 생성하고, 워크스페이스 어시스턴트로 �
 ### 1. AI Draft Panel
 
 - 위치: `components/ai/AIDraftPanel.tsx`
-- 기능: 작업 설명 입력 → AI가 방/면적/가격 초안 생성
+- 기능: 작업 설명 입력 → AI가 견적 초안 생성 후 폼에 적용
 - Pro 플랜 전용 (`lib/subscription/access.ts`에서 게이팅)
+- Quote 생성 화면에 노출됨 (`components/quotes/QuoteCreateScreen.tsx`)
 
 ### 2. Workspace Assistant
 
 - 위치: `components/dashboard/WorkspaceAssistant.tsx`
-- 기능: 채팅 UI로 질문 응답 (견적 팁, 가격 조언 등)
+- 기능: 채팅 UI로 workspace context 기반 응답/초안 생성
 - 서버 액션: `app/actions/workspace-assistant.ts`
 
 ## 기술 스택
@@ -30,11 +31,14 @@ AI가 견적서 초안을 생성하고, 워크스페이스 어시스턴트로 �
 - `subscription.plan === 'pro'`
 - Starter 사용자에게는 UpgradePrompt 표시
 
-## TODO (Phase 2)
+## Current Status
 
-- [ ] Gemini API 키 환경변수 설정
-- [ ] 프롬프트 튜닝 (호주 페인팅 컨텍스트)
-- [ ] 스트리밍 응답 구현
-- [ ] 사용량 제한 (일일/월간)
-- [ ] 에러 핸들링 (API 장애 시 graceful degradation)
-- [ ] AIDraftPanel을 Quote 생성 화면에 노출 (Phase 3 Stage 3에서 권장됨)
+- [x] Gemini/Genkit 기반 quote draft
+- [x] Dashboard Workspace Assistant
+- [x] Pro plan gating + Starter upgrade prompt
+- [x] Quote create screen AI draft panel
+- [x] basic error handling
+- [ ] 월간/일간 사용량 제한
+- [ ] token/cost dashboard
+- [ ] streaming 응답
+- [ ] AI audit event 운영 조회

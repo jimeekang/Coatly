@@ -1,5 +1,5 @@
 ---
-description: 새 기능 요청을 분석하고 subtask로 분해한 뒤 Codex 구현 브리프를 출력
+description: 새 기능 요청을 분석하고 subtask로 분해한 뒤 Codex 엔지니어링 브리프를 출력
 argument-hint: [기능 설명]
 allowed-tools: Read
 ---
@@ -12,9 +12,9 @@ allowed-tools: Read
 2. `docs/PLANS.md`에서 현재 Phase + 우선순위 확인
 3. `docs/features/audit/audit.md`에서 활성 audit 항목과 충돌하는지 확인
 4. 요청이 Out of Scope면 거절하고 이유 설명
-5. 요청을 독립적인 subtask로 분해
-6. UI/UX 결정이 필요하면 `.claude/skills/ui-spec/SKILL.md` 호출하여 스펙 작성
-7. subtask별 Codex 구현 브리프 출력 — Codex가 받아 직접 구현·테스트
+5. 요청을 독립적인 subtask로 분해하고 progress 영향 표시
+6. UI/UX 결정이 필요하면 `.claude/skills/ui-spec.md` 호출하여 스펙 작성
+7. subtask별 Codex 구현 브리프 출력 — Codex가 구현·테스트·DB·배포·git을 담당
 
 ## 출력 형식
 
@@ -41,11 +41,11 @@ allowed-tools: Read
 ...
 
 ## 다음 단계
-사용자에게: "Codex로 전환해서 위 Subtask 1부터 구현하세요. DB 변경은 db-schema skill, 테스트는 test-writer skill 사용."
+사용자에게: "Codex로 전환해서 위 Subtask 1부터 구현하세요. DB 변경은 db-schema skill, 테스트는 test-writer skill 사용. 배포/git이 필요하면 Codex가 이어서 처리합니다."
 ```
 
 ## 참고
 
 - 현재 Phase 상태와 우선순위는 `docs/PLANS.md`가 단일 소스 — 여기에 하드코딩하지 말 것
 - 활성 audit 위험은 `docs/features/audit/audit.md` 참조 (저장 비-원자성, Google Calendar fail-closed, AI 거버넌스, reminder 멱등성 등)
-- 이 명령은 Claude Code 전용. Codex는 plan을 받아 구현만 담당.
+- 이 명령은 Claude Code 전용. Codex는 plan을 받아 엔지니어링 실행을 담당.

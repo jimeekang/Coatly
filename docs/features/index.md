@@ -42,7 +42,7 @@
 
 | 파일 | 내용 |
 |------|------|
-| [ai-assistant.md](./ai/ai-assistant.md) | AI 드래프트 패널, 워크스페이스 어시스턴트 (Phase 2 예정) |
+| [ai-assistant.md](./ai/ai-assistant.md) | AI 드래프트 패널, 워크스페이스 어시스턴트, Pro gating, 남은 governance 작업 |
 
 > ⚠️ AI 데이터 거버넌스 활성 audit: [`audit/audit.md` § 1.1-C](./audit/audit.md)
 
@@ -50,7 +50,7 @@
 
 | 파일 | 내용 |
 |------|------|
-| [schedule.md](./schedule/schedule.md) | 목표·Option B 결정, 데이터 모델, OAuth API, Phase A–F 구현 단계, 테스트·리스크·MVP |
+| [schedule.md](./schedule/schedule.md) | Schedule + Google Calendar 현재 구현 상태, 남은 fail-closed/sync 작업 |
 
 ## Design System
 

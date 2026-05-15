@@ -65,12 +65,19 @@ draft → sent → paid
 
 ## Acceptance Criteria
 
-- [ ] 청구서 번호 자동 채번 (INV-0001, user별 unique)
-- [ ] 견적서에서 변환 시 line item 자동 생성
-- [ ] 부분 납부 추적 (amount_paid_cents)
-- [ ] 기한 초과 시 overdue 상태 자동 변경
-- [ ] PDF에 은행 정보 (BSB, Account) 포함
-- [ ] GST 10% 자동 계산
+- [x] 청구서 번호 자동 채번 (INV-0001, user별 unique)
+- [x] 견적서에서 변환 시 line item 자동 생성
+- [x] 부분 납부 추적 (`amount_paid_cents`)
+- [x] 기한 초과 시 overdue 상태 resolve
+- [x] PDF에 은행 정보 포함
+- [x] GST 10% 자동 계산
+- [x] 고객 이메일 발송 + public PDF token
+- [x] due soon/overdue reminder cron 멱등성
+
+## Remaining Work
+
+- [ ] Invoice reminder 실패/재시도 운영 UI
+- [ ] 저장 원자성 RPC 검토
 
 ## Payment Terms
 

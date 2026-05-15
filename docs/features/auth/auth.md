@@ -77,11 +77,13 @@ const onboardingPath = '/onboarding'
 
 ## Acceptance Criteria
 
-- [ ] ABN 입력 시 ABR API로 자동 검증 + 사업자명 autofill
-- [ ] 필수 필드 미입력 시 다음 단계 진행 불가
-- [ ] 온보딩 완료 전 대시보드 접근 불가 (middleware 강제)
-- [ ] 로고 업로드는 5MB 이하 이미지만 허용
-- [ ] 온보딩 도중 이탈 후 재접속 시 마지막 상태 유지
+- [x] ABN 입력 시 ABR API로 자동 검증 + 사업자명 autofill
+- [x] 필수 필드 미입력 시 다음 단계 진행 불가
+- [x] 온보딩 완료 전 대시보드 접근 불가
+- [x] 로고 업로드는 이미지 파일로 제한
+- [x] 비밀번호 재설정 flow
+- [ ] 로고 5MB 제한의 서버/클라이언트 양쪽 검증 확인
+- [ ] 온보딩 중간 이탈 후 상태 복원 UX 강화
 
 ## Edge Cases
 
@@ -93,7 +95,7 @@ const onboardingPath = '/onboarding'
 ### 왜 소셜 로그인 없이 이메일만?
 
 타겟 사용자(호주 페인터)가 Google/Apple 로그인보다 이메일이 더 친숙.
-소셜 로그인은 Phase 2+ 고려.
+소셜 로그인은 현재 범위 밖입니다.
 
 ### 왜 onboarding을 별도 경로로?
 

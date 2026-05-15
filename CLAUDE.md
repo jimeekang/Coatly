@@ -1,6 +1,8 @@
-# Coatly — Project Context
+# Coatly — Claude Planning Context
 
-> 두 도구 공용 컨텍스트. 라우팅(어떤 요청을 누가 처리하는지) → [`AGENTS.md`](./AGENTS.md). Codex 전용 컨텍스트 → [`.codex/AGENTS.md`](./.codex/AGENTS.md).
+> Claude Code는 **플랜, 디자인, 앱 구성 기획, progress 기획**을 담당합니다.
+> 기능 구현/버그/DB/배포/git은 Codex 엔지니어링 문서 → [`docs/ENGINEERING.md`](./docs/ENGINEERING.md).
+> 라우팅 표 → [`AGENTS.md`](./AGENTS.md).
 
 ## Stack
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS + Storage) · Stripe · React-PDF · Resend · Vercel
@@ -36,18 +38,33 @@ const { data } = await supabase.from('quotes').select('*');
 ## Out of Scope (제안 금지)
 GPS · Team scheduling · Supplier integrations · Native app · Multi-language
 
+## Claude Code Ownership
+
+Claude Code가 담당:
+- 제품/기능 플랜과 우선순위
+- 디자인/UI/UX 스펙
+- 앱 구성/정보 구조/흐름 기획
+- `docs/PLANS.md` progress 정리
+- 디자인 리뷰, 앱 전체 분석, 브라우저 QA 리포트
+
+Claude Code가 직접 담당하지 않음:
+- 기능 구현
+- 오류/버그 수정
+- DB schema/migration/RLS
+- 배포/Vercel/git commit/push
+
 ## Tool Routing (요약)
 
 | 영역 | 담당 |
 |------|------|
-| 디자인 / UI / UX / 계획 / 앱 분석 / QA·테스트 | **Claude Code** (`.claude/skills/`, `.claude/commands/`) |
-| 기능 구현 / 기능 테스트 / DB 스키마 | **Codex** (`.codex/skills/`, `.codex/AGENTS.md`) |
+| 플랜 / 디자인 / 앱 구성 / progress 기획 / 앱 분석 / QA 리포트 | **Claude Code** (`.claude/skills/`, `.claude/commands/`) |
+| 기능 구현 / 버그 해결 / DB / 배포 / git / 기능 테스트 | **Codex** (`.codex/skills/`, `docs/ENGINEERING.md`) |
 
 상세: [`AGENTS.md`](./AGENTS.md)
 
 ## Navigation
 - 기술 아키텍처: [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 - Claude Code skills: [`.claude/skills/`](./.claude/skills/) | commands: [`.claude/commands/`](./.claude/commands/)
-- Codex skills: [`.codex/skills/`](./.codex/skills/) | guidance: [`.codex/AGENTS.md`](./.codex/AGENTS.md)
-- 작업 흐름: `/plan` (Claude) → Codex 구현 → `/gstack-health` → `/gstack-ship`
+- Codex skills: [`.codex/skills/`](./.codex/skills/) | engineering guide: [`docs/ENGINEERING.md`](./docs/ENGINEERING.md)
+- 작업 흐름: `/plan` (Claude) → Codex 구현/검증/배포/git → Claude QA/design-review 필요 시 재검토
 - 가장 최근 audit / tech debt: [`docs/features/audit/audit.md`](./docs/features/audit/audit.md)

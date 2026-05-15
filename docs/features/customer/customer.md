@@ -12,11 +12,12 @@
 
 ## Acceptance Criteria
 
-- [ ] 고객 CRUD (이름 필수, 나머지 선택)
-- [ ] 고객 보관(archive) — soft delete
-- [ ] 고객별 견적/청구서 이력 조회
-- [ ] 고객 검색 (이름, 이메일, 회사명)
-- [ ] 내부 메모 (notes) — 고객에게 비공개
+- [x] 고객 CRUD (이름 필수, 나머지 선택)
+- [x] 고객 보관(archive) — soft delete
+- [x] 고객별 견적/청구서 이력 조회
+- [x] 고객 검색 (이름, 이메일, 회사명)
+- [x] 내부 메모 (notes) — 고객에게 비공개
+- [x] 고객에서 quote/invoice 생성 흐름 연결
 
 ## Data Fields
 
