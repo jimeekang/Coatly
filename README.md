@@ -1,33 +1,12 @@
 # Coatly
 
-A quote and invoice management SaaS for small Australian painting businesses.
-Manage customers, build room-by-room quotes, generate PDFs, issue invoices, and handle Stripe subscriptions — all in one app.
+호주 1–3인 painter를 위한 모바일 우선 SaaS. v1 wedge = **AI Quote Writer** (notes + rough measurements + 보조 사진 + price_rates → polished quote artifact). 견적·청구·고객·구독·일정을 한 앱에서 처리.
 
-> 📘 More: [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`CLAUDE.md`](CLAUDE.md) (project context) · [`AGENTS.md`](AGENTS.md) (agent routing) · [`docs/`](docs/)
-
----
+> 📘 Navigation: [`ARCHITECTURE.md`](ARCHITECTURE.md) (스택·DB·flow) · [`CLAUDE.md`](CLAUDE.md) (planning context) · [`AGENTS.md`](AGENTS.md) (agent routing) · [`docs/PLANS.md`](docs/PLANS.md) (roadmap) · [`docs/features/ai/V1-PLAN.md`](docs/features/ai/V1-PLAN.md) (v1 wedge) · [`TODOS.md`](TODOS.md) (deferred)
 
 ## Tech Stack
 
-| Area | Technology |
-|------|------------|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript 5 (strict) |
-| Styling | Tailwind CSS 4 |
-| UI Components | shadcn/ui |
-| Database | Supabase (PostgreSQL 15) |
-| Auth | Supabase Auth (email/password) |
-| Storage | Supabase Storage |
-| Payments | Stripe (subscriptions) |
-| PDF | @react-pdf/renderer |
-| AI | Google Gemini via Genkit |
-| ABN Lookup | Australian Business Register (ABR) Web Services |
-| Form Validation | Zod + React Hook Form |
-| State Management | Zustand |
-| Deployment | Vercel (Serverless) |
-| Testing | Vitest + Testing Library |
-
----
+기술 스택 전체는 [`ARCHITECTURE.md`](ARCHITECTURE.md#stack) 참조. 핵심: Next.js 16 App Router + React 19 + Supabase(Postgres/Auth/RLS/Storage) + Stripe + React-PDF + Resend + Gemini Flash via Genkit + Vercel.
 
 ## Local Development
 
@@ -35,7 +14,7 @@ Manage customers, build room-by-room quotes, generate PDFs, issue invoices, and 
 
 - Node.js 20+
 - npm 10+
-- [Supabase CLI](https://supabase.com/docs/guides/cli) — only needed for local DB
+- 원격 Supabase 프로젝트(로컬 Docker 불필요)
 
 ### 1. Clone and install
 
@@ -47,7 +26,7 @@ npm install
 
 ### 2. Environment variables
 
-Create `.env.local` in the project root:
+`.env.local` 생성:
 
 ```env
 # Supabase
@@ -67,7 +46,7 @@ STRIPE_PRICE_PRO_ANNUAL=price_...
 # ABN Lookup
 ABR_GUID=<abr-web-services-guid>
 
-# AI (optional)
+# AI (v1 wedge core)
 GEMINI_API_KEY=<gemini-api-key>
 
 # App URL
@@ -76,48 +55,29 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 > Supabase keys: Dashboard → Project Settings → API
 > ABR GUID: register at [abr.business.gov.au](https://abr.business.gov.au/Tools/WebServices)
+> Gemini API key: [aistudio.google.com](https://aistudio.google.com/)
 
-### 3. Apply DB migrations
-
-**Remote Supabase** (recommended — no extra tooling):
-```bash
-# Set remote URL/keys in .env.local, then:
-npm run dev
-```
-
-**Local Supabase** (requires Docker):
-```bash
-supabase start
-supabase db push
-```
-
-### 4. Start dev server
+### 3. Start dev server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+[http://localhost:3000](http://localhost:3000) 열기. DB는 원격 Supabase가 자동 연결됨. migration은 MCP 도구로만 적용 ([`.codex/skills/db-schema.md`](.codex/skills/db-schema.md)).
 
-### 5. (Optional) Seed demo data
+### 4. (Optional) Seed demo data
 
 ```bash
-# Add ALLOW_DEMO_SEED=true to .env.local, then:
-npm run seed:demo -- --email=<your-email>
-
-# Or:
-ALLOW_DEMO_SEED=true npm run seed:demo -- --user-id=<uuid>
+ALLOW_DEMO_SEED=true npm run seed:demo -- --email=<your-email>
 ```
 
-Creates 5 customers, 3 quotes, 2 invoices. Re-running wipes and re-creates (idempotent).
+Creates 5 customers, 3 quotes, 2 invoices. 재실행 시 wipe + 재생성 (idempotent).
 
-### 6. Local Stripe webhook
+### 5. Local Stripe webhook
 
 ```bash
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
-
----
 
 ## npm Scripts
 
@@ -128,36 +88,31 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 | `npm run lint` | Run ESLint |
 | `npm run test` | Vitest watch mode |
 | `npm run test:run` | Vitest single run |
+| `npm run db:types` | Regenerate `types/database.ts` |
 | `npm run seed:demo` | Seed demo data |
-
----
 
 ## Subscription Plans
 
 | Plan | Price | Limits |
 |------|-------|--------|
-| Starter | A$39/mo (A$450/yr) | 10 active quotes/month |
-| Pro | A$59/mo (A$680/yr) | Unlimited + AI + branding |
-
----
+| Starter | A$39/mo (A$450/yr) | 월 10 active quotes, AI 없음 |
+| Pro | A$59/mo (A$680/yr) | 무제한 quotes + AI Quote Writer + 브랜딩 |
 
 ## Deployment
 
-Pushing to `main` triggers a Vercel production deployment.
-
-Set environment variables at: Vercel Dashboard → Project → Settings → Environment Variables.
+`main` push → Vercel 자동 배포. 환경 변수는 Vercel Dashboard → Project → Settings.
 
 > ⚠️ Never set `ALLOW_DEMO_SEED` in production.
 
----
+## Out of Scope
 
-## 한글 요약
+GPS · Team scheduling · Supplier integrations · Native app · Multi-language. 자세한 건 [`CLAUDE.md`](CLAUDE.md).
 
-호주 소규모 페인터(1–3인)를 위한 모바일 우선 PWA. 견적·청구·고객·구독을 한 앱에서 처리.
+## Tool Routing
 
-- 개발 시작: `.env.local` 채운 뒤 `npm install && npm run dev`
-- DB는 원격 Supabase 권장 (로컬 Docker 불필요)
-- 데모 데이터: `ALLOW_DEMO_SEED=true npm run seed:demo -- --email=<이메일>`
-- 배포: `main` push → Vercel 자동
-- 가격: Starter A$39/월(견적 10건), Pro A$59/월(무제한 + AI)
-- 자세한 아키텍처: [`ARCHITECTURE.md`](ARCHITECTURE.md), 작업 라우팅: [`AGENTS.md`](AGENTS.md)
+| 영역 | 담당 |
+|------|------|
+| 플랜 / 디자인 / progress / QA | Claude Code (`.claude/commands/`, `.claude/skills/`) |
+| 구현 / 버그 / DB / 배포 / git | Codex (`.codex/skills/`, [`docs/ENGINEERING.md`](docs/ENGINEERING.md)) |
+
+자세한 라우팅 표는 [`AGENTS.md`](AGENTS.md).

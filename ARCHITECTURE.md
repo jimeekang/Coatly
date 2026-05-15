@@ -1,12 +1,12 @@
 # Coatly — Architecture
 
-> 이 문서는 현재 구현된 시스템의 짧은 기술 지도입니다. 상세 DB 원장은 `supabase/migrations/`와 `docs/generated/db-schema.md`를 기준으로 합니다.
+> 이 문서는 현재 구현된 시스템의 짧은 기술 지도입니다. 상세 DB 원장은 `supabase/migrations/`와 [`docs/generated/DB-SCHEMA.md`](./docs/generated/DB-SCHEMA.md)를 기준으로 합니다.
 
 ## Product Shape
 
-Coatly는 호주 소규모 페인터를 위한 모바일 우선 SaaS입니다. 고객 관리, 견적, PDF, 청구, 일정, 자재/서비스 카탈로그, Stripe 구독, AI 초안, Google Calendar 연동을 한 워크스페이스에서 처리합니다.
+Coatly는 호주 소규모 페인터를 위한 모바일 우선 SaaS입니다. 고객 관리, 견적, PDF, 청구, 일정, 자재/서비스 카탈로그, Stripe 구독, **AI Quote Writer (v1 wedge)**, Google Calendar 연동을 한 워크스페이스에서 처리합니다. v1 wedge 자세한 건 [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md).
 
-## Stack
+## Stack {#stack}
 
 | 영역 | 기술 |
 |------|------|
@@ -15,7 +15,7 @@ Coatly는 호주 소규모 페인터를 위한 모바일 우선 SaaS입니다. �
 | Data | Supabase Postgres, Auth, RLS, Storage |
 | Payments | Stripe Checkout, Portal, Webhook |
 | PDF/Email | `@react-pdf/renderer`, Resend |
-| AI | Genkit + Google Gemini |
+| AI | Gemini Flash via Genkit (v1 wedge core) |
 | Calendar | Google Calendar OAuth + Calendar API |
 | Deploy | Vercel serverless |
 

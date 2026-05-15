@@ -4,8 +4,12 @@
 > 기능 구현/버그/DB/배포/git은 Codex 엔지니어링 문서 → [`docs/ENGINEERING.md`](./docs/ENGINEERING.md).
 > 라우팅 표 → [`AGENTS.md`](./AGENTS.md).
 
+## v1 Wedge (2026-05-15 APPROVED)
+
+**AI Quote Writer for Australian painters.** Notes + rough measurements + 보조 사진 + price_rates → polished quote artifact(scope + assumptions + exclusions + line items). AUD $59/월 Pro 정당화 핵심. AI는 **surface 매핑 + scope writing**만, **pricing은 deterministic** (painter price_rates table server-side lookup). 자세한 건 [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md).
+
 ## Stack
-Next.js 16 (App Router) · React 19 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS + Storage) · Stripe · React-PDF · Resend · Vercel
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS + Storage) · Stripe · React-PDF · Resend · Gemini Flash via Genkit · Vercel
 
 ## Key Constraints
 - Mobile-first PWA — 터치 타겟 44px+, 핵심 액션 화면 하단 배치
@@ -33,7 +37,7 @@ const { data } = await supabase.from('quotes').select('*');
 - **컨테이너 너비**: list/dashboard 페이지는 layout의 `max-w-7xl` 의존, 단순 form은 `max-w-lg md:max-w-2xl`, 설정 페이지는 `max-w-4xl`, 복합 form(line items 포함)은 `max-w-lg lg:max-w-6xl`
 - **페이지 spacing**: `flex flex-col gap-4 sm:gap-6` (top-level wrapper)
 
-상세: [`docs/DESIGN_CONSISTENCY_AUDIT.md`](./docs/DESIGN_CONSISTENCY_AUDIT.md), [`docs/features/design-system/design-system.md`](./docs/features/design-system/design-system.md)
+상세: [`docs/DESIGN_CONSISTENCY_AUDIT.md`](./docs/DESIGN_CONSISTENCY_AUDIT.md), [`docs/features/design-system/DESIGN-SYSTEM.md`](./docs/features/design-system/DESIGN-SYSTEM.md)
 
 ## Out of Scope (제안 금지)
 GPS · Team scheduling · Supplier integrations · Native app · Multi-language
@@ -64,7 +68,10 @@ Claude Code가 직접 담당하지 않음:
 
 ## Navigation
 - 기술 아키텍처: [`ARCHITECTURE.md`](./ARCHITECTURE.md)
-- Claude Code skills: [`.claude/skills/`](./.claude/skills/) | commands: [`.claude/commands/`](./.claude/commands/)
-- Codex skills: [`.codex/skills/`](./.codex/skills/) | engineering guide: [`docs/ENGINEERING.md`](./docs/ENGINEERING.md)
+- v1 build plan: [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md)
+- Phase progress: [`docs/PLANS.md`](./docs/PLANS.md)
+- Deferred items: [`TODOS.md`](./TODOS.md)
+- Claude Code commands: [`.claude/commands/`](./.claude/commands/) (lowercase = slash command name)
+- Codex skills: [`.codex/skills/`](./.codex/skills/) (lowercase = skill name) | engineering guide: [`docs/ENGINEERING.md`](./docs/ENGINEERING.md)
 - 작업 흐름: `/plan` (Claude) → Codex 구현/검증/배포/git → Claude QA/design-review 필요 시 재검토
-- 가장 최근 audit / tech debt: [`docs/features/audit/audit.md`](./docs/features/audit/audit.md)
+- 가장 최근 audit / tech debt: [`docs/features/audit/AUDIT.md`](./docs/features/audit/AUDIT.md)

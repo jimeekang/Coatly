@@ -60,16 +60,18 @@
 | Claude planning context | [`CLAUDE.md`](./CLAUDE.md) |
 | Codex engineering guide | [`docs/ENGINEERING.md`](./docs/ENGINEERING.md) |
 | 기술 아키텍처 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
+| **v1 wedge build plan (AI Quote Writer)** | [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md) |
 | 로드맵 + progress | [`docs/PLANS.md`](./docs/PLANS.md) |
+| Deferred items / TODOs | [`TODOS.md`](./TODOS.md) |
 | 디자인 정책 | [`docs/DESIGN.md`](./docs/DESIGN.md) |
 | 디자인 일관성 감사 | [`docs/DESIGN_CONSISTENCY_AUDIT.md`](./docs/DESIGN_CONSISTENCY_AUDIT.md) |
 | 프론트엔드 패턴 | [`docs/FRONTEND.md`](./docs/FRONTEND.md) |
 | 제품 감각 | [`docs/PRODUCT_SENSE.md`](./docs/PRODUCT_SENSE.md) |
 | 안정성 | [`docs/RELIABILITY.md`](./docs/RELIABILITY.md) |
 | 보안/RLS | [`docs/SECURITY.md`](./docs/SECURITY.md) |
-| 기능 문서 | [`docs/features/`](./docs/features/index.md) |
-| Audit/Tech debt | [`docs/features/audit/audit.md`](./docs/features/audit/audit.md) |
-| DB 스냅샷 | [`docs/generated/db-schema.md`](./docs/generated/db-schema.md) |
+| 기능 문서 | [`docs/features/INDEX.md`](./docs/features/INDEX.md) |
+| Audit/Tech debt | [`docs/features/audit/AUDIT.md`](./docs/features/audit/AUDIT.md) |
+| DB 스냅샷 | [`docs/generated/DB-SCHEMA.md`](./docs/generated/DB-SCHEMA.md) |
 
 ## Notion Sync
 

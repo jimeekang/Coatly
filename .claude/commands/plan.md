@@ -10,7 +10,7 @@ allowed-tools: Read
 
 1. `CLAUDE.md`를 읽고 Out of Scope 확인
 2. `docs/PLANS.md`에서 현재 Phase + 우선순위 확인
-3. `docs/features/audit/audit.md`에서 활성 audit 항목과 충돌하는지 확인
+3. `docs/features/audit/AUDIT.md`에서 활성 audit 항목과 충돌하는지 확인
 4. 요청이 Out of Scope면 거절하고 이유 설명
 5. 요청을 독립적인 subtask로 분해하고 progress 영향 표시
 6. UI/UX 결정이 필요하면 `.claude/skills/ui-spec.md` 호출하여 스펙 작성
@@ -23,7 +23,7 @@ allowed-tools: Read
 - Phase 적합 여부:
 - Out of scope 여부:
 - 우선순위 (P1/P2/P3 또는 신규):
-- Audit 충돌 여부 (audit.md 참조):
+- Audit 충돌 여부 (AUDIT.md 참조):
 
 ## 디자인/UX 결정 (Claude Code가 산출)
 - [ui-spec skill 결과 또는 핵심 UX 결정]
@@ -47,5 +47,5 @@ allowed-tools: Read
 ## 참고
 
 - 현재 Phase 상태와 우선순위는 `docs/PLANS.md`가 단일 소스 — 여기에 하드코딩하지 말 것
-- 활성 audit 위험은 `docs/features/audit/audit.md` 참조 (저장 비-원자성, Google Calendar fail-closed, AI 거버넌스, reminder 멱등성 등)
+- 활성 audit 위험은 `docs/features/audit/AUDIT.md` 참조 (저장 비-원자성, Google Calendar fail-closed, AI 거버넌스, reminder 멱등성 등)
 - 이 명령은 Claude Code 전용. Codex는 plan을 받아 엔지니어링 실행을 담당.

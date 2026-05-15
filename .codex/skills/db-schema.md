@@ -89,4 +89,4 @@ create policy "users can only see their own {table}"
 - 절대 `any` 타입 사용 금지
 - join 타입은 inline으로 정의 (별도 파일 X)
 - migration 적용 전 반드시 `execute_sql`로 테이블/컬럼 존재 여부 확인
-- `docs/generated/db-schema.md`는 스냅샷 참조용 — 최신 schema는 `generate_typescript_types`로 직접 가져올 것
+- `docs/generated/DB-SCHEMA.md`는 스냅샷 참조용 — 최신 schema는 `generate_typescript_types`로 직접 가져올 것

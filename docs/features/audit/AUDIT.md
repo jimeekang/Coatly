@@ -8,11 +8,12 @@
 |----|--------|------|------|-----------|
 | A1 | P0 | Quote/Invoice 저장 원자성 | 열림 | 다중 insert/update 흐름을 RPC transaction으로 묶을 범위 산정 |
 | A2 | P1 | Public booking + Google Calendar | 열림 | Google event 생성 실패 시 booking 정책을 fail-closed로 정리 |
-| A3 | P1 | AI 거버넌스 | 부분 | 사용량 제한, 비용 모니터링, 민감정보 처리 정책 보강 |
+| A3 | P0 | AI 거버넌스 + v1 wedge | 진행 중 | v1 build T4 (`ai_usage_logs` + limit) + T8 validator. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md) |
 | A4 | P1 | Invoice reminder cron | 부분 해결 | `invoice_reminder_events` 기반 멱등성 운영 로그 점검 |
 | A5 | P1 | Public quote security/audit | 부분 | token expiry/revoke/error audit 조회와 운영 화면 검토 |
 | A6 | P1 | Exterior estimate | 열림 | edit/PDF/detail/AI draft 회귀 테스트 강화 |
-| A7 | P2 | 문서 drift | 진행 중 | 모든 MD 200줄 이하, PLANS를 단일 progress source로 유지 |
+| A7 | P2 | 문서 drift | 진행 중 | 모든 MD 200줄 이하, PLANS를 단일 progress source로 유지, [/TODOS.md](../../../TODOS.md) 로 v1.1 deferred 추적 |
+| A8 | P1 | Stale price_rates race (v1.1 deferred) | TODO | painter가 AI 생성 중 price_rates 수정 → AI는 old rate. v1 UI mitigation만, snapshot immutability는 v1.1 — [/TODOS.md](../../../TODOS.md) |
 
 ## Finding Details
 
@@ -34,12 +35,15 @@
 
 ### A3 — AI Governance
 
-AI draft와 workspace assistant가 구현되어 있습니다. Pro gating은 있으나 비용/사용량 제한과 민감정보 처리 정책은 더 명확해야 합니다.
+AI draft와 workspace assistant가 구현되어 있습니다. v1 wedge 재정의(2026-05-15)로 governance가 build 핵심 — T4 `ai_usage_logs` migration + `lib/ai/usage.ts` rate limit + validator/repair layer + deterministic pricing pass. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md).
 
 수용 기준:
-- user/action/model/status/token/latency/request id가 추적됨
-- 월간/일간 사용량 제한 정책이 정리됨
-- AI 실패가 quote 저장을 막지 않음
+- user/action/model/status/token/latency/request id가 `ai_usage_logs`에 기록됨 (attempt accounting — success/failed/cancelled/partial/retried)
+- per-painter monthly limit 적용, 도달 시 429 + UpgradePrompt
+- AI 실패가 quote 저장을 막지 않음 (graceful degradation → manual builder fallback)
+- AI rate hallucination 방지 — `lib/ai/validator.ts`가 painter price_rates에 없는 rate 거부 + warning
+- DRAFT marker UI + ToS disclaimer (T11)
+- 후속 critical gap: stale `price_rates` race condition은 v1.1 TODO ([/TODOS.md](../../../TODOS.md))
 
 ### A4 — Invoice Reminder Cron
 
