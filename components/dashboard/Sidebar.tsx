@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -14,6 +14,8 @@ import {
   LogOut,
   DollarSign,
   Home,
+  MoreHorizontal,
+  X,
 } from 'lucide-react';
 import { signOut } from '@/app/actions/auth';
 import type { SubscriptionSnapshot } from '@/lib/subscription/access';
@@ -36,11 +38,17 @@ const navItems: NavItem[] = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-const mobileTabItems: NavItem[] = [
+const mobilePrimaryItems: NavItem[] = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/schedule', label: 'Schedule', icon: CalendarDays },
   { href: '/quotes', label: 'Quotes', icon: FileText },
   { href: '/invoices', label: 'Invoices', icon: Receipt },
+];
+
+const mobileMoreItems: NavItem[] = [
+  { href: '/customers', label: 'Customers', icon: Users },
+  { href: '/materials-service', label: 'Material / Service', icon: Boxes },
+  { href: '/price-rates', label: 'Price Rates', icon: DollarSign },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -61,10 +69,12 @@ export default function DashboardSidebar({
   subscription: SubscriptionSnapshot;
 }) {
   const pathname = usePathname();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const hasHydrated = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
   const planLabel = formatPlanName(subscription.plan);
   const isPro = subscription.plan === 'pro';
   const activePathname = hasHydrated ? pathname : '';
+  const isMoreActive = mobileMoreItems.some(({ href }) => isActive(href, activePathname));
 
   return (
     <>
@@ -164,12 +174,72 @@ export default function DashboardSidebar({
         </div>
       </header>
 
+      {isMoreOpen ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close more navigation"
+            className="fixed inset-x-0 top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 bg-black/30 md:hidden"
+            onClick={() => setIsMoreOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="More menu"
+            className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-sm md:hidden"
+          >
+            <nav
+              id="mobile-more-navigation"
+              aria-label="More navigation"
+              className="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-outline-variant px-4 py-3">
+                <p className="text-sm font-bold text-on-surface">More</p>
+                <button
+                  type="button"
+                  aria-label="Close more navigation"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-high active:bg-outline-variant"
+                  onClick={() => setIsMoreOpen(false)}
+                >
+                  <X className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
+                </button>
+              </div>
+              <div className="divide-y divide-outline-variant">
+                {mobileMoreItems.map(({ href, label, icon: Icon }) => {
+                  const active = isActive(href, activePathname);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      aria-current={active ? 'page' : undefined}
+                      className={`flex min-h-12 items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors ${
+                        active
+                          ? 'bg-surface-container-high text-primary'
+                          : 'text-on-surface hover:bg-surface-container-high'
+                      }`}
+                      onClick={() => setIsMoreOpen(false)}
+                    >
+                      <Icon
+                        className={`h-5 w-5 shrink-0 ${active ? 'text-primary' : 'text-on-surface-variant'}`}
+                        strokeWidth={active ? 2.25 : 1.75}
+                        aria-hidden="true"
+                      />
+                      <span>{label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+          </div>
+        </>
+      ) : null}
+
       {/* ── Mobile bottom tab bar ── */}
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-40 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t border-outline-variant bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
         aria-label="Bottom navigation"
       >
-        {mobileTabItems.map(({ href, label, icon: Icon }) => {
+        {mobilePrimaryItems.map(({ href, label, icon: Icon }) => {
           const active = isActive(href, activePathname);
           return (
             <Link
@@ -189,6 +259,25 @@ export default function DashboardSidebar({
             </Link>
           );
         })}
+        <button
+          type="button"
+          aria-controls="mobile-more-navigation"
+          aria-current={isMoreActive ? 'page' : undefined}
+          aria-expanded={isMoreOpen}
+          className={`flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 duration-150 ${
+            isMoreActive || isMoreOpen ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
+          }`}
+          onClick={() => setIsMoreOpen((open) => !open)}
+        >
+          <MoreHorizontal
+            className={`h-[22px] w-[22px] ${
+              isMoreActive || isMoreOpen ? 'text-primary' : 'text-on-surface-variant'
+            }`}
+            strokeWidth={isMoreActive || isMoreOpen ? 2.25 : 1.75}
+            aria-hidden="true"
+          />
+          <span className="truncate">More</span>
+        </button>
       </nav>
     </>
   );
