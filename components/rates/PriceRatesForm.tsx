@@ -209,7 +209,7 @@ function RateRowActions({
       <button
         type="button"
         onClick={onEditToggle}
-        className="border-outline text-on-surface hover:border-primary hover:text-primary inline-flex h-10 items-center gap-1.5 rounded-xl border bg-white px-3 text-xs font-medium"
+        className="border-outline text-on-surface hover:border-primary hover:text-primary inline-flex h-11 items-center gap-1.5 rounded-xl border bg-white px-4 text-xs font-medium"
       >
         {isEditing ? (
           <Check className="h-3.5 w-3.5" />
@@ -222,7 +222,7 @@ function RateRowActions({
         type="button"
         aria-label={deleteLabel}
         onClick={onDelete}
-        className="border-error/30 text-error hover:bg-error-container inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-white"
+        className="border-error/30 text-error hover:bg-error-container inline-flex h-11 w-11 items-center justify-center rounded-xl border bg-white"
       >
         <Trash2 className="h-4 w-4" />
       </button>
@@ -1798,7 +1798,7 @@ function ExteriorRatesSection({
               key={surface}
               type="button"
               onClick={() => onSurfaceToggle(surface, true)}
-              className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-10 items-center gap-1.5 rounded-xl border border-dashed bg-white px-3 text-xs font-medium"
+              className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-11 items-center gap-1.5 rounded-xl border border-dashed bg-white px-4 text-xs font-medium"
             >
               <Plus className="h-3.5 w-3.5" />
               Restore {EXTERIOR_SURFACE_LABELS[surface]}

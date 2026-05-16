@@ -25,7 +25,7 @@ export default async function JobDetailPage({ params }: Props) {
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/jobs"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface-variant transition-colors hover:bg-surface-container-high"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-on-surface-variant transition-colors hover:bg-surface-container-high"
           aria-label="Back to jobs"
         >
           <svg

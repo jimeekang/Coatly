@@ -233,7 +233,8 @@ describe('QuoteForm', () => {
     const footer = sendButton.closest('.fixed');
     const footerContent = sendButton.closest('.mx-auto');
 
-    expect(footer).toHaveClass('bottom-16');
+    expect(footer).toHaveClass('bottom-[calc(4rem+env(safe-area-inset-bottom))]');
+    expect(footer).toHaveClass('pb-[calc(0.75rem+env(safe-area-inset-bottom))]');
     expect(footer).toHaveClass('px-3', 'sm:px-4', 'md:px-6');
     expect(footer).toHaveClass('md:left-[72px]', 'lg:left-64');
     expect(footerContent).toHaveClass('max-w-lg', 'lg:max-w-6xl');

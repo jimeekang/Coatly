@@ -225,7 +225,7 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
               key={option.value}
               type="button"
               onClick={() => setSort(option.value)}
-              className={`min-h-8 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors sm:px-4 sm:py-1.5 sm:text-xs ${
+              className={`min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors sm:px-4 ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'

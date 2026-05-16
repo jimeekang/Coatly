@@ -1,0 +1,56 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+function readSource(relativePath: string) {
+  return readFileSync(path.join(process.cwd(), relativePath), 'utf8');
+}
+
+describe('mobile accessibility regressions', () => {
+  it('does not disable pinch zoom in the app viewport', () => {
+    expect(readSource('app/layout.tsx')).not.toContain('maximumScale');
+  });
+
+  it('keeps the mobile dashboard chrome safe-area aware', () => {
+    const sidebar = readSource('components/dashboard/Sidebar.tsx');
+
+    expect(sidebar).toContain('h-[calc(4rem+env(safe-area-inset-bottom))]');
+    expect(sidebar).toContain('pb-[env(safe-area-inset-bottom)]');
+  });
+
+  it('keeps quote send overlays above mobile navigation and safe-area aware', () => {
+    const quoteForm = readSource('components/quotes/QuoteForm.tsx');
+
+    expect(quoteForm).toContain('z-50');
+    expect(quoteForm).toContain('bottom-[calc(4rem+env(safe-area-inset-bottom))]');
+    expect(quoteForm).toContain('pb-[calc(0.75rem+env(safe-area-inset-bottom))]');
+    expect(quoteForm).not.toContain('bottom-16');
+  });
+
+  it('keeps known field-use touch targets at least 44px tall', () => {
+    expect(readSource('components/layout/BackButton.tsx')).toContain('h-11 w-11');
+    expect(readSource('components/quotes/QuoteTable.tsx')).not.toContain('min-h-8');
+    expect(readSource('components/invoices/InvoiceTable.tsx')).not.toContain('min-h-8');
+    expect(readSource('components/customers/CustomerTable.tsx')).not.toContain('min-h-8');
+    expect(readSource('components/ai/AIDraftPanel.tsx')).not.toContain('min-h-9');
+  });
+
+  it('keeps expanded field-use controls away from 40px min-height utilities', () => {
+    const files = [
+      'app/(dashboard)/customers/[id]/page.tsx',
+      'components/customers/CustomerForm.tsx',
+      'components/jobs/JobEditForm.tsx',
+      'components/jobs/JobsWorkspace.tsx',
+      'components/quotes/QuoteExtraLineItems.tsx',
+      'components/quotes/QuoteForm.tsx',
+      'components/rates/PriceRatesForm.tsx',
+      'components/schedule/ScheduleCalendar.tsx',
+    ];
+
+    for (const file of files) {
+      const source = readSource(file);
+      expect(source).not.toMatch(/\bmin-h-(8|9|10)\b/);
+      expect(source).not.toMatch(/\bh-10\b/);
+    }
+  });
+});

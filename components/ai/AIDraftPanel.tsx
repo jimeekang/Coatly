@@ -64,7 +64,7 @@ export function AIDraftPanel({
             key={example}
             type="button"
             onClick={() => onPromptChange(example)}
-            className="min-h-9 rounded-full border border-primary-container/50 bg-surface-container-lowest px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary-container/30 active:bg-primary-container/50"
+            className="min-h-11 rounded-full border border-primary-container/50 bg-surface-container-lowest px-4 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary-container/30 active:bg-primary-container/50"
           >
             {example}
           </button>

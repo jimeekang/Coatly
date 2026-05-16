@@ -32,7 +32,7 @@ export default async function CustomerDetailPage({ params }: Props) {
       <div className="flex items-center gap-3 mb-6">
         <Link
           href="/customers"
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-low text-on-surface-variant active:bg-surface-container-high transition-colors"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors active:bg-surface-container-high"
           aria-label="Back to customers"
         >
           <svg

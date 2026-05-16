@@ -823,7 +823,7 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
       <h2 className="text-lg font-bold text-pm-body">{title}</h2>
       <button
         onClick={onClose}
-        className="flex h-10 w-10 items-center justify-center rounded-full text-pm-secondary transition-colors hover:bg-pm-surface"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-pm-secondary transition-colors hover:bg-pm-surface"
         aria-label="Close"
       >
         <X className="h-4 w-4" />
@@ -1360,7 +1360,7 @@ export function ScheduleCalendar({
                     </span>
                     <button
                       onClick={() => openAddEvent(selected)}
-                      className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-pm-border px-3 text-xs font-semibold text-pm-secondary transition-colors hover:bg-pm-surface"
+                      className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-pm-border px-4 text-xs font-semibold text-pm-secondary transition-colors hover:bg-pm-surface"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Add
@@ -1706,7 +1706,7 @@ function SegmentButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors sm:h-11 sm:gap-2 sm:px-3 sm:text-sm ${
+      className={`flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors sm:gap-2 sm:px-3 sm:text-sm ${
         active
           ? 'border-pm-teal bg-pm-teal/10 text-pm-teal'
           : 'border-pm-border bg-white text-pm-secondary hover:bg-pm-surface'

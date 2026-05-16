@@ -248,7 +248,7 @@ export function PublicQuoteClient({
                   </span>
                   <a
                     href={`/api/pdf/quote?token=${encodeURIComponent(token)}`}
-                    className="inline-flex min-h-9 items-center justify-center rounded-full border border-white/30 px-3 text-xs font-semibold text-white transition-colors hover:bg-white/10"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/30 px-4 text-xs font-semibold text-white transition-colors hover:bg-white/10"
                   >
                     PDF
                   </a>

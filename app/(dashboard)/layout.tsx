@@ -29,8 +29,8 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-surface">
       <DashboardSidebar businessName={businessName} subscription={subscription} />
-      {/* pt-14 offsets fixed mobile top bar; pb-16 for bottom tab bar */}
-      <main className="flex-1 pt-14 pb-16 md:pt-0 md:pb-0 overflow-x-clip">
+      {/* Mobile offsets match the fixed top bar and bottom tab bar, including device safe areas. */}
+      <main className="flex-1 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 overflow-x-clip">
         <div className="mx-auto w-full max-w-7xl min-w-0 p-3 sm:p-4 md:p-6">{children}</div>
       </main>
     </div>

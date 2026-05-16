@@ -656,7 +656,7 @@ function PricingSummaryPanel({
                   value={discountInput}
                   onChange={(e) => onDiscountInputChange(e.target.value)}
                   placeholder="0.00"
-                  className="border-outline-variant text-on-surface focus:border-error focus:ring-error/20 h-10 flex-1 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline-variant text-on-surface focus:border-error focus:ring-error/20 h-11 flex-1 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                 />
                 {discountCents > 0 && (
                   <span className="text-error text-sm font-medium">
@@ -714,7 +714,7 @@ function PricingSummaryPanel({
                   value={depositInput}
                   onChange={(e) => onDepositInputChange(e.target.value)}
                   placeholder="50"
-                  className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-10 w-20 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-20 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                 />
                 <span className="text-on-surface-variant text-sm">% of total</span>
                 {depositPercent > 0 && (
@@ -2401,7 +2401,7 @@ export function QuoteForm({
       </div>
 
       {sendDialog && selectedCustomer && (
-        <div className="fixed inset-0 z-30 flex items-end bg-black/40 px-4 py-4 md:items-center md:justify-center">
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40 px-4 py-4 md:items-center md:justify-center">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -2416,7 +2416,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="border-outline-variant text-on-surface-variant h-10 rounded-lg border px-3 text-sm font-medium disabled:opacity-50"
+                className="border-outline-variant text-on-surface-variant h-11 rounded-lg border px-4 text-sm font-medium disabled:opacity-50"
               >
                 Close
               </button>
@@ -2518,8 +2518,8 @@ export function QuoteForm({
         </div>
       )}
 
-      {/* Sticky footer CTA — sits above the dashboard bottom tab bar (h-16) on mobile */}
-      <div className="border-outline-variant fixed right-0 bottom-16 left-0 z-10 border-t bg-white/95 px-3 pt-3 pb-3 backdrop-blur-sm sm:px-4 md:bottom-0 md:left-[72px] md:px-6 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:left-64">
+      {/* Sticky footer CTA sits above the dashboard bottom tab bar and device safe area on mobile. */}
+      <div className="border-outline-variant fixed right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 z-10 border-t bg-white/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm sm:px-4 md:bottom-0 md:left-[72px] md:px-6 lg:left-64">
         <div className="mx-auto flex w-full max-w-lg justify-center lg:max-w-6xl">
           {showSendQuoteButton ? (
             <div className="w-full space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">

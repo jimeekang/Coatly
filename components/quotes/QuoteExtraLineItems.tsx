@@ -224,7 +224,7 @@ export function QuoteExtraLineItems({
                               key={suggestion.id}
                               type="button"
                               onClick={() => applySuggestedItem(item._key, suggestion)}
-                              className="flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-primary/15 bg-white px-3 py-2 text-left hover:border-primary hover:bg-primary/10"
+                              className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-primary/15 bg-white px-3 py-2 text-left hover:border-primary hover:bg-primary/10"
                             >
                               <span className="min-w-0">
                                 <span className="block truncate text-sm font-medium text-on-surface">

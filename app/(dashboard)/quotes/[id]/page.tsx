@@ -314,7 +314,7 @@ export default async function QuoteDetailPage({
                                 />
                                 <button
                                   type="submit"
-                                  className={`inline-flex min-h-9 items-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                                  className={`inline-flex min-h-11 items-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
                                     item.is_selected
                                       ? 'border border-outline-variant bg-white text-on-surface hover:bg-surface-container-low'
                                       : 'bg-primary text-on-primary hover:opacity-90'

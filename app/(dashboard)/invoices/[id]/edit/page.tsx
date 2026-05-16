@@ -26,7 +26,7 @@ export default async function EditInvoicePage({ params }: Props) {
       <div className="mb-6 flex items-center gap-3">
         <Link
           href={`/invoices/${invoice.id}`}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors active:bg-surface-container-high"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors active:bg-surface-container-high"
           aria-label="Back to invoice"
         >
           <svg

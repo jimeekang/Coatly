@@ -148,7 +148,7 @@ export default function DashboardSidebar({
       </aside>
 
       {/* ── Mobile top bar ── */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between bg-surface/90 backdrop-blur-md border-b border-outline-variant px-4 h-14 shadow-sm">
+      <header className="md:hidden fixed top-0 inset-x-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between border-b border-outline-variant bg-surface/90 px-4 pt-[env(safe-area-inset-top)] shadow-sm backdrop-blur-md">
         <h1 className="text-xl font-bold tracking-tight text-on-surface">Coatly</h1>
         <div className="flex items-center gap-2">
           <p className="text-xs text-on-surface-variant truncate max-w-[120px] font-medium">
@@ -166,7 +166,7 @@ export default function DashboardSidebar({
 
       {/* ── Mobile bottom tab bar ── */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/90 backdrop-blur-md border-t border-outline-variant grid grid-cols-5 h-16"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t border-outline-variant bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
         aria-label="Bottom navigation"
       >
         {mobileTabItems.map(({ href, label, icon: Icon }) => {

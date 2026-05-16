@@ -249,7 +249,7 @@ export function JobsWorkspace({
             <button
               type="button"
               onClick={() => { clearPrefillRoute(); setFormOpen(false); }}
-              className="min-h-10 rounded-lg border border-outline-variant px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+              className="min-h-11 rounded-lg border border-outline-variant px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
             >
               Cancel
             </button>
@@ -322,7 +322,7 @@ export function JobsWorkspace({
                   key={status}
                   type="button"
                   onClick={() => setForm((c) => ({ ...c, status }))}
-                  className={`min-h-10 rounded-full border px-4 text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`min-h-11 rounded-full border px-4 text-xs font-semibold whitespace-nowrap transition-colors ${
                     active
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-low'

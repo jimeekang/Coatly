@@ -516,7 +516,7 @@ export function CustomerForm({
                   <button
                     type="button"
                     onClick={() => removeProperty(index)}
-                    className="border-pm-border text-pm-secondary min-h-10 rounded-lg border bg-white px-3 text-sm font-medium"
+                    className="border-pm-border text-pm-secondary min-h-11 rounded-lg border bg-white px-3 text-sm font-medium"
                   >
                     Remove
                   </button>
