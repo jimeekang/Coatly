@@ -7,6 +7,7 @@
 | 파일 | 내용 |
 |------|------|
 | [V1-PLAN.md](./ai/V1-PLAN.md) | **v1 wedge build plan** — Phase 0 validation, GREEN gate, T1–T12 work items, AI 역할 boundary, ai_usage_logs schema, streaming pattern, worktree lanes, timeline |
+| [PHASE0-CHECKLIST.md](./ai/PHASE0-CHECKLIST.md) | Phase 0 실행 체크리스트 — 날짜별 validation plan, interview log, golden set, cost economics, Stripe payment link, gate result 기록장 |
 | [AI-ASSISTANT.md](./ai/AI-ASSISTANT.md) | AI Draft Panel + Workspace Assistant 현재 상태, v1 갭, status checklist |
 
 > ⚠️ Stale `price_rates` race (v1.1 deferred) — [/TODOS.md](../../TODOS.md) 참조.

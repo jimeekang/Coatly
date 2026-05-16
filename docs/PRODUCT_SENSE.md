@@ -4,7 +4,7 @@
 
 호주 1–3인 painter의 **진짜 pain은 site measurement(20–60분, OK)가 아니라 노트→quote 서류화**다 (founder-as-customer N=1 직접 검증). 미국 AI photo-takeoff SaaS(Bolster/Togal)는 호주 미진입, 호주 SaaS(Tradify/ServiceM8)는 AI 없음. 1–2년 window 가설.
 
-**Coatly v1 wedge = AI Quote Writer.** Notes + rough measurements + 보조 사진 + price_rates → polished quote artifact(scope of works + assumptions + exclusions + area별 line items + editable). AUD $59/월 Pro 정당화 핵심. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md).
+**Coatly v1 wedge = AI Quote Writer.** Notes + rough measurements + 보조 사진 + price_rates → polished quote artifact(scope of works + assumptions + exclusions + area별 line items + editable). AUD $59/월 Pro 정당화 핵심. v1 보조 AI는 Today Assistant(오늘 처리할 일) + Follow-up Writer(고객 follow-up 문구)로 제한한다. v1 기본 AI 모델 후보는 Alibaba Cloud / Qwen `qwen3-vl-flash`이며, 사진은 scope 보조로만 쓰고 가격은 deterministic `price_rates`로 계산한다. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md).
 
 ## Problem Statement
 
@@ -17,11 +17,13 @@
 
 ## Value Proposition
 
-**Coatly = 페인터용 AI Quote Writer + 견적·청구 올인원**
+**Coatly = 페인터용 AI Quote Writer + follow-up helper + 견적·청구 올인원**
 
 | 가치 | 설명 |
 |------|------|
 | AI 견적 초안 (v1 wedge) | 노트/측정/사진 → 1–2분 안에 polished quote artifact, painter 검토 후 send |
+| Today Assistant (v1 보조 AI) | 오늘 처리할 견적 follow-up, overdue invoice, job 요약을 dashboard에서 표시 |
+| Follow-up Writer (v1 보조 AI) | 고객에게 보낼 quote check-in, booking request, invoice reminder 문구 초안 작성 |
 | 전문적 이미지 | 로고, ABN, 연락처가 포함된 브랜딩 PDF |
 | 결제 추적 | 청구서 상태 관리, 미수금 알림 |
 | 모바일 현장 사용 | 현장에서 장갑 끼고도 사용 가능한 모바일 UX |
@@ -42,7 +44,7 @@
 | Plan | 가격 | 대상 | 핵심 기능 |
 |------|------|------|-----------|
 | Starter | A$39/mo (A$450/yr) | 파트타임, 소규모 | 월 10건 견적, 기본 기능 |
-| Pro | A$59/mo (A$680/yr) | 전업, 성장 중 | 무제한 견적, AI, 브랜딩, Xero |
+| Pro | A$59/mo (A$680/yr) | 전업, 성장 중 | 무제한 견적, AI Quote Writer, Today Assistant, Follow-up Writer, 브랜딩, Xero |
 
 **업셀 전략:** Starter에서 월 견적 한도 도달 시 Pro 업그레이드 프롬프트 표시
 
@@ -57,7 +59,7 @@
 | Bolster/Togal (US) | USD $79–200+ | AI photo takeoff | 호주 미진입, USD 가격 |
 | Excel/종이 | 무료 | 친숙 | 비전문적, 비효율 |
 
-**Coatly 포지셔닝:** 페인터 전용 + AI Quote Writer + 호주 native ($59 AUD) + 모바일 우선. 시장 갭 = "호주에 AI 견적 작가가 없다" (1–2년 window 가설).
+**Coatly 포지셔닝:** 페인터 전용 + AI Quote Writer + lightweight follow-up automation + 호주 native ($59 AUD) + 모바일 우선. 시장 갭 = "호주에 AI 견적 작가가 없다" (1–2년 window 가설).
 
 ## Key Metrics (Phase 2+)
 
