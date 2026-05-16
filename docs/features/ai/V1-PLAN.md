@@ -1,69 +1,132 @@
-# Coatly v1 — AI Quote Writer
+# Coatly v1 — AI-assisted Quote Form Builder
 
-> v1 wedge 요약. 원문은 `~/.gstack/projects/jimeekang-Coatly/` 의 design + impl-plan 파일. 2026-05-16 기준.
+> v1 wedge 요약. 원문은 `~/.gstack/projects/jimeekang-Coatly/` 의 design + impl-plan 파일. 2026-05-17 기준.
 
 ## Wedge (Office Hours, 2026-05-15 APPROVED)
 
-**AI Quote Writer (notes + rough measurements + photos → polished quote artifact) + lightweight AI operations helpers + 호주 native PDF + AUD $59/월.**
+**AI-assisted Quote Form Builder (notes + rough measurements + photos → scope sections + clauses + deterministic pricing rows) + lightweight AI operations helpers + 호주 native PDF + pricing validation.**
 
 - 호주 1–3인 painter (sole trader / small team) 대상. Pain: site measurement(20–60분) 자체는 OK, **노트→quote 서류화**가 진짜 문제.
 - 시장 갭: 미국 AI photo-takeoff SaaS(Bolster/Togal)는 호주 미진입, 호주 SaaS(Tradify/ServiceM8/Quotient)는 AI 없음. 1–2년 window 가설.
-- AI는 wedge 본질. 빠지면 $59 정당화 불가.
+- AI는 wedge 본질이다. 다만 v1 AI는 가격을 만드는 기능이 아니라 **고객용 quote form 초안**을 만드는 기능이다.
 - v1 보조 AI 범위: **Today Assistant**(오늘 처리할 follow-up / overdue invoice / job 요약) + **Follow-up Writer**(고객에게 보낼 SMS/email 초안). 둘 다 만능 챗봇이 아니라 기존 quote/customer/invoice/job 데이터 위의 좁은 helper.
 - v1 AI model default: **Alibaba Cloud / Qwen `qwen3-vl-flash`**. 사진 분석 + quote/follow-up 초안 생성의 기본 모델로 두되, provider adapter 뒤에 감싸서 향후 교체 가능하게 만든다.
 - v1.1+ stack: stronger photo takeoff model eval → learning-based pricing → customer portal (one-click accept + Stripe deposit). 각 phase 별도 wedge 검증.
+- 과거 견적서 분석 기준으로 quote form은 `scope section` + `pricing row` + `clause library`를 분리한다. 상세 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md)에 둔다.
 
-## Phase 0 — Validation (14 days, 진행 중)
+## Phase 0 — Validation (14 days, GREEN 완료)
 
 운영 체크리스트와 결과 기록장은 [PHASE0-CHECKLIST.md](./PHASE0-CHECKLIST.md)에 둔다.
 
 | 작업 | 상태 |
 |------|------|
 | 인터뷰어 5명 섭외 | ✓ 완료 (2026-05-15) |
-| 30분 인터뷰 + 과거 quote 공유 요청 (eval golden set 시드) | 진행 중 |
-| AI cost economics spreadsheet (Qwen3-VL-Flash 토큰/quote × quotes/painter/월 × $59 ARPU → gross margin ≥70%) | 진행 중 |
-| Stripe Dashboard manual payment link 5개 준비 | 진행 중 |
-| 인터뷰 script — photos?, streaming?, price_rates 정확도? | 진행 중 |
-| 보조 AI 확인 — 오늘 할 일 요약?, follow-up 문구 초안? | 진행 중 |
+| written survey / 인터뷰 답변 5명분 수집 | ✓ 완료 (2026-05-16) |
+| 인터뷰 분석 — photos?, price_rates 정확도?, Today/Follow-up 반응 | ✓ 완료. 5/5 AI quote 관심, 5/5 Today/Follow-up 긍정, 4/5 price_rates 입력 동의 |
+| 과거 quote form 3개 분석 — interior/exterior scope, optional item, clause library | ✓ 완료. Winchester, Edgar checklist, Paint Buddy를 scope/pricing/clause 구조로 분해 |
+| Quote form structure 문서화 | ✓ 완료. [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md) 작성 |
+| v1 build 순서 문서화 | ✓ 완료. [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) 작성 |
+| AI model decision | ✓ 완료. Alibaba Cloud / Qwen `qwen3-vl-flash`를 v1 기본 모델 후보로 확정 |
+| 가격 정책 / plan packaging | ✓ 완료. Basic A$29/month, Pro A$59/month, 첫 사용자 Pro 1개월 무료 trial, anytime cancel |
+| AI cost economics spreadsheet | 진행 중. Qwen 단가와 plan limit 기준 GREEN 방향, D11에서 final spreadsheet 필요 |
+| Golden set numeric fixture | 진행 중. legacy form 3개 분석 완료, painter별 anonymized quote 추가 회수 필요 |
 
-### GREEN gate (Day 14)
+### Gate Result (2026-05-17)
 
-**GREEN — build start:**
-- ≥3/5 painter "쓸 것 같다" + ≥1/5 manual Stripe 선결제 $59
-- ≥5 painter 과거 quote 공유 (eval seed)
-- painter price_rates 입력 동의
+**GREEN — build start approved.**
 
-**YELLOW — reduced scope:** 2/5 긍정 + 0 선결제 → T2/T3 defer, T8 prompt depth 축소, T13/T14는 deterministic UI + 템플릿 fallback으로 축소.
+근거:
 
-**RED — kill / pivot:** ≤1/5 긍정 + 0 선결제 → office-hours로 wedge reframe (Approach C "Estimator-as-a-Service" 또는 전체 reframe).
+- AI Quote Form 사용 의향: 5/5 긍정 또는 조건부 긍정
+- Trial 후보: P1/P2/P3
+- Price policy: Basic A$29 + Pro A$59 확정
+- First user offer: Pro 1개월 무료 trial, trial 후 A$59/month 전환 측정
+- Cancellation: 언제든지 취소 가능
+- Quote form coverage: legacy quote form 3개를 scope/pricing/clause 구조로 재현 가능
+- Build prerequisite: `price_rates`, quote calculation boundary, quote form structure를 AI 연동보다 먼저 구현
 
-## Build (6–8주, GREEN 후 시작)
+남은 Phase 0 기록:
+
+- D11 cost spreadsheet에서 Qwen token/photo estimate와 Basic/Pro limit별 예상 gross margin을 숫자로 확정한다.
+- painter별 anonymized quote 5개 목표는 계속 회수한다.
+- numeric golden set은 W4 legacy quote reconstruction에서 fixture로 만든다.
+
+## Build (6–8주, GREEN 후 시작 가능)
+
+Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote Form Builder가 v1 wedge의 중심이지만, 첫 구현은 AI provider가 아니라 `price_rates`, quote calculation engine, 고객용 quote form data structure 정리다. Quick/Advanced 견적에서 anchor가 중복되거나 subtotal/GST/total이 화면마다 다르게 계산되면, AI를 붙여도 신뢰할 수 없는 견적이 된다. 또한 AI가 만든 문장이 가격 row와 섞이면 PDF/public quote/invoice 전환이 지저분해진다.
+
+구현자가 따라갈 파일별 순서와 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)에 분리한다. 이 문서는 wedge와 scope boundary를 요약하고, build plan은 usage tracking 전에 완성해야 할 실제 앱 작업 순서를 담당한다.
 
 | ID | 영역 | 핵심 |
 |----|------|------|
-| T1 | AI input schema + provider adapter | `photos`, `price_rates`, `job_type`, `scope_notes`, `rough_measurements` 추가 / `customers`, `quotes` context 제거 (P1 cost 보호). `lib/ai/providers/qwen.ts` 같은 얇은 adapter로 `qwen3-vl-flash` 호출을 숨김. **AI 역할 boundary: surface 매핑 + scope/exclusion writing만, pricing은 deterministic** |
-| T2 | Photo upload + multimodal | Phase 0 painter check ≥3/5일 때만 build. Qwen3-VL-Flash vision input 사용. Supabase Storage RLS, max N (default 3, 인터뷰/cost spreadsheet로 조정), 1920px JPEG 85%, photo-only auto takeoff 금지 |
+| T0 | Price rate + quote calculation foundation | `quick_estimate`, `detailed_estimate_anchors`, `detailed_estimate_items`, `room_rate_presets`, `quote_estimate_items`, `quote_line_items`의 역할을 분리. "one priced scope, one anchor" 규칙, canonical subtotal/GST/total calculator, snapshot/version 기준 확정 |
+| T0A | Quick + Advanced hardening | Quick은 room size + selected surfaces + coating/condition multiplier. Advanced는 room anchor + explicit opening/trim. duplicate room anchor, stale rate, preview/save/PDF/invoice mismatch 테스트 작성 |
+| T0B | Quote form data model | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` 구조 확정. 기존 `quote_estimate_items`/`quote_line_items`와 연결. interior/exterior taxonomy와 clause library seed 작성 |
+| T1 | AI input schema + provider adapter | `photos`, `price_rates_snapshot`, `job_type`, `scope_notes`, `rough_measurements` 추가 / `customers`, `quotes` context 제거 (P1 cost 보호). `lib/ai/providers/qwen.ts` 같은 얇은 adapter로 `qwen3-vl-flash` 호출을 숨김. **AI 역할 boundary: `scope_sections`, `pricing_candidates`, `clauses`만 생성하고 pricing은 T0 calculator가 deterministic 처리** |
+| T2 | Photo upload + multimodal | Qwen3-VL-Flash vision input 사용. Supabase Storage RLS, Basic quote당 3장/월 15장, Pro quote당 5장/월 100장, 1920px JPEG 85%, photo-only auto takeoff 금지 |
 | T3 | Streaming response | **Server Action + ReadableStream** (Day 0 spike mandatory). Qwen streaming response 호환성 확인. RSC streamUI / API SSE 아님. Phase 0 painter check 조건부 |
-| T4 | Per-painter usage limit + cost log | `ai_usage_logs` 테이블 (generated `billing_month` column, attempt accounting) |
+| T4 | Per-painter usage limit + cost log | `ai_usage_logs` 테이블 (generated `billing_month` column, attempt accounting). Basic/Pro plan limit과 Pro trial usage를 함께 기록 |
 | T5 | Error handling + graceful degradation | Qwen/Alibaba provider down → 1 retry → manual builder fallback CTA |
-| T6 | AIDraftPanel wire-up + Pro gating + manual correction UX | `QuoteCreateScreen`에 노출, Starter UpgradePrompt, AI 출력 inline 편집 + edit ratio metadata |
+| T6 | AIDraftPanel wire-up + Pro gating + manual correction UX | `QuoteCreateScreen`에 노출. AI draft를 Scope/Pricing/Terms review flow로 넣고, `scope_sections`와 `clauses`는 inline 편집, 가격은 deterministic preview로만 표시. edit ratio metadata 저장 |
 | T7 | Generic Workspace Assistant off | 범용 채팅 UI는 feature flag + nav 제거. 코드는 v2 검토용 유지하고, v1은 T13/T14의 scoped assistants만 노출 |
-| T8 | AU prompt tuning + eval harness + validator | AU domain depth (prep, access, substrate, climate, occupied). 10 golden quotes. `lib/ai/validator.ts` repair layer (server-side price_rates 적용) |
+| T8 | AU prompt tuning + eval harness + validator | AU domain depth (prep, access, substrate, climate, occupied). 10 golden quotes + legacy PDF 3개 form reconstruction. `lib/ai/validator.ts` repair layer (price field 제거, clause/scope schema repair) |
 | T9 | Settings/ai-usage page | 단순 SQL aggregate. 사용수 / Pro limit / 예상 비용 |
-| T10 | Stripe pre-order | **manual payment link via Dashboard (~1일)**. productized page는 v1.1 deferred |
+| T10 | Pro free trial + paid conversion setup | 첫 cohort는 Pro 1개월 무료 trial. trial 종료 후 A$59/month 결제 전환을 측정하고 cancel reason을 기록. productized billing dashboard는 v1.1 deferred |
 | T11 | DRAFT marker + ToS disclaimer | "DRAFT — review before send" UI + PDF marker. AI 책임 conditional ToS |
-| T12 | Regression test (IRON RULE) | T1 schema 영향 — `lib/ai/drafts.test.ts`, `app/actions/ai-drafts.test.ts`, `components/ai/AIDraftPanel.test.tsx` |
-| T13 | Today Assistant | Dashboard에 deterministic task list + AI summary. Follow-up 필요한 quote, overdue invoice, 오늘/이번 주 job만 표시. Starter는 deterministic list, Pro는 AI summary |
+| T12 | Regression test (IRON RULE) | T0/T0A price boundary + T1 schema 영향 — quote total parity, duplicate anchor guard, `lib/ai/drafts.test.ts`, `app/actions/ai-drafts.test.ts`, `components/ai/AIDraftPanel.test.tsx` |
+| T13 | Today Assistant | Dashboard에 deterministic task list + AI summary. Follow-up 필요한 quote, overdue invoice, 오늘/이번 주 job만 표시. Basic은 deterministic list, Pro는 AI summary |
 | T14 | Follow-up Writer | Quote/customer/invoice 화면에서 고객 메시지 초안 생성. 견적 확인 요청, 승인 후 일정 잡기, invoice reminder. **자동 발송 없음** — user review 후 기존 email flow 또는 manual copy |
 
 ## AI 역할 boundary (D6 / Codex Hybrid)
 
-- AI **does**: free-text notes → structured surfaces, scope of works, assumptions, exclusions
-- AI **does NOT**: rate 결정 — 출력 schema에서 rate field 제거
-- Server-side pass: painter `price_rates` table에서 surface × coating type lookup → line items에 inject (`lib/ai/apply-deterministic-pricing.ts`)
+- Precondition: T0/T0A에서 price rate 구조와 canonical quote calculator가 먼저 안정돼야 한다.
+- AI **does**: free-text notes → `quote_scope_sections`, `quote_scope_steps`, assumptions, exclusions, risk disclosure, `quote_clause_items` 초안
+- AI **does**: surface/area 후보를 `pricing_candidates`로 제안
+- AI **does NOT**: rate 결정, `quote_estimate_items.total_cents` 생성, GST 계산 — 출력 schema에서 price/rate field 제거
+- Server-side pass: painter `price_rates` snapshot에서 surface × coating type lookup → canonical quote calculator로 금액 생성 (`lib/ai/apply-deterministic-pricing.ts`)
 - GST: app server-side, AI는 net (ex-GST) 출력만
 - 보조 AI **does**: deterministic query 결과를 요약하고, follow-up 메시지 초안을 작성
 - 보조 AI **does NOT**: 고객에게 자동 발송, job 일정 변경, invoice/quote status 변경, due date 발명
+
+## Price Rate & Quote Item Boundary
+
+v1 quote 계산은 "어떤 항목이 돈을 만드는가"를 먼저 고정한다.
+
+| 영역 | authoritative source | 저장 위치 | 금지 사항 |
+|------|----------------------|-----------|-----------|
+| Scope section | user-reviewed AI/manual/template section | `quote_scope_sections`, `quote_scope_steps` | customer-visible text를 price row처럼 사용하지 않음 |
+| Quick estimate | Quick room snapshot: room size, selected surfaces, coating/condition multiplier | `pricing_method_inputs`, `quote_estimate_items` | 같은 room/surface를 `quote_line_items`로 다시 더하지 않음 |
+| Advanced detailed estimate | room anchor + explicit door/window/skirting/trim items | `pricing_method_inputs`, `quote_estimate_items` | room anchor와 전체 property anchor를 같은 base subtotal에 섞지 않음 |
+| Manual/custom add-on | user-entered material/service/custom item | `quote_line_items` | already-included scope를 add-on처럼 중복 청구하지 않음 |
+| Day rate | days × daily rate + material method | `pricing_method_inputs` | AI가 days/rate를 임의 변경하지 않음 |
+| Clause library | reusable/customer-visible terms | `quote_clause_items` | clause 문구가 가격을 만들지 않음 |
+| AI draft | scope/surface candidates + clauses only | `quote_ai_intake_snapshots`, draft metadata before user review | price/rate/GST field 출력 금지 |
+
+필수 guardrail:
+
+- `quote_estimate_items`는 estimate engine이 만든 priced rows만 담는다.
+- `quote_line_items`는 material/service/custom/optional add-on만 담는다.
+- quote preview, save, detail, PDF, invoice conversion은 같은 subtotal/GST/total 규칙을 사용한다.
+- rate 변경 후 기존 quote는 snapshot 기준으로 유지하고, 새 quote만 새 rates를 사용한다.
+- AI가 만든 scope는 저장 전 user review를 거치고, 금액은 deterministic pricing pass가 생성한다.
+
+## AI-assisted Quote Form Builder Structure
+
+과거 견적서 3개 분석 결과, 실제 painter quote는 line item 계산서가 아니라 **작업 설명서 + 조건/예외 문서 + 가격 요약**에 가깝다. 따라서 v1 quote form은 다음 구조를 따른다.
+
+| 구조 | 예시 | 데이터 |
+|------|------|--------|
+| Scope section | Ceiling, Walls, Bathroom, Rendered walls, Fence optional item | `quote_scope_sections` |
+| Scope step | light sanding, 1 coat primer, 2 coats Weathershield, colour to be confirmed | `quote_scope_steps` |
+| Pricing row | eaves 40 sqm × rate, door/frame each × rate, optional fence fixed price | `quote_estimate_items`, `quote_line_items` |
+| Clause item | Vivid White, paint peeling, water damage, efflorescence, furniture moving, warranty | `quote_clause_items` |
+| AI intake | notes, rough measurements, photos, colour/sheen status, prompt/model metadata | `quote_ai_intake_snapshots` |
+
+Interior taxonomy must cover bedrooms, bathrooms, living, kitchen, hallway, stairway, laundry, wardrobe, walls, ceiling, cornice, doors, door frames, windows, skirting, trim, bathroom/wet area, colour match, Vivid White, water damage, peeling paint.
+
+Exterior taxonomy must cover rendered walls, cladding boards, eaves/soffits, fascia/barge boards, gutters, downpipes, gable, timber, front door, exterior doors/frames, windows/frames, retaining walls, fence, handrail, poles, roof, concrete overhang, pool retaining wall, porous render, efflorescence, difficult access.
+
+자세한 필드 정의와 AI output contract는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md)를 따른다.
 
 ## AI Model Policy (v1)
 
@@ -71,7 +134,7 @@ v1 기본 모델은 **Alibaba Cloud / Qwen `qwen3-vl-flash`**로 둔다. 선택 
 
 ### 적용 범위
 
-- Quote draft: notes + rough measurements + photos + price_rates context를 받아 polished quote artifact 초안을 만든다.
+- Quote draft: notes + rough measurements + photos + price_rates context를 받아 `scope_sections`, `pricing_candidates`, `clauses` 기반 quote form 초안을 만든다.
 - Photo analysis: surface 후보, visible condition, access/prep hint, assumptions/exclusions 작성 보조.
 - Today Assistant: deterministic task list 위에 짧은 summary와 우선순위 문장 생성.
 - Follow-up Writer: quote check-in, booking request, invoice reminder 문구 초안 작성.
@@ -105,15 +168,15 @@ v1 기본 모델은 **Alibaba Cloud / Qwen `qwen3-vl-flash`**로 둔다. 선택 
 
 ### Cost guardrails
 
-- Starter: photo AI 없음
-- Pro: monthly AI draft limit 안에서만 사용
-- quote당 사진 수 제한: default 3장, Phase 0 인터뷰와 cost spreadsheet로 최종 확정
+- Basic: AI quote draft 5/month, photo AI 15 photos/month, quote당 사진 3장
+- Pro: AI quote draft 25/month, photo AI 100 photos/month, quote당 사진 5장
+- Pro 1개월 무료 trial 사용자는 trial 기간 동안 Pro limit을 사용한다
 - 업로드 전 1920px 이하 JPEG 85%로 리사이즈/압축
 - 동일 파일은 content hash 또는 storage path + prompt version 기준으로 재분석 방지
 - 재시도는 1회만 허용하고 모든 attempt를 `ai_usage_logs`에 기록
 - `ai_usage_logs.metadata`에 `photo_count`, `image_bytes`, `model`, `prompt_version`, `cache_hit` 기록
 - `ai_usage_logs.metadata`에 `provider = alibaba-qwen` 기록
-- AI 비용 상한: 전체 AI cost ≤30% Pro ARPU. 초과 예상 시 T2 defer 또는 사진 수/월 draft limit 축소
+- AI 비용 상한: 전체 AI cost ≤30% plan ARPU. 초과 예상 시 T2 defer 또는 사진 수/월 draft limit 축소
 
 ### Product wording
 
@@ -143,7 +206,7 @@ CREATE INDEX ai_usage_logs_painter_month ON ai_usage_logs (painter_user_id, bill
 
 추가 migrations (조건부):
 - T2: `quote_photos` table 또는 `quotes.photos jsonb` (painter check 통과 시)
-- T10: 없음 (v1은 manual link). productize 시 `pre_orders` v1.1
+- T10: 최소 billing 상태 필드 또는 Stripe customer/subscription mapping 필요 여부를 build 시작 시 결정. productized billing dashboard는 v1.1
 - T13/T14: 신규 테이블 없음. 기존 `quotes`, `customers`, `invoices`, `jobs`, `job_schedule_days` read model + `ai_usage_logs.metadata`만 사용
 
 Migration 흐름: `apply_migration` → `execute_sql` 검증 → `generate_typescript_types`.
@@ -185,10 +248,11 @@ Quote/customer/invoice detail에서 고객에게 보낼 짧은 SMS/email 초안�
 
 | Lane | Items | 의존 |
 |------|-------|------|
-| A | T1 → T12 → T8 → T3 (spike first) | — (start now) |
+| P | T0 → T0A → T0B | — (GREEN 후 최우선) |
+| A | T1 → T12 → T8 → T3 (spike first) | P (pricing boundary fixed) |
 | B | T4 → T9 → T13 | A (T1 schema), dashboard read model |
 | C | T6 → T7 → T11 → T14 | A (T1 schema), existing quote/invoice email flow |
-| D | T10 (manual link) | — (1일) |
+| D | T10 (Pro trial + paid conversion setup) | — (1일) |
 | E | T2 → T5 | A (T1 schema) |
 
 Conflict: C+E 둘 다 `AIDraftPanel.tsx` — C는 Pro gating wrapper, E는 photo upload integration. A+E 둘 다 `lib/ai/drafts.ts` — A finish prompt first, E adds error wrap outer.
@@ -201,29 +265,34 @@ T13은 `dashboard/page.tsx`와 AI usage shared code, T14는 quote/customer/invoi
 
 | Phase | 기간 | 상태 |
 |-------|------|------|
-| Phase 0 validation + cost spreadsheet + golden set | 2주 | 진행 중 |
-| GREEN gate decision | day 14 | 진행 중 |
-| v1 build (5 lanes, post-GREEN) | 6–8주 | post-GREEN |
+| Phase 0 validation + interview analysis + legacy quote form analysis | 2주 | 완료/GREEN (2026-05-17) |
+| Cost spreadsheet + numeric golden set fixture | D11 + W4 | 진행 중 |
+| v1 build (6 lanes, GREEN 이후) | 6–8주 | 시작 가능. 첫 순서는 pricing-first |
 | Integration + deploy | 1주 | post-build |
-| Paid trial (5 painter manual Stripe) | 4–6주 | post-deploy |
+| Free Pro trial + paid conversion tracking | 4–6주 | post-deploy. 첫 cohort Pro 1개월 무료 후 A$59 conversion 측정 |
 | **Total** | **13–17주** | sequential, Codex 권장 |
 
-Build start ≠ Phase 0 parallel. GREEN gate가 theater 되지 않도록 sequential 강제.
+Build start는 승인됐지만 사용량 tracking은 build/deploy/onboarding 이후에만 시작한다.
 
 ## v1 Success Criteria
 
 - AI cost ≤30% ARPU (premise 6 검증)
-- AI 출력 price line item painter edit 비율 ≤30%
+- Quote total mismatch 0: preview/save/detail/PDF/invoice conversion 금액 불일치 없음
+- Duplicate anchor incident 0: room anchor, quick item, line item 이중 청구 없음
+- AI draft scope/clause wording painter edit 비율 ≤30%
+- Legacy quote reconstruction: Winchester interior, Edgar checklist, Paint Buddy exterior quote 구조를 scope/pricing/clause data로 재현 가능
 - Scope/exclusion painter "send-ready" 비율 ≥70%
-- Today Assistant task list "useful today" 응답 ≥70% (paid trial cohort)
+- Today Assistant task list "useful today" 응답 ≥70% (trial cohort)
 - Follow-up Writer 초안 사용/수정 후 발송 또는 copy 비율 ≥50%
-- 5 인터뷰 painter 중 ≥1 paid conversion (trial → $59 paid) 4주 내
+- 5 인터뷰 painter 중 ≥1 paid conversion (Pro trial → A$59 paid) 4주 내
 - False-positive horror story 0: 가격 -50%/+50% outlier 없음, GST 누락 0, interior/exterior 오분류 0
 
 ## Critical Gaps & Deferrals
 
-- **Stale `price_rates` race** (painter mid-AI-call price_rates 수정) — v1.1 TODO. v1 mitigation: T6 UI에 "AI가 사용한 rates" snapshot 표시 ("이 quote는 2026-05-15 16:30 기준 rate로 생성됨"). 자세한 건 [/TODOS.md](../../../TODOS.md).
-- **Stripe webhook silent fail** — v1은 manual link로 우회. productize 시 idempotency layer 추가.
+- **Quick/Advanced duplicate anchor risk** — v1에서 deferred 불가. T0/T0A에서 quote calculation boundary, snapshot, regression tests를 먼저 정리한다.
+- **Quote form structure gap** — v1에서 deferred 불가. T0B에서 customer-visible `scope_sections`와 pricing rows, clause library를 분리하지 않으면 AI output이 PDF/public quote/invoice 흐름을 오염시킨다.
+- **Stale `price_rates` race** (painter mid-AI-call price_rates 수정) — v1.1 deferred. v1 mitigation: T6 UI에 "AI가 사용한 rates" snapshot 표시 ("이 quote는 2026-05-15 16:30 기준 rate로 생성됨"). 자세한 건 [/TODOS.md](../../../TODOS.md).
+- **Billing trial/conversion productization** — Phase 0 gate는 선결제가 아니라 Pro 1개월 무료 trial 후 A$59 conversion으로 검증한다. public launch 전에는 Stripe trial/cancel 상태와 app plan state mismatch를 막는 webhook/idempotency 검증이 필요하다.
 - **Generic Workspace Assistant** — v1 off. v2 검토용 코드만 유지. v1은 Today Assistant + Follow-up Writer만 허용.
 - **Assistant overreach** — v1 보조 AI는 자동 발송/자동 일정 변경/자동 상태 변경 금지. 모든 action은 user-confirmed.
 
@@ -240,4 +309,4 @@ Build start ≠ Phase 0 parallel. GREEN gate가 theater 되지 않도록 sequent
 
 - Design (APPROVED, 2026-05-15): `~/.gstack/projects/jimeekang-Coatly/jimee-claude-upbeat-galileo-e38c4d-design-20260515-230649.md`
 - Impl plan (ENG CLEARED, 2026-05-15): `~/.gstack/projects/jimeekang-Coatly/jimee-claude-upbeat-galileo-e38c4d-impl-plan-20260515-232820.md`
-- Related: [AI-ASSISTANT.md](./AI-ASSISTANT.md), [AUDIT.md A3](../audit/AUDIT.md), [PLANS.md](../../PLANS.md)
+- Related: [PHASE0-CHECKLIST.md](./PHASE0-CHECKLIST.md), [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md), [AI-ASSISTANT.md](./AI-ASSISTANT.md), [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md), [AUDIT.md A3](../audit/AUDIT.md), [PLANS.md](../../PLANS.md)

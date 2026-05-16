@@ -4,6 +4,8 @@
 
 페인터가 현장에서 빠르게 견적을 만들고, 고객에게 PDF/공개 링크로 보내고, 승인 이후 invoice/job으로 이어지게 합니다.
 
+v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 따른다. 고객에게 보이는 quote form은 **scope section + pricing row + clause library**로 분리한다.
+
 ## Current Status
 
 | 영역 | 상태 | 구현 근거 |
@@ -21,6 +23,7 @@
 | Public approval | 구현됨 | `/q/[token]`, signature, approve/reject |
 | Public booking | 구현됨 | approved quote → job booking |
 | Quote → invoice | 구현됨 | invoice quote option/line item 흐름 |
+| AI Quote Form Builder | 설계 필요 | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` |
 
 ## Quote Modes
 
@@ -44,6 +47,47 @@
 | `quote_templates` | 반복 견적 재사용 |
 | `public_quote_events` | 공개 링크 접근/승인/거절 감사 |
 
+## AI Quote Form Builder Data Model
+
+실제 legacy quote form 분석 결과, quote는 단순 line item 계산서가 아니라 작업 설명서와 조건 문서가 합쳐진 고객용 artifact다. v1은 아래 구조를 추가한다.
+
+| 구조 | 역할 | 저장 위치 | 예시 |
+|------|------|-----------|------|
+| Scope section | 고객에게 보이는 작업 범위의 큰 단위 | `quote_scope_sections` | Ceiling, Walls, Bathroom, Rendered walls, Fence optional item |
+| Scope step | section 안의 bullet 작업 설명 | `quote_scope_steps` | light sanding, 1 coat primer, 2 coats Weathershield, colour to be confirmed |
+| Pricing row | 실제 subtotal을 만드는 계산 row | `quote_estimate_items` | eaves sqm, door each, room anchor, exterior surface |
+| Custom/add-on row | material/service/custom/optional add-on | `quote_line_items` | optional fence, extra work, custom service |
+| Clause item | 조건, 예외, 보증, 리스크 문구 | `quote_clause_items` | Vivid White, paint peeling, water damage, efflorescence, furniture moving |
+| AI intake snapshot | AI draft 생성 당시 입력과 model metadata | `quote_ai_intake_snapshots` | notes, rough measurements, photo refs, prompt version |
+
+### Boundary Rules
+
+- `quote_scope_sections`와 `quote_scope_steps`는 고객용 문서 구조다. 직접 subtotal을 만들지 않는다.
+- `quote_estimate_items`는 estimate engine이 만든 priced rows만 담는다.
+- `quote_line_items`는 already-included scope를 다시 청구하는 용도로 쓰지 않는다.
+- `quote_clause_items`는 price를 만들지 않는다.
+- AI draft는 `scope_sections`, `pricing_candidates`, `clauses`만 생성한다.
+- deterministic pricing pass만 `quote_estimate_items`, `quote_line_items`, subtotal/GST/total을 만든다.
+- PDF/public quote/invoice conversion은 같은 section order, optional item state, calculated totals를 사용한다.
+
+### Interior Required Coverage
+
+| 그룹 | 항목 |
+|------|------|
+| Areas | bedrooms, bathroom, living, dining, kitchen, hallway, stairway, laundry, wardrobe, study/office, other |
+| Surfaces | walls, ceiling, cornice, doors, door frames, windows/frames, skirting, trim, wardrobe inside, bathroom/wet area |
+| Prep/coating | sanding, dusting, patching, gap filling, primer, oil undercoat, cover stain primer, ceiling flat, low sheen wall paint, kitchen & bath paint, oil/water enamel |
+| Condition/notes | dark colour, Vivid White, colour match, peeling paint, water damage, wet area, tile edge gap, colour/sheen to be confirmed |
+
+### Exterior Required Coverage
+
+| 그룹 | 항목 |
+|------|------|
+| Surfaces | rendered walls, cladding boards, eaves/soffits, fascia/barge boards, gutters, downpipes, gable, timber, front door, exterior doors/frames, windows/frames, retaining walls, fence, handrail, poles, roof, concrete overhang, pool retaining wall, other |
+| Units | sqm, lm, each, fixed |
+| Prep/coating | sanding, dusting, patching, gap filling, total prep, solvent-based primer, Acratex/Acraprime, metal primer, timber under primer, Weathershield, varnish |
+| Condition/notes | porous render, efflorescence, difficult access, unsafe access, new timber, peeling paint, moisture/water damage, colour/sheen to be confirmed |
+
 ## Status Workflow
 
 ```text
@@ -59,6 +103,21 @@ draft -> sent -> approved -> booked/job/invoice
 - Labour/material margin은 별도 percent로 저장합니다.
 - Quick estimate는 저장 시 authoritative snapshot을 남겨 이후 단가 변경에 흔들리지 않게 합니다.
 - Starter는 월간 active quote limit을 적용하고 Pro는 무제한입니다.
+- v1 AI-assisted Quote Form Builder 이전에 quote calculation boundary를 먼저 정리합니다.
+- `quote_estimate_items`는 estimate engine이 만든 priced rows만 저장합니다.
+- `quote_line_items`는 material/service/custom/optional add-on만 저장합니다.
+- 같은 priced scope는 room anchor, quick item, line item 중 하나로만 계산합니다.
+- quote preview, save, detail, PDF, invoice conversion은 같은 subtotal/GST/total 규칙을 사용해야 합니다.
+- rate 변경 후 기존 quote는 저장 당시 snapshot 기준으로 유지하고, 새 quote만 새 rate를 사용합니다.
+
+## Quick / Advanced Pricing Boundary
+
+| 영역 | Authoritative source | 저장 위치 | 주의점 |
+|------|----------------------|-----------|--------|
+| Quick estimate | room template + size + selected surfaces + coating/condition multipliers | `pricing_method_inputs`, `quote_estimate_items` | 같은 room/surface를 line item으로 다시 더하지 않음 |
+| Advanced detailed estimate | room anchor + explicit door/window/skirting/trim items | `pricing_method_inputs`, `quote_estimate_items` | room anchor와 전체 property anchor를 같은 base subtotal에 섞지 않음 |
+| Custom/material/service | user-entered add-on rows | `quote_line_items` | already-included scope를 add-on처럼 중복 청구하지 않음 |
+| AI draft | scope sections + pricing candidates + clauses | draft metadata / `quote_ai_intake_snapshots` before review | AI가 price/rate/GST를 만들지 않음 |
 
 ## UX Rules
 
@@ -88,6 +147,9 @@ draft -> sent -> approved -> booked/job/invoice
 
 | 우선순위 | 항목 | 내용 |
 |----------|------|------|
+| P0 | Price calculation boundary | Quick/Advanced 견적에서 room anchor, quick estimate item, custom line item이 같은 scope를 중복 계산하지 않도록 authoritative source와 guardrail 정리 |
+| P0 | AI Quote Form Builder structure | 고객용 scope section, 가격 row, clause library를 분리하고 legacy interior/exterior quote form을 재현 가능한 데이터 구조로 정리 |
+| P0 | Quote total parity | preview/save/detail/PDF/invoice conversion이 같은 subtotal/GST/total 규칙을 쓰는지 회귀 테스트 강화 |
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |
 | P1 | Exterior edit safety | 편집 시 exterior snapshot 손실 여부 회귀 테스트 강화 |
 | P1 | Exterior PDF/detail | 모든 exterior cost/line item이 상세/PDF에 일관 렌더되는지 검증 |
