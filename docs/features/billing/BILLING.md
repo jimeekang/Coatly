@@ -2,37 +2,73 @@
 
 ## Plans
 
-| | Starter | Pro |
-|---|---------|-----|
-| 가격 (월) | A$39 | A$59 |
-| 가격 (연) | A$450 (A$37.50/mo) | A$680 (A$56.67/mo) |
-| 활성 견적 | 월 10건 | 무제한 |
+| | Basic | Pro |
+|---|-------|-----|
+| 가격 (월) | A$29 | A$59 |
+| 가격 (연) | 추후 확정 | 추후 확정 |
+| 첫 사용자 offer | 없음. 필요 시 launch discount 별도 검토 | 첫 cohort Pro 1개월 무료 trial |
+| 취소 | 언제든지 가능 | 언제든지 가능 |
+| Quote / Invoice / Customer | 포함 | 포함 |
+| PDF quote / public quote link | 포함 | 포함 |
+| Price rates setup | 포함 | 포함 |
+| Quick quote / manual quote | 포함 | 포함 |
+| AI quote draft | 5/month | 25/month |
+| Photos per quote | 3 | 5 |
+| Monthly photo AI | 15 photos/month | 100 photos/month |
+| Follow-up Writer | 10/month | 50/month |
+| Today Assistant | deterministic task list only | deterministic list + AI summary |
+| Advanced AI scope/clause builder | 제한된 scope draft | full AI Quote Form Builder |
+| Clause library | 기본 clause | 전체 clause library + custom clause 저장 |
+| AI usage/cost view | 기본 사용량 표시 | 사용량, photo count, estimated cost 표시 |
 | 사용자 | 1명 | 3명 |
-| AI 드래프트 | ❌ | ✅ |
 | Xero 연동 | ❌ | ✅ |
 | Job Costing | ❌ | ✅ |
-| 우선 지원 | ❌ | ✅ |
+| 우선 지원 | 기본 support | priority support |
 | 브랜딩 (PDF) | 기본 | 커스텀 |
 
 정의 파일: `config/plans.ts` (단일 소스)
+
+Note: 코드에 기존 `starter` plan id가 남아 있으면 customer-facing label은 `Basic`으로 바꾼다. v1 AI surface에 "Starter" 문구를 노출하지 않는다.
 
 ## Feature Gating Logic
 
 ```ts
 // lib/subscription/access.ts
 const FEATURES = {
-  starter: { activeQuoteLimit: 10, ai: false, xeroSync: false, jobCosting: false },
-  pro:     { activeQuoteLimit: Infinity, ai: true, xeroSync: true, jobCosting: true },
+  basic: {
+    activeQuoteLimit: 10,
+    aiQuoteDraftsMonthly: 5,
+    photoAiImagesMonthly: 15,
+    photosPerQuote: 3,
+    followUpDraftsMonthly: 10,
+    todayAssistantAiSummary: false,
+    advancedScopeClauseBuilder: false,
+    xeroSync: false,
+    jobCosting: false,
+  },
+  pro: {
+    activeQuoteLimit: Infinity,
+    aiQuoteDraftsMonthly: 25,
+    photoAiImagesMonthly: 100,
+    photosPerQuote: 5,
+    followUpDraftsMonthly: 50,
+    todayAssistantAiSummary: true,
+    advancedScopeClauseBuilder: true,
+    xeroSync: true,
+    jobCosting: true,
+  },
 }
 
 canCreateQuote()   → activeQuoteCount < plan.activeQuoteLimit
-canUseAI()         → plan === 'pro'
+canUseAIQuoteDraft() → monthlyDraftCount < plan.aiQuoteDraftsMonthly
+canUsePhotoAI()      → monthlyPhotoCount < plan.photoAiImagesMonthly
 canSyncXero()      → plan === 'pro'
 canUseJobCosting() → plan === 'pro'
 ```
 
 - 견적 생성 시 `activeQuoteLimit` 확인
-- Pro 기능 접근 시 `subscription.plan === 'pro'` 확인
+- AI 기능 사용 시 plan별 monthly limit과 photos-per-quote limit 확인
+- Pro-only 기능 접근 시 `subscription.plan === 'pro'` 또는 Pro trial 확인
 - 한도 도달 시 `UpgradePrompt` 컴포넌트 표시
 
 ## Stripe Integration Flow
@@ -48,11 +84,21 @@ canUseJobCosting() → plan === 'pro'
 
 ## Upgrade Flow
 
-1. Starter 사용자가 한도 도달 또는 Pro 기능 접근
+1. Basic 사용자가 한도 도달 또는 Pro 기능 접근
 2. `UpgradePrompt` 컴포넌트 표시
 3. "Upgrade to Pro" 클릭 → POST /api/stripe/checkout
 4. Stripe Checkout → 결제 → webhook → DB 업데이트
 5. 즉시 Pro 기능 활성화
+
+## Free Pro Trial
+
+첫 cohort에는 Pro 1개월 무료 trial을 제공한다. trial 사용자는 trial 기간 동안 Pro limit을 사용하고, trial 종료 후 A$59/month 결제 전환을 측정한다. 사용자는 언제든지 cancel 가능해야 하며, cancel reason은 별도 metadata 또는 운영 로그에 기록한다.
+
+Readiness 조건:
+
+- quote draft, photo helper, usage log, cost limit, Pro trial state, cancel path가 모두 동작
+- `ai_usage_logs`가 provider/model/token/cost/photo count를 기록
+- trial 종료일과 current period end를 Settings/Billing에서 명확하게 표시
 
 ## Webhook Events
 
@@ -164,7 +210,7 @@ async function syncSubscription(sub: Stripe.Subscription) {
     user_id: sub.metadata.user_id,
     stripe_customer_id: sub.customer as string,
     stripe_subscription_id: sub.id,
-    plan: sub.metadata.plan || 'starter',
+    plan: sub.metadata.plan || 'basic',
     status: sub.status,
     current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
     current_period_end: new Date(sub.current_period_end * 1000).toISOString(),

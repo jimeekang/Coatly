@@ -28,6 +28,7 @@
 |------|------|-------------|
 | Detailed room/surface | 방별 벽/천장/트림 상세 견적 | `quote_rooms`, `quote_room_surfaces` |
 | Quick estimate | 현장 빠른 방/크기/표면 matrix | `quote_estimate_items`, `pricing_snapshot` |
+| Average property preset | 2 bed 2 bath apartment 같은 평균 interior anchor | `pricing_method_inputs`, `quote_estimate_items`, rate snapshot |
 | Day rate | 일수 × 일당 + 자재 | `pricing_method_inputs` |
 | Manual | 직접 금액 입력 | manual line items |
 | Exterior | 외부 작업 카테고리 | `estimate_category = exterior` |
@@ -58,14 +59,31 @@ draft -> sent -> approved -> booked/job/invoice
 - GST는 10% 기준으로 계산합니다.
 - Labour/material margin은 별도 percent로 저장합니다.
 - Quick estimate는 저장 시 authoritative snapshot을 남겨 이후 단가 변경에 흔들리지 않게 합니다.
-- Starter는 월간 active quote limit을 적용하고 Pro는 무제한입니다.
+- Basic은 제한된 AI/usage limit을 적용하고 Pro는 full AI Quote Form Builder와 높은 usage limit을 제공합니다.
+- Room anchor를 선택해도 walls/ceiling/trim/doors/windows는 quote 안에서 개별 선택 가능해야 합니다.
+- Average property preset과 room anchor는 같은 base subtotal 안에서 중복으로 더하지 않습니다.
+- Prep, access, paint upgrade, travel, scaffold 같은 add-on은 이미 포함된 scope와 겹칠 때 block 또는 warning이 필요합니다.
 
 ## UX Rules
 
 - Quote 생성 첫 화면에서 AI draft, template, manual form을 사용할 수 있습니다.
-- AI draft는 Pro gated이며 사용자는 저장 전 반드시 폼을 검토합니다.
+- AI draft는 plan-aware입니다. Basic은 제한된 notes-based AI, Pro/Pro trial은 full AI Quote Form Builder를 사용하며, 사용자는 저장 전 반드시 폼을 검토합니다.
 - Quote CTA는 `+ New Quote` 패턴을 사용합니다.
 - Public quote는 고객이 optional item, PDF, 승인/거절, 예약 날짜를 볼 수 있어야 합니다.
+
+## Planned Price Rates Expansion
+
+v1 pricing foundation은 세션 `019e32de-aaa3-7940-aaa6-9c773d3ec251`의 Rate Library + Modifiers 방향을 따른다.
+
+| 그룹 | 필요한 항목 |
+|------|-------------|
+| Average Property Prices | Apartment 1 bed 1 bath, Apartment 2 bed 1 bath, Apartment 2 bed 2 bath, Apartment 3 bed 2 bath, House 3 bed 2 bath, House 4 bed 2 bath |
+| Room Prices | Bedroom, bathroom, living, hallway, stairwell 등 full repaint price + walls-only/ceiling-only/trim-only % |
+| Base Surface Rates | interior walls/ceiling `/sqm`, trim/skirting `/lm`, doors/windows `/each`, exterior surfaces |
+| Prep & Repairs | patching, cracks, sanding, caulking, mould, stain/tannin block, oil-to-water prep |
+| Access & Complexity | high ceiling, stairwell, furnished/occupied, poor access, second-storey/ladder, scaffold |
+| Paint Systems | 1 coat refresh, 2 coat repaint, new plaster 3 coats, wet-area paint, premium washable, enamel, exterior full system |
+| Business Rules | minimum job/room, callout/travel, material markup, target daily earning warning |
 
 ## Completed Acceptance Criteria
 
@@ -74,7 +92,7 @@ draft -> sent -> approved -> booked/job/invoice
 - [x] GST 10% 계산
 - [x] AUD 포맷 표시
 - [x] PDF 비즈니스 브랜딩
-- [x] Starter 월간 active quote 제한
+- [x] Basic/legacy Starter 월간 active quote 제한
 - [x] 유효기간 필드
 - [x] quick/detailed estimate snapshot
 - [x] material/service line items
@@ -91,6 +109,7 @@ draft -> sent -> approved -> booked/job/invoice
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |
 | P1 | Exterior edit safety | 편집 시 exterior snapshot 손실 여부 회귀 테스트 강화 |
 | P1 | Exterior PDF/detail | 모든 exterior cost/line item이 상세/PDF에 일관 렌더되는지 검증 |
+| P1 | Rate library expansion | Average Property Prices, Room Prices surface split, Prep/Access modifiers 구현 필요 |
 | P1 | Public audit | public token 접근/오류/승인 이벤트 운영 조회 강화 |
 | P2 | Read receipt | 고객 링크 열람/다운로드 이벤트를 영업 후속 조치에 활용 |
 | P2 | Smart pricing | 히스토리 기반 가격 제안은 아직 미구현 |
