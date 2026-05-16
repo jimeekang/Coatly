@@ -23,6 +23,7 @@ v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 �
 | Public approval | 구현됨 | `/q/[token]`, signature, approve/reject |
 | Public booking | 구현됨 | approved quote → job booking |
 | Quote → invoice | 구현됨 | invoice quote option/line item 흐름 |
+| Canonical quote totals | 부분 구현됨 | `calculateQuoteTotals()`, optional add-on/public quote/invoice preset parity. Duplicate priced scope guard는 미완료 |
 | AI Quote Form Builder | 설계 필요 | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` |
 
 ## Quote Modes
@@ -144,14 +145,19 @@ draft -> sent -> approved -> booked/job/invoice
 - [x] approved quote booking
 - [x] quote templates
 - [x] AI draft panel 노출
+- [x] canonical quote total calculator
+- [x] optional add-on total recalculation with discount/manual adjustment
+- [x] public quote total preview with selected optional add-ons
+- [x] quote-to-invoice preset base scope + selected optional add-on handling
+- [x] discounted quote invoice parity-safe line and manual adjustment block
 
 ## Active Risks / Next Work
 
 | 우선순위 | 항목 | 내용 |
 |----------|------|------|
-| P0 | Price calculation boundary | Quick/Advanced 견적에서 room anchor, quick estimate item, custom line item이 같은 scope를 중복 계산하지 않도록 authoritative source와 guardrail 정리 |
+| P0 | Duplicate priced scope guard | Canonical total path는 구현됐지만, Quick/Advanced 견적에서 room anchor, quick estimate item, custom line item이 같은 scope를 중복 계산하지 않도록 structured scope key validator가 아직 필요 |
 | P0 | AI Quote Form Builder structure | 고객용 scope section, 가격 row, clause library를 분리하고 legacy interior/exterior quote form을 재현 가능한 데이터 구조로 정리 |
-| P0 | Quote total parity | [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)에 따라 preview/save/detail/PDF/public quote/invoice conversion이 같은 subtotal/GST/total 규칙을 쓰는지 회귀 테스트 강화 |
+| P0 | Quote total parity hardening | Optional add-on/public quote/invoice preset parity는 focused tests 통과. 남은 작업은 exact create/update same-fixture test, PDF route regression, full suite/build |
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |
 | P1 | Exterior edit safety | 편집 시 exterior snapshot 손실 여부 회귀 테스트 강화 |
 | P1 | Exterior PDF/detail | 모든 exterior cost/line item이 상세/PDF에 일관 렌더되는지 검증 |

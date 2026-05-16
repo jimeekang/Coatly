@@ -77,6 +77,15 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 | T13 | Today Assistant | Dashboard에 deterministic task list + AI summary. Follow-up 필요한 quote, overdue invoice, 오늘/이번 주 job만 표시. Basic은 deterministic list, Pro는 AI summary |
 | T14 | Follow-up Writer | Quote/customer/invoice 화면에서 고객 메시지 초안 생성. 견적 확인 요청, 승인 후 일정 잡기, invoice reminder. **자동 발송 없음** — user review 후 기존 email flow 또는 manual copy |
 
+### Build Progress Snapshot (2026-05-17)
+
+| 영역 | 상태 | 다음 필요 작업 |
+|------|------|----------------|
+| T0 / Task 1A canonical totals | 구현됨. `calculateQuoteTotals()`가 quote total authority가 되었고 optional add-on, public quote preview, quote-to-invoice preset parity가 focused tests를 통과했다 | PDF route regression과 full suite/build를 Task 1 종료 전에 실행 |
+| T0 / Task 1B duplicate priced scope guard | 미완료. 아직 structured scope key validator가 없어 quick/advanced scope와 custom line item의 이중 청구를 deterministic하게 막지 못한다 | `lib/quote-pricing-scopes.ts` 또는 Task 3 scope tables와 연결되는 scope key 설계 후 create/edit validation 적용 |
+| T0A Quick/Advanced hardening | 대기. canonical total path 일부는 준비됐지만 duplicate guard가 먼저 끝나야 한다 | room/surface toggle, average property preset, stale-rate snapshot tests를 Task 2에서 진행 |
+| AI provider / Qwen work | 시작 전 | AI pricing candidates는 Task 1B와 Task 2가 끝난 뒤에만 연결 |
+
 ## AI 역할 boundary (D6 / Codex Hybrid)
 
 - Precondition: T0/T0A에서 price rate 구조와 canonical quote calculator가 먼저 안정돼야 한다.

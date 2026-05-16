@@ -78,11 +78,15 @@ draft → sent → paid
 - [x] GST 10% 자동 계산
 - [x] 고객 이메일 발송 + public PDF token
 - [x] due soon/overdue reminder cron 멱등성
+- [x] quote base scope invoice line 생성
+- [x] selected optional add-on만 invoice preset에 포함
+- [x] quote discount는 parity-safe single line으로 처리
+- [x] manual adjustment quote는 preset 생성 차단 메시지 표시
 
 ## Remaining Work
 
-- [ ] Quote-to-invoice total parity 회귀 테스트
-- [ ] Optional add-on 선택 상태와 discount/manual adjustment가 invoice preset에 정확히 반영되는지 검증
+- [ ] PDF/public quote까지 포함한 end-to-end total parity 회귀 테스트
+- [ ] manual adjustment를 invoice에서 과세/비과세 조정 row로 지원할지 별도 decision
 - [ ] Invoice reminder 실패/재시도 운영 UI
 - [ ] 저장 원자성 RPC 검토
 

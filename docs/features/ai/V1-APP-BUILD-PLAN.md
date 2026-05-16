@@ -36,6 +36,7 @@
 | Trial limit | 첫 cohort는 Pro trial 기간 동안 Pro limit 사용 |
 | AI model | Alibaba Cloud / Qwen `qwen3-vl-flash`, provider adapter 뒤에 고정 |
 | 아직 남은 validation 기록 | D11 cost spreadsheet 숫자 확정, painter별 anonymized quote 추가 회수, W4 numeric golden set fixture |
+| Task 1 implementation review | 2026-05-17 기준 Task 1A canonical quote totals/invoice parity는 구현 + focused tests 통과. Task 1B duplicate priced scope guard, rollback/lock edge tests, full safety verification은 남음 |
 
 ## Build Rule
 
@@ -70,7 +71,7 @@
 
 | Week | 날짜 | 목표 | 완료 기준 |
 |------|------|------|-----------|
-| W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | AI 없이도 quote total이 preview/save/detail/PDF/invoice에서 같은 규칙으로 설명된다 |
+| W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | 진행 중. canonical calculator, optional add-on/public quote, invoice preset parity는 구현됨. duplicate priced scope guard + full safety verification 후 완료 |
 | W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + quote form schema | painter rate setup, `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` 구조가 준비된다 |
 | W3 | 2026-06-15 ~ 2026-06-19 | Quick/Advanced hardening + Scope/Clause builder UI | customer-visible scope와 priced row가 UI와 저장 구조에서 분리된다 |
 | W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Winchester, Edgar, Paint Buddy quote form을 scope/pricing/clause 구조로 재현하고 가격 회귀 테스트가 통과한다 |
@@ -102,7 +103,7 @@
 
 **Detailed plan:** [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md)
 
-**Status:** implementation preparation is documented. Task 1 changes the existing quote/invoice calculation surface, but AI integration must not start here.
+**Status:** PARTIAL. Task 1A canonical quote totals and quote-to-invoice preset parity are implemented and focused tests passed on 2026-05-17. Task 1B duplicate priced scope guard, linked-invoice/rollback edge tests, PDF route regression, and full `npm run test:run` / `npm run build` remain.
 
 **Goal:** AI 기능을 붙이기 전에 quote 가격 출처, subtotal/GST/total 계산, optional add-on, public quote, invoice preset이 모두 같은 규칙으로 동작하게 만든다.
 
@@ -134,6 +135,12 @@
 - Fix create/update, optional add-on selection, public quote preview, and invoice preset parity.
 - Preserve current Supabase tables unless duplicate priced scope guard needs a separately reviewed schema change.
 - Keep AI and photo analysis out of all price-writing paths.
+
+**Implementation snapshot (2026-05-17):**
+
+- Done: `calculateQuoteTotals()` + compatibility wrapper, calculator tests, shared create/update pricing resolver, optional add-on recalculation with discount/manual adjustment, public quote canonical preview, invoice preset base scope/selected optional/discount/manual adjustment handling.
+- Verified: `npm run test:run -- lib/quotes.test.ts app/actions/quotes.test.ts`, `npm run test:run -- lib/invoices.test.ts app/actions/invoices.test.ts`, and `npm run test:run -- components/quotes/QuoteForm.test.tsx components/invoices/InvoiceForm.test.tsx` passed.
+- Still required before Task 2/AI pricing candidates: deterministic duplicate priced scope guard, exact create/update same-fixture parity test, optional linked-invoice/rollback tests, PDF route regression, full suite/build.
 
 **Completion criteria:**
 

@@ -34,7 +34,7 @@
 
 | Week | 날짜 | 목표 | 상세 방법 | 결과 기록 |
 |------|------|------|-----------|-----------|
-| Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 + [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | 미기록 |
+| Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 + [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | 진행 중. 2026-05-17 기준 Task 1A canonical totals/optional add-on/public quote/invoice preset parity 구현 + focused tests 통과. Task 1B duplicate priced scope guard, PDF route regression, full suite/build 남음 |
 | Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + quote form schema | Task 2-3 | 미기록 |
 | Build W3 | 2026-06-15 ~ 2026-06-19 | Quick/Advanced hardening + Scope/Clause builder UI | Task 4 | 미기록 |
 | Build W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Task 4 + Test matrix | 미기록 |
