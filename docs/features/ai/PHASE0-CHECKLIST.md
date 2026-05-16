@@ -1,6 +1,6 @@
 # AI-assisted Quote Form Builder Validation, Build, and Trial Checklist
 
-> 기준일: 2026-05-16. Phase 0 validation 기간: 2026-05-15 금요일부터 2026-05-29 금요일까지 14일. 이후 GREEN이면 8주 build, 4주 paid trial tracking으로 이어진다.
+> 기준일: 2026-05-16. Phase 0 validation 기간: 2026-05-15 금요일부터 2026-05-29 금요일까지 14일. 2026-05-17 기준 GREEN으로 판정했고, 이후 8주 build와 4주 Free Pro Trial + Paid Conversion Tracking으로 이어진다.
 
 ## Rule
 
@@ -10,7 +10,7 @@
 - 과거 quote는 고객 이름, 주소, 전화번호, 이메일을 지운 뒤 eval seed로만 사용한다.
 - v1 기본 모델 후보는 Alibaba Cloud / Qwen `qwen3-vl-flash`다. 가격/성능은 Phase 0 D6/D11에 공식 문서 기준으로 다시 확인한다.
 - AI 비용 계산은 실행 당일 공식 model pricing으로 다시 입력한다. 2026-05-16 확인 기준은 Qwen3-VL-Flash 32K 이하 tier input $0.05 / 1M tokens, output $0.40 / 1M tokens지만, 최종 spreadsheet는 실행일 가격을 사용한다.
-- 실제 사용량 트래킹은 앱 구현 후 paid trial에서만 판정한다. 인터뷰 단계의 중간 점검은 build 여부를 위한 정성/선결제 신호만 본다.
+- 실제 사용량 트래킹은 앱 구현 후 Free Pro Trial + Paid Conversion Tracking에서만 판정한다. 인터뷰 단계의 중간 점검은 build 여부를 위한 정성 신호와 trial 후보 확보를 본다.
 - v1 build는 AI 연동부터 시작하지 않는다. **price_rates, quote item 구조, subtotal/GST/total 계산, quote form structure가 먼저 안정돼야 AI-assisted Quote Form Builder를 붙인다.**
 - AI는 가격을 만들거나 rate를 고르지 않는다. AI는 scope 문장, surface 후보, assumptions/exclusions만 초안 작성하고, 금액은 앱의 deterministic quote calculation engine이 계산한다.
 - 과거 견적서 form은 AI eval seed일 뿐 아니라 quote form data model seed로 사용한다. v1 quote form은 `scope section` + `pricing row` + `clause library`를 분리한다.
@@ -21,7 +21,7 @@
 
 | Phase | 기간 | 날짜 | 목적 | 판정 |
 |-------|------|------|------|------|
-| Phase 0 Validation | 2주 | 2026-05-15 ~ 2026-05-29 | 인터뷰, 과거 quote 확보, 비용 계산, 선결제 의향 확인 | GREEN/YELLOW/RED build decision |
+| Phase 0 Validation | 2주 | 2026-05-15 ~ 2026-05-29 | 인터뷰, 과거 quote 확보, 비용 계산, trial 후보와 가격 반응 확인 | GREEN/YELLOW/RED build decision |
 | v1 Build | 8주 | 2026-06-01 ~ 2026-07-24 | price rate/quote calculation foundation → quote form structure → AI-assisted Quote Form Builder → 보조 AI/usage tracking 구현 | Internal readiness |
 | Integration + Onboarding | 1주 | 2026-07-27 ~ 2026-07-31 | production deploy, pilot painter 세팅, price_rates 입력, 첫 quote 생성 확인 | Trial start readiness |
 | Free Pro Trial + Paid Conversion Tracking | 4주 | 2026-08-03 ~ 2026-08-28 | 실제 사용량, AI 품질, 비용, quote outcome, trial 이후 결제 전환 측정 | Midpoint + final decision |
@@ -34,7 +34,7 @@
 
 | Week | 날짜 | 목표 | 상세 방법 | 결과 기록 |
 |------|------|------|-----------|-----------|
-| Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 | 미기록 |
+| Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 + [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | 미기록 |
 | Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + quote form schema | Task 2-3 | 미기록 |
 | Build W3 | 2026-06-15 ~ 2026-06-19 | Quick/Advanced hardening + Scope/Clause builder UI | Task 4 | 미기록 |
 | Build W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Task 4 + Test matrix | 미기록 |
@@ -54,10 +54,10 @@
 | D4 | 2026-05-19 Tue | 인터뷰 3–4 진행 | 같은 script로 진행. 사진 사용 의향, follow-up pain, room/surface/add-on 이중 계산 위험을 깊게 확인 | Interview Log P3/P4, Pricing Notes | 완료/앞당김. P3/P4 log 반영. P3은 A$59 강한 긍정, P4는 현재 quote volume 0으로 pilot fit 낮음 |
 | D5 | 2026-05-20 Wed | 인터뷰 5 진행 + 누락 quote 회수 | 마지막 인터뷰 후 미제출 quote 재요청 | Interview Log P5, quote 5개 목표 | 진행 중. P5 log 반영 완료. legacy PDF 3개 확보. painter별 과거 quote 5개 목표는 아직 미달 |
 | D6 | 2026-05-21 Thu | pricing model + AI cost economics 1차 계산 | painter 답변을 기준으로 quick/advanced rate 구조 초안 작성. Qwen3-VL-Flash 공식 pricing 확인 후 text draft, photo draft, today summary, follow-up draft 비용을 월 사용량으로 계산 | Pricing Model Draft, Cost Log v1 | 진행 중. quote volume range 0-10/month 확인, active 응답자 평균 약 4-6 quotes/month. Qwen3-VL-Flash 2026-05-16 1차 가격 기록 완료, 공식 재확인과 spreadsheet 필요 |
-| D7 | 2026-05-22 Fri | Validation 중간 점검 | 5명 반응을 GREEN/YELLOW/RED 신호로 분류. script에서 약한 질문 보완. 실제 사용량 판정은 build 후 paid trial에서만 진행 | Midpoint Decision Notes | 완료/앞당김. 정성 사용 의향 5/5, Today/Follow-up 5/5 긍정. A$59 선결제 대신 Pro 1개월 무료 trial 후 paid conversion 측정으로 gate 기준 변경 |
+| D7 | 2026-05-22 Fri | Validation 중간 점검 | 5명 반응을 GREEN/YELLOW/RED 신호로 분류. script에서 약한 질문 보완. 실제 사용량 판정은 build 후 Free Pro Trial + Paid Conversion Tracking에서만 진행 | Midpoint Decision Notes | 완료/앞당김. 정성 사용 의향 5/5, Today/Follow-up 5/5 긍정. A$59 선결제 검증 대신 Pro 1개월 무료 trial 후 paid conversion 측정으로 gate 기준 변경 |
 | D8 | 2026-05-23 Sat | follow-up 보강 | 애매한 painter에게 짧은 follow-up. 선결제 의향과 quote 공유 재확인 | Follow-up Notes | 필요. P1/P2에게 eval seed 의미 재설명, P3에게 AI pricing boundary 설명, P4/P5에게 current usage fit 확인, 추가 quote 공유 재요청 |
 | D9 | 2026-05-24 Sun | golden set + quote form structure 정리 | 받은 quote 익명화, 품질 체크, AI eval과 price calculation scenario에 쓸 입력/정답 형태로 분류. 과거 견적서 form을 scope/pricing/clause 구조로 분해 | Golden Set Tracker, Price Scenario Tracker, Legacy Quote Form Tracker | 진행 중. legacy PDF 3개는 scope/pricing/clause 분석 완료. painter별 anonymized quote golden set은 추가 회수 필요 |
-| D10 | 2026-05-25 Mon | Stripe manual payment link 발송 | 높은 의향 painter에게 A$59 선결제 링크 발송. 결제 아니면 거절 이유 기록 | Payment Link Tracker | 미시작. P3만 A$59 link 후보. P1/P2는 가격 반대, P4/P5는 volume 조건부라 follow-up 후 판단 |
+| D10 | 2026-05-25 Mon | Pro trial 초대 기준 정리 | 높은 의향 painter에게 Pro 1개월 무료 trial 조건, A$59 전환 가격, cancel anytime 정책을 설명한다. 선결제 링크는 보내지 않고 trial 후보/거절 이유를 기록한다 | Pro Trial Invite Tracker | 완료/대체. 선결제 검증 대신 Pro trial → A$59 conversion 검증으로 변경. P1/P2/P3는 trial 후보, P4/P5는 insight/adjacent 후보 |
 | D11 | 2026-05-26 Tue | 비용/limit 최종안 | Qwen3-VL-Flash 기준 월 draft limit, quote당 사진 수, assistant generation limit을 결정. 품질 실패 시 fallback 모델 후보와 사용 조건 기록 | Cost Log final | 진행 중. 비용 단가는 1차 기록됐지만 prompt token estimate, photo count별 cost, monthly limit은 미확정 |
 | D12 | 2026-05-27 Wed | scope 결정안 | T2 photo, T3 streaming, T13/T14 보조 AI를 GREEN/YELLOW별로 정리 | Scope Decision Draft | 진행 중. Photo helper는 5/5 관심 있으나 photo-only auto takeoff 기대는 제한해야 함. Streaming은 P1만 강한 선호, T3는 조건부. Today/Follow-up은 v1 유지 신호 강함 |
 | D13 | 2026-05-28 Thu | gate packet 준비 | 인터뷰 evidence, quote seed, cost, payment 상태를 한 페이지로 요약 | Gate Packet | 완료/앞당김. 가격 정책과 trial 정책을 기준으로 gate packet 요약 반영 |
@@ -109,13 +109,13 @@
 14. 오늘 할 일 요약, overdue invoice, quote follow-up 알림이 dashboard에 나오면 유용한가요?
 15. 고객에게 보낼 quote check-in, booking request, invoice reminder 문구 초안이 유용한가요?
 16. 과거 quote 1개를 익명화해서 eval seed와 price calculation scenario로 공유할 수 있나요?
-17. 이 기능이 있으면 A$59/월 Pro를 결제할 의향이 있나요? 지금 선결제 링크를 보내면 결제할 수 있나요?
+17. 이 기능이 있으면 A$59/월 Pro를 결제할 의향이 있나요? Pro 1개월 무료 trial 후 계속 쓴다면 결제 전환할 수 있나요?
 
 ## Interview Log
 
 원문: [docs/inverview-answer.txt](../../inverview-answer.txt). 원문은 이전 12문항 script로 수집되어 현재 script의 Quick/Advanced 상세 질문 일부는 follow-up이 필요하다.
 
-| Painter | 날짜 | Quotes/월 | 현재 도구 | Quote 작성 시간 | 핵심 pain | AI Quote Form 반응 | Photo 기대 | price_rates 동의 | Today Assistant | Follow-up Writer | 과거 quote 공유 | A$59 선결제 | 결정 근거 |
+| Painter | 날짜 | Quotes/월 | 현재 도구 | Quote 작성 시간 | 핵심 pain | AI Quote Form 반응 | Photo 기대 | price_rates 동의 | Today Assistant | Follow-up Writer | 과거 quote 공유 | A$59/Pro trial 반응 | 결정 근거 |
 |---------|------|-----------|-----------|-----------------|-----------|----------------------|------------|------------------|-----------------|------------------|----------------|------------|-----------|
 | P1 | 2026-05-16 수집 | 4-8 | Word | 10-20분 | 문장 정리, follow-up. Residential에서는 site measure/line item pain 낮음 | 조건부 긍정. site 문제점까지 자동 작성되면 사용 | Quote 사진은 드묾. 사진은 별도 report, photo-only 산출보다 notes/measurement 보조 충분 | 동의 | 매우 유용 | 유용 | 의미 설명 필요 | 거절 | A$59는 quote volume 대비 비쌈. 하루 10건 이상이면 고려 |
 | P2 | 2026-05-16 수집 | 1-2 | 현장 눈대중 M2/LM + 수기 판단 | 1-2시간 | site measurement, line item, 문장, follow-up 모두 | 강한 긍정 | 사진 많이 사용. photo-only measurement/cost expectation 강함 | 동의 | 긍정 | 긍정 | 동의, 용어 설명 필요 | 거절 | 기능 pain은 크지만 A$59는 매우 비쌈. under A$20이면 고려 |
@@ -132,8 +132,8 @@
 | `price_rates` 입력 | 4/5 동의, P3는 AI price 반영을 원함. v1에서는 AI가 rate를 만들지 않고 painter review + deterministic calculator로 제한해야 함 |
 | Today Assistant | 5/5 긍정. v1 보조 AI 범위에 유지할 근거 있음 |
 | Follow-up Writer | 5/5 긍정. 자동 발송 없이 초안 작성 범위로 유지 |
-| A$59 선결제 | 강한 긍정 1/5(P3), 명확한 가격 반대 2/5(P1/P2), volume 조건부 2/5(P4/P5). 가격/패키징은 YELLOW risk |
-| Pilot fit | P1/P2/P3가 painter pilot 후보. P4/P5는 사용량이 낮아 interview insight는 유효하지만 paid trial cohort로는 약함 |
+| A$59/Pro trial 반응 | 강한 긍정 1/5(P3), 명확한 가격 반대 2/5(P1/P2), volume 조건부 2/5(P4/P5). Basic A$29 + Pro trial로 가격/패키징 risk를 낮춘다 |
+| Pilot fit | P1/P2/P3가 painter pilot 후보. P4/P5는 사용량이 낮아 interview insight는 유효하지만 Free Pro Trial cohort로는 약함 |
 
 ## Pricing Interview Notes
 
@@ -192,7 +192,7 @@
 | 사진 resize 정책 | 1920px JPEG 85% | 업로드 전 압축 기준 | 유지 |
 | photo analysis cache | image hash/storage path + prompt version | 같은 사진 세트 재분석 방지 | 계획 |
 | painter당 quote draft/월 | 0-10 range | 인터뷰 quotes/월 평균으로 산정 | active 후보 기준 약 4-6/month. cost spreadsheet는 low 2, base 5, high 10으로 계산 |
-| painter당 Today Assistant/월 | 미기록 | daily usage 또는 dashboard visits 기준 | 5/5 유용하다고 응답. 실제 횟수는 paid trial에서 측정 |
+| painter당 Today Assistant/월 | 미기록 | daily usage 또는 dashboard visits 기준 | 5/5 유용하다고 응답. 실제 횟수는 Free Pro Trial + Paid Conversion Tracking에서 측정 |
 | painter당 Follow-up Writer/월 | 미기록 | quote follow-up + invoice reminder 빈도 기준 | 5/5 유용하다고 응답. quote volume과 invoice reminder 빈도 follow-up 필요 |
 | 월 AI cost / Pro user | Pro draft 25/month, photo 100/month, follow-up 50/month 기준 | draft + photo + assistant generation 합산 | D11 spreadsheet에서 최종 산정. Qwen 단가 기준 30% ARPU 이하로 통제 가능성이 높음 |
 | AI cost / ARPU | Pro A$59, Basic A$29 | 월 AI cost ÷ plan ARPU | plan별 monthly limit으로 통제. Basic은 photo 15/month, Pro는 photo 100/month |

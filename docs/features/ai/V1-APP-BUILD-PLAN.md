@@ -17,6 +17,7 @@
 | [PHASE0-CHECKLIST.md](./PHASE0-CHECKLIST.md) | validation 일정, 인터뷰 결과, gate decision 기록 |
 | [V1-PLAN.md](./V1-PLAN.md) | v1 wedge, AI boundary, success criteria |
 | [AI-ASSISTANT.md](./AI-ASSISTANT.md) | AI 기능 범위, Qwen model policy, usage log 요약 |
+| [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | Task 1 detailed implementation plan for rate source audit, canonical quote totals, optional add-ons, public quote, and invoice parity |
 | [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md) | quote form data model, AI output contract, legacy quote form 분석 |
 | [QUOTE.md](../quote/QUOTE.md) | 현재 quote builder 구조, pricing modes, active risks |
 | [BILLING.md](../billing/BILLING.md) | 기존 Stripe checkout, portal, webhook, subscription cache 구조 |
@@ -99,38 +100,46 @@
 
 ## Task 1: Rate Source Audit and Canonical Quote Totals
 
+**Detailed plan:** [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md)
+
+**Status:** implementation preparation is documented. Task 1 changes the existing quote/invoice calculation surface, but AI integration must not start here.
+
+**Goal:** AI 기능을 붙이기 전에 quote 가격 출처, subtotal/GST/total 계산, optional add-on, public quote, invoice preset이 모두 같은 규칙으로 동작하게 만든다.
+
 **Files:**
 - Modify: `lib/quotes.ts`
 - Modify: `app/actions/quotes.ts`
+- Modify: `components/quotes/QuoteForm.tsx`
+- Modify: `components/quotes/public/PublicQuoteClient.tsx`
+- Modify: `lib/invoices.ts`
+- Modify: `components/invoices/InvoiceForm.tsx`
 - Modify: `lib/quotes.test.ts`
 - Modify: `app/actions/quotes.test.ts`
+- Modify: `lib/invoices.test.ts`
+- Modify: `app/actions/invoices.test.ts`
+- Modify: `components/quotes/QuoteForm.test.tsx`
+- Modify: `components/invoices/InvoiceForm.test.tsx`
+- Read: `components/quotes/LineItemsSection.tsx`
+- Read: `components/quotes/QuoteExtraLineItems.tsx`
 - Read: `supabase/migrations/014_quote_estimate_items_and_context.sql`
 - Read: `supabase/migrations/018_pricing_methods.sql`
 - Read: `supabase/migrations/019_material_items_and_quote_line_items.sql`
+- Read: `supabase/migrations/024_quote_optional_line_items.sql`
 - Read: `supabase/migrations/041_detailed_quick_estimate.sql`
 - Read: `supabase/migrations/042_allow_quick_estimate_items.sql`
 
-**Method:**
+**Summary:**
 
-- [ ] **Step 1: Map authoritative price sources**
+- Make `calculateQuoteTotals()` the single quote total authority.
+- Fix create/update, optional add-on selection, public quote preview, and invoice preset parity.
+- Preserve current Supabase tables unless duplicate priced scope guard needs a separately reviewed schema change.
+- Keep AI and photo analysis out of all price-writing paths.
 
-  Create an internal map in the implementation notes for each pricing method: `room_surface`, `quick_estimate`, `detailed_quick`, `room_rate`, `day_rate`, `manual`, `exterior`. For each method, write which table creates base subtotal, which table creates add-on subtotal, and which snapshot fields must not change after save.
+**Completion criteria:**
 
-- [ ] **Step 2: Make one server calculator the final total path**
-
-  Keep or consolidate around `calculateQuoteTotals()` in `lib/quotes.ts`. It must receive `base_subtotal_cents`, selected `quote_line_items`, `discount_cents`, and `adjustment_cents`, then return `line_items_subtotal_cents`, `subtotal_cents`, `discounted_subtotal_cents`, `gst_cents`, and `total_cents`.
-
-- [ ] **Step 3: Remove alternate total math from save/update paths**
-
-  In `app/actions/quotes.ts`, every create/update path must call the same total calculator after it has resolved the pricing method. Preview, save, edit, public optional item selection, and invoice conversion must not each invent total math.
-
-- [ ] **Step 4: Add total parity tests**
-
-  Add tests in `lib/quotes.test.ts` and `app/actions/quotes.test.ts` for discount, GST, manual adjustment, selected optional item, unselected optional item, and invoice conversion. Expected result: all paths produce the same cents values.
-
-- [ ] **Step 5: Add duplicate priced scope guard tests**
-
-  Add tests where a room anchor already includes walls/ceiling/trim and the same scope is added again as a custom line item. Expected result: validation blocks the duplicate or forces the duplicate row to be marked as non-priced customer-visible scope.
+- Quote create, edit, optional add-on selection, public optional add-on selection, public approval, PDF quote display, and invoice preset generation explain the same total.
+- No code path writes `subtotal_cents`, `gst_cents`, or `total_cents` without going through `calculateQuoteTotals()` or a documented invoice-only calculator.
+- Focused quote/invoice/UI tests and full build verification pass as defined in the detailed plan.
 
 ## Task 2: Quick and Advanced Rate Boundary
 

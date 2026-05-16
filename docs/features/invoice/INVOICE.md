@@ -52,9 +52,14 @@ draft → sent → paid
 ## 견적서 → 청구서 변환
 
 견적서 accept 후 "Create Invoice" 버튼으로 변환:
-- Quote의 room/surface 데이터를 line item으로 변환
+- Quote의 approved total을 설명할 수 있는 invoice line item으로 변환
+- base quote scope가 `quote_line_items`에 없으면 base scope invoice line을 생성
+- selected optional add-on만 invoice에 포함하고, unselected optional add-on은 제외
+- quote discount/manual adjustment가 있으면 approved quote total과 invoice preset total이 달라지지 않도록 단일 parity-safe line 또는 명확한 block message를 사용
 - `quote_id` 필드로 연결 관계 유지
 - 변환 후에도 line item 수정 가능
+
+관련 계산 규칙은 [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)의 quote-to-invoice parity 기준을 따른다.
 
 ## 부분 납부
 
@@ -76,6 +81,8 @@ draft → sent → paid
 
 ## Remaining Work
 
+- [ ] Quote-to-invoice total parity 회귀 테스트
+- [ ] Optional add-on 선택 상태와 discount/manual adjustment가 invoice preset에 정확히 반영되는지 검증
 - [ ] Invoice reminder 실패/재시도 운영 UI
 - [ ] 저장 원자성 RPC 검토
 

@@ -8,6 +8,7 @@
 |------|------|
 | [V1-PLAN.md](./ai/V1-PLAN.md) | **v1 wedge build plan** — Phase 0 validation, GREEN gate, T0–T14 work items, quote form structure, AI 역할 boundary, ai_usage_logs schema, streaming pattern, worktree lanes, timeline |
 | [V1-APP-BUILD-PLAN.md](./ai/V1-APP-BUILD-PLAN.md) | **v1 app build before usage tracking** — pricing-first 구현 순서, 파일별 작업 범위, Qwen 연동, 사진 분석, 보조 AI, usage/cost logging, trial readiness |
+| [V1-TASK1-RATE-SOURCE-AUDIT.md](./ai/V1-TASK1-RATE-SOURCE-AUDIT.md) | **Task 1 detailed plan** — rate source audit, canonical quote totals, optional add-on, public quote, invoice parity 세부 구현 계획 |
 | [PHASE0-CHECKLIST.md](./ai/PHASE0-CHECKLIST.md) | Phase 0 실행 체크리스트 — 날짜별 validation plan, interview log, golden set, cost economics, Stripe payment link, gate result 기록장 |
 | [AI-ASSISTANT.md](./ai/AI-ASSISTANT.md) | AI Draft Panel + AI-assisted Quote Form Builder 현재 상태, v1 갭, status checklist |
 
@@ -42,7 +43,7 @@
 
 | 파일 | 내용 |
 |------|------|
-| [BILLING.md](./billing/BILLING.md) | Starter A$39 / Pro A$59 plan 정의, Stripe 연동, webhook 멱등성, 취소/갱신 |
+| [BILLING.md](./billing/BILLING.md) | Basic A$29 / Pro A$59 plan 정의, Pro 1개월 무료 trial, Stripe 연동, webhook 멱등성, 취소/갱신 |
 
 ## PDF Generation
 

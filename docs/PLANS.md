@@ -16,7 +16,7 @@
 | 0 | Foundation | 완료 | 프로젝트, Supabase, Auth, Stripe, Vercel |
 | 1 | Core Features | 완료 | 고객, 견적, PDF, invoice, billing |
 | 2 | AI & Operations | 진행 중 | AI, schedule, email, public quote, jobs 고도화 |
-| **v1 AI Quote Writer push** | **wedge 재정의** | **Phase 0 진행 중** | **AI Quote Writer = $59 wedge + Today Assistant / Follow-up Writer 보조 AI. validation 2주 → build 6–8주 → paid trial 4–6주. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md)** |
+| **v1 AI Quote Writer push** | **wedge 재정의** | **Phase 0 GREEN / build 준비** | **AI Quote Writer = Basic A$29 limited AI + Pro A$59 full AI wedge. Today Assistant / Follow-up Writer 보조 AI. validation GREEN → build 6–8주 → Free Pro Trial + paid conversion tracking. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md)** |
 | 3 | Integrations & Scale | 계획 | accounting sync, 운영/분석 고도화 |
 
 ## Implemented Progress
@@ -38,7 +38,7 @@
 - [x] Invoice PDF with bank/business defaults
 - [x] Business onboarding, ABN lookup, logo upload
 - [x] Stripe checkout, portal, webhook sync, plan gating
-- [x] Starter active quote limit and Pro unlimited behavior
+- [x] subscription scaffold, active quote limit, Pro behavior
 - [x] Materials & services catalogue with CSV import/export
 - [x] Price/rate settings and profitability display
 
@@ -46,7 +46,7 @@
 
 - [x] Workspace Assistant on dashboard, Pro gated
 - [x] AI quote drafting panel on quote create screen
-- [x] Quote templates with Starter/Pro limits
+- [x] Quote templates with plan limits
 - [x] Quote email send via Resend
 - [x] Public quote link `/q/[token]`
 - [x] Public approve/reject with typed signature
@@ -63,14 +63,14 @@
 
 ## v1 AI Quote Writer Push (2026-05-16)
 
-> Wedge 재정의(2026-05-15 office-hours): AI Quote Writer가 $59 paying user 확보의 본질. v1 보조 AI로 Today Assistant(오늘 처리할 일) + Follow-up Writer(고객 follow-up 문구)를 추가하되, 범용 Workspace Assistant 채팅은 끈다. Phase 2 AI 시드 위에 production-grade AI Draft + price_rates deterministic pricing + scoped operations helpers + usage governance를 13–17주에 ship + paid conversion 측정.
+> Wedge 재정의(2026-05-15 office-hours): AI Quote Writer가 paid user 확보의 본질. Basic A$29는 제한된 AI로 entry value를 만들고, Pro A$59는 full AI Quote Form Builder + photo AI + Today Assistant AI summary + Follow-up Writer로 확장한다. 범용 Workspace Assistant 채팅은 v1에서 끈다. Phase 2 AI 시드 위에 production-grade AI Draft + price_rates deterministic pricing + scoped operations helpers + usage governance를 ship한 뒤 Free Pro Trial → paid conversion을 측정한다.
 
 | Step | 기간 | 상태 | 산출물 |
 |------|------|------|--------|
-| Phase 0 validation (인터뷰 5명, cost spreadsheet, golden set) | 2주 | 진행 중 (섭외 ✓) | GREEN gate 통과 / pivot / kill |
-| v1 build (5 lanes 병렬 — T1~T14) | 6–8주 | post-GREEN | streaming AI Draft, ai_usage_logs, AU prompt, validator, manual edit UX, Today Assistant, Follow-up Writer |
+| Phase 0 validation (인터뷰 5명, cost spreadsheet, golden set) | 2주 | GREEN 완료 | Basic/Pro 가격, Pro trial 정책, Qwen model, quote form structure 확정 |
+| v1 build (pricing-first — T0~T14) | 6–8주 | 시작 가능 | canonical quote totals, AI Draft, ai_usage_logs, AU prompt, validator, manual edit UX, Today Assistant, Follow-up Writer |
 | Production deploy + integration | 1주 | post-build | Vercel prod, Qwen API key, 3 migrations |
-| Paid trial (5 painter manual Stripe link) | 4–6주 | post-deploy | ≥1 paid conversion |
+| Free Pro Trial + paid conversion tracking | 4주 | post-deploy | Pro 1개월 무료 trial, ≥1 A$59 Pro conversion, cancel reason 기록 |
 
 자세한 work item / GREEN gate kill criteria / worktree lane 매핑은 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md).
 
@@ -80,7 +80,7 @@
 |----------|------|-----------|------|
 | P1 | Quote/Invoice 저장 원자성 | 다중 쿼리 경로 존재, RPC transaction 검토 필요 | Codex |
 | P1 | Google Calendar booking fail-closed | 연결/표시는 구현, write 실패 정책 보강 필요 | Codex |
-| P1 | AI usage governance | Pro gating 구현, v1 plan T4 (`ai_usage_logs`)로 `quote_draft`, `today_assistant`, `follow_up_writer` cost+limit 보강 | Codex (post-GREEN) |
+| P1 | AI usage governance | Basic/Pro/Pro trial limit 정책 확정, v1 plan T4 (`ai_usage_logs`)로 `quote_draft`, `today_assistant`, `follow_up_writer` cost+limit 보강 | Codex |
 | P1 | Exterior estimate 회귀 | 기능 존재, edit/PDF/detail 일관성 테스트 강화 필요 | Codex |
 | P1 | Design legacy token cleanup | 대부분 정리, 일부 badge/detail 컴포넌트 잔여 | Codex |
 
@@ -96,14 +96,14 @@
 
 ## v1.1 / v2 Backlog (post v1 wedge validation)
 
-> v1 paid trial 통과(PASS) 후 단계적 stack. 각 phase 별도 design doc + office-hours.
+> v1 Free Pro Trial + paid conversion tracking 통과(PASS) 후 단계적 stack. 각 phase 별도 design doc + office-hours.
 
 - [ ] Stronger photo takeoff model eval → surface hint/sqm assist (v1.1; v1 Qwen3-VL-Flash는 scope 보조만)
 - [ ] Learning-based pricing recommendation (v1.2)
 - [ ] Customer portal one-click accept + Stripe deposit (v2.0)
 - [ ] Interior/Exterior 빌더 분리 (v2.1)
 - [ ] Generic Workspace Assistant 재논의 (v2.0+ post validation; v1은 Today Assistant / Follow-up Writer만 허용)
-- [ ] Productize Stripe pre-order (v1 manual link → webhook + idempotency layer)
+- [ ] Productize Pro trial, cancel reason, and paid conversion tracking
 - [ ] Stale `price_rates` race condition snapshot immutability (자세한 건 [/TODOS.md](../TODOS.md))
 
 ## Phase 3 Backlog

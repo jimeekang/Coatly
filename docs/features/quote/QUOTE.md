@@ -4,7 +4,7 @@
 
 페인터가 현장에서 빠르게 견적을 만들고, 고객에게 PDF/공개 링크로 보내고, 승인 이후 invoice/job으로 이어지게 합니다.
 
-v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 따른다. 고객에게 보이는 quote form은 **scope section + pricing row + clause library**로 분리한다.
+v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 따른다. 고객에게 보이는 quote form은 **scope section + pricing row + clause library**로 분리한다. 가격 계산 boundary와 quote total parity 세부 구현은 [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)를 따른다.
 
 ## Current Status
 
@@ -99,10 +99,12 @@ draft -> sent -> approved -> booked/job/invoice
 ## Pricing Rules
 
 - 모든 금액은 cents 정수입니다.
-- GST는 10% 기준으로 계산합니다.
+- GST는 quote-level discount 적용 후 taxable subtotal 기준으로 10% 계산합니다.
+- Canonical total contract: `base_subtotal_cents + selected quote_line_items - discount_cents → discounted_subtotal_cents → gst_cents → total_cents`.
+- 기존 manual adjustment는 현재 quote 동작처럼 GST 밖에서 더합니다. 과세 처리 변경은 별도 decision이 필요합니다.
 - Labour/material margin은 별도 percent로 저장합니다.
 - Quick estimate는 저장 시 authoritative snapshot을 남겨 이후 단가 변경에 흔들리지 않게 합니다.
-- Starter는 월간 active quote limit을 적용하고 Pro는 무제한입니다.
+- Basic은 제한된 AI quote/photo/follow-up 사용량을 제공하고, Pro는 full AI Quote Form Builder와 더 높은 AI limit을 제공합니다.
 - v1 AI-assisted Quote Form Builder 이전에 quote calculation boundary를 먼저 정리합니다.
 - `quote_estimate_items`는 estimate engine이 만든 priced rows만 저장합니다.
 - `quote_line_items`는 material/service/custom/optional add-on만 저장합니다.
@@ -122,7 +124,7 @@ draft -> sent -> approved -> booked/job/invoice
 ## UX Rules
 
 - Quote 생성 첫 화면에서 AI draft, template, manual form을 사용할 수 있습니다.
-- AI draft는 Pro gated이며 사용자는 저장 전 반드시 폼을 검토합니다.
+- Basic AI는 제한된 notes-based quote wording helper이고, Pro AI는 full Scope/Clause builder + photo AI를 제공합니다. 사용자는 저장 전 반드시 폼을 검토합니다.
 - Quote CTA는 `+ New Quote` 패턴을 사용합니다.
 - Public quote는 고객이 optional item, PDF, 승인/거절, 예약 날짜를 볼 수 있어야 합니다.
 
@@ -133,7 +135,7 @@ draft -> sent -> approved -> booked/job/invoice
 - [x] GST 10% 계산
 - [x] AUD 포맷 표시
 - [x] PDF 비즈니스 브랜딩
-- [x] Starter 월간 active quote 제한
+- [x] subscription gating scaffold
 - [x] 유효기간 필드
 - [x] quick/detailed estimate snapshot
 - [x] material/service line items
@@ -149,7 +151,7 @@ draft -> sent -> approved -> booked/job/invoice
 |----------|------|------|
 | P0 | Price calculation boundary | Quick/Advanced 견적에서 room anchor, quick estimate item, custom line item이 같은 scope를 중복 계산하지 않도록 authoritative source와 guardrail 정리 |
 | P0 | AI Quote Form Builder structure | 고객용 scope section, 가격 row, clause library를 분리하고 legacy interior/exterior quote form을 재현 가능한 데이터 구조로 정리 |
-| P0 | Quote total parity | preview/save/detail/PDF/invoice conversion이 같은 subtotal/GST/total 규칙을 쓰는지 회귀 테스트 강화 |
+| P0 | Quote total parity | [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)에 따라 preview/save/detail/PDF/public quote/invoice conversion이 같은 subtotal/GST/total 규칙을 쓰는지 회귀 테스트 강화 |
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |
 | P1 | Exterior edit safety | 편집 시 exterior snapshot 손실 여부 회귀 테스트 강화 |
 | P1 | Exterior PDF/detail | 모든 exterior cost/line item이 상세/PDF에 일관 렌더되는지 검증 |

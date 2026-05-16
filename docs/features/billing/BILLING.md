@@ -2,17 +2,26 @@
 
 ## Plans
 
-| | Starter | Pro |
-|---|---------|-----|
-| 가격 (월) | A$39 | A$59 |
-| 가격 (연) | A$450 (A$37.50/mo) | A$680 (A$56.67/mo) |
-| 활성 견적 | 월 10건 | 무제한 |
-| 사용자 | 1명 | 3명 |
-| AI 드래프트 | ❌ | ✅ |
-| Xero 연동 | ❌ | ✅ |
-| Job Costing | ❌ | ✅ |
-| 우선 지원 | ❌ | ✅ |
-| 브랜딩 (PDF) | 기본 | 커스텀 |
+2026-05-17 v1 pricing decision 기준. 고객에게 보이는 플랜명은 **Basic**과 **Pro**다. 기존 코드나 DB enum이 아직 `starter`를 내부 id로 쓰는 경우에도 v1 AI 화면과 결제 문구에서는 `Basic`으로 표시한다.
+
+| | Basic | Pro |
+|---|-------|-----|
+| 가격 (월) | A$29 | A$59 |
+| 첫 사용자 offer | 없음. 필요 시 launch discount 별도 검토 | 첫 cohort Pro 1개월 무료 trial |
+| 취소 정책 | 언제든지 취소 가능 | 언제든지 취소 가능 |
+| Quote / Invoice / Customer | 포함 | 포함 |
+| PDF quote / public quote link | 포함 | 포함 |
+| Price rates setup | 포함 | 포함 |
+| Quick quote / manual quote | 포함 | 포함 |
+| AI quote draft | 5/month | 25/month |
+| Photos per quote | 3 | 5 |
+| Monthly photo AI limit | 15 photos/month | 100 photos/month |
+| Follow-up Writer | 10/month | 50/month |
+| Today Assistant | deterministic task list only | deterministic task list + AI summary |
+| Advanced AI scope/clause builder | 제한된 scope draft | 전체 Scope section + pricing candidate + clause review flow |
+| Clause library | 기본 clause | 전체 clause library + custom clause 저장 |
+| AI usage/cost view | 기본 사용량 표시 | 사용량, photo count, estimated cost 표시 |
+| Support | 기본 support | priority support |
 
 정의 파일: `config/plans.ts` (단일 소스)
 
@@ -21,50 +30,83 @@
 ```ts
 // lib/subscription/access.ts
 const FEATURES = {
-  starter: { activeQuoteLimit: 10, ai: false, xeroSync: false, jobCosting: false },
-  pro:     { activeQuoteLimit: Infinity, ai: true, xeroSync: true, jobCosting: true },
+  basic: {
+    aiQuoteDraftLimit: 5,
+    photoAiMonthlyLimit: 15,
+    photosPerQuote: 3,
+    followUpWriterLimit: 10,
+    todayAiSummary: false,
+    advancedAiScopeBuilder: false,
+  },
+  pro: {
+    aiQuoteDraftLimit: 25,
+    photoAiMonthlyLimit: 100,
+    photosPerQuote: 5,
+    followUpWriterLimit: 50,
+    todayAiSummary: true,
+    advancedAiScopeBuilder: true,
+  },
 }
 
-canCreateQuote()   → activeQuoteCount < plan.activeQuoteLimit
-canUseAI()         → plan === 'pro'
-canSyncXero()      → plan === 'pro'
-canUseJobCosting() → plan === 'pro'
+canUseAIQuoteDraft()    → monthly quote_draft usage < plan.aiQuoteDraftLimit
+canUsePhotoAI()         → monthly photo count < plan.photoAiMonthlyLimit
+canUseTodayAISummary()  → plan === 'pro' or active Pro trial
+canUseFollowUpWriter()  → monthly follow_up_writer usage < plan.followUpWriterLimit
+canUseAdvancedBuilder() → plan === 'pro' or active Pro trial
 ```
 
-- 견적 생성 시 `activeQuoteLimit` 확인
-- Pro 기능 접근 시 `subscription.plan === 'pro'` 확인
-- 한도 도달 시 `UpgradePrompt` 컴포넌트 표시
+- Basic에도 제한된 AI를 제공한다. AI 기능 전체를 Pro 전용으로 숨기지 않는다.
+- Pro trial 사용자는 trial 기간 동안 Pro limit을 사용한다.
+- AI는 price/rate/GST/total을 만들지 않는다. 모든 금액은 quote canonical calculator가 만든다.
+- 한도 도달 또는 Pro-only 기능 접근 시 `UpgradePrompt` 컴포넌트 표시
+- `ai_usage_logs`에 feature, provider/model, token/cost, photo count, cache hit, plan/trial state를 기록한다.
 
 ## Stripe Integration Flow
 
 ```
-1. 사용자 → "Subscribe" 클릭
+1. 사용자 → "Start Pro Trial" 또는 "Upgrade to Pro" 클릭
 2. POST /api/stripe/checkout → Stripe Checkout 세션 생성
-3. 사용자 → Stripe Checkout 페이지에서 결제
+3. Stripe Checkout에서 trial 또는 subscription 시작
 4. Stripe → POST /api/webhooks/stripe (webhook)
 5. webhook-handler.ts → subscriptions 테이블 upsert
-6. 사용자 → 대시보드로 리다이렉트 (구독 활성)
+6. 사용자 → 대시보드로 리다이렉트 (trial/구독 활성)
 ```
 
 ## Upgrade Flow
 
-1. Starter 사용자가 한도 도달 또는 Pro 기능 접근
+1. Basic 사용자가 한도 도달 또는 Pro 기능 접근
 2. `UpgradePrompt` 컴포넌트 표시
-3. "Upgrade to Pro" 클릭 → POST /api/stripe/checkout
-4. Stripe Checkout → 결제 → webhook → DB 업데이트
+3. "Start Pro Trial" 또는 "Upgrade to Pro" 클릭 → POST /api/stripe/checkout
+4. Stripe Checkout → trial/subscription 생성 → webhook → DB 업데이트
 5. 즉시 Pro 기능 활성화
 
 ## Webhook Events
 
 | Event | 처리 |
 |-------|------|
-| `checkout.session.completed` | 신규 subscription 레코드 생성 |
+| `checkout.session.completed` | 신규 trial/subscription 레코드 생성 |
 | `customer.subscription.created` | 상태 동기화 |
 | `customer.subscription.updated` | 플랜/상태/기간 업데이트 |
 | `customer.subscription.deleted` | status = cancelled |
 | `invoice.payment_failed` | status = past_due |
 
 **멱등성**: stripe_subscription_id 기준 upsert → 중복 webhook 안전.
+
+## Trial And Conversion
+
+첫 cohort는 Pro 1개월 무료 trial을 받는다. Trial 종료 후 A$59/month Pro 결제 전환을 측정한다.
+
+| 상태 | 앱 동작 |
+|------|---------|
+| `trialing` | Pro limit 활성. Billing UI에 trial end date 표시 |
+| `active` | Pro limit 활성. current period end 표시 |
+| `cancel_at_period_end` | 기간 종료일까지 Pro limit 유지. cancel reason 기록 |
+| `cancelled` | Basic 또는 expired state로 downgrade |
+| `past_due` | 결제 문제 안내 + grace policy 적용 |
+
+- Trial 시작 전 price_rates setup, 첫 quote smoke test, usage logging, cancel path가 준비되어야 한다.
+- 사용자는 언제든지 cancel 가능해야 한다.
+- Cancel reason은 trial-to-paid conversion 분석에 필요하므로 기록한다.
 
 ## Cancellation & Renewal
 
@@ -76,6 +118,8 @@ canUseJobCosting() → plan === 'pro'
 4. Stripe → webhook: subscription.updated (cancel_at_period_end = true)
 5. UI: "구독이 [날짜]에 종료됩니다" + "Renew" 버튼 표시
 ```
+
+취소 reason은 Stripe portal만으로 충분히 수집되지 않으면 앱 내 lightweight form으로 별도 저장한다.
 
 **갱신:**
 ```
@@ -164,7 +208,7 @@ async function syncSubscription(sub: Stripe.Subscription) {
     user_id: sub.metadata.user_id,
     stripe_customer_id: sub.customer as string,
     stripe_subscription_id: sub.id,
-    plan: sub.metadata.plan || 'starter',
+    plan: sub.metadata.plan || 'basic',
     status: sub.status,
     current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
     current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
@@ -180,3 +224,9 @@ async function syncSubscription(sub: Stripe.Subscription) {
 - Admin client (service_role) 사용 — `subscriptions`에 RLS INSERT 정책 없음
 - Upsert on `user_id` — 멱등성 보장 (중복 webhook 안전)
 - Stripe 자동 재시도: 실패 시 최대 3일
+
+## Related Docs
+
+- [../ai/PHASE0-CHECKLIST.md](../ai/PHASE0-CHECKLIST.md) — Basic/Pro pricing decision, Pro trial policy, cost economics
+- [../ai/V1-APP-BUILD-PLAN.md](../ai/V1-APP-BUILD-PLAN.md) — plan/trial gating build tasks
+- [../ai/V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md) — quote total parity before trial

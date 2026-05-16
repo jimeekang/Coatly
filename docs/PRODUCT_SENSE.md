@@ -4,7 +4,7 @@
 
 호주 1–3인 painter의 **진짜 pain은 site measurement(20–60분, OK)가 아니라 노트→quote 서류화**다 (founder-as-customer N=1 직접 검증). 미국 AI photo-takeoff SaaS(Bolster/Togal)는 호주 미진입, 호주 SaaS(Tradify/ServiceM8)는 AI 없음. 1–2년 window 가설.
 
-**Coatly v1 wedge = AI Quote Writer.** Notes + rough measurements + 보조 사진 + price_rates → polished quote artifact(scope of works + assumptions + exclusions + area별 line items + editable). AUD $59/월 Pro 정당화 핵심. v1 보조 AI는 Today Assistant(오늘 처리할 일) + Follow-up Writer(고객 follow-up 문구)로 제한한다. v1 기본 AI 모델 후보는 Alibaba Cloud / Qwen `qwen3-vl-flash`이며, 사진은 scope 보조로만 쓰고 가격은 deterministic `price_rates`로 계산한다. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md).
+**Coatly v1 wedge = AI Quote Writer.** Notes + rough measurements + 보조 사진 + price_rates → polished quote artifact(scope of works + assumptions + exclusions + area별 line items + editable). Basic A$29는 제한된 AI로 entry value를 만들고, Pro A$59는 full AI Quote Form Builder + photo AI + Today Assistant AI summary + Follow-up Writer로 업그레이드 이유를 만든다. v1 기본 AI 모델 후보는 Alibaba Cloud / Qwen `qwen3-vl-flash`이며, 사진은 scope 보조로만 쓰고 가격은 deterministic `price_rates`로 계산한다. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md).
 
 ## Problem Statement
 
@@ -43,10 +43,12 @@
 
 | Plan | 가격 | 대상 | 핵심 기능 |
 |------|------|------|-----------|
-| Starter | A$39/mo (A$450/yr) | 파트타임, 소규모 | 월 10건 견적, 기본 기능 |
-| Pro | A$59/mo (A$680/yr) | 전업, 성장 중 | 무제한 견적, AI Quote Writer, Today Assistant, Follow-up Writer, 브랜딩, Xero |
+| Basic | A$29/mo | 파트타임, 소규모 | Quote/Invoice/Customer, PDF/public quote, price rates, AI quote draft 5/month, photo AI 15 photos/month |
+| Pro | A$59/mo | 전업, 성장 중 | AI quote draft 25/month, photo AI 100 photos/month, full Scope/Clause builder, Today Assistant AI summary, Follow-up Writer 50/month |
 
-**업셀 전략:** Starter에서 월 견적 한도 도달 시 Pro 업그레이드 프롬프트 표시
+**첫 cohort 전략:** Pro 1개월 무료 trial을 제공하고, trial 종료 후 A$59/month 전환과 cancel reason을 측정한다. 언제든지 취소 가능해야 한다.
+
+**업셀 전략:** Basic에서 AI draft/photo/follow-up 한도 도달 또는 Pro-only Scope/Clause builder 접근 시 Pro 업그레이드 프롬프트 표시.
 
 ## Competitive Landscape
 
@@ -59,7 +61,7 @@
 | Bolster/Togal (US) | USD $79–200+ | AI photo takeoff | 호주 미진입, USD 가격 |
 | Excel/종이 | 무료 | 친숙 | 비전문적, 비효율 |
 
-**Coatly 포지셔닝:** 페인터 전용 + AI Quote Writer + lightweight follow-up automation + 호주 native ($59 AUD) + 모바일 우선. 시장 갭 = "호주에 AI 견적 작가가 없다" (1–2년 window 가설).
+**Coatly 포지셔닝:** 페인터 전용 + AI Quote Writer + lightweight follow-up automation + 호주 native Basic A$29 / Pro A$59 + 모바일 우선. 시장 갭 = "호주에 AI 견적 작가가 없다" (1–2년 window 가설).
 
 ## Key Metrics (Phase 2+)
 
@@ -69,7 +71,7 @@
 | Quote-to-Invoice | 견적 → 청구 전환율 | > 40% |
 | Monthly Active | 월간 활성 사용자 | Growth |
 | Churn Rate | 월간 이탈률 | < 5% |
-| ARPU | 사용자당 평균 매출 | A$45+ |
+| ARPU | 사용자당 평균 매출 | Basic A$29 / Pro A$59 mix 기준 A$45+ |
 
 ## Australian Compliance
 

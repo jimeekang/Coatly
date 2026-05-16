@@ -1,6 +1,6 @@
 # Feature: AI Assistant
 
-> Phase 2 AI draft panel + Workspace Assistant seed가 부분 구현된 상태. v1 wedge는 "AI-assisted Quote Form Builder"이고, 보조 AI 범위는 Today Assistant + Follow-up Writer로 제한됨 — 자세한 v1 build 계획은 [V1-PLAN.md](./V1-PLAN.md), quote form 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md).
+> Phase 2 AI draft panel + Workspace Assistant seed가 부분 구현된 상태. v1 wedge는 "AI-assisted Quote Form Builder"이고, 보조 AI 범위는 Today Assistant + Follow-up Writer로 제한됨 — 자세한 v1 build 계획은 [V1-PLAN.md](./V1-PLAN.md), quote form 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md), pricing foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md).
 
 ## v1 Wedge (2026-05-15 APPROVED)
 
@@ -22,7 +22,7 @@
 | Workspace Assistant | `components/dashboard/WorkspaceAssistant.tsx` | Pro 한정 채팅 UI | **generic chat v1 off**. Today Assistant + Follow-up Writer로 scoped replacement |
 | Today Assistant | dashboard | 미구현 | deterministic task list + Pro AI summary |
 | Follow-up Writer | quote/customer/invoice detail | 미구현 | quote check-in, booking request, invoice reminder 초안 |
-| Pro plan gating | `lib/subscription/access.ts` | 구현됨 | Starter UpgradePrompt 유지 |
+| Basic/Pro plan gating | `lib/subscription/access.ts` | 구현됨/정책 업데이트 필요 | Basic limited AI + Pro full AI limits, Pro trial state |
 
 ## v1 신규 컴포넌트 (post-GREEN)
 
@@ -70,7 +70,7 @@ Implementation rules:
 - store `provider = alibaba-qwen` and `model = qwen3-vl-flash` in `ai_usage_logs.metadata`
 - cache photo analysis by image hash/storage path + prompt version
 - keep a fallback path to manual quote builder if provider call fails
-- evaluate Qwen3-VL-Flash against the golden set before paid trial; only upgrade to Plus/another model if quality fails
+- evaluate Qwen3-VL-Flash against the golden set before Free Pro Trial + Paid Conversion Tracking; only upgrade to Plus/another model if quality fails
 
 ## Streaming pattern
 
@@ -109,9 +109,9 @@ AI must not:
 - send or save a quote without painter review
 
 Implementation guardrails:
-- Starter has no photo AI
-- Pro photo AI counts against monthly AI draft limit
-- default max 3 photos per quote until Phase 0 interview/cost data changes it
+- Basic photo AI: max 3 photos per quote, 15 photos/month
+- Pro and Pro trial photo AI: max 5 photos per quote, 100 photos/month
+- Photo AI usage counts against plan monthly photo limit and logs cost per attempt
 - images are resized to max 1920px and JPEG 85% before model input
 - content hash or storage path + prompt version prevents re-analysis of the same image set
 - 1 retry max; every attempt logs cost and tokens
@@ -137,9 +137,10 @@ Quote/customer/invoice detail에서 고객 메시지 초안을 만든다.
 
 ## Gating + cost guardrails
 
-- Pro plan = `X` quote drafts/month (X는 Phase 0 cost spreadsheet에서 결정)
-- Pro assistant actions = `Y` today/follow-up generations/month (Y는 Phase 0 cost spreadsheet에서 결정)
-- Starter plan = 0 AI drafts / 0 AI follow-up generations → UpgradePrompt. Deterministic task list는 표시 가능
+- Basic plan = 5 AI quote drafts/month, 15 photo AI images/month, 3 photos/quote, 10 follow-up drafts/month, deterministic Today list only
+- Pro plan = 25 AI quote drafts/month, 100 photo AI images/month, 5 photos/quote, 50 follow-up drafts/month, Today AI summary
+- Pro 1개월 무료 trial = trial 기간 동안 Pro limits
+- Basic에서 Pro-only Scope/Clause builder나 limit 초과 사용 시 UpgradePrompt. Deterministic task list는 표시 가능
 - Per-attempt log + monthly aggregate. Limit 도달 → 429 + UpgradePrompt
 - Premise 6 fallback 경로: prompt 압축 → 사진 수 제한 강화 → 월 draft limit 강화 → higher-cost fallback 모델 제한 사용 → 가격 재검토
 
@@ -155,7 +156,7 @@ Quote/customer/invoice detail에서 고객 메시지 초안을 만든다.
 
 - [ ] Qwen3-VL-Flash provider adapter 전환
 - [x] AIDraftPanel + ai-drafts server action 시드
-- [x] Pro gating + Starter UpgradePrompt
+- [x] Basic/Pro gating scaffold + UpgradePrompt
 - [x] Basic error handling
 - [ ] AU prompt depth (T8)
 - [ ] Scope section + clause library output schema
@@ -171,7 +172,7 @@ Quote/customer/invoice detail에서 고객 메시지 초안을 만든다.
 - [ ] settings/ai-usage page (T9)
 - [ ] Today Assistant deterministic list + AI summary (T13)
 - [ ] Follow-up Writer quote/customer/invoice CTA (T14)
-- [ ] Stripe manual pre-order link (T10)
+- [ ] Pro trial state + paid conversion + cancel reason setup (T10)
 
 ## 관련 문서
 
