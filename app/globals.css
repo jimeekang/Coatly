@@ -177,6 +177,15 @@ body {
   border-color: #B91C1C;
 }
 
+/* ── Hidden scrollbar utility (horizontal segmented controls) ── */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;

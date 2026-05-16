@@ -28,7 +28,12 @@
       "Bash(cp \"/Users/jimee/.claude/projects/-Users-jimee-Desktop-Project-Coatly/7ff96bdc-d719-4dfa-aad0-e74a26fb54cf/tool-results/webfetch-1776572695884-xpn1wh.bin\" /tmp/design2/bundle.tar.gz)",
       "Bash(tar xzf *)",
       "Bash(gunzip -c bundle.tar.gz)",
-      "Bash(tar x *)"
+      "Bash(tar x *)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(npx next *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"price-rates: %{http_code}\\\\n\" http://localhost:3000/price-rates)",
+      "Read(//private/tmp/**)"
     ]
   }
 }
