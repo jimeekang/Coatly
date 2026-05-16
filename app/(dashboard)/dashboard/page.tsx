@@ -220,7 +220,7 @@ export default async function DashboardPage() {
         >
           This Month
         </h2>
-        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3 sm:gap-4">
           {kpiStats.map((stat) => (
             <div
               key={stat.label}
@@ -260,7 +260,7 @@ export default async function DashboardPage() {
         >
           Quote Pipeline
         </h2>
-        <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2 sm:gap-3">
           {quotePipelineStats.map((stat) => (
             <div key={stat.label} className="min-w-0 rounded-xl border border-outline-variant bg-white p-3 sm:rounded-2xl sm:p-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
@@ -285,7 +285,7 @@ export default async function DashboardPage() {
         >
           Overview
         </h2>
-        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3 sm:gap-4">
           {overviewStats.map((stat) => (
             <div
               key={stat.label}

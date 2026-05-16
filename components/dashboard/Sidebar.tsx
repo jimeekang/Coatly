@@ -78,15 +78,15 @@ export default function DashboardSidebar({
 
   return (
     <>
-      {/* ── Desktop/Tablet sidebar ── */}
-      <aside className="hidden md:flex md:w-[72px] lg:w-64 flex-col bg-surface-container-low md:px-2 md:py-4 lg:p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50 border-r border-outline-variant shrink-0">
-        {/* Logo — icon always, wordmark lg+ only */}
-        <div className="mb-6 md:flex md:justify-center lg:justify-start lg:px-4 lg:pt-2">
+      {/* ── Tablet/Desktop sidebar ── */}
+      <aside className="hidden md:flex md:w-60 lg:w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50 border-r border-outline-variant shrink-0">
+        {/* Logo */}
+        <div className="mb-6 flex justify-start px-4 pt-2">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-primary flex-shrink-0 flex items-center justify-center">
               <span className="text-on-primary text-[11px] font-extrabold leading-none">C</span>
             </div>
-            <div className="hidden lg:block">
+            <div>
               <h1 className="text-xl font-extrabold tracking-tight text-on-surface" style={{ letterSpacing: '-0.02em' }}>Coatly</h1>
               <p className="text-[10px] font-bold tracking-[0.14em] text-on-surface-variant uppercase mt-0.5">
                 Painter Workspace
@@ -105,17 +105,17 @@ export default function DashboardSidebar({
                 href={href}
                 title={label}
                 aria-current={active ? 'page' : undefined}
-                className={`flex items-center md:justify-center lg:justify-start gap-3 md:px-0 lg:px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
+                className={`flex items-center justify-start gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
                   active
                     ? 'bg-surface-container-high text-on-surface font-bold border border-outline-variant shadow-xs'
                     : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-medium border border-transparent'
                 }`}
               >
                 <Icon
-                  className={`h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0 ${active ? 'text-primary' : ''}`}
+                  className={`h-4 w-4 flex-shrink-0 ${active ? 'text-primary' : ''}`}
                   strokeWidth={active ? 2.5 : 1.75}
                 />
-                <span className="hidden lg:inline">{label}</span>
+                <span>{label}</span>
               </Link>
             );
           })}
@@ -126,24 +126,24 @@ export default function DashboardSidebar({
           <button
             type="submit"
             title="Logout"
-            className="flex items-center md:justify-center lg:justify-start gap-3 md:px-0 lg:px-4 py-3 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container transition-colors w-full"
+            className="flex items-center justify-start gap-3 px-4 py-3 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container transition-colors w-full"
             aria-label="Logout"
           >
-            <LogOut className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" strokeWidth={1.75} />
-            <span className="hidden lg:inline">Logout</span>
+            <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
+            <span>Logout</span>
           </button>
         </form>
 
-        {/* User card — avatar only on tablet, full card on desktop */}
-        <div className="mt-2 md:flex md:justify-center lg:block lg:px-4 lg:py-4 lg:bg-surface-container-high lg:rounded-xl lg:border lg:border-outline-variant">
-          <div className="flex items-center md:justify-center lg:justify-start gap-3">
+        {/* User card */}
+        <div className="mt-2 px-4 py-4 bg-surface-container-high rounded-xl border border-outline-variant">
+          <div className="flex items-center justify-start gap-3">
             <div
               title={businessName}
               className="w-9 h-9 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary text-sm font-bold flex-shrink-0"
             >
               {businessName.slice(0, 2).toUpperCase()}
             </div>
-            <div className="hidden lg:block min-w-0">
+            <div className="min-w-0">
               <p className="text-xs font-bold text-on-surface truncate">{businessName}</p>
               <p
                 className={`text-[11px] uppercase tracking-widest font-semibold ${

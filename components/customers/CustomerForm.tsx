@@ -7,25 +7,23 @@ import {
   type CustomerFormData,
   type CustomerProperty,
 } from '@/app/actions/customers';
+import {
+  FormField,
+  FormOptionalIndicator,
+  FormRequiredIndicator,
+  formControlClassName,
+  formDisabledControlClassName,
+  formLabelClassName,
+} from '@/components/forms/FormField';
+import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
+import { FormSection } from '@/components/forms/FormSection';
 import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
 import type { ParsedGooglePlaceAddress } from '@/lib/google-places-address';
 
 const AU_STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
-const FIELD_CLASS =
-  'w-full rounded-lg border border-pm-border bg-white px-4 py-3 text-base text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 h-12';
-
-const FIELD_DISABLED_CLASS =
-  'w-full rounded-lg border border-pm-border bg-pm-surface px-4 py-3 text-base text-pm-secondary h-12 cursor-not-allowed';
-
-const LABEL_CLASS = 'block text-sm font-medium text-pm-body mb-1';
-
-const REQUIRED = <span className="text-pm-coral ml-0.5">*</span>;
-const OPTIONAL = (
-  <span className="text-pm-secondary ml-1.5 text-xs font-normal">
-    (optional)
-  </span>
-);
+const REQUIRED = <FormRequiredIndicator />;
+const OPTIONAL = <FormOptionalIndicator />;
 
 function createEmptyProperty(index = 0): CustomerProperty {
   return {
@@ -344,22 +342,19 @@ export function CustomerForm({
   const canSubmit = Boolean(form.name.trim());
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-28">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-32">
       {/* ── Contact Details ── */}
-      <section>
-        <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
-          Contact Details
-        </h3>
+      <FormSection title="Contact Details">
         <div className="flex flex-col gap-4">
           {/* Full Name */}
           <div>
-            <label htmlFor="name" className={LABEL_CLASS}>
+            <label htmlFor="name" className={formLabelClassName}>
               Full Name{REQUIRED}
             </label>
             {useCompanyName ? (
-              <div className={FIELD_DISABLED_CLASS}>
+              <div className={formDisabledControlClassName}>
                 {form.company_name || (
-                  <span className="text-pm-border">
+                  <span className="text-outline-variant">
                     Auto-filled from company name
                   </span>
                 )}
@@ -374,26 +369,23 @@ export function CustomerForm({
                 placeholder="e.g. John Smith"
                 value={form.name}
                 onChange={handleChange}
-                className={FIELD_CLASS}
+                className={formControlClassName}
               />
             )}
           </div>
 
           {/* Company Name + checkbox */}
           <div>
-            <label htmlFor="company_name" className={LABEL_CLASS}>
-              Company Name
-              {OPTIONAL}
-            </label>
-            <input
-              id="company_name"
+            <FormField
+              htmlFor="company_name"
+              label="Company Name"
+              optional
               name="company_name"
               type="text"
               autoComplete="organization"
               placeholder="e.g. Smith Painting Co."
               value={form.company_name}
               onChange={handleChange}
-              className={FIELD_CLASS}
             />
             {/* 체크박스: company name을 대표 이름으로 저장 */}
             <label className="mt-2 flex cursor-pointer items-center gap-2.5 select-none">
@@ -401,9 +393,9 @@ export function CustomerForm({
                 type="checkbox"
                 checked={useCompanyName}
                 onChange={handleUseCompanyName}
-                className="border-pm-border text-pm-teal focus:ring-pm-teal-mid h-5 w-5 cursor-pointer rounded"
+                className="border-outline-variant text-primary focus:ring-primary/20 h-5 w-5 cursor-pointer rounded"
               />
-              <span className="text-pm-secondary text-sm">
+              <span className="text-on-surface-variant text-sm">
                 Save using company name as the display name
               </span>
             </label>
@@ -411,11 +403,11 @@ export function CustomerForm({
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
-              <label className={LABEL_CLASS}>Emails{OPTIONAL}</label>
+              <label className={formLabelClassName}>Emails{OPTIONAL}</label>
               <button
                 type="button"
                 onClick={addEmail}
-                className="border-pm-border text-pm-body min-h-11 rounded-lg border bg-white px-3 text-sm font-medium"
+                className="border-outline-variant text-on-surface min-h-11 rounded-xl border bg-white px-3 text-sm font-medium"
               >
                 Add Email
               </button>
@@ -432,13 +424,13 @@ export function CustomerForm({
                     }
                     value={email}
                     onChange={(event) => updateEmail(index, event.target.value)}
-                    className={`${FIELD_CLASS} min-w-0 flex-1`}
+                    className={`${formControlClassName} min-w-0 flex-1`}
                   />
                   {form.emails.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeEmail(index)}
-                      className="border-pm-border text-pm-secondary min-h-12 shrink-0 rounded-lg border bg-white px-3 text-sm font-medium"
+                      className="border-outline-variant text-on-surface-variant min-h-12 shrink-0 rounded-xl border bg-white px-3 text-sm font-medium"
                     >
                       Remove
                     </button>
@@ -450,11 +442,11 @@ export function CustomerForm({
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
-              <label className={LABEL_CLASS}>Phone Numbers{OPTIONAL}</label>
+              <label className={formLabelClassName}>Phone Numbers{OPTIONAL}</label>
               <button
                 type="button"
                 onClick={addPhone}
-                className="border-pm-border text-pm-body min-h-11 rounded-lg border bg-white px-3 text-sm font-medium"
+                className="border-outline-variant text-on-surface min-h-11 rounded-xl border bg-white px-3 text-sm font-medium"
               >
                 Add Phone
               </button>
@@ -471,13 +463,13 @@ export function CustomerForm({
                     }
                     value={phone}
                     onChange={(event) => updatePhone(index, event.target.value)}
-                    className={`${FIELD_CLASS} min-w-0 flex-1`}
+                    className={`${formControlClassName} min-w-0 flex-1`}
                   />
                   {form.phones.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removePhone(index)}
-                      className="border-pm-border text-pm-secondary min-h-12 shrink-0 rounded-lg border bg-white px-3 text-sm font-medium"
+                      className="border-outline-variant text-on-surface-variant min-h-12 shrink-0 rounded-xl border bg-white px-3 text-sm font-medium"
                     >
                       Remove
                     </button>
@@ -487,17 +479,17 @@ export function CustomerForm({
             </div>
           </div>
         </div>
-      </section>
+      </FormSection>
 
-      <section>
+      <FormSection>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-pm-secondary text-sm font-semibold tracking-wide uppercase">
+          <h3 className="text-on-surface-variant text-sm font-semibold tracking-wide uppercase">
             Site Address
           </h3>
           <button
             type="button"
             onClick={addProperty}
-            className="border-pm-border text-pm-body min-h-11 rounded-lg border bg-white px-3 text-sm font-medium"
+            className="border-outline-variant text-on-surface min-h-11 rounded-xl border bg-white px-3 text-sm font-medium"
           >
             Add Site
           </button>
@@ -506,17 +498,17 @@ export function CustomerForm({
           {form.properties.map((property, index) => (
             <div
               key={index}
-              className="border-pm-border rounded-xl border bg-white p-4"
+              className="border-outline-variant rounded-xl border bg-white p-4"
             >
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-pm-secondary text-xs font-semibold tracking-wide uppercase">
+                <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
                   {index === 0 ? 'Primary Site' : `Site ${index + 1}`}
                 </p>
                 {form.properties.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeProperty(index)}
-                    className="border-pm-border text-pm-secondary min-h-11 rounded-lg border bg-white px-3 text-sm font-medium"
+                    className="border-outline-variant text-on-surface-variant min-h-11 rounded-xl border bg-white px-3 text-sm font-medium"
                   >
                     Remove
                   </button>
@@ -524,7 +516,7 @@ export function CustomerForm({
               </div>
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className={LABEL_CLASS}>
+                  <label className={formLabelClassName}>
                     Property Label{OPTIONAL}
                   </label>
                   <input
@@ -534,11 +526,11 @@ export function CustomerForm({
                     onChange={(event) =>
                       updateProperty(index, 'label', event.target.value)
                     }
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   />
                 </div>
                 <div>
-                  <label className={LABEL_CLASS}>
+                  <label className={formLabelClassName}>
                     Street Address{OPTIONAL}
                   </label>
                   <GoogleAddressAutocomplete
@@ -551,11 +543,11 @@ export function CustomerForm({
                     onAddressSelected={(address) =>
                       updatePropertyAddress(index, address)
                     }
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   />
                 </div>
                 <div>
-                  <label className={LABEL_CLASS}>Unit / Apt{OPTIONAL}</label>
+                  <label className={formLabelClassName}>Unit / Apt{OPTIONAL}</label>
                   <input
                     type="text"
                     autoComplete={index === 0 ? 'address-line2' : 'off'}
@@ -564,11 +556,11 @@ export function CustomerForm({
                     onChange={(event) =>
                       updateProperty(index, 'address_line2', event.target.value)
                     }
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   />
                 </div>
                 <div>
-                  <label className={LABEL_CLASS}>Suburb{OPTIONAL}</label>
+                  <label className={formLabelClassName}>Suburb{OPTIONAL}</label>
                   <input
                     type="text"
                     autoComplete={index === 0 ? 'address-level2' : 'off'}
@@ -577,18 +569,18 @@ export function CustomerForm({
                     onChange={(event) =>
                       updateProperty(index, 'city', event.target.value)
                     }
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={LABEL_CLASS}>State{OPTIONAL}</label>
+                    <label className={formLabelClassName}>State{OPTIONAL}</label>
                     <select
                       value={property.state}
                       onChange={(event) =>
                         updateProperty(index, 'state', event.target.value)
                       }
-                      className={FIELD_CLASS}
+                      className={formControlClassName}
                     >
                       <option value="">Select</option>
                       {AU_STATES.map((s) => (
@@ -599,7 +591,7 @@ export function CustomerForm({
                     </select>
                   </div>
                   <div>
-                    <label className={LABEL_CLASS}>Postcode{OPTIONAL}</label>
+                    <label className={formLabelClassName}>Postcode{OPTIONAL}</label>
                     <input
                       type="text"
                       autoComplete={index === 0 ? 'postal-code' : 'off'}
@@ -610,12 +602,12 @@ export function CustomerForm({
                       onChange={(event) =>
                         updateProperty(index, 'postcode', event.target.value)
                       }
-                      className={FIELD_CLASS}
+                      className={formControlClassName}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className={LABEL_CLASS}>
+                  <label className={formLabelClassName}>
                     Property Notes{OPTIONAL}
                   </label>
                   <input
@@ -625,21 +617,18 @@ export function CustomerForm({
                     onChange={(event) =>
                       updateProperty(index, 'notes', event.target.value)
                     }
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   />
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </section>
+      </FormSection>
 
       {/* ── Billing Address ── */}
-      <section>
-        <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
-          Billing Address
-        </h3>
-        <div className="border-pm-border rounded-xl border bg-white p-4">
+      <FormSection title="Billing Address">
+        <div className="border-outline-variant rounded-xl border bg-white p-4">
           <label className="flex cursor-pointer items-center gap-3 select-none">
             <input
               type="checkbox"
@@ -650,9 +639,9 @@ export function CustomerForm({
                   billing_same_as_site: e.target.checked,
                 }))
               }
-              className="border-pm-border text-pm-teal focus:ring-pm-teal-mid h-5 w-5 cursor-pointer rounded"
+              className="border-outline-variant text-primary focus:ring-primary/20 h-5 w-5 cursor-pointer rounded"
             />
-            <span className="text-pm-body text-sm font-medium">
+            <span className="text-on-surface text-sm font-medium">
               Same as site address
             </span>
           </label>
@@ -660,7 +649,7 @@ export function CustomerForm({
           {!form.billing_same_as_site && (
             <div className="mt-4 flex flex-col gap-4">
               <div>
-                <label className={LABEL_CLASS}>Street Address{OPTIONAL}</label>
+                <label className={formLabelClassName}>Street Address{OPTIONAL}</label>
                 <GoogleAddressAutocomplete
                   autoComplete="billing address-line1"
                   placeholder="e.g. 12 Harbor St"
@@ -672,11 +661,11 @@ export function CustomerForm({
                     }))
                   }
                   onAddressSelected={updateBillingAddress}
-                  className={FIELD_CLASS}
+                  className={formControlClassName}
                 />
               </div>
               <div>
-                <label className={LABEL_CLASS}>Unit / Apt{OPTIONAL}</label>
+                <label className={formLabelClassName}>Unit / Apt{OPTIONAL}</label>
                 <input
                   type="text"
                   autoComplete="billing address-line2"
@@ -688,11 +677,11 @@ export function CustomerForm({
                       billing_address_line2: e.target.value,
                     }))
                   }
-                  className={FIELD_CLASS}
+                  className={formControlClassName}
                 />
               </div>
               <div>
-                <label className={LABEL_CLASS}>Suburb{OPTIONAL}</label>
+                <label className={formLabelClassName}>Suburb{OPTIONAL}</label>
                 <input
                   type="text"
                   autoComplete="billing address-level2"
@@ -704,12 +693,12 @@ export function CustomerForm({
                       billing_city: e.target.value,
                     }))
                   }
-                  className={FIELD_CLASS}
+                  className={formControlClassName}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={LABEL_CLASS}>State{OPTIONAL}</label>
+                  <label className={formLabelClassName}>State{OPTIONAL}</label>
                   <select
                     value={form.billing_state}
                     onChange={(e) =>
@@ -718,7 +707,7 @@ export function CustomerForm({
                         billing_state: e.target.value,
                       }))
                     }
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   >
                     <option value="">Select</option>
                     {AU_STATES.map((s) => (
@@ -729,7 +718,7 @@ export function CustomerForm({
                   </select>
                 </div>
                 <div>
-                  <label className={LABEL_CLASS}>Postcode{OPTIONAL}</label>
+                  <label className={formLabelClassName}>Postcode{OPTIONAL}</label>
                   <input
                     type="text"
                     autoComplete="billing postal-code"
@@ -743,51 +732,42 @@ export function CustomerForm({
                         billing_postcode: e.target.value,
                       }))
                     }
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   />
                 </div>
               </div>
             </div>
           )}
         </div>
-      </section>
+      </FormSection>
 
       {/* ── Notes ── */}
-      <section>
-        <h3 className="text-pm-secondary mb-3 text-sm font-semibold tracking-wide uppercase">
-          Notes
-        </h3>
-        <div>
-          <label htmlFor="notes" className={LABEL_CLASS}>
-            Internal Notes
-            <span className="text-pm-secondary ml-1.5 text-xs font-normal">
-              (not shown to client)
-            </span>
-          </label>
-          <textarea
-            id="notes"
-            name="notes"
-            rows={3}
-            placeholder="e.g. Prefers work before 9am, park in rear"
-            value={form.notes}
-            onChange={handleChange}
-            className="border-pm-border text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:ring-pm-teal-pale/30 w-full resize-none rounded-lg border bg-white px-4 py-3 text-base focus:ring-2 focus:outline-none"
-          />
-        </div>
-      </section>
+      <FormSection title="Notes">
+        <FormField
+          as="textarea"
+          htmlFor="notes"
+          label="Internal Notes"
+          name="notes"
+          rows={3}
+          placeholder="e.g. Prefers work before 9am, park in rear"
+          value={form.notes}
+          onChange={handleChange}
+          className="resize-none"
+        />
+      </FormSection>
 
       {/* ── 에러 메시지 ── */}
       {error && (
-        <div className="bg-pm-coral-light border-pm-coral rounded-lg border px-4 py-3">
-          <p className="text-pm-coral-dark text-sm">{error}</p>
+        <div className="bg-error-container border-error rounded-xl border px-4 py-3">
+          <p className="text-on-error-container text-sm">{error}</p>
         </div>
       )}
 
       {/* ── CTA — 하단 고정 ── */}
-      <div className="border-pm-border fixed right-0 bottom-0 left-0 z-10 border-t bg-white px-4 py-4">
-        <div className="mx-auto flex max-w-lg gap-3">
-          <button
+      <FormFooter>
+          <FormFooterButton
             type="button"
+            variant="secondary"
             onClick={() => {
               if (onCancel) {
                 onCancel();
@@ -796,19 +776,18 @@ export function CustomerForm({
               router.back();
             }}
             disabled={loading}
-            className="border-pm-border text-pm-body active:bg-pm-surface h-14 flex-1 rounded-xl border bg-white text-base font-medium transition-colors disabled:opacity-50"
+            className="flex-1 font-medium"
           >
             {cancelLabel}
-          </button>
-          <button
+          </FormFooterButton>
+          <FormFooterButton
             type="submit"
             disabled={loading || !canSubmit}
-            className="bg-pm-teal active:bg-pm-teal-hover h-14 flex-[2] rounded-xl text-base font-semibold text-white transition-colors disabled:opacity-50"
+            className="flex-[2]"
           >
             {loading ? 'Saving…' : submitLabel}
-          </button>
-        </div>
-      </div>
+          </FormFooterButton>
+      </FormFooter>
     </form>
   );
 }

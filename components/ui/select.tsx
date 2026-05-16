@@ -39,11 +39,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={selectId} className="block text-sm font-medium text-pm-body">
+          <label htmlFor={selectId} className="block text-sm font-semibold text-on-surface">
             {label}
-            {required && <span className="ml-0.5 text-pm-coral">*</span>}
+            {required && <span className="ml-0.5 text-error">*</span>}
             {optional && (
-              <span className="ml-1.5 text-xs font-normal text-pm-secondary">(optional)</span>
+              <span className="ml-1.5 text-xs font-normal text-on-surface-variant">(optional)</span>
             )}
           </label>
         )}
@@ -53,12 +53,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={[
-              'h-12 w-full appearance-none rounded-lg border bg-white pl-4 pr-10',
-              'text-base text-pm-body transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30',
+              'h-12 w-full appearance-none rounded-xl border bg-white pl-4 pr-10',
+              'text-base text-on-surface transition-colors',
+              'focus:outline-none focus:ring-2 focus:ring-primary/20',
               error
-                ? 'border-pm-coral focus:border-pm-coral'
-                : 'border-pm-border focus:border-pm-teal-mid',
+                ? 'border-error focus:border-error'
+                : 'border-outline-variant focus:border-primary',
               className,
             ]
               .filter(Boolean)
@@ -76,13 +76,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-pm-secondary">
+          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant">
             <ChevronDown className="h-4 w-4" />
           </span>
         </div>
 
-        {error && <p className="text-xs text-pm-coral">{error}</p>}
-        {hint && !error && <p className="text-xs text-pm-secondary">{hint}</p>}
+        {error && <p className="text-xs text-error">{error}</p>}
+        {hint && !error && <p className="text-xs text-on-surface-variant">{hint}</p>}
       </div>
     );
   },

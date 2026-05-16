@@ -146,14 +146,14 @@ const STATUS_BADGE: Record<JobStatus, string> = {
 };
 
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MOBILE_SCHEDULE_VIEW_QUERY = '(max-width: 767px)';
+const TABLET_AGENDA_VIEW_QUERY = '(max-width: 1023px)';
 
-function subscribeToMobileScheduleViewport(onStoreChange: () => void): () => void {
+function subscribeToTabletAgendaViewport(onStoreChange: () => void): () => void {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return () => {};
   }
 
-  const mediaQuery = window.matchMedia(MOBILE_SCHEDULE_VIEW_QUERY);
+  const mediaQuery = window.matchMedia(TABLET_AGENDA_VIEW_QUERY);
   if (typeof mediaQuery.addEventListener === 'function') {
     mediaQuery.addEventListener('change', onStoreChange);
     return () => mediaQuery.removeEventListener('change', onStoreChange);
@@ -163,22 +163,22 @@ function subscribeToMobileScheduleViewport(onStoreChange: () => void): () => voi
   return () => mediaQuery.removeListener(onStoreChange);
 }
 
-function getMobileScheduleViewportSnapshot(): boolean {
+function getTabletAgendaViewportSnapshot(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false;
   }
 
-  return window.matchMedia(MOBILE_SCHEDULE_VIEW_QUERY).matches;
+  return window.matchMedia(TABLET_AGENDA_VIEW_QUERY).matches;
 }
 
 function getServerScheduleViewportSnapshot(): boolean {
   return false;
 }
 
-function useMobileScheduleViewport(): boolean {
+function useTabletAgendaViewport(): boolean {
   return useSyncExternalStore(
-    subscribeToMobileScheduleViewport,
-    getMobileScheduleViewportSnapshot,
+    subscribeToTabletAgendaViewport,
+    getTabletAgendaViewportSnapshot,
     getServerScheduleViewportSnapshot,
   );
 }
@@ -1073,7 +1073,7 @@ export function ScheduleCalendar({
   const [month, setMonth] = useState(() => Number(resolvedToday.slice(5, 7)) - 1);
   const [selected, setSelected] = useState<string | null>(resolvedToday);
   const initialViewMode = isViewMode(initialView) ? initialView : null;
-  const isMobileScheduleViewport = useMobileScheduleViewport();
+  const isTabletAgendaViewport = useTabletAgendaViewport();
   const [view, setView] = useState<ViewMode>(() => initialViewMode ?? 'calendar');
   const [hasSelectedView, setHasSelectedView] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
@@ -1131,8 +1131,8 @@ export function ScheduleCalendar({
 
   useEffect(() => {
     if (initialViewMode || hasSelectedView) return;
-    setView(isMobileScheduleViewport ? 'list' : 'calendar');
-  }, [hasSelectedView, initialViewMode, isMobileScheduleViewport]);
+    setView(isTabletAgendaViewport ? 'list' : 'calendar');
+  }, [hasSelectedView, initialViewMode, isTabletAgendaViewport]);
 
   function selectView(nextView: ViewMode) {
     setHasSelectedView(true);
@@ -1566,7 +1566,7 @@ function CalendarEventChip({
         e.dataTransfer.effectAllowed = 'move';
       }}
       title={getChipLabel(event)}
-      className={`flex min-h-11 w-full min-w-0 cursor-grab items-center rounded border px-2 text-left text-xs font-semibold leading-tight shadow-sm active:cursor-grabbing lg:min-h-5 lg:px-1 lg:text-[10px] lg:leading-none ${getChipClassName(
+      className={`flex min-h-11 w-full min-w-0 cursor-grab items-center rounded border px-2 text-left text-xs font-semibold leading-tight shadow-sm active:cursor-grabbing xl:min-h-6 xl:px-1 xl:text-[10px] ${getChipClassName(
         event,
       )} ${draggable ? '' : 'cursor-default'}`}
     >
@@ -1612,7 +1612,7 @@ function CalendarGrid({
                 return (
                   <div
                     key={`pad-${i}`}
-                    className="min-h-[96px] border-b border-r border-pm-border/40 bg-pm-surface/20 last:border-r-0 lg:min-h-[64px]"
+                    className="min-h-[96px] border-b border-r border-pm-border/40 bg-pm-surface/20 last:border-r-0 xl:min-h-[64px]"
                   />
                 );
               }
@@ -1632,24 +1632,24 @@ function CalendarGrid({
                     e.preventDefault();
                     onDrop(dateStr, e.dataTransfer.getData('application/json'));
                   }}
-                  className={`group relative min-h-[190px] border-b border-r border-pm-border/40 last:border-r-0 lg:min-h-[118px] ${
+                  className={`group relative min-h-[190px] border-b border-r border-pm-border/40 last:border-r-0 xl:min-h-[118px] ${
                     isSelected ? 'bg-pm-teal/5 ring-1 ring-inset ring-pm-teal/30' : 'hover:bg-pm-surface/50'
                   }`}
                 >
                   <button
                     onClick={() => onSelect(dateStr)}
                     aria-label={`Select ${DATE_LONG_FORMATTER.format(parseYmdUtc(dateStr))}`}
-                    className="flex min-h-11 w-full items-center justify-center px-0.5 pt-1 lg:min-h-[32px] lg:px-1 lg:pt-1.5"
+                    className="flex min-h-11 w-full items-center justify-center px-0.5 pt-1 xl:min-h-[32px] xl:px-1 xl:pt-1.5"
                   >
                     <span
-                      className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold lg:h-7 lg:w-7 ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold xl:h-7 xl:w-7 ${
                         isToday ? 'bg-pm-teal text-white' : isSelected ? 'text-pm-teal' : 'text-pm-body'
                       }`}
                     >
                       {dayNum}
                     </span>
                   </button>
-                  <div className="flex flex-col gap-1 px-1 pb-12 pt-1 lg:pb-8">
+                  <div className="flex flex-col gap-1 px-1 pb-12 pt-1 xl:pb-8">
                     {visibleEvents.map((event, index) => (
                       <CalendarEventChip
                         key={`${event.kind}-${getChipLabel(event)}-${index}`}
@@ -1661,7 +1661,7 @@ function CalendarGrid({
                       <button
                         type="button"
                         onClick={() => onSelect(dateStr)}
-                        className="min-h-11 rounded border border-pm-border bg-white px-2 text-left text-xs font-semibold leading-tight text-pm-secondary lg:min-h-5 lg:px-1 lg:text-[10px] lg:leading-none"
+                        className="min-h-11 rounded border border-pm-border bg-white px-2 text-left text-xs font-semibold leading-tight text-pm-secondary xl:min-h-6 xl:px-1 xl:text-[10px]"
                       >
                         +{hiddenCount} more
                       </button>
@@ -1669,7 +1669,7 @@ function CalendarGrid({
                   </div>
                   <button
                     onClick={() => onAdd(dateStr)}
-                    className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-white text-pm-secondary shadow-sm ring-1 ring-pm-border transition-colors hover:text-pm-teal lg:hidden lg:group-hover:flex"
+                    className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-white text-pm-secondary shadow-sm ring-1 ring-pm-border transition-colors hover:text-pm-teal xl:hidden xl:group-hover:flex"
                     aria-label="Add schedule on this day"
                   >
                     <Plus className="h-3.5 w-3.5" />

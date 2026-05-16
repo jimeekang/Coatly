@@ -27,7 +27,7 @@ export default async function CustomerDetailPage({ params }: Props) {
   if (!customer || error) notFound();
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-4">
+    <div className="mx-auto max-w-lg px-4 pt-4 md:max-w-2xl">
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
         <Link

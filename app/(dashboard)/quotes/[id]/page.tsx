@@ -196,7 +196,7 @@ export default async function QuoteDetailPage({
           </div>
 
           {/* ── detail-grid: main card + sidebar ── */}
-          <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+          <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
 
             {/* ── Main card: Line items + Totals ── */}
             <div className="self-start bg-white border border-outline-variant rounded-3xl shadow-sm">

@@ -98,11 +98,11 @@ const JOB: CalendarJob = {
 
 const originalMatchMedia = window.matchMedia;
 
-function mockScheduleViewport(isMobile: boolean) {
+function mockScheduleViewport(isTabletAgenda: boolean) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
-      matches: query === '(max-width: 767px)' ? isMobile : false,
+      matches: query === '(max-width: 1023px)' ? isTabletAgenda : false,
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -226,7 +226,7 @@ describe('ScheduleCalendar', () => {
     expect(screen.queryByLabelText('Schedule calendar month')).not.toBeInTheDocument();
   });
 
-  it('keeps the month grid as the tablet and desktop default', () => {
+  it('keeps the month grid as the wide desktop default', () => {
     mockScheduleViewport(false);
 
     renderCalendar({ today: '2026-05-02' });

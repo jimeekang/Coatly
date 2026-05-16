@@ -208,7 +208,7 @@ export function JobDetail({ job }: { job: JobDetail }) {
         </button>
       )}
 
-      <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+      <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
         {/* Main detail card */}
         <div className="flex flex-col gap-4">
           <div className="self-start bg-white border border-outline-variant rounded-3xl shadow-sm p-5 space-y-4 w-full">

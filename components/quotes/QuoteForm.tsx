@@ -5,6 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Zap, Layers, CalendarDays, PenLine, Home, Trees } from 'lucide-react';
 import {
+  FormField,
+  formControlClassName,
+  formLabelClassName,
+  formTextareaClassName,
+} from '@/components/forms/FormField';
+import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
+import { FormSection } from '@/components/forms/FormSection';
+import {
   NumericInput,
   sanitizeIntegerInput,
 } from '@/components/shared/NumericInput';
@@ -77,14 +85,6 @@ import {
   type ExteriorEstimateFormState,
 } from '@/components/quotes/ExteriorEstimateBuilder';
 import { calculateExteriorEstimate } from '@/lib/exterior-estimates';
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const FIELD =
-  'h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
-const LABEL = 'mb-1.5 block text-sm font-semibold text-on-surface';
-const TEXTAREA =
-  'w-full rounded-xl border border-outline-variant bg-white px-4 py-3 text-base text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1521,13 +1521,13 @@ export function QuoteForm({
       onSubmit={handleSubmit}
       className={
         showSendQuoteButton
-          ? 'pb-80 md:pb-40 lg:pb-36'
-          : 'pb-52 md:pb-28 lg:pb-24'
+          ? 'pb-80 md:pb-40 xl:pb-36'
+          : 'pb-52 md:pb-28 xl:pb-24'
       }
     >
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-6">
         <div className="space-y-4">
-          <div className="lg:hidden">
+          <div className="xl:hidden">
             <PricingSummaryPanel
               quoteNumberPreview={editableQuoteNumber}
               onQuoteNumberChange={setEditableQuoteNumber}
@@ -1551,13 +1551,10 @@ export function QuoteForm({
           </div>
 
           {/* Quote details */}
-          <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-            <div className="mb-4">
-              <h3 className="text-on-surface text-base font-bold leading-snug">Quote Details</h3>
-            </div>
+          <FormSection title="Quote Details">
             <div className="grid gap-4">
               <div>
-                <label htmlFor="customer_id" className={LABEL}>
+                <label htmlFor="customer_id" className={formLabelClassName}>
                   Customer
                 </label>
                 <select
@@ -1565,7 +1562,7 @@ export function QuoteForm({
                   name="customer_id"
                   value={form.customer_id}
                   onChange={handleChange}
-                  className={FIELD}
+                  className={formControlClassName}
                 >
                   <option value="">Select a customer</option>
                   {customers.map((customer) => (
@@ -1635,22 +1632,17 @@ export function QuoteForm({
                   </p>
                 )}
               </div>
+              <FormField
+                htmlFor="title"
+                label="Title"
+                name="title"
+                type="text"
+                value={form.title}
+                onChange={handleChange}
+                placeholder="Interior repaint — 42 Ocean View Rd"
+              />
               <div>
-                <label htmlFor="title" className={LABEL}>
-                  Title
-                </label>
-                <input
-                  id="title"
-                  name="title"
-                  type="text"
-                  value={form.title}
-                  onChange={handleChange}
-                  placeholder="Interior repaint — 42 Ocean View Rd"
-                  className={FIELD}
-                />
-              </div>
-              <div>
-                <label htmlFor="valid_until" className={LABEL}>
+                <label htmlFor="valid_until" className={formLabelClassName}>
                   Valid Until
                 </label>
                 <input
@@ -1659,11 +1651,11 @@ export function QuoteForm({
                   type="date"
                   value={form.valid_until}
                   onChange={handleChange}
-                  className={FIELD}
+                  className={formControlClassName}
                 />
               </div>
               <div>
-                <label htmlFor="working_days" className={LABEL}>
+                <label htmlFor="working_days" className={formLabelClassName}>
                   Booking Duration
                 </label>
                 <div className="relative">
@@ -1691,7 +1683,7 @@ export function QuoteForm({
                       }));
                     }}
                     aria-describedby="working_days_help"
-                    className="border-outline-variant text-on-surface placeholder-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
+                    className="border-outline-variant text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
                   />
                   <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                     days
@@ -1706,7 +1698,7 @@ export function QuoteForm({
                 </p>
               </div>
             </div>
-          </section>
+          </FormSection>
 
           {/* Pricing method selector */}
           <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
@@ -1818,7 +1810,7 @@ export function QuoteForm({
                     key={scope}
                     type="button"
                     onClick={() => setQuoteScope(scope)}
-                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
+                    className={`inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all ${
                       quoteScope === scope
                         ? 'bg-white text-on-surface shadow-sm'
                         : 'text-on-surface-variant hover:text-on-surface'
@@ -1850,7 +1842,7 @@ export function QuoteForm({
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={LABEL}>Number of days</label>
+                  <label className={formLabelClassName}>Number of days</label>
                   <input
                     type="number"
                     min="0.5"
@@ -1862,11 +1854,11 @@ export function QuoteForm({
                         days: parseFloat(e.target.value) || 1,
                       }))
                     }
-                    className={FIELD}
+                    className={formControlClassName}
                   />
                 </div>
                 <div>
-                  <label className={LABEL}>Daily labour rate ($)</label>
+                  <label className={formLabelClassName}>Daily labour rate ($)</label>
                   <NumericInput
                     inputMode="numeric"
                     value={(dayRateState.daily_rate_cents / 100).toFixed(0)}
@@ -1883,12 +1875,12 @@ export function QuoteForm({
                         daily_rate_cents: Math.round(nextValue * 100),
                       }));
                     }}
-                    className={FIELD}
+                    className={formControlClassName}
                   />
                 </div>
               </div>
               <div className="mt-4">
-                <label className={LABEL}>Material costs</label>
+                <label className={formLabelClassName}>Material costs</label>
                 <div className="flex gap-4">
                   {(['percentage', 'flat'] as const).map((m) => (
                     <label
@@ -2141,7 +2133,7 @@ export function QuoteForm({
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={LABEL}>Labour cost ($, ex-GST)</label>
+                  <label className={formLabelClassName}>Labour cost ($, ex-GST)</label>
                   <NumericInput
                     inputMode="numeric"
                     value={(manualInputs.labor_cents / 100).toFixed(0)}
@@ -2158,11 +2150,11 @@ export function QuoteForm({
                         labor_cents: Math.round(nextValue * 100),
                       }));
                     }}
-                    className={FIELD}
+                    className={formControlClassName}
                   />
                 </div>
                 <div>
-                  <label className={LABEL}>Material cost ($, ex-GST)</label>
+                  <label className={formLabelClassName}>Material cost ($, ex-GST)</label>
                   <NumericInput
                     inputMode="numeric"
                     value={(manualInputs.material_cents / 100).toFixed(0)}
@@ -2179,7 +2171,7 @@ export function QuoteForm({
                         material_cents: Math.round(nextValue * 100),
                       }));
                     }}
-                    className={FIELD}
+                    className={formControlClassName}
                   />
                 </div>
               </div>
@@ -2280,7 +2272,7 @@ export function QuoteForm({
             </div>
             <div className="grid gap-4">
               <div>
-                <label htmlFor="notes" className={LABEL}>
+                <label htmlFor="notes" className={formLabelClassName}>
                   Client Notes
                 </label>
                 <textarea
@@ -2290,11 +2282,11 @@ export function QuoteForm({
                   value={form.notes}
                   onChange={handleChange}
                   placeholder="Any notes visible to the client on the quote"
-                  className={TEXTAREA}
+                  className={formTextareaClassName}
                 />
               </div>
               <div>
-                <label htmlFor="internal_notes" className={LABEL}>
+                <label htmlFor="internal_notes" className={formLabelClassName}>
                   Internal Notes
                 </label>
                 <textarea
@@ -2304,7 +2296,7 @@ export function QuoteForm({
                   value={form.internal_notes}
                   onChange={handleChange}
                   placeholder="Internal notes — not shown to the client"
-                  className={TEXTAREA}
+                  className={formTextareaClassName}
                 />
               </div>
             </div>
@@ -2321,7 +2313,7 @@ export function QuoteForm({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="labour_markup" className={LABEL}>
+                  <label htmlFor="labour_markup" className={formLabelClassName}>
                     Labour Markup
                   </label>
                   <div className="relative">
@@ -2342,7 +2334,7 @@ export function QuoteForm({
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="material_markup" className={LABEL}>
+                  <label htmlFor="material_markup" className={formLabelClassName}>
                     Materials Markup
                   </label>
                   <div className="relative">
@@ -2374,8 +2366,8 @@ export function QuoteForm({
           )}
         </div>
 
-        <aside className="hidden lg:block lg:self-stretch">
-          <div className="lg:sticky lg:top-6">
+        <aside className="hidden xl:block xl:self-stretch">
+          <div className="xl:sticky xl:top-6">
             <PricingSummaryPanel
               quoteNumberPreview={editableQuoteNumber}
               onQuoteNumberChange={setEditableQuoteNumber}
@@ -2402,7 +2394,7 @@ export function QuoteForm({
 
       {sendDialog && selectedCustomer && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 px-4 py-4 md:items-center md:justify-center">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
+          <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
@@ -2424,7 +2416,7 @@ export function QuoteForm({
 
             <div className="mt-5 space-y-4">
               <div>
-                <label htmlFor="send_quote_email" className={LABEL}>
+                <label htmlFor="send_quote_email" className={formLabelClassName}>
                   Send to
                 </label>
                 <select
@@ -2437,7 +2429,7 @@ export function QuoteForm({
                         : current
                     )
                   }
-                  className={FIELD}
+                  className={formControlClassName}
                 >
                   {customerEmailOptions.map((email) => (
                     <option key={email} value={email}>
@@ -2507,7 +2499,7 @@ export function QuoteForm({
                 type="button"
                 onClick={handleConfirmSendQuote}
                 disabled={isPending || !sendDialog.email}
-                className="bg-on-surface hover:bg-on-surface/90 h-12 rounded-xl px-4 text-sm font-semibold text-white transition-colors disabled:opacity-50"
+                className="bg-primary hover:bg-primary/90 h-12 rounded-xl px-4 text-sm font-semibold text-on-primary transition-colors disabled:opacity-50"
               >
                 {isPending && activeSubmitIntent === 'send_email'
                   ? 'Sending...'
@@ -2519,64 +2511,68 @@ export function QuoteForm({
       )}
 
       {/* Sticky footer CTA sits above the dashboard bottom tab bar and device safe area on mobile. */}
-      <div className="border-outline-variant fixed right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 z-10 border-t bg-white/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm sm:px-4 md:bottom-0 md:left-[72px] md:px-6 lg:left-64">
-        <div className="mx-auto flex w-full max-w-lg justify-center lg:max-w-6xl">
-          {showSendQuoteButton ? (
-            <div className="w-full space-y-2 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
-              <button
-                type="button"
-                onClick={handleOpenSendDialog}
-                disabled={isPending || !canSubmit || !canSendQuote}
-                className="bg-on-surface hover:bg-on-surface/90 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white transition-colors disabled:opacity-50 lg:flex-[1.6]"
+      <FormFooter
+        className="px-3 sm:px-4 md:px-6"
+        contentClassName="justify-center xl:max-w-6xl"
+      >
+        {showSendQuoteButton ? (
+          <div className="w-full space-y-2 xl:flex xl:items-center xl:gap-3 xl:space-y-0">
+            <FormFooterButton
+              type="button"
+              onClick={handleOpenSendDialog}
+              disabled={isPending || !canSubmit || !canSendQuote}
+              className="w-full gap-2 xl:flex-[1.6]"
+            >
+              {isPending && activeSubmitIntent === 'send_email'
+                ? 'Sending...'
+                : 'Send Quote to Client'}
+            </FormFooterButton>
+            <div className="grid grid-cols-2 gap-2 xl:flex xl:flex-1">
+              <FormFooterButton
+                type="submit"
+                variant="secondary"
+                data-submit-intent="save"
+                onClick={() => setActiveSubmitIntent('save')}
+                disabled={isPending || !canSubmit}
+                className="h-11 text-sm xl:flex-1"
               >
-                {isPending && activeSubmitIntent === 'send_email'
-                  ? 'Sending...'
-                  : 'Send Quote to Client'}
-              </button>
-              <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-1">
-                <button
-                  type="submit"
-                  data-submit-intent="save"
-                  onClick={() => setActiveSubmitIntent('save')}
-                  disabled={isPending || !canSubmit}
-                  className="border-outline-variant text-on-surface hover:bg-surface-container inline-flex h-11 items-center justify-center rounded-xl border bg-white px-4 text-sm font-semibold transition-colors disabled:opacity-50 lg:flex-1"
-                >
-                  {isPending && activeSubmitIntent === 'save'
-                    ? 'Saving...'
-                    : 'Save Draft'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => (onCancel ? onCancel() : router.back())}
-                  disabled={isPending}
-                  className="border-outline-variant text-on-surface-variant hover:text-on-surface inline-flex h-11 items-center justify-center rounded-xl border bg-white px-4 text-sm font-medium transition-colors disabled:opacity-50 lg:flex-1"
-                >
-                  {cancelLabel}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-3">
-              <button
+                {isPending && activeSubmitIntent === 'save'
+                  ? 'Saving...'
+                  : 'Save Draft'}
+              </FormFooterButton>
+              <FormFooterButton
                 type="button"
+                variant="secondary"
                 onClick={() => (onCancel ? onCancel() : router.back())}
                 disabled={isPending}
-                className="border-outline-variant text-on-surface-variant hover:text-on-surface inline-flex h-14 items-center justify-center rounded-xl border bg-white px-4 text-base font-medium transition-colors disabled:opacity-50"
+                className="h-11 text-sm font-medium text-on-surface-variant hover:text-on-surface xl:flex-1"
               >
                 {cancelLabel}
-              </button>
-              <button
-                type="submit"
-                data-submit-intent="save"
-                disabled={isPending || !canSubmit}
-                className="bg-on-surface hover:bg-on-surface/90 inline-flex h-14 items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white transition-colors disabled:opacity-50"
-              >
-                {isPending ? 'Saving...' : submitLabel}
-              </button>
+              </FormFooterButton>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        ) : (
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-3">
+            <FormFooterButton
+              type="button"
+              variant="secondary"
+              onClick={() => (onCancel ? onCancel() : router.back())}
+              disabled={isPending}
+              className="font-medium text-on-surface-variant hover:text-on-surface"
+            >
+              {cancelLabel}
+            </FormFooterButton>
+            <FormFooterButton
+              type="submit"
+              data-submit-intent="save"
+              disabled={isPending || !canSubmit}
+              className="gap-2"
+            >
+              {isPending ? 'Saving...' : submitLabel}
+            </FormFooterButton>
+          </div>
+        )}
+      </FormFooter>
     </form>
   );
 }

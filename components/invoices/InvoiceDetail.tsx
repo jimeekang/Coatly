@@ -369,7 +369,7 @@ export function InvoiceDetail({
             <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
               <h3 className="mb-4 text-base font-semibold text-pm-body">Line Items</h3>
               <div className="overflow-hidden rounded-2xl border border-pm-border">
-                <div className="hidden grid-cols-[minmax(0,1.6fr)_110px_140px_140px] gap-3 bg-pm-surface px-4 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary md:grid">
+                <div className="hidden grid-cols-[minmax(0,1.6fr)_110px_140px_140px] gap-3 bg-pm-surface px-4 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary xl:grid">
                   <span>Description</span>
                   <span className="text-right">Qty</span>
                   <span className="text-right">Unit</span>
@@ -378,7 +378,7 @@ export function InvoiceDetail({
                 <div className="divide-y divide-pm-border">
                   {invoice.line_items.map((item) => (
                     <div key={item.id} className="px-4 py-4">
-                      <div className="grid gap-3 md:grid-cols-[minmax(0,1.6fr)_110px_140px_140px] md:items-start">
+                      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_110px_140px_140px] xl:items-start">
                         <div>
                           <p className="whitespace-pre-wrap text-sm font-medium text-pm-body">
                             {item.description}
@@ -387,14 +387,14 @@ export function InvoiceDetail({
                             GST {formatAUD(item.gst_cents)}
                           </p>
                         </div>
-                        <p className="text-sm text-pm-secondary md:text-right">
-                          <span className="md:hidden">Qty </span>{item.quantity}
+                        <p className="text-sm text-pm-secondary xl:text-right">
+                          <span className="xl:hidden">Qty </span>{item.quantity}
                         </p>
-                        <p className="text-sm text-pm-secondary md:text-right">
-                          <span className="md:hidden">Unit </span>{formatAUD(item.unit_price_cents)}
+                        <p className="text-sm text-pm-secondary xl:text-right">
+                          <span className="xl:hidden">Unit </span>{formatAUD(item.unit_price_cents)}
                         </p>
-                        <p className="text-sm font-semibold text-pm-body md:text-right">
-                          <span className="md:hidden">Amount </span>{formatAUD(item.total_cents)}
+                        <p className="text-sm font-semibold text-pm-body xl:text-right">
+                          <span className="xl:hidden">Amount </span>{formatAUD(item.total_cents)}
                         </p>
                       </div>
                     </div>

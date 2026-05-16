@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation';
 import type { InvoicePaymentMethod } from '@/types/invoice';
 import { getGSTFromExAmount } from '@/utils/gst';
 import { formatAUD, formatDate } from '@/utils/format';
-
-const FIELD_CLASS =
-  'h-12 w-full rounded-xl border border-pm-border bg-white px-4 py-3 text-base text-pm-body placeholder-pm-secondary transition-colors focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30';
-const TEXTAREA_CLASS =
-  'w-full rounded-xl border border-pm-border bg-white px-4 py-3 text-base text-pm-body placeholder-pm-secondary transition-colors focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30';
-const LABEL_CLASS = 'mb-1.5 block text-sm font-medium text-pm-body';
+import {
+  FormField,
+  formControlClassName,
+  formLabelClassName,
+  formTextareaClassName,
+} from '@/components/forms/FormField';
+import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
+import { FormSection } from '@/components/forms/FormSection';
 
 const INVOICE_TYPE_COPY: Record<
   InvoiceFormDefaultValues['invoice_type'],
@@ -527,40 +529,40 @@ export function InvoiceForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_300px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_300px]">
         {/* ── Left column ── */}
         <div className="space-y-6">
 
           {/* Header: invoice number + live total */}
-          <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
+          <FormSection>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pm-secondary">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-on-surface-variant">
                   Invoice
                 </p>
-                <p className="mt-1 text-[28px] font-semibold leading-none text-pm-body">
+                <p className="mt-1 text-[28px] font-semibold leading-none text-on-surface">
                   {invoiceNumberPreview}
                 </p>
               </div>
-              <div className="rounded-2xl bg-pm-teal-light px-4 py-3 text-right">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pm-teal-mid">
+              <div className="rounded-2xl bg-success-container px-4 py-3 text-right">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary-container">
                   Total
                 </p>
-                <p className="mt-1 text-2xl font-semibold text-pm-teal">
+                <p className="mt-1 text-2xl font-semibold text-primary">
                   {formatAUD(summary.total)}
                 </p>
               </div>
             </div>
-          </section>
+          </FormSection>
 
           {/* Setup: customer + quote + type + due date */}
-          <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
-            <h3 className="mb-4 text-base font-semibold text-pm-body">Invoice Setup</h3>
+          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
+            <h3 className="mb-4 text-base font-semibold text-on-surface">Invoice Setup</h3>
 
             <div className="space-y-4">
               {/* Customer */}
               <div>
-                <label htmlFor="customer_id" className={LABEL_CLASS}>
+                <label htmlFor="customer_id" className={formLabelClassName}>
                   Customer
                 </label>
                 <select
@@ -568,7 +570,7 @@ export function InvoiceForm({
                   name="customer_id"
                   value={form.customer_id}
                   onChange={handleFormChange}
-                  className={FIELD_CLASS}
+                  className={formControlClassName}
                 >
                   <option value="">Select a customer</option>
                   {customers.map((customer) => (
@@ -581,16 +583,16 @@ export function InvoiceForm({
 
               {/* Linked Quote */}
               <div>
-                <label htmlFor="quote_id" className={LABEL_CLASS}>
+                <label htmlFor="quote_id" className={formLabelClassName}>
                   Linked Quote{' '}
-                  <span className="text-xs font-normal text-pm-secondary">(optional)</span>
+                  <span className="text-xs font-normal text-on-surface-variant">(optional)</span>
                 </label>
                 <select
                   id="quote_id"
                   name="quote_id"
                   value={form.quote_id}
                   onChange={handleFormChange}
-                  className={FIELD_CLASS}
+                  className={formControlClassName}
                 >
                   <option value="">No linked quote</option>
                   {filteredQuotes.map((quote) => (
@@ -605,7 +607,7 @@ export function InvoiceForm({
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Invoice type */}
                 <div>
-                  <label htmlFor="invoice_type" className={LABEL_CLASS}>
+                  <label htmlFor="invoice_type" className={formLabelClassName}>
                     Type
                   </label>
                   <select
@@ -613,21 +615,21 @@ export function InvoiceForm({
                     name="invoice_type"
                     value={form.invoice_type}
                     onChange={handleFormChange}
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   >
                     <option value="full">Full</option>
                     <option value="deposit">Deposit</option>
                     <option value="progress">Progress</option>
                     <option value="final">Final</option>
                   </select>
-                  <p className="mt-1.5 text-xs text-pm-secondary">
+                  <p className="mt-1.5 text-xs text-on-surface-variant">
                     {form.invoice_type === 'deposit' && selectedQuote && selectedQuote.deposit_percent > 0
                       ? `Deposit invoice uses the ${selectedQuote.deposit_percent}% deposit saved on the linked quote.`
                       : INVOICE_TYPE_COPY[form.invoice_type].hint}
                   </p>
                   {form.invoice_type === 'progress' && selectedQuote && (
-                    <div className="mt-3 space-y-2 rounded-xl border border-pm-border bg-pm-surface/50 p-3">
-                      <label htmlFor="progress_percent" className="block text-xs font-medium text-pm-secondary">
+                    <div className="mt-3 space-y-2 rounded-xl border border-outline-variant bg-surface-container-low/50 p-3">
+                      <label htmlFor="progress_percent" className="block text-xs font-medium text-on-surface-variant">
                         Progress Percent (%)
                       </label>
                       <input
@@ -638,7 +640,7 @@ export function InvoiceForm({
                         inputMode="numeric"
                         value={progressPercent}
                         onChange={(event) => handleProgressPercentChange(event.target.value)}
-                        className={FIELD_CLASS}
+                        className={formControlClassName}
                       />
                       <div className="flex flex-wrap gap-2">
                         {[25, 50, 75, 100].map((percent) => (
@@ -646,13 +648,13 @@ export function InvoiceForm({
                             key={percent}
                             type="button"
                             onClick={() => handleProgressPercentChange(String(percent))}
-                            className="inline-flex min-h-11 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-body transition-colors hover:bg-white"
+                            className="inline-flex min-h-11 items-center rounded-xl border border-outline-variant px-3 text-xs font-medium text-on-surface transition-colors hover:bg-white"
                           >
                             {percent}%
                           </button>
                         ))}
                       </div>
-                      <p className="text-xs text-pm-secondary">
+                      <p className="text-xs text-on-surface-variant">
                         Applies to the remaining staged subtotal for this linked quote.
                       </p>
                     </div>
@@ -661,8 +663,8 @@ export function InvoiceForm({
 
                 {/* Due date */}
                 <div>
-                  <label htmlFor="due_date" className={LABEL_CLASS}>
-                    Due Date <span className="text-xs font-normal text-pm-secondary">(optional)</span>
+                  <label htmlFor="due_date" className={formLabelClassName}>
+                    Due Date <span className="text-xs font-normal text-on-surface-variant">(optional)</span>
                   </label>
                   <input
                     id="due_date"
@@ -670,7 +672,7 @@ export function InvoiceForm({
                     type="date"
                     value={form.due_date}
                     onChange={handleFormChange}
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   />
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
@@ -679,7 +681,7 @@ export function InvoiceForm({
                         setForm((prev) => ({ ...prev, due_date: buildDefaultDueDate() }));
                         setError(null);
                       }}
-                      className="inline-flex min-h-11 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-body transition-colors hover:bg-pm-surface"
+                      className="inline-flex min-h-11 items-center rounded-xl border border-outline-variant px-3 text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-low"
                     >
                       Set +14 days
                     </button>
@@ -689,12 +691,12 @@ export function InvoiceForm({
                         setForm((prev) => ({ ...prev, due_date: '' }));
                         setError(null);
                       }}
-                      className="inline-flex min-h-11 items-center rounded-lg border border-pm-border px-3 text-xs font-medium text-pm-secondary transition-colors hover:bg-pm-surface"
+                      className="inline-flex min-h-11 items-center rounded-xl border border-outline-variant px-3 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low"
                     >
                       Clear
                     </button>
                   </div>
-                  <p className="mt-1.5 text-xs text-pm-secondary">
+                  <p className="mt-1.5 text-xs text-on-surface-variant">
                     Leave this blank if the invoice does not need a payment deadline yet.
                   </p>
                 </div>
@@ -702,7 +704,7 @@ export function InvoiceForm({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="status" className={LABEL_CLASS}>
+                  <label htmlFor="status" className={formLabelClassName}>
                     Status
                   </label>
                   <select
@@ -710,7 +712,7 @@ export function InvoiceForm({
                     name="status"
                     value={form.status}
                     onChange={handleFormChange}
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   >
                     {statusOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -719,12 +721,12 @@ export function InvoiceForm({
                     ))}
                   </select>
                   {(form.status === 'sent' || form.status === 'overdue') && (
-                    <p className="mt-1.5 text-xs text-pm-secondary">
+                    <p className="mt-1.5 text-xs text-on-surface-variant">
                       Sent and overdue are set automatically. You can mark this invoice as paid or cancelled here.
                     </p>
                   )}
                   {form.status === 'paid' && (
-                    <p className="mt-1.5 text-xs text-pm-secondary">
+                    <p className="mt-1.5 text-xs text-on-surface-variant">
                       Marking as paid will store the paid date and set the invoice balance to zero.
                     </p>
                   )}
@@ -732,7 +734,7 @@ export function InvoiceForm({
 
                 {(form.status === 'paid' || form.paid_date || form.payment_method) && (
                   <div>
-                    <label htmlFor="paid_date" className={LABEL_CLASS}>
+                    <label htmlFor="paid_date" className={formLabelClassName}>
                       Paid Date
                     </label>
                     <input
@@ -741,7 +743,7 @@ export function InvoiceForm({
                       type="date"
                       value={form.paid_date}
                       onChange={handleFormChange}
-                      className={FIELD_CLASS}
+                      className={formControlClassName}
                       required={form.status === 'paid'}
                     />
                   </div>
@@ -750,7 +752,7 @@ export function InvoiceForm({
 
               {(form.status === 'paid' || form.payment_method || form.paid_date) && (
                 <div>
-                  <label htmlFor="payment_method" className={LABEL_CLASS}>
+                  <label htmlFor="payment_method" className={formLabelClassName}>
                     Payment Method
                   </label>
                   <select
@@ -758,7 +760,7 @@ export function InvoiceForm({
                     name="payment_method"
                     value={form.payment_method}
                     onChange={handleFormChange}
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   >
                     <option value="">Select a payment method</option>
                     {PAYMENT_METHOD_OPTIONS.map((option) => (
@@ -767,7 +769,7 @@ export function InvoiceForm({
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1.5 text-xs text-pm-secondary">
+                  <p className="mt-1.5 text-xs text-on-surface-variant">
                     {form.status === 'paid'
                       ? 'Required when status is paid.'
                       : 'Optional, but useful for reconciling paid invoices later.'}
@@ -779,30 +781,30 @@ export function InvoiceForm({
             {/* Quote billing context */}
             {selectedQuote && quoteContext && (
               <div
-                className={`mt-5 rounded-2xl border px-4 py-4 ${
-                  quoteContext.overBilled ? 'border-amber-200 bg-amber-50' : 'border-pm-border bg-pm-surface/60'
+                className={`mt-5 rounded-xl border px-4 py-4 ${
+                  quoteContext.overBilled ? 'border-amber-200 bg-amber-50' : 'border-outline-variant bg-surface-container-low/60'
                 }`}
               >
-                <p className="mb-3 text-sm font-semibold text-pm-body">
+                <p className="mb-3 text-sm font-semibold text-on-surface">
                   {selectedQuote.quote_number}
                   {selectedQuote.title ? ` — ${selectedQuote.title}` : ''}
                 </p>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-xl bg-white px-3 py-2">
-                    <p className="text-xs text-pm-secondary">Quote total</p>
-                    <p className="mt-0.5 text-sm font-semibold text-pm-body">
+                    <p className="text-xs text-on-surface-variant">Quote total</p>
+                    <p className="mt-0.5 text-sm font-semibold text-on-surface">
                       {formatAUD(selectedQuote.total_cents)}
                     </p>
                   </div>
                   <div className="rounded-xl bg-white px-3 py-2">
-                    <p className="text-xs text-pm-secondary">Already invoiced</p>
-                    <p className="mt-0.5 text-sm font-semibold text-pm-body">
+                    <p className="text-xs text-on-surface-variant">Already invoiced</p>
+                    <p className="mt-0.5 text-sm font-semibold text-on-surface">
                       {formatAUD(quoteContext.billedBeforeThisInvoiceTotal)}
                     </p>
                   </div>
                   <div className="rounded-xl bg-white px-3 py-2">
-                    <p className="text-xs text-pm-secondary">Remaining</p>
-                    <p className={`mt-0.5 text-sm font-semibold ${quoteContext.overBilled ? 'text-amber-700' : 'text-pm-teal'}`}>
+                    <p className="text-xs text-on-surface-variant">Remaining</p>
+                    <p className={`mt-0.5 text-sm font-semibold ${quoteContext.overBilled ? 'text-amber-700' : 'text-primary'}`}>
                       {formatAUD(quoteContext.remainingTotal)}
                     </p>
                   </div>
@@ -817,13 +819,13 @@ export function InvoiceForm({
           </section>
 
           {/* Line Items */}
-          <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
+          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-base font-semibold text-pm-body">Line Items</h3>
+              <h3 className="text-base font-semibold text-on-surface">Line Items</h3>
               <button
                 type="button"
                 onClick={addLineItem}
-                className="inline-flex min-h-11 items-center rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
+                className="inline-flex min-h-11 items-center rounded-xl border border-outline-variant px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
               >
                 + Add Item
               </button>
@@ -843,15 +845,15 @@ export function InvoiceForm({
                 return (
                   <div
                     key={`${index}-${item.description.slice(0, 10)}`}
-                    className="rounded-2xl border border-pm-border bg-pm-surface/50 p-4"
+                    className="rounded-xl border border-outline-variant bg-surface-container-low/50 p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <p className="text-sm font-semibold text-pm-body">Item {index + 1}</p>
+                      <p className="text-sm font-semibold text-on-surface">Item {index + 1}</p>
                       {lineItems.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeLineItem(index)}
-                          className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-pm-secondary transition-colors hover:bg-white hover:text-pm-body"
+                          className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-on-surface-variant transition-colors hover:bg-white hover:text-on-surface"
                         >
                           Remove
                         </button>
@@ -860,7 +862,7 @@ export function InvoiceForm({
 
                     <div className="mt-3 space-y-3">
                       <div>
-                        <label className={LABEL_CLASS} htmlFor={`line-description-${index}`}>
+                        <label className={formLabelClassName} htmlFor={`line-description-${index}`}>
                           Description
                         </label>
                         <textarea
@@ -869,13 +871,13 @@ export function InvoiceForm({
                           value={item.description}
                           onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
                           placeholder="e.g. Prep, prime and paint — 2 coats"
-                          className={TEXTAREA_CLASS}
+                          className={formTextareaClassName}
                         />
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div>
-                          <label className={LABEL_CLASS} htmlFor={`line-qty-${index}`}>
+                          <label className={formLabelClassName} htmlFor={`line-qty-${index}`}>
                             Qty
                           </label>
                           <input
@@ -886,11 +888,11 @@ export function InvoiceForm({
                             inputMode="decimal"
                             value={item.quantity}
                             onChange={(e) => handleLineItemChange(index, 'quantity', e.target.value)}
-                            className={FIELD_CLASS}
+                            className={formControlClassName}
                           />
                         </div>
                         <div>
-                          <label className={LABEL_CLASS} htmlFor={`line-price-${index}`}>
+                          <label className={formLabelClassName} htmlFor={`line-price-${index}`}>
                             Unit Price (A$)
                           </label>
                           <input
@@ -901,7 +903,7 @@ export function InvoiceForm({
                             inputMode="decimal"
                             value={item.unitPrice}
                             onChange={(e) => handleLineItemChange(index, 'unitPrice', e.target.value)}
-                            className={FIELD_CLASS}
+                            className={formControlClassName}
                           />
                         </div>
                       </div>
@@ -909,16 +911,16 @@ export function InvoiceForm({
 
                     <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-pm-secondary">Line total</span>
-                        <span className="font-semibold text-pm-body">{formatAUD(lineTotal)}</span>
+                        <span className="text-on-surface-variant">Line total</span>
+                        <span className="font-semibold text-on-surface">{formatAUD(lineTotal)}</span>
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-3">
-                        <span className="text-pm-secondary">GST (10%)</span>
-                        <span className="font-medium text-pm-body">{formatAUD(lineGst)}</span>
+                        <span className="text-on-surface-variant">GST (10%)</span>
+                        <span className="font-medium text-on-surface">{formatAUD(lineGst)}</span>
                       </div>
-                      <div className="mt-2 flex items-center justify-between gap-3 border-t border-pm-border pt-2">
-                        <span className="font-medium text-pm-body">Item total</span>
-                        <span className="font-semibold text-pm-teal">
+                      <div className="mt-2 flex items-center justify-between gap-3 border-t border-outline-variant pt-2">
+                        <span className="font-medium text-on-surface">Item total</span>
+                        <span className="font-semibold text-primary">
                           {formatAUD(lineGrandTotal)}
                         </span>
                       </div>
@@ -930,11 +932,11 @@ export function InvoiceForm({
           </section>
 
           {/* Notes & Terms */}
-          <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
-            <h3 className="mb-4 text-base font-semibold text-pm-body">Notes & Terms</h3>
+          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
+            <h3 className="mb-4 text-base font-semibold text-on-surface">Notes & Terms</h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="notes" className={LABEL_CLASS}>
+                <label htmlFor="notes" className={formLabelClassName}>
                   Notes
                 </label>
                 <textarea
@@ -944,42 +946,38 @@ export function InvoiceForm({
                   value={form.notes}
                   onChange={handleFormChange}
                   placeholder="Add a payment note or job summary"
-                  className={TEXTAREA_CLASS}
+                  className={formTextareaClassName}
                 />
               </div>
 
-              <div>
-                <label htmlFor="payment_terms" className={LABEL_CLASS}>
-                  Payment Terms
-                </label>
-                <textarea
-                  id="payment_terms"
-                  name="payment_terms"
-                  rows={3}
-                  value={form.payment_terms}
-                  onChange={handleFormChange}
-                  placeholder="Payment due within 14 days from invoice date."
-                  className={TEXTAREA_CLASS}
-                />
-              </div>
+              <FormField
+                as="textarea"
+                htmlFor="payment_terms"
+                label="Payment Terms"
+                name="payment_terms"
+                rows={3}
+                value={form.payment_terms}
+                onChange={handleFormChange}
+                placeholder="Payment due within 14 days from invoice date."
+              />
             </div>
           </section>
 
           {/* Business & Payment Details — collapsed by default */}
-          <section className="rounded-3xl border border-pm-border bg-white shadow-sm">
+          <section className="rounded-2xl border border-outline-variant bg-white shadow-sm">
             <button
               type="button"
               onClick={() => setShowBusinessDetails((v) => !v)}
-              className="flex w-full items-center justify-between p-5 text-left"
+              className="flex w-full items-center justify-between p-4 text-left sm:p-6"
             >
-              <h3 className="text-base font-semibold text-pm-body">Business & Payment Details</h3>
-              <span className="text-pm-secondary">{showBusinessDetails ? '▲' : '▼'}</span>
+              <h3 className="text-base font-semibold text-on-surface">Business & Payment Details</h3>
+              <span className="text-on-surface-variant">{showBusinessDetails ? '▲' : '▼'}</span>
             </button>
 
             {showBusinessDetails && (
-              <div className="space-y-4 border-t border-pm-border px-5 pb-5 pt-4">
+              <div className="space-y-4 border-t border-outline-variant px-4 pb-4 pt-4 sm:px-6 sm:pb-6">
                 <div>
-                  <label htmlFor="business_abn" className={LABEL_CLASS}>
+                  <label htmlFor="business_abn" className={formLabelClassName}>
                     ABN
                   </label>
                   <input
@@ -989,11 +987,11 @@ export function InvoiceForm({
                     value={form.business_abn}
                     onChange={handleFormChange}
                     placeholder="12 345 678 901"
-                    className={FIELD_CLASS}
+                    className={formControlClassName}
                   />
                 </div>
                 <div>
-                  <label htmlFor="bank_details" className={LABEL_CLASS}>
+                  <label htmlFor="bank_details" className={formLabelClassName}>
                     Bank Details
                   </label>
                   <textarea
@@ -1003,7 +1001,7 @@ export function InvoiceForm({
                     value={form.bank_details}
                     onChange={handleFormChange}
                     placeholder={'Account Name: Your Business\nBSB: 123-456\nAccount: 12345678'}
-                    className={TEXTAREA_CLASS}
+                    className={formTextareaClassName}
                   />
                 </div>
               </div>
@@ -1012,56 +1010,56 @@ export function InvoiceForm({
         </div>
 
         {/* ── Right sidebar ── */}
-        <aside className="space-y-5 lg:sticky lg:top-4 lg:self-start">
+        <aside className="space-y-5 xl:sticky xl:top-4 xl:self-start">
           {/* Totals */}
-          <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-pm-secondary">
+          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-on-surface-variant">
               Totals
             </h3>
             <dl className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-pm-secondary">Subtotal</dt>
-                <dd className="font-medium text-pm-body">{formatAUD(summary.subtotal)}</dd>
+                <dt className="text-on-surface-variant">Subtotal</dt>
+                <dd className="font-medium text-on-surface">{formatAUD(summary.subtotal)}</dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-pm-secondary">GST (10%)</dt>
-                <dd className="font-medium text-pm-body">{formatAUD(summary.gst)}</dd>
+                <dt className="text-on-surface-variant">GST (10%)</dt>
+                <dd className="font-medium text-on-surface">{formatAUD(summary.gst)}</dd>
               </div>
-              <div className="flex items-center justify-between gap-4 border-t border-pm-border pt-3">
-                <dt className="font-semibold text-pm-body">Total</dt>
-                <dd className="text-lg font-semibold text-pm-teal">{formatAUD(summary.total)}</dd>
+              <div className="flex items-center justify-between gap-4 border-t border-outline-variant pt-3">
+                <dt className="font-semibold text-on-surface">Total</dt>
+                <dd className="text-lg font-semibold text-primary">{formatAUD(summary.total)}</dd>
               </div>
             </dl>
           </section>
 
           {/* Quote items snapshot */}
           {selectedQuote && selectedQuoteIncludedItems.length > 0 && (
-            <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-pm-secondary">
+            <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-on-surface-variant">
                 Quote items
               </h3>
               <div className="space-y-2">
                 {selectedQuoteIncludedItems.map((item, index) => (
                   <div
                     key={`${item.description}-${index}`}
-                    className="rounded-xl bg-pm-surface px-3 py-2.5"
+                    className="rounded-xl bg-surface-container-low px-3 py-2.5"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="whitespace-pre-wrap text-sm font-medium text-pm-body">
+                      <p className="whitespace-pre-wrap text-sm font-medium text-on-surface">
                         {item.description}
                       </p>
-                      <p className="shrink-0 text-sm font-semibold text-pm-body">
+                      <p className="shrink-0 text-sm font-semibold text-on-surface">
                         {formatAUD(item.total_cents)}
                       </p>
                     </div>
-                    <p className="mt-0.5 text-xs text-pm-secondary">
+                    <p className="mt-0.5 text-xs text-on-surface-variant">
                       Qty {item.quantity} × {formatAUD(item.unit_price_cents)}
                     </p>
                   </div>
                 ))}
               </div>
               {selectedQuote.valid_until && (
-                <p className="mt-3 text-xs text-pm-secondary">
+                <p className="mt-3 text-xs text-on-surface-variant">
                   Valid until {formatDate(selectedQuote.valid_until)}
                 </p>
               )}
@@ -1070,22 +1068,22 @@ export function InvoiceForm({
 
           {/* Customer snapshot */}
           {selectedCustomer && (
-            <section className="rounded-3xl border border-pm-border bg-white p-5 shadow-sm">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-pm-secondary">
+            <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-on-surface-variant">
                 Customer Snapshot
               </h3>
               <div className="space-y-1 text-sm">
-                <p className="font-semibold text-pm-body">
+                <p className="font-semibold text-on-surface">
                   {selectedCustomer.company_name || selectedCustomer.name}
                 </p>
                 {selectedCustomer.email && (
-                  <p className="text-pm-secondary">{selectedCustomer.email}</p>
+                  <p className="text-on-surface-variant">{selectedCustomer.email}</p>
                 )}
                 {selectedCustomer.phone && (
-                  <p className="text-pm-secondary">{selectedCustomer.phone}</p>
+                  <p className="text-on-surface-variant">{selectedCustomer.phone}</p>
                 )}
                 {selectedCustomer.address && (
-                  <p className="whitespace-pre-wrap text-pm-secondary">{selectedCustomer.address}</p>
+                  <p className="whitespace-pre-wrap text-on-surface-variant">{selectedCustomer.address}</p>
                 )}
               </div>
             </section>
@@ -1094,43 +1092,44 @@ export function InvoiceForm({
       </div>
 
       {error && (
-        <div className="rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3">
-          <p className="text-sm text-pm-coral-dark">{error}</p>
+        <div className="rounded-xl border border-error bg-error-container px-4 py-3">
+          <p className="text-sm text-on-error-container">{error}</p>
         </div>
       )}
 
       {/* Fixed bottom CTA */}
-      <div className="fixed bottom-20 left-0 right-0 z-10 border-t border-pm-border bg-white px-4 pt-4 pb-4 md:bottom-0 md:left-64 md:pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row">
-          <button
+      <FormFooter contentClassName="max-w-6xl flex-col">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <FormFooterButton
             type="button"
+            variant="secondary"
             onClick={() => {
               if (onCancel) { onCancel(); return; }
               router.back();
             }}
             disabled={isPending}
-            className="h-14 flex-1 rounded-2xl border border-pm-border bg-white text-base font-medium text-pm-body transition-colors hover:bg-pm-surface disabled:opacity-50"
+            className="flex-1 font-medium"
           >
             {cancelLabel}
-          </button>
-          <button
+          </FormFooterButton>
+          <FormFooterButton
             type="submit"
             disabled={isPending || !canSubmit}
-            className="h-14 flex-[1.6] rounded-2xl bg-pm-teal text-base font-semibold text-white transition-colors hover:bg-pm-teal-hover disabled:opacity-50"
+            className="flex-[1.6]"
           >
             {isPending ? 'Saving...' : submitLabel}
-          </button>
+          </FormFooterButton>
         </div>
         {!customers.length && (
-          <div className="mx-auto mt-3 max-w-6xl rounded-lg border border-dashed border-pm-border bg-pm-surface px-4 py-3 text-sm text-pm-secondary">
+          <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
             Add a customer first in{' '}
-            <Link href="/customers/new" className="font-medium text-pm-teal-hover hover:underline">
+            <Link href="/customers/new" className="font-medium text-primary hover:underline">
               Customers
             </Link>
             .
           </div>
         )}
-      </div>
+      </FormFooter>
     </form>
   );
 }

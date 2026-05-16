@@ -69,7 +69,7 @@
 
 ### D6-1. 토큰 마이그레이션 맵
 
-`app/globals.css:75-91`의 공식 매핑. 세 폼에서 쓰이는 항목만:
+`app/globals.css:75-91`의 공식 legacy alias 매핑. 세 폼에서 쓰이는 항목만:
 
 | 레거시 `pm-*` | MD3 토큰 | 값 |
 |---------------|----------|-----|
@@ -83,10 +83,10 @@
 | `pm-coral-dark` | `on-error-container` | `#7F1D1D` |
 | `pm-body` | `on-surface` | `#0F1620` |
 | `pm-secondary` | `on-surface-variant` | `#475569` |
-| `pm-border` | `outline-variant` ⚠️ | `#E2E8F0` |
+| `pm-border` | `outline` | `#CBD5E1` |
 | `pm-surface` | `surface-container-low` | `#F4F2ED` |
 
-⚠️ `pm-border`는 globals.css 주석상 `outline`(#CBD5E1)에 매핑되지만, **form 테두리는 더 밝은 `outline-variant`(#E2E8F0)로 통일** (MD3-correct한 QuoteForm 기준, 의도적 1:1 아님). input focus 시 테두리는 `border-primary`.
+**Form-specific override**: 이 표는 공식 1:1 alias 매핑이다. 다만 D6 폼 작업에서는 `border-pm-border`를 기계적으로 `border-outline`로 치환하지 않는다. MD3-correct한 QuoteForm 기준에 맞춰 form field, section, footer 경계는 더 가벼운 `border-outline-variant`(#E2E8F0)로 통일한다. input focus border는 `border-primary`.
 
 ### D6-2. 신규 공유 컴포넌트 (3개 생성)
 
@@ -114,31 +114,35 @@ error:    mt-1 text-sm text-error
 
 **`components/forms/FormFooter.tsx`** — 고정 하단 액션 바 + Primary/Secondary 버튼
 ```
-컨테이너: fixed bottom-0 left-0 right-0 z-30 border-t border-outline-variant
+컨테이너: fixed left-0 right-0 z-30 border-t border-outline-variant
           bg-white/95 backdrop-blur-sm px-4 pt-3
           pb-[calc(0.75rem+env(safe-area-inset-bottom))]
-          md:left-[72px] lg:left-64        ← 사이드바 너비와 정렬
+          bottom-[calc(4rem+env(safe-area-inset-bottom))]
+          md:bottom-0
+          md:left-60 lg:left-64           ← tablet/desktop sidebar 너비와 정렬
 Primary:   h-14 rounded-xl bg-primary text-on-primary font-semibold
            hover:bg-primary/90 disabled:opacity-50
 Secondary: h-14 rounded-xl border border-outline-variant bg-white
            text-on-surface font-semibold hover:bg-surface-container-low
 ```
 
+모바일에서는 footer가 bottom tab bar 위에 물리적으로 배치되어야 한다. 태블릿/데스크탑에서는 sidebar offset만 적용하고 viewport 하단에 붙인다.
+
 > 기존 `components/ui/input.tsx`·`select.tsx`는 `pm-*` 기반이고 label/error 래핑이 없어 세 폼이 사용하지 않음. 이번 작업에서 두 파일의 토큰도 D6-1 맵으로 MD3 치환할 것. `FormField`가 내부적으로 `ui/input.tsx`를 조합할지 신규 control을 둘지는 구현 재량.
 
 ### D6-3. 표준값 (확정)
 
-| 항목 | 통일값 |
-|------|--------|
-| 섹션 카드 radius | `rounded-2xl` |
-| 버튼 radius | `rounded-xl` |
-| input radius | `rounded-xl` |
-| input 높이 | `h-12` |
-| footer 버튼 높이 | `h-14` |
-| 폼 내부 보조 액션 버튼 | `h-11` |
-| Primary 버튼 색 | `bg-primary` |
-| 라벨 weight | `font-semibold` |
-| 폼 wrapper | `flex flex-col gap-6 pb-32` |
+| 항목 | 통일값 | 현재 위반 |
+|------|--------|-----------|
+| 섹션 카드 radius | `rounded-2xl` | Invoice `rounded-3xl`, Customer 카드 없음 |
+| 버튼 radius | `rounded-xl` | Invoice `rounded-2xl` |
+| input radius | `rounded-xl` | Customer `rounded-lg` |
+| input 높이 | `h-12` | 없음 |
+| footer 버튼 높이 | `h-14` | 없음 |
+| 폼 내부 보조 액션 버튼 | `h-11` | Quote 일부 `h-12` 혼재 |
+| Primary 버튼 색 | `bg-primary` | Quote `bg-on-surface`, Invoice/Customer `bg-pm-teal` |
+| 라벨 weight | `font-semibold` | Invoice/Customer `font-medium` |
+| 폼 wrapper | `flex flex-col gap-6 pb-32` | Customer `pb-28` |
 
 ### D6-4. 파일별 변경 지시
 
@@ -167,7 +171,7 @@ Secondary: h-14 rounded-xl border border-outline-variant bg-white
 
 ### D6-5. z-index 레이어 정리 (같이 처리)
 
-`QuoteForm`의 Send Quote 모달이 `z-30`, 모바일 nav가 `z-40` → 모달이 nav 밑에 깔림. `<FormFooter>` 도입 시 레이어를 정리:
+이전 감사에서 `QuoteForm`의 Send Quote 모달 `z-30`과 모바일 nav `z-40` 충돌이 발견되었다. 현재 `QuoteForm` 모달은 `z-50`로 고쳐져 있으므로, `<FormFooter>` 도입 시 아래 레이어 규칙을 유지한다:
 
 | 레이어 | z-index |
 |--------|---------|
@@ -175,17 +179,17 @@ Secondary: h-14 rounded-xl border border-outline-variant bg-white
 | 모바일 탭바 / nav | `z-40` |
 | 모달 · 오버레이 | `z-50` |
 
-→ `<FormFooter>`는 `z-30`, 모달류는 전부 `z-50`로. 모달 z-index 일괄 점검.
+→ `<FormFooter>`는 `z-30`, 모바일 nav는 `z-40`, 모달류는 전부 `z-50`로. 새 shared footer 적용 중 기존 `z-50` 모달을 낮추지 말 것.
 
 ### D6-6. 작업 순서 (커밋 단위)
 
-1. 공유 컴포넌트 3개 생성 + `ui/input.tsx`·`select.tsx` 토큰 MD3 치환 — 커밋 1
-2. `CustomerForm` 마이그레이션 (814줄, 가장 작음) — 커밋 1
-3. `InvoiceForm` 마이그레이션 (1136줄) — 커밋 1
-4. `QuoteForm` 마이그레이션 (2582줄) + z-index 정리 — 커밋 1
-5. build + 3개 폼 모바일/데스크탑 렌더 확인
+1. 공유 컴포넌트 3개 생성 + `ui/input.tsx`·`select.tsx` 토큰 MD3 치환 — 커밋 D6-1
+2. `CustomerForm` 마이그레이션 (814줄, 가장 작음) — 커밋 D6-2
+3. `InvoiceForm` 마이그레이션 (1136줄) — 커밋 D6-3
+4. `QuoteForm` 마이그레이션 (2582줄) + footer/z-index 규칙 유지 — 커밋 D6-4
+5. build + 3개 폼 모바일/데스크탑 렌더 확인 — 검증 로그 첨부
 
-폼별 독립 커밋. 한 커밋에 묶지 말 것.
+각 항목은 별도 커밋/검증 단위다. 한 커밋에 묶지 말 것.
 
 ### D6-7. 완료 기준
 
@@ -195,6 +199,7 @@ Secondary: h-14 rounded-xl border border-outline-variant bg-white
 - [ ] inline `FIELD*` / `LABEL*` / `TEXTAREA*` const 정의 0개
 - [ ] `npm run build` 통과, `any` 타입 미발생
 - [ ] 모바일 375px에서 footer가 탭바와 안 겹치고 Send Quote 모달이 nav 위에 뜸
+- [ ] 태블릿 768-1024px에서 라벨형 sidebar(240px)와 footer offset이 정렬됨
 - [ ] 컨테이너 너비 변경 없음 (Customer만 `md:max-w-2xl` 유지)
 
 ### D6-8. 범위 밖 (별도 추적)

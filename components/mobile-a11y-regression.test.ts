@@ -20,10 +20,12 @@ describe('mobile accessibility regressions', () => {
 
   it('keeps quote send overlays above mobile navigation and safe-area aware', () => {
     const quoteForm = readSource('components/quotes/QuoteForm.tsx');
+    const formFooter = readSource('components/forms/FormFooter.tsx');
 
     expect(quoteForm).toContain('z-50');
-    expect(quoteForm).toContain('bottom-[calc(4rem+env(safe-area-inset-bottom))]');
-    expect(quoteForm).toContain('pb-[calc(0.75rem+env(safe-area-inset-bottom))]');
+    expect(quoteForm).toContain('FormFooter');
+    expect(formFooter).toContain('bottom-[calc(4rem+env(safe-area-inset-bottom))]');
+    expect(formFooter).toContain('pb-[calc(0.75rem+env(safe-area-inset-bottom))]');
     expect(quoteForm).not.toContain('bottom-16');
   });
 
@@ -52,5 +54,17 @@ describe('mobile accessibility regressions', () => {
       expect(source).not.toMatch(/\bmin-h-(8|9|10)\b/);
       expect(source).not.toMatch(/\bh-10\b/);
     }
+  });
+
+  it('keeps tablet dashboard navigation labeled and form footers aligned', () => {
+    const sidebar = readSource('components/dashboard/Sidebar.tsx');
+    const formFooter = readSource('components/forms/FormFooter.tsx');
+
+    expect(sidebar).toContain('md:w-60');
+    expect(sidebar).not.toContain('md:w-[72px]');
+    expect(sidebar).not.toContain('hidden lg:inline');
+    expect(formFooter).toContain('md:left-60');
+    expect(formFooter).toContain('lg:left-64');
+    expect(formFooter).not.toContain('md:left-[72px]');
   });
 });
