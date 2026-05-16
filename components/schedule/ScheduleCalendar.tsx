@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -146,6 +146,42 @@ const STATUS_BADGE: Record<JobStatus, string> = {
 };
 
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MOBILE_SCHEDULE_VIEW_QUERY = '(max-width: 767px)';
+
+function subscribeToMobileScheduleViewport(onStoreChange: () => void): () => void {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return () => {};
+  }
+
+  const mediaQuery = window.matchMedia(MOBILE_SCHEDULE_VIEW_QUERY);
+  if (typeof mediaQuery.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', onStoreChange);
+    return () => mediaQuery.removeEventListener('change', onStoreChange);
+  }
+
+  mediaQuery.addListener(onStoreChange);
+  return () => mediaQuery.removeListener(onStoreChange);
+}
+
+function getMobileScheduleViewportSnapshot(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false;
+  }
+
+  return window.matchMedia(MOBILE_SCHEDULE_VIEW_QUERY).matches;
+}
+
+function getServerScheduleViewportSnapshot(): boolean {
+  return false;
+}
+
+function useMobileScheduleViewport(): boolean {
+  return useSyncExternalStore(
+    subscribeToMobileScheduleViewport,
+    getMobileScheduleViewportSnapshot,
+    getServerScheduleViewportSnapshot,
+  );
+}
 
 function ymd(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -949,7 +985,7 @@ function GoogleEventCard({ event }: { event: CalendarGoogleEvent }) {
           href={event.htmlLink}
           target="_blank"
           rel="noreferrer"
-          className="flex h-9 items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline"
+          className="flex min-h-11 items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline"
         >
           Open in Google Calendar
           <ExternalLink className="h-3.5 w-3.5" />
@@ -1036,7 +1072,10 @@ export function ScheduleCalendar({
   const [year, setYear] = useState(() => Number(resolvedToday.slice(0, 4)));
   const [month, setMonth] = useState(() => Number(resolvedToday.slice(5, 7)) - 1);
   const [selected, setSelected] = useState<string | null>(resolvedToday);
-  const [view, setView] = useState<ViewMode>(() => (isViewMode(initialView) ? initialView : 'calendar'));
+  const initialViewMode = isViewMode(initialView) ? initialView : null;
+  const isMobileScheduleViewport = useMobileScheduleViewport();
+  const [view, setView] = useState<ViewMode>(() => initialViewMode ?? 'calendar');
+  const [hasSelectedView, setHasSelectedView] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
     isSourceFilter(initialSource) ? initialSource : 'all',
   );
@@ -1089,6 +1128,16 @@ export function ScheduleCalendar({
     : null;
   const activeFilterCount =
     Number(sourceFilter !== 'all') + Number(statusFilter !== 'all') + Number(searchQuery.trim().length > 0);
+
+  useEffect(() => {
+    if (initialViewMode || hasSelectedView) return;
+    setView(isMobileScheduleViewport ? 'list' : 'calendar');
+  }, [hasSelectedView, initialViewMode, isMobileScheduleViewport]);
+
+  function selectView(nextView: ViewMode) {
+    setHasSelectedView(true);
+    setView(nextView);
+  }
 
   function prevMonth() {
     if (month === 0) {
@@ -1188,7 +1237,7 @@ export function ScheduleCalendar({
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-pm-secondary transition-colors hover:bg-pm-surface hover:text-pm-body"
+                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-pm-secondary transition-colors hover:bg-pm-surface hover:text-pm-body"
                 aria-label="Clear search"
               >
                 <X className="h-4 w-4" />
@@ -1196,11 +1245,11 @@ export function ScheduleCalendar({
             )}
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-            <SegmentButton active={view === 'calendar'} onClick={() => setView('calendar')}>
+            <SegmentButton active={view === 'calendar'} onClick={() => selectView('calendar')}>
               <CalendarDays className="h-4 w-4" />
               Calendar
             </SegmentButton>
-            <SegmentButton active={view === 'list'} onClick={() => setView('list')}>
+            <SegmentButton active={view === 'list'} onClick={() => selectView('list')}>
               <List className="h-4 w-4" />
               List
             </SegmentButton>
@@ -1517,7 +1566,7 @@ function CalendarEventChip({
         e.dataTransfer.effectAllowed = 'move';
       }}
       title={getChipLabel(event)}
-      className={`flex h-4 w-full min-w-0 cursor-grab items-center rounded border px-0.5 text-left text-[9px] font-semibold leading-none shadow-sm active:cursor-grabbing sm:h-5 sm:px-1 sm:text-[10px] ${getChipClassName(
+      className={`flex min-h-11 w-full min-w-0 cursor-grab items-center rounded border px-2 text-left text-xs font-semibold leading-tight shadow-sm active:cursor-grabbing lg:min-h-5 lg:px-1 lg:text-[10px] lg:leading-none ${getChipClassName(
         event,
       )} ${draggable ? '' : 'cursor-default'}`}
     >
@@ -1563,7 +1612,7 @@ function CalendarGrid({
                 return (
                   <div
                     key={`pad-${i}`}
-                    className="min-h-[58px] border-b border-r border-pm-border/40 bg-pm-surface/20 last:border-r-0 sm:min-h-[64px]"
+                    className="min-h-[96px] border-b border-r border-pm-border/40 bg-pm-surface/20 last:border-r-0 lg:min-h-[64px]"
                   />
                 );
               }
@@ -1583,23 +1632,24 @@ function CalendarGrid({
                     e.preventDefault();
                     onDrop(dateStr, e.dataTransfer.getData('application/json'));
                   }}
-                  className={`group relative min-h-[82px] border-b border-r border-pm-border/40 last:border-r-0 sm:min-h-[118px] ${
+                  className={`group relative min-h-[190px] border-b border-r border-pm-border/40 last:border-r-0 lg:min-h-[118px] ${
                     isSelected ? 'bg-pm-teal/5 ring-1 ring-inset ring-pm-teal/30' : 'hover:bg-pm-surface/50'
                   }`}
                 >
                   <button
                     onClick={() => onSelect(dateStr)}
-                    className="flex h-7 w-full items-center justify-center px-0.5 pt-1 sm:h-8 sm:px-1 sm:pt-1.5"
+                    aria-label={`Select ${DATE_LONG_FORMATTER.format(parseYmdUtc(dateStr))}`}
+                    className="flex min-h-11 w-full items-center justify-center px-0.5 pt-1 lg:min-h-[32px] lg:px-1 lg:pt-1.5"
                   >
                     <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold sm:h-7 sm:w-7 sm:text-xs ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold lg:h-7 lg:w-7 ${
                         isToday ? 'bg-pm-teal text-white' : isSelected ? 'text-pm-teal' : 'text-pm-body'
                       }`}
                     >
                       {dayNum}
                     </span>
                   </button>
-                  <div className="flex flex-col gap-0.5 px-0.5 pb-7 pt-0.5 sm:gap-1 sm:px-1 sm:pb-8 sm:pt-1">
+                  <div className="flex flex-col gap-1 px-1 pb-12 pt-1 lg:pb-8">
                     {visibleEvents.map((event, index) => (
                       <CalendarEventChip
                         key={`${event.kind}-${getChipLabel(event)}-${index}`}
@@ -1611,7 +1661,7 @@ function CalendarGrid({
                       <button
                         type="button"
                         onClick={() => onSelect(dateStr)}
-                        className="h-4 rounded border border-pm-border bg-white px-0.5 text-left text-[9px] font-semibold leading-none text-pm-secondary sm:h-5 sm:px-1 sm:text-[10px]"
+                        className="min-h-11 rounded border border-pm-border bg-white px-2 text-left text-xs font-semibold leading-tight text-pm-secondary lg:min-h-5 lg:px-1 lg:text-[10px] lg:leading-none"
                       >
                         +{hiddenCount} more
                       </button>
@@ -1619,7 +1669,7 @@ function CalendarGrid({
                   </div>
                   <button
                     onClick={() => onAdd(dateStr)}
-                    className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-pm-secondary shadow-sm ring-1 ring-pm-border transition-colors hover:text-pm-teal sm:hidden sm:group-hover:flex"
+                    className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-white text-pm-secondary shadow-sm ring-1 ring-pm-border transition-colors hover:text-pm-teal lg:hidden lg:group-hover:flex"
                     aria-label="Add schedule on this day"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -1678,7 +1728,10 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="rounded-2xl border border-dashed border-pm-border bg-white px-6 py-8 text-center">
       <p className="text-sm text-pm-secondary">No matching jobs or events.</p>
-      <button onClick={onAdd} className="mt-3 text-sm font-medium text-pm-teal hover:underline">
+      <button
+        onClick={onAdd}
+        className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-pm-teal hover:bg-pm-teal/5"
+      >
         Add an event
       </button>
     </div>
@@ -1706,6 +1759,7 @@ function SegmentButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors sm:gap-2 sm:px-3 sm:text-sm ${
         active
           ? 'border-pm-teal bg-pm-teal/10 text-pm-teal'
@@ -1730,7 +1784,7 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
-      className={`h-8 min-w-0 whitespace-nowrap rounded-full border px-2.5 text-[11px] font-semibold transition-colors sm:h-9 sm:px-3 sm:text-xs ${
+      className={`min-h-11 min-w-0 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
         active
           ? 'border-pm-teal bg-pm-teal/10 text-pm-teal'
           : 'border-pm-border bg-white text-pm-secondary hover:bg-pm-surface'

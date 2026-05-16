@@ -96,9 +96,31 @@ const JOB: CalendarJob = {
   quoteNumber: 'QUO-1042',
 };
 
+const originalMatchMedia = window.matchMedia;
+
+function mockScheduleViewport(isMobile: boolean) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 767px)' ? isMobile : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe('ScheduleCalendar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: originalMatchMedia,
+    });
     useToastStore.setState({ toasts: [] });
     addJobScheduleDayMock.mockResolvedValue({ error: null });
     deleteJobScheduleDayMock.mockResolvedValue({ error: null });
@@ -192,6 +214,36 @@ describe('ScheduleCalendar', () => {
     expect(screen.getByRole('heading', { name: 'May 2026' })).toBeInTheDocument();
   });
 
+  it('defaults to the agenda list on mobile when no view is requested', async () => {
+    mockScheduleViewport(true);
+
+    renderCalendar({ today: '2026-05-02' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+    });
+    expect(screen.getByText('Job list')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Schedule calendar month')).not.toBeInTheDocument();
+  });
+
+  it('keeps the month grid as the tablet and desktop default', () => {
+    mockScheduleViewport(false);
+
+    renderCalendar({ today: '2026-05-02' });
+
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Schedule calendar month')).toBeInTheDocument();
+  });
+
+  it('honours an explicit calendar view on mobile', () => {
+    mockScheduleViewport(true);
+
+    renderCalendar({ today: '2026-05-02', initialView: 'calendar' });
+
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Schedule calendar month')).toBeInTheDocument();
+  });
+
   it('returns to today from another month', async () => {
     const user = userEvent.setup();
 
@@ -227,6 +279,20 @@ describe('ScheduleCalendar', () => {
     expect(sourceFilters).not.toHaveClass('overflow-x-auto');
     expect(statusFilters).toHaveClass('flex-wrap');
     expect(statusFilters).not.toHaveClass('overflow-x-auto');
+  });
+
+  it('uses 44px touch targets for mobile calendar dates, filters, and event chips', () => {
+    mockScheduleViewport(true);
+
+    renderCalendar({ today: '2026-05-02', initialView: 'calendar' });
+
+    expect(screen.getByRole('button', { name: 'All' })).toHaveClass('min-h-11');
+    expect(screen.getByRole('button', { name: /Select Saturday 2 May/i })).toHaveClass('min-h-11');
+    expect(screen.getAllByRole('button', { name: 'Sarah Mitchell' })[0]).toHaveClass('min-h-11');
+    expect(screen.getAllByRole('button', { name: 'Add schedule on this day' })[0]).toHaveClass(
+      'h-11',
+      'w-11',
+    );
   });
 
   it('can open as a jobs list and search completed historical jobs', () => {
