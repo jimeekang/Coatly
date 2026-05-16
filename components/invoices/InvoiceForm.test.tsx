@@ -40,7 +40,10 @@ describe('InvoiceForm', () => {
             quote_number: 'QUO-0004',
             title: 'Cafe repaint',
             subtotal_cents: 385000,
+            gst_cents: 38500,
             total_cents: 423500,
+            discount_cents: 0,
+            manual_adjustment_cents: 0,
             deposit_percent: 30,
             status: 'draft',
             valid_until: '2026-04-14',
@@ -74,10 +77,10 @@ describe('InvoiceForm', () => {
     fireEvent.change(screen.getByLabelText(/Due Date/), {
       target: { value: '2026-04-03' },
     });
-    fireEvent.change(screen.getByLabelText('Description'), {
+    fireEvent.change(screen.getAllByLabelText('Description')[0], {
       target: { value: 'Deposit invoice' },
     });
-    fireEvent.change(screen.getByLabelText('Unit Price (A$)'), {
+    fireEvent.change(screen.getAllByLabelText('Unit Price (A$)')[0], {
       target: { value: '250' },
     });
     fireEvent.change(screen.getByPlaceholderText('Add a payment note or job summary'), {
@@ -101,7 +104,12 @@ describe('InvoiceForm', () => {
       line_items: [
         {
           description: 'Deposit invoice',
-          quantity: 2,
+          quantity: 1,
+          unit_price_cents: 25000,
+        },
+        {
+          description: 'Interior repaint\nWalls and ceiling',
+          quantity: 1,
           unit_price_cents: 25000,
         },
       ],
@@ -181,7 +189,10 @@ describe('InvoiceForm', () => {
             quote_number: 'QUO-0004',
             title: 'Cafe repaint',
             subtotal_cents: 385000,
+            gst_cents: 38500,
             total_cents: 423500,
+            discount_cents: 0,
+            manual_adjustment_cents: 0,
             deposit_percent: 30,
             status: 'approved',
             valid_until: '2026-04-14',
@@ -217,7 +228,12 @@ describe('InvoiceForm', () => {
     expect(screen.getByText('Already invoiced')).toBeInTheDocument();
     expect(screen.getByText('Quote items')).toBeInTheDocument();
     expect(screen.getAllByText(/Walls and ceiling/).length).toBeGreaterThan(0);
-    expect(screen.getByLabelText('Description')).toHaveValue('Interior repaint\nWalls and ceiling');
+    expect(screen.getAllByLabelText('Description')[0]).toHaveValue(
+      'Approved quote scope - QUO-0004 - Cafe repaint'
+    );
+    expect(screen.getAllByLabelText('Description')[1]).toHaveValue(
+      'Interior repaint\nWalls and ceiling'
+    );
     expect(screen.queryByRole('option', { name: 'Sent' })).not.toBeInTheDocument();
   });
 
@@ -243,7 +259,10 @@ describe('InvoiceForm', () => {
             quote_number: 'QUO-0004',
             title: 'Cafe repaint',
             subtotal_cents: 300000,
+            gst_cents: 30000,
             total_cents: 330000,
+            discount_cents: 0,
+            manual_adjustment_cents: 0,
             deposit_percent: 20,
             status: 'approved',
             valid_until: '2026-04-14',

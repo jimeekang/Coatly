@@ -2136,7 +2136,8 @@ describe('setQuoteOptionalLineItemSelection', () => {
                 data: {
                   id: 'quote-1',
                   subtotal_cents: 68000,
-                  manual_adjustment_cents: 0,
+                  discount_cents: 3000,
+                  manual_adjustment_cents: 2000,
                 },
                 error: null,
               }),
@@ -2226,8 +2227,8 @@ describe('setQuoteOptionalLineItemSelection', () => {
     expect(captured.lineItemUpdate).toEqual({ is_selected: true });
     expect(captured.quoteUpdate).toEqual({
       subtotal_cents: 83000,
-      gst_cents: 8300,
-      total_cents: 91300,
+      gst_cents: 8000,
+      total_cents: 90000,
     });
   });
 });
@@ -2440,7 +2441,8 @@ describe('public quote access', () => {
                   id: 'quote-public-1',
                   status: 'sent',
                   subtotal_cents: 68000,
-                  manual_adjustment_cents: 0,
+                  discount_cents: 3000,
+                  manual_adjustment_cents: 2000,
                 },
                 error: null,
               }),
@@ -2510,8 +2512,8 @@ describe('public quote access', () => {
     expect(captured.lineItemUpdate).toEqual({ is_selected: true });
     expect(captured.quoteUpdate).toEqual({
       subtotal_cents: 83000,
-      gst_cents: 8300,
-      total_cents: 91300,
+      gst_cents: 8000,
+      total_cents: 90000,
     });
   });
 

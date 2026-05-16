@@ -307,10 +307,25 @@ export function QuoteTemplate({
             <Text>Subtotal (ex GST)</Text>
             <Text>{formatAUD(quote.subtotal_cents)}</Text>
           </View>
+          {quote.discount_cents > 0 && (
+            <View style={styles.totalRow}>
+              <Text>Discount</Text>
+              <Text>-{formatAUD(quote.discount_cents)}</Text>
+            </View>
+          )}
           <View style={styles.totalRow}>
             <Text>GST (10%)</Text>
             <Text>{formatAUD(quote.gst_cents)}</Text>
           </View>
+          {quote.manual_adjustment_cents !== 0 && (
+            <View style={styles.totalRow}>
+              <Text>Adjustment</Text>
+              <Text>
+                {quote.manual_adjustment_cents > 0 ? '+' : '-'}
+                {formatAUD(Math.abs(quote.manual_adjustment_cents))}
+              </Text>
+            </View>
+          )}
           <View style={[styles.totalRow, styles.totalLine]}>
             <Text>Total (inc GST)</Text>
             <Text>{formatAUD(quote.total_cents)}</Text>

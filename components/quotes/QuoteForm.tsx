@@ -1106,13 +1106,13 @@ export function QuoteForm({
         { label: 'Labour', value: methodPreview.labor_cents },
         { label: 'Materials', value: methodPreview.material_cents },
         ...(lineItemSubtotal > 0
-          ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
+          ? [{ label: 'Selected add-ons', value: lineItemSubtotal }]
           : []),
-        ...discountLine,
         {
           label: 'Subtotal (ex GST)',
           value: composedMethodPreview.subtotal_cents,
         },
+        ...discountLine,
         { label: 'GST (10%)', value: composedMethodPreview.gst_cents },
         {
           label: 'Total (inc GST)',
@@ -1132,13 +1132,13 @@ export function QuoteForm({
         { label: 'Labour', value: methodPreview.labor_cents },
         { label: 'Materials', value: methodPreview.material_cents },
         ...(lineItemSubtotal > 0
-          ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
+          ? [{ label: 'Selected add-ons', value: lineItemSubtotal }]
           : []),
-        ...discountLine,
         {
           label: 'Subtotal (ex GST)',
           value: composedMethodPreview.subtotal_cents,
         },
+        ...discountLine,
         { label: 'GST (10%)', value: composedMethodPreview.gst_cents },
         {
           label: 'Total (inc GST)',
@@ -1168,13 +1168,13 @@ export function QuoteForm({
           ]
         : []),
       ...(lineItemSubtotal > 0
-        ? [{ label: 'Materials & Services', value: lineItemSubtotal }]
+        ? [{ label: 'Selected add-ons', value: lineItemSubtotal }]
         : []),
-      ...discountLine,
       {
         label: 'Subtotal (ex GST)',
         value: hybridTotals?.subtotal_cents ?? subtotalWithMarkup,
       },
+      ...discountLine,
       { label: 'GST (10%)', value: hybridTotals?.gst_cents ?? 0 },
       ...(adjustmentCents !== 0
         ? [

@@ -667,6 +667,11 @@ describe('createInvoice', () => {
         status: 'approved',
         title: 'Cafe repaint',
         quote_number: 'QUO-0010',
+        subtotal_cents: 120000,
+        total_cents: 132000,
+        discount_cents: 0,
+        manual_adjustment_cents: 0,
+        deposit_percent: 0,
       },
       error: null,
     });
@@ -680,6 +685,7 @@ describe('createInvoice', () => {
             notes: 'Walls and ceiling',
             quantity: 2,
             unit_price_cents: 12500,
+            total_cents: 25000,
             is_optional: false,
             is_selected: true,
             sort_order: 0,
@@ -690,6 +696,7 @@ describe('createInvoice', () => {
             notes: null,
             quantity: 1,
             unit_price_cents: 8000,
+            total_cents: 8000,
             is_optional: true,
             is_selected: false,
             sort_order: 1,
@@ -789,9 +796,14 @@ describe('createInvoice', () => {
       notes: 'Linked to approved quote QUO-0010 - Cafe repaint',
       line_items: [
         {
+          description: 'Approved quote scope - QUO-0010 - Cafe repaint',
+          quantity: 1,
+          unit_price_cents: 95000,
+        },
+        {
           description: 'Interior repaint\nWalls and ceiling',
-          quantity: 2,
-          unit_price_cents: 12500,
+          quantity: 1,
+          unit_price_cents: 25000,
         },
       ],
     });

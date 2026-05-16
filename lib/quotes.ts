@@ -238,31 +238,56 @@ export function calculateQuoteLineItemsSubtotal(
   }, 0);
 }
 
-export function composeQuoteTotals({
+export function calculateQuoteTotals({
   base_subtotal_cents,
+  manual_adjustment_cents,
   adjustment_cents = 0,
   discount_cents = 0,
   line_items = [],
 }: {
   base_subtotal_cents: number;
+  manual_adjustment_cents?: number;
   adjustment_cents?: number;
   discount_cents?: number;
   line_items?: QuotePricedLineItem[];
 }) {
   const line_items_subtotal_cents = calculateQuoteLineItemsSubtotal(line_items);
-  const subtotal_cents = base_subtotal_cents + line_items_subtotal_cents;
+  const subtotal_cents =
+    Math.max(0, Math.round(base_subtotal_cents)) +
+    line_items_subtotal_cents;
+  const clampedDiscountCents = Math.min(
+    Math.max(0, Math.round(discount_cents)),
+    subtotal_cents
+  );
   const discounted_subtotal_cents = Math.max(
     0,
-    subtotal_cents - discount_cents
+    subtotal_cents - clampedDiscountCents
   );
   const gst_cents = Math.round(discounted_subtotal_cents * 0.1);
+  const resolvedAdjustmentCents = Math.round(
+    manual_adjustment_cents ?? adjustment_cents
+  );
 
   return {
     line_items_subtotal_cents,
     subtotal_cents,
+    discounted_subtotal_cents,
     gst_cents,
-    total_cents: discounted_subtotal_cents + gst_cents + adjustment_cents,
+    total_cents: Math.max(
+      0,
+      discounted_subtotal_cents + gst_cents + resolvedAdjustmentCents
+    ),
   };
+}
+
+export function composeQuoteTotals(input: {
+  base_subtotal_cents: number;
+  manual_adjustment_cents?: number;
+  adjustment_cents?: number;
+  discount_cents?: number;
+  line_items?: QuotePricedLineItem[];
+}) {
+  return calculateQuoteTotals(input);
 }
 
 export function calculateDepositCents(
@@ -315,6 +340,7 @@ export type QuoteDetail = {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  manual_adjustment_cents: number;
   discount_cents: number;
   deposit_percent: number;
   estimate_category: QuoteEstimateCategory;
@@ -390,6 +416,8 @@ export type PublicQuoteDetail = {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  discount_cents: number;
+  manual_adjustment_cents: number;
   working_days: number | null;
   customer: QuoteCustomerSummary;
   rooms: PublicQuoteRoom[];
@@ -743,6 +771,8 @@ export function calculateQuotePreview(input: {
   complexity?: QuoteComplexity;
   labour_margin_percent: number;
   material_margin_percent: number;
+  discount_cents?: number;
+  manual_adjustment_cents?: number;
   line_items?: QuoteLineItemFormInput[];
   rooms: Array<{
     name: string;
@@ -789,6 +819,8 @@ export function calculateQuotePreview(input: {
   const totals = composeQuoteTotals({
     base_subtotal_cents:
       base_subtotal_cents + labour_margin_cents + material_margin_cents,
+    discount_cents: input.discount_cents ?? 0,
+    manual_adjustment_cents: input.manual_adjustment_cents ?? 0,
     line_items: input.line_items ?? [],
   });
 
@@ -946,6 +978,7 @@ export function mapQuoteDetail(row: {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  manual_adjustment_cents?: number | null;
   discount_cents?: number | null;
   deposit_percent?: number | null;
   estimate_category?: string | null;
@@ -1008,6 +1041,7 @@ export function mapQuoteDetail(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
+    manual_adjustment_cents: row.manual_adjustment_cents ?? 0,
     estimate_category:
       (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
     property_type: (row.property_type as QuoteDetail['property_type']) ?? null,
@@ -1077,6 +1111,8 @@ export function toPublicQuoteDetail(quote: QuoteDetail): PublicQuoteDetail {
     subtotal_cents: quote.subtotal_cents,
     gst_cents: quote.gst_cents,
     total_cents: quote.total_cents,
+    discount_cents: quote.discount_cents,
+    manual_adjustment_cents: quote.manual_adjustment_cents,
     working_days:
       (quote as unknown as { working_days?: number | null }).working_days ??
       null,
@@ -1135,6 +1171,8 @@ export function mapPublicQuoteDetail(row: {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  discount_cents?: number | null;
+  manual_adjustment_cents?: number | null;
   customer: QuoteCustomerSource | null;
   rooms: Array<{
     id: string;
@@ -1170,6 +1208,8 @@ export function mapPublicQuoteDetail(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
+    discount_cents: row.discount_cents ?? 0,
+    manual_adjustment_cents: row.manual_adjustment_cents ?? 0,
     working_days:
       (row as { working_days?: number | null }).working_days ?? null,
     customer: resolveQuoteCustomerSummary(row),

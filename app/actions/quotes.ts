@@ -6,6 +6,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import {
   buildQuoteCustomerAddress,
   calculateQuoteLineItemsSubtotal,
+  calculateQuoteTotals,
   calculateQuotePreview,
   composeQuoteTotals,
   formatQuoteCustomerPropertyAddress,
@@ -213,9 +214,9 @@ const QUOTE_DETAIL_SELECT = `id, user_id, customer_id, public_share_token, appro
 const QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT = `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
-const PUBLIC_QUOTE_DETAIL_SELECT = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
+const PUBLIC_QUOTE_DETAIL_SELECT = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
-const PUBLIC_QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
+const PUBLIC_QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
 const PUBLIC_QUOTE_APPROVAL_SELECT = `id, user_id, customer_email, customer_address, quote_number, title, status, valid_until, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
@@ -269,6 +270,8 @@ type PublicQuoteRow = {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  discount_cents?: number | null;
+  manual_adjustment_cents?: number | null;
   customer: QuoteListRow['customer'];
 };
 
@@ -294,6 +297,151 @@ type PublicQuoteApprovalRow = {
 type CreateQuoteOptions = {
   submitIntent?: 'save' | 'send_email';
 };
+
+type ParsedQuoteCreateData = Extract<
+  ReturnType<typeof parseQuoteCreateInput>,
+  { success: true }
+>['data'];
+
+function resolveQuotePricingPreviewForSave(
+  data: ParsedQuoteCreateData,
+  effectiveRates: UserRateSettings
+) {
+  const interiorEstimate = data.interior_estimate
+    ? calculateInteriorEstimate(data.interior_estimate, effectiveRates)
+    : null;
+  const exteriorEstimateResult = data.exterior_estimate
+    ? calculateExteriorEstimate(
+        data.exterior_estimate as Parameters<typeof calculateExteriorEstimate>[0],
+        effectiveRates
+      )
+    : null;
+  const adjustmentCents = data.manual_adjustment_cents ?? 0;
+  const discountCents = data.discount_cents ?? 0;
+  const depositPercent = data.deposit_percent ?? 0;
+  const lineItems = data.line_items ?? [];
+  const pricingMethod = data.pricing_method ?? 'hybrid';
+  const rawMethodInputs = data.pricing_method_inputs;
+
+  let resolvedPricingInputs: PricingMethodInputs | null = null;
+  let preview: ReturnType<typeof calculateQuotePreview>;
+
+  if (pricingMethod === 'day_rate' && rawMethodInputs?.method === 'day_rate') {
+    const inputs: DayRateInputs = rawMethodInputs.inputs;
+    const result = calculateDayRateQuote(inputs);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'day_rate', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (
+    pricingMethod === 'detailed_quick' &&
+    rawMethodInputs?.method === 'detailed_quick'
+  ) {
+    const inputs = normalizeQuickEstimateInputsForCalculation(
+      rawMethodInputs.inputs as QuickInputs,
+      effectiveRates
+    );
+    const result = calculateQuickEstimate(inputs, effectiveRates);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'detailed_quick', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (
+    pricingMethod === 'room_rate' &&
+    rawMethodInputs?.method === 'room_rate'
+  ) {
+    const inputs: RoomRateInputs = rawMethodInputs.inputs;
+    const result = calculateRoomRateQuote(inputs);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'room_rate', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (pricingMethod === 'manual' && rawMethodInputs?.method === 'manual') {
+    const inputs: ManualInputs = rawMethodInputs.inputs;
+    const result = calculateManualQuote(inputs);
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: result.subtotal_cents,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'manual', inputs };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: result.subtotal_cents,
+      ...totals,
+    };
+  } else if (exteriorEstimateResult) {
+    const base = exteriorEstimateResult.subtotal_cents;
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: base,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'hybrid', inputs: null };
+    preview = { rooms: [], base_subtotal_cents: base, ...totals };
+  } else if (interiorEstimate) {
+    const base = interiorEstimate.subtotal_cents;
+    const labourMarkup = Math.round(base * (data.labour_margin_percent / 100));
+    const materialMarkup = Math.round(base * (data.material_margin_percent / 100));
+    const subtotal = base + labourMarkup + materialMarkup;
+    const totals = composeQuoteTotals({
+      base_subtotal_cents: subtotal,
+      adjustment_cents: adjustmentCents,
+      discount_cents: discountCents,
+      line_items: lineItems,
+    });
+    resolvedPricingInputs = { method: 'hybrid', inputs: null };
+    preview = {
+      rooms: [],
+      base_subtotal_cents: base,
+      ...totals,
+    };
+  } else {
+    resolvedPricingInputs = {
+      method: pricingMethod as 'sqm_rate' | 'hybrid',
+      inputs: null,
+    };
+    preview = calculateQuotePreview(data);
+  }
+
+  return {
+    adjustmentCents,
+    depositPercent,
+    discountCents,
+    exteriorEstimateResult,
+    interiorEstimate,
+    lineItems,
+    preview,
+    pricingMethod,
+    resolvedPricingInputs,
+  };
+}
 
 async function sendQuoteDocumentEmail(input: {
   supabase: QuoteDataClient;
@@ -746,6 +894,8 @@ function mapHydratedPublicQuoteDetail(
     subtotal_cents: quote.subtotal_cents,
     gst_cents: quote.gst_cents,
     total_cents: quote.total_cents,
+    discount_cents: quote.discount_cents ?? 0,
+    manual_adjustment_cents: quote.manual_adjustment_cents ?? 0,
     working_days:
       (quote as unknown as { working_days?: number | null }).working_days ??
       null,
@@ -1288,142 +1438,17 @@ export async function createQuote(
 
   const { data: userRates } = await getBusinessRateSettings(supabase, user.id);
   const effectiveRates = userRates ?? DEFAULT_RATE_SETTINGS;
-  const interiorEstimate = parsed.data.interior_estimate
-    ? calculateInteriorEstimate(parsed.data.interior_estimate, effectiveRates)
-    : null;
-  const exteriorEstimateResult = parsed.data.exterior_estimate
-    ? calculateExteriorEstimate(
-        parsed.data.exterior_estimate as Parameters<
-          typeof calculateExteriorEstimate
-        >[0],
-        effectiveRates
-      )
-    : null;
-  const adjustmentCents = parsed.data.manual_adjustment_cents ?? 0;
-  const discountCents = parsed.data.discount_cents ?? 0;
-  const depositPercent = parsed.data.deposit_percent ?? 0;
-  const lineItems = parsed.data.line_items ?? [];
-  const pricingMethod = parsed.data.pricing_method ?? 'hybrid';
-  const rawMethodInputs = parsed.data.pricing_method_inputs;
-
-  // ── Resolve preview by pricing method ─────────────────────────────────────
-  let resolvedPricingInputs: PricingMethodInputs | null = null;
-  // Use the full return type of calculateQuotePreview; simple methods return rooms: []
-  let preview: ReturnType<typeof calculateQuotePreview>;
-
-  if (pricingMethod === 'day_rate' && rawMethodInputs?.method === 'day_rate') {
-    const inputs: DayRateInputs = rawMethodInputs.inputs;
-    const result = calculateDayRateQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'day_rate', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'detailed_quick' &&
-    rawMethodInputs?.method === 'detailed_quick'
-  ) {
-    const inputs = normalizeQuickEstimateInputsForCalculation(
-      rawMethodInputs.inputs as QuickInputs,
-      effectiveRates
-    );
-    const result = calculateQuickEstimate(inputs, effectiveRates);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'detailed_quick', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'room_rate' &&
-    rawMethodInputs?.method === 'room_rate'
-  ) {
-    const inputs: RoomRateInputs = rawMethodInputs.inputs;
-    const result = calculateRoomRateQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'room_rate', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'manual' &&
-    rawMethodInputs?.method === 'manual'
-  ) {
-    const inputs: ManualInputs = rawMethodInputs.inputs;
-    const result = calculateManualQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'manual', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (exteriorEstimateResult) {
-    // hybrid with exterior estimate
-    const base = exteriorEstimateResult.subtotal_cents;
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: base,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'hybrid', inputs: null };
-    preview = { rooms: [], base_subtotal_cents: base, ...totals };
-  } else if (interiorEstimate) {
-    // hybrid / sqm_rate with interior estimate
-    const base = interiorEstimate.subtotal_cents;
-    const labourMarkup = Math.round(
-      base * (parsed.data.labour_margin_percent / 100)
-    );
-    const materialMarkup = Math.round(
-      base * (parsed.data.material_margin_percent / 100)
-    );
-    const subtotal = base + labourMarkup + materialMarkup;
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: subtotal,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'hybrid', inputs: null };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: base,
-      ...totals,
-    };
-  } else {
-    // sqm_rate / hybrid with manual rooms
-    resolvedPricingInputs = {
-      method: pricingMethod as 'sqm_rate' | 'hybrid',
-      inputs: null,
-    };
-    preview = calculateQuotePreview(parsed.data);
-  }
+  const {
+    adjustmentCents,
+    depositPercent,
+    discountCents,
+    exteriorEstimateResult,
+    interiorEstimate,
+    lineItems,
+    preview,
+    pricingMethod,
+    resolvedPricingInputs,
+  } = resolveQuotePricingPreviewForSave(parsed.data, effectiveRates);
 
   const { data: quoteNumber, error: quoteNumberError } = await supabase.rpc(
     'generate_quote_number',
@@ -1676,7 +1701,7 @@ export async function setQuoteOptionalLineItemSelection(
 
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
-    .select('id, subtotal_cents, manual_adjustment_cents')
+    .select('id, subtotal_cents, discount_cents, manual_adjustment_cents')
     .eq('id', quoteId)
     .eq('user_id', user.id)
     .single();
@@ -1735,28 +1760,26 @@ export async function setQuoteOptionalLineItemSelection(
     quote.subtotal_cents - currentIncludedLineItemsSubtotal
   );
 
-  const nextIncludedLineItemsSubtotal = calculateQuoteLineItemsSubtotal(
-    (lineItems ?? []).map((item) => ({
-      quantity: 1,
-      unit_price_cents: item.total_cents,
-      total_cents: item.total_cents,
-      is_optional: item.is_optional,
-      is_selected: item.id === lineItemId ? isSelected : item.is_selected,
-    }))
-  );
-
-  const nextSubtotalCents =
-    baseSubtotalWithoutLineItems + nextIncludedLineItemsSubtotal;
-  const nextGstCents = Math.round(nextSubtotalCents * 0.1);
-  const nextTotalCents =
-    nextSubtotalCents + nextGstCents + (quote.manual_adjustment_cents ?? 0);
+  const nextLineItems = (lineItems ?? []).map((item) => ({
+    quantity: 1,
+    unit_price_cents: item.total_cents,
+    total_cents: item.total_cents,
+    is_optional: item.is_optional,
+    is_selected: item.id === lineItemId ? isSelected : item.is_selected,
+  }));
+  const nextTotals = calculateQuoteTotals({
+    base_subtotal_cents: baseSubtotalWithoutLineItems,
+    discount_cents: quote.discount_cents ?? 0,
+    manual_adjustment_cents: quote.manual_adjustment_cents ?? 0,
+    line_items: nextLineItems,
+  });
 
   const { error: updateQuoteError } = await supabase
     .from('quotes')
     .update({
-      subtotal_cents: nextSubtotalCents,
-      gst_cents: nextGstCents,
-      total_cents: nextTotalCents,
+      subtotal_cents: nextTotals.subtotal_cents,
+      gst_cents: nextTotals.gst_cents,
+      total_cents: nextTotals.total_cents,
     })
     .eq('id', quoteId)
     .eq('user_id', user.id);
@@ -1784,7 +1807,9 @@ export async function setPublicQuoteOptionalLineItemSelection(
 
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
-    .select('id, status, valid_until, subtotal_cents, manual_adjustment_cents')
+    .select(
+      'id, status, valid_until, subtotal_cents, discount_cents, manual_adjustment_cents'
+    )
     .eq('public_share_token', quoteToken)
     .single();
 
@@ -1848,28 +1873,26 @@ export async function setPublicQuoteOptionalLineItemSelection(
     quote.subtotal_cents - currentIncludedLineItemsSubtotal
   );
 
-  const nextIncludedLineItemsSubtotal = calculateQuoteLineItemsSubtotal(
-    (lineItems ?? []).map((item) => ({
-      quantity: 1,
-      unit_price_cents: item.total_cents,
-      total_cents: item.total_cents,
-      is_optional: item.is_optional,
-      is_selected: item.id === lineItemId ? isSelected : item.is_selected,
-    }))
-  );
-
-  const nextSubtotalCents =
-    baseSubtotalWithoutLineItems + nextIncludedLineItemsSubtotal;
-  const nextGstCents = Math.round(nextSubtotalCents * 0.1);
-  const nextTotalCents =
-    nextSubtotalCents + nextGstCents + (quote.manual_adjustment_cents ?? 0);
+  const nextLineItems = (lineItems ?? []).map((item) => ({
+    quantity: 1,
+    unit_price_cents: item.total_cents,
+    total_cents: item.total_cents,
+    is_optional: item.is_optional,
+    is_selected: item.id === lineItemId ? isSelected : item.is_selected,
+  }));
+  const nextTotals = calculateQuoteTotals({
+    base_subtotal_cents: baseSubtotalWithoutLineItems,
+    discount_cents: quote.discount_cents ?? 0,
+    manual_adjustment_cents: quote.manual_adjustment_cents ?? 0,
+    line_items: nextLineItems,
+  });
 
   const { error: updateQuoteError } = await supabase
     .from('quotes')
     .update({
-      subtotal_cents: nextSubtotalCents,
-      gst_cents: nextGstCents,
-      total_cents: nextTotalCents,
+      subtotal_cents: nextTotals.subtotal_cents,
+      gst_cents: nextTotals.gst_cents,
+      total_cents: nextTotals.total_cents,
     })
     .eq('id', quote.id)
     .eq('public_share_token', quoteToken);
@@ -2349,133 +2372,17 @@ export async function updateQuote(
 
   const { data: userRates } = await getBusinessRateSettings(supabase, user.id);
   const effectiveRates = userRates ?? DEFAULT_RATE_SETTINGS;
-  const interiorEstimate = parsed.data.interior_estimate
-    ? calculateInteriorEstimate(parsed.data.interior_estimate, effectiveRates)
-    : null;
-  const exteriorEstimateResult = parsed.data.exterior_estimate
-    ? calculateExteriorEstimate(
-        parsed.data.exterior_estimate as Parameters<
-          typeof calculateExteriorEstimate
-        >[0],
-        effectiveRates
-      )
-    : null;
-  const adjustmentCents = parsed.data.manual_adjustment_cents ?? 0;
-  const discountCents = parsed.data.discount_cents ?? 0;
-  const depositPercent = parsed.data.deposit_percent ?? 0;
-  const lineItems = parsed.data.line_items ?? [];
-  const pricingMethod = parsed.data.pricing_method ?? 'hybrid';
-  const rawMethodInputs = parsed.data.pricing_method_inputs;
-
-  let resolvedPricingInputs: PricingMethodInputs | null = null;
-  let preview: ReturnType<typeof calculateQuotePreview>;
-
-  if (pricingMethod === 'day_rate' && rawMethodInputs?.method === 'day_rate') {
-    const inputs: DayRateInputs = rawMethodInputs.inputs;
-    const result = calculateDayRateQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'day_rate', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'detailed_quick' &&
-    rawMethodInputs?.method === 'detailed_quick'
-  ) {
-    const inputs = normalizeQuickEstimateInputsForCalculation(
-      rawMethodInputs.inputs as QuickInputs,
-      effectiveRates
-    );
-    const result = calculateQuickEstimate(inputs, effectiveRates);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'detailed_quick', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'room_rate' &&
-    rawMethodInputs?.method === 'room_rate'
-  ) {
-    const inputs: RoomRateInputs = rawMethodInputs.inputs;
-    const result = calculateRoomRateQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'room_rate', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'manual' &&
-    rawMethodInputs?.method === 'manual'
-  ) {
-    const inputs: ManualInputs = rawMethodInputs.inputs;
-    const result = calculateManualQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'manual', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (exteriorEstimateResult) {
-    const base = exteriorEstimateResult.subtotal_cents;
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: base,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'hybrid', inputs: null };
-    preview = { rooms: [], base_subtotal_cents: base, ...totals };
-  } else if (interiorEstimate) {
-    const base = interiorEstimate.subtotal_cents;
-    const labourMarkup = Math.round(
-      base * (parsed.data.labour_margin_percent / 100)
-    );
-    const materialMarkup = Math.round(
-      base * (parsed.data.material_margin_percent / 100)
-    );
-    const subtotal = base + labourMarkup + materialMarkup;
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: subtotal,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'hybrid', inputs: null };
-    preview = { rooms: [], base_subtotal_cents: base, ...totals };
-  } else {
-    resolvedPricingInputs = {
-      method: pricingMethod as 'sqm_rate' | 'hybrid',
-      inputs: null,
-    };
-    preview = calculateQuotePreview(parsed.data);
-  }
+  const {
+    adjustmentCents,
+    depositPercent,
+    discountCents,
+    exteriorEstimateResult,
+    interiorEstimate,
+    lineItems,
+    preview,
+    pricingMethod,
+    resolvedPricingInputs,
+  } = resolveQuotePricingPreviewForSave(parsed.data, effectiveRates);
 
   // Resolve quote number — allow custom override if different from existing
   let resolvedQuoteNumber = existing.quote_number;
