@@ -18,6 +18,7 @@
 | [V1-PLAN.md](./V1-PLAN.md) | v1 wedge, AI boundary, success criteria |
 | [AI-ASSISTANT.md](./AI-ASSISTANT.md) | AI 기능 범위, Qwen model policy, usage log 요약 |
 | [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | Task 1 detailed implementation plan for rate source audit, canonical quote totals, optional add-ons, public quote, and invoice parity |
+| [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md) | Task 2 detailed implementation plan for Quick/Advanced rate separation, snapshot immutability, setup warnings, and duplicate scope protection |
 | [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md) | quote form data model, AI output contract, legacy quote form 분석 |
 | [QUOTE.md](../quote/QUOTE.md) | 현재 quote builder 구조, pricing modes, active risks |
 | [BILLING.md](../billing/BILLING.md) | 기존 Stripe checkout, portal, webhook, subscription cache 구조 |
@@ -37,6 +38,7 @@
 | AI model | Alibaba Cloud / Qwen `qwen3-vl-flash`, provider adapter 뒤에 고정 |
 | 아직 남은 validation 기록 | D11 cost spreadsheet 숫자 확정, painter별 anonymized quote 추가 회수, W4 numeric golden set fixture |
 | Task 1 implementation review | 2026-05-17 기준 Task 1A canonical quote totals/invoice parity는 구현 + focused tests 통과. Task 1B duplicate priced scope guard, rollback/lock edge tests, full safety verification은 남음 |
+| Task 2 implementation review | 2026-05-17 기준 Quick schema/UI/snapshot helper와 Advanced room item library/source fields는 구현됨. Quick row metadata completeness, Advanced numeric snapshot, setup warnings, duplicate scope guard, quote-level stale-rate tests는 남음 |
 
 ## Build Rule
 
@@ -72,7 +74,7 @@
 | Week | 날짜 | 목표 | 완료 기준 |
 |------|------|------|-----------|
 | W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | 진행 중. canonical calculator, optional add-on/public quote, invoice preset parity는 구현됨. duplicate priced scope guard + full safety verification 후 완료 |
-| W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + quote form schema | painter rate setup, `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` 구조가 준비된다 |
+| W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + quote form schema | Task 2 Quick/Advanced rate boundary와 Task 3 quote form schema가 준비된다 |
 | W3 | 2026-06-15 ~ 2026-06-19 | Quick/Advanced hardening + Scope/Clause builder UI | customer-visible scope와 priced row가 UI와 저장 구조에서 분리된다 |
 | W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Winchester, Edgar, Paint Buddy quote form을 scope/pricing/clause 구조로 재현하고 가격 회귀 테스트가 통과한다 |
 | W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + Basic/Pro usage logging | Qwen call이 adapter 뒤에 있고, AI output이 price-free schema를 통과하며, plan/trial별 cost log가 남는다 |
@@ -150,39 +152,74 @@
 
 ## Task 2: Quick and Advanced Rate Boundary
 
+**Detailed plan:** [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)
+
+**Status:** PARTIAL. 2026-05-17 기준 Quick rate schema/UI/snapshot unit behavior와 Advanced room item library/source copy는 구현되어 있다. 아직 Task 1B duplicate priced scope guard, Quick estimate row metadata completeness, Advanced numeric snapshot immutability, setup warnings, invalid surface validation, and quote-level stale-rate A/B tests가 남아 있다.
+
+**Goal:** Quick estimate와 Advanced detailed estimate의 pricing source를 분리하고, rate 변경 이후 기존 quote가 저장 당시 snapshot 기준으로 유지되게 만든다.
+
 **Files:**
 - Modify: `components/rates/PriceRatesForm.tsx`
 - Modify: `components/rates/QuickEstimateTab.tsx`
 - Modify: `lib/rate-settings.ts`
+- Create: `lib/rate-setup-diagnostics.ts`
+- Create/Modify: `lib/quote-pricing-scopes.ts`
 - Modify: `lib/detailed-estimate-anchors.ts`
 - Modify: `lib/interior-estimates.ts`
 - Modify: `components/quotes/QuickEstimateBuilder.tsx`
 - Modify: `components/quotes/QuickQuoteBuilder.tsx`
 - Modify: `components/quotes/InteriorEstimateBuilder.tsx`
+- Modify: `components/quotes/QuoteForm.tsx`
+- Modify: `app/actions/quotes.ts`
 - Modify: `lib/rate-settings.test.ts`
 - Modify: `lib/interior-estimates.test.ts`
+- Modify: `utils/calculations.test.ts`
+- Modify: `app/actions/quotes.test.ts`
+- Modify: `components/rates/PriceRatesForm.test.tsx`
+- Modify: `components/quotes/QuoteForm.test.tsx`
 
 **Method:**
 
-- [ ] **Step 1: Separate Quick setup from Advanced setup**
+- [x] **Step 1: Audit current Quick/Advanced implementation**
 
-  Price Rates must visibly separate Quick room size matrix from Advanced room anchor/unit rates. Quick is `room template + size + selected surfaces + coating/condition multiplier`. Advanced is `room anchor + explicit door/window/skirting/trim/surface quantities`.
+  Current audit is captured in [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md). Quick schema/UI/snapshot helper and Advanced room source copy exist, but Task 2 is not complete.
 
-- [ ] **Step 2: Store Quick snapshot completely**
+- [ ] **Step 2: Finish duplicate priced scope guard dependency**
 
-  Quick estimate save payload must include template id, template version, label, selected size, selected surfaces, coating multiplier, condition multiplier, and calculated total. After rate changes, existing quote display must use the saved snapshot.
+  Reuse or create structured priced scope keys so Quick/Advanced estimate rows and custom line items cannot charge the same room/surface/opening/trim scope twice.
 
-- [ ] **Step 3: Store Advanced snapshot completely**
+- [ ] **Step 3: Add shared setup diagnostics**
 
-  Advanced estimate save payload must include room anchor source, included scope flags, explicit door/window/skirting quantities, unit rates, and calculated total. If an explicit item overlaps with included scope, validation must stop the save.
+  `lib/rate-setup-diagnostics.ts` should report missing/zero Quick and Advanced rate sources. Price Rates shows setup status; Quote Builder blocks accidental A$0 selected sources.
 
-- [ ] **Step 4: Add setup warnings**
+- [ ] **Step 4: Complete Quick snapshot row metadata**
 
-  If a painter has zero or missing rates in a required Quick/Advanced source, the quote builder must show a setup warning before trial quote generation. It should not silently create a A$0 priced quote unless the user intentionally creates a free/manual row.
+  `pricing_method_inputs` already keeps the Quick room snapshot. `quote_estimate_items.metadata` must also include source id/version/label, snapshot version, selected surfaces, per-surface cents, and multipliers.
 
-- [ ] **Step 5: Add stale-rate tests**
+- [ ] **Step 5: Complete Advanced numeric snapshot immutability**
 
-  Add tests showing quote A created with rate version 1 keeps version 1 totals after the painter changes rate settings to version 2. New quote B uses version 2.
+  Advanced source id/version/label fields exist, but old quotes still need numeric anchor snapshots so `detailed_estimate_anchors` changes do not alter existing quote totals.
+
+- [ ] **Step 6: Block invalid Advanced surface states**
+
+  A room with all `include_walls`, `include_ceiling`, and `include_trim` false must be invalid. Do not fallback to global scope for that room.
+
+- [ ] **Step 7: Remove or wire door/window room toggles**
+
+  For v1, doors and windows should be explicit opening items only. Remove room-level `include_doors` / `include_windows` toggles unless they create explicit priced opening items.
+
+- [ ] **Step 8: Add stale-rate and save-shape tests**
+
+  Add quote A/B stale-rate tests, create/update same-shape tests, duplicate scope tests, and setup warning tests as listed in the detailed Task 2 plan.
+
+**Completion criteria:**
+
+- Quick and Advanced rate setup are visibly separate and warning-gated.
+- Existing Quick/Advanced quotes keep saved snapshot totals after rate changes.
+- New quotes use current rates.
+- Duplicate priced scopes are blocked in create and update.
+- Quick/Advanced accidental A$0 selected sources are blocked before save.
+- Focused tests, full test suite, build, and `git diff --check` pass.
 
 ## Task 3: Quote Form Structure Schema
 

@@ -16,7 +16,7 @@
 | 0 | Foundation | 완료 | 프로젝트, Supabase, Auth, Stripe, Vercel |
 | 1 | Core Features | 완료 | 고객, 견적, PDF, invoice, billing |
 | 2 | AI & Operations | 진행 중 | AI, schedule, email, public quote, jobs 고도화 |
-| **v1 AI Quote Writer push** | **wedge 재정의** | **Phase 0 GREEN / build 진행 중** | **AI Quote Writer = Basic A$29 limited AI + Pro A$59 full AI wedge. Task 1A canonical quote totals/invoice parity 구현, Task 1B duplicate scope guard 남음. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md)** |
+| **v1 AI Quote Writer push** | **wedge 재정의** | **Phase 0 GREEN / build 진행 중** | **AI Quote Writer = Basic A$29 limited AI + Pro A$59 full AI wedge. Task 1A canonical quote totals/invoice parity 구현, Task 1B duplicate scope guard와 Task 2 Quick/Advanced rate boundary hardening 남음. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md)** |
 | 3 | Integrations & Scale | 계획 | accounting sync, 운영/분석 고도화 |
 
 ## Implemented Progress
@@ -68,7 +68,7 @@
 | Step | 기간 | 상태 | 산출물 |
 |------|------|------|--------|
 | Phase 0 validation (인터뷰 5명, cost spreadsheet, golden set) | 2주 | GREEN 완료 | Basic/Pro 가격, Pro trial 정책, Qwen model, quote form structure 확정 |
-| v1 build (pricing-first — T0~T14) | 6–8주 | 진행 중 | Task 1A canonical quote totals + invoice preset parity 구현. 다음은 Task 1B duplicate priced scope guard, full safety verification, 이후 AI Draft, ai_usage_logs, AU prompt, validator, manual edit UX, Today Assistant, Follow-up Writer |
+| v1 build (pricing-first — T0~T14) | 6–8주 | 진행 중 | Task 1A canonical quote totals + invoice preset parity 구현. Task 2 audit 기준 Quick schema/UI/snapshot helper와 Advanced room item source copy는 있음. 다음은 Task 1B duplicate priced scope guard, Task 2 snapshot/setup warning/stale-rate hardening, 이후 AI Draft, ai_usage_logs, AU prompt, validator, manual edit UX, Today Assistant, Follow-up Writer |
 | Production deploy + integration | 1주 | post-build | Vercel prod, Qwen API key, 3 migrations |
 | Free Pro Trial + paid conversion tracking | 4주 | post-deploy | Pro 1개월 무료 trial, ≥1 A$59 Pro conversion, cancel reason 기록 |
 
@@ -80,6 +80,7 @@
 |----------|------|-----------|------|
 | P1 | Quote/Invoice 저장 원자성 | 다중 쿼리 경로 존재, RPC transaction 검토 필요 | Codex |
 | P1 | v1 Task 1B duplicate priced scope guard | canonical total path는 구현됨. quick/advanced scope와 custom line item 이중 청구를 막는 structured scope key validator 필요 | Codex |
+| P1 | v1 Task 2 Quick/Advanced rate boundary hardening | 세부 계획 작성됨. Quick row metadata completeness, Advanced numeric snapshot, setup diagnostics, A$0 warning, stale-rate A/B tests 필요 | Codex |
 | P1 | Google Calendar booking fail-closed | 연결/표시는 구현, write 실패 정책 보강 필요 | Codex |
 | P1 | AI usage governance | Basic/Pro/Pro trial limit 정책 확정, v1 plan T4 (`ai_usage_logs`)로 `quote_draft`, `today_assistant`, `follow_up_writer` cost+limit 보강 | Codex |
 | P1 | Exterior estimate 회귀 | 기능 존재, edit/PDF/detail 일관성 테스트 강화 필요 | Codex |

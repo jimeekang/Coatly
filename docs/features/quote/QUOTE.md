@@ -4,7 +4,7 @@
 
 페인터가 현장에서 빠르게 견적을 만들고, 고객에게 PDF/공개 링크로 보내고, 승인 이후 invoice/job으로 이어지게 합니다.
 
-v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 따른다. 고객에게 보이는 quote form은 **scope section + pricing row + clause library**로 분리한다. 가격 계산 boundary와 quote total parity 세부 구현은 [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)를 따른다.
+v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 따른다. 고객에게 보이는 quote form은 **scope section + pricing row + clause library**로 분리한다. 가격 계산 boundary와 quote total parity 세부 구현은 [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)를 따른다. Quick/Advanced rate boundary와 snapshot hardening은 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](../ai/V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 따른다.
 
 ## Current Status
 
@@ -12,9 +12,9 @@ v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 �
 |------|------|-----------|
 | Quote CRUD | 구현됨 | `app/actions/quotes.ts`, `app/(dashboard)/quotes/*` |
 | Room/surface 견적 | 구현됨 | `QuoteForm`, `quote_rooms`, `quote_room_surfaces` |
-| Quick/Detailed estimate | 구현됨 | `QuickQuoteBuilder`, `QuickEstimateBuilder`, migration 041–042 |
+| Quick/Detailed estimate | 구현됨, Task 2 hardening 남음 | `QuickQuoteBuilder`, `QuickEstimateBuilder`, `InteriorEstimateBuilder`, migration 041–042 |
 | Exterior estimate | 구현됨, 감사 항목 남음 | `ExteriorEstimateBuilder`, audit 참고 |
-| Rate settings | 구현됨 | `PriceRatesForm`, `lib/rate-settings.ts` |
+| Rate settings | 구현됨, setup diagnostics 남음 | `PriceRatesForm`, `QuickEstimateTab`, `lib/rate-settings.ts` |
 | Material/service line items | 구현됨 | `material_items`, `quote_line_items` |
 | Quote templates | 구현됨 | `quote_templates`, `TemplatePicker` |
 | AI quote drafting | 구현됨 | `AIDraftPanel`, `generateAIDraft()` |
@@ -104,7 +104,7 @@ draft -> sent -> approved -> booked/job/invoice
 - Canonical total contract: `base_subtotal_cents + selected quote_line_items - discount_cents → discounted_subtotal_cents → gst_cents → total_cents`.
 - 기존 manual adjustment는 현재 quote 동작처럼 GST 밖에서 더합니다. 과세 처리 변경은 별도 decision이 필요합니다.
 - Labour/material margin은 별도 percent로 저장합니다.
-- Quick estimate는 저장 시 authoritative snapshot을 남겨 이후 단가 변경에 흔들리지 않게 합니다.
+- Quick estimate는 저장 시 authoritative snapshot을 남겨 이후 단가 변경에 흔들리지 않게 합니다. 현재 unit-level snapshot helper는 구현됐고, `quote_estimate_items.metadata` completeness가 Task 2 남은 작업입니다.
 - Basic은 제한된 AI quote/photo/follow-up 사용량을 제공하고, Pro는 full AI Quote Form Builder와 더 높은 AI limit을 제공합니다.
 - v1 AI-assisted Quote Form Builder 이전에 quote calculation boundary를 먼저 정리합니다.
 - `quote_estimate_items`는 estimate engine이 만든 priced rows만 저장합니다.
@@ -114,6 +114,8 @@ draft -> sent -> approved -> booked/job/invoice
 - rate 변경 후 기존 quote는 저장 당시 snapshot 기준으로 유지하고, 새 quote만 새 rate를 사용합니다.
 
 ## Quick / Advanced Pricing Boundary
+
+세부 구현 계획과 현재 gap은 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](../ai/V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)에 둔다. 2026-05-17 기준 Quick schema/UI/snapshot helper와 Advanced room item source copy는 구현됐지만 Advanced numeric snapshot immutability, setup warnings, duplicate scope guard는 아직 남아 있다.
 
 | 영역 | Authoritative source | 저장 위치 | 주의점 |
 |------|----------------------|-----------|--------|
@@ -156,6 +158,7 @@ draft -> sent -> approved -> booked/job/invoice
 | 우선순위 | 항목 | 내용 |
 |----------|------|------|
 | P0 | Duplicate priced scope guard | Canonical total path는 구현됐지만, Quick/Advanced 견적에서 room anchor, quick estimate item, custom line item이 같은 scope를 중복 계산하지 않도록 structured scope key validator가 아직 필요 |
+| P0 | Quick/Advanced rate boundary hardening | Quick row metadata completeness, Advanced numeric anchor snapshot, A$0 setup warning, invalid surface validation, stale-rate quote A/B tests가 필요 |
 | P0 | AI Quote Form Builder structure | 고객용 scope section, 가격 row, clause library를 분리하고 legacy interior/exterior quote form을 재현 가능한 데이터 구조로 정리 |
 | P0 | Quote total parity hardening | Optional add-on/public quote/invoice preset parity는 focused tests 통과. 남은 작업은 exact create/update same-fixture test, PDF route regression, full suite/build |
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |

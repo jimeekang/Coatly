@@ -28,14 +28,14 @@
 
 ## v1 Build Plan Before Usage Tracking
 
-실제 사용량을 보려면 앱 구현이 먼저 끝나야 한다. 기능 구현 순서, 파일별 작업 범위, AI 연동, 사진 분석, usage/cost logging 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)를 기준 문서로 둔다.
+실제 사용량을 보려면 앱 구현이 먼저 끝나야 한다. 기능 구현 순서, 파일별 작업 범위, AI 연동, 사진 분석, usage/cost logging 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)를 기준 문서로 둔다. Task 1 세부 구현은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md), Task 2 Quick/Advanced rate boundary 세부 구현은 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 참조한다.
 
 이 체크리스트에는 validation 결과와 trial tracking 기록만 남긴다. 세부 구현 설명은 build plan과 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md)에 분리한다.
 
 | Week | 날짜 | 목표 | 상세 방법 | 결과 기록 |
 |------|------|------|-----------|-----------|
 | Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 + [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | 진행 중. 2026-05-17 기준 Task 1A canonical totals/optional add-on/public quote/invoice preset parity 구현 + focused tests 통과. Task 1B duplicate priced scope guard, PDF route regression, full suite/build 남음 |
-| Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + quote form schema | Task 2-3 | 미기록 |
+| Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + quote form schema | Task 2-3. Task 2 세부 계획: [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md) | 준비됨. 2026-05-17 기준 Quick schema/UI/snapshot helper와 Advanced room item library/source fields는 구현 확인. 남은 작업은 duplicate scope guard, Quick row metadata completeness, Advanced numeric snapshot, setup warnings, stale-rate A/B tests |
 | Build W3 | 2026-06-15 ~ 2026-06-19 | Quick/Advanced hardening + Scope/Clause builder UI | Task 4 | 미기록 |
 | Build W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Task 4 + Test matrix | 미기록 |
 | Build W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + usage logging | Task 5-6 | 미기록 |

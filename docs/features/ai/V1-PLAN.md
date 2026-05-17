@@ -55,7 +55,7 @@
 
 Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote Form Builder가 v1 wedge의 중심이지만, 첫 구현은 AI provider가 아니라 `price_rates`, quote calculation engine, 고객용 quote form data structure 정리다. Quick/Advanced 견적에서 anchor가 중복되거나 subtotal/GST/total이 화면마다 다르게 계산되면, AI를 붙여도 신뢰할 수 없는 견적이 된다. 또한 AI가 만든 문장이 가격 row와 섞이면 PDF/public quote/invoice 전환이 지저분해진다.
 
-구현자가 따라갈 파일별 순서와 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)에 분리한다. 이 문서는 wedge와 scope boundary를 요약하고, build plan은 usage tracking 전에 완성해야 할 실제 앱 작업 순서를 담당한다.
+구현자가 따라갈 파일별 순서와 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)에 분리한다. Task 1 가격 계산 foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md), Task 2 Quick/Advanced rate boundary는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 기준으로 구현한다.
 
 | ID | 영역 | 핵심 |
 |----|------|------|
@@ -83,7 +83,7 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 |------|------|----------------|
 | T0 / Task 1A canonical totals | 구현됨. `calculateQuoteTotals()`가 quote total authority가 되었고 optional add-on, public quote preview, quote-to-invoice preset parity가 focused tests를 통과했다 | PDF route regression과 full suite/build를 Task 1 종료 전에 실행 |
 | T0 / Task 1B duplicate priced scope guard | 미완료. 아직 structured scope key validator가 없어 quick/advanced scope와 custom line item의 이중 청구를 deterministic하게 막지 못한다 | `lib/quote-pricing-scopes.ts` 또는 Task 3 scope tables와 연결되는 scope key 설계 후 create/edit validation 적용 |
-| T0A Quick/Advanced hardening | 대기. canonical total path 일부는 준비됐지만 duplicate guard가 먼저 끝나야 한다 | room/surface toggle, average property preset, stale-rate snapshot tests를 Task 2에서 진행 |
+| T0A Quick/Advanced hardening | 부분 구현. Quick schema/UI/snapshot helper와 Advanced room item library/source copy는 있음. duplicate guard, Advanced numeric snapshot, setup warnings, quote-level stale-rate tests는 미완료 | [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)에 따라 Task 1B dependency 후 구현 |
 | AI provider / Qwen work | 시작 전 | AI pricing candidates는 Task 1B와 Task 2가 끝난 뒤에만 연결 |
 
 ## AI 역할 boundary (D6 / Codex Hybrid)
@@ -118,6 +118,13 @@ v1 quote 계산은 "어떤 항목이 돈을 만드는가"를 먼저 고정한다
 - quote preview, save, detail, PDF, invoice conversion은 같은 subtotal/GST/total 규칙을 사용한다.
 - rate 변경 후 기존 quote는 snapshot 기준으로 유지하고, 새 quote만 새 rates를 사용한다.
 - AI가 만든 scope는 저장 전 user review를 거치고, 금액은 deterministic pricing pass가 생성한다.
+
+2026-05-17 implementation note:
+
+- Quick estimate는 unit-level snapshot behavior가 준비되어 있지만 `quote_estimate_items.metadata`에 source id/version/label, snapshot version, per-surface cents를 추가해야 한다.
+- Advanced estimate는 source id/version/label이 payload에 저장되지만 numeric anchor snapshot immutability가 아직 부족하다.
+- room-level `include_doors` / `include_windows` toggles는 calculator input과 직접 연결되지 않으므로 v1에서는 제거하거나 explicit opening item 생성으로 wire해야 한다.
+- 세부 구현 순서는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 따른다.
 
 ## AI-assisted Quote Form Builder Structure
 

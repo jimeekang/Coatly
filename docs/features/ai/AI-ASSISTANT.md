@@ -1,12 +1,14 @@
 # Feature: AI Assistant
 
-> Phase 2 AI draft panel + Workspace Assistant seed가 부분 구현된 상태. v1 wedge는 "AI-assisted Quote Form Builder"이고, 보조 AI 범위는 Today Assistant + Follow-up Writer로 제한됨 — 자세한 v1 build 계획은 [V1-PLAN.md](./V1-PLAN.md), quote form 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md), pricing foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md).
+> Phase 2 AI draft panel + Workspace Assistant seed가 부분 구현된 상태. v1 wedge는 "AI-assisted Quote Form Builder"이고, 보조 AI 범위는 Today Assistant + Follow-up Writer로 제한됨 — 자세한 v1 build 계획은 [V1-PLAN.md](./V1-PLAN.md), quote form 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md), pricing foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md), Quick/Advanced rate boundary는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md).
 
 ## v1 Wedge (2026-05-15 APPROVED)
 
 호주 1–3인 painter가 현장 노트 + rough measurements + 보조 사진 + price_rates를 넣으면, AI가 polished quote form 초안(`scope_sections`, `scope_steps`, `pricing_candidates`, `clauses`)을 1–2분 안에 생성한다. v1 목표 모델은 **Alibaba Cloud / Qwen `qwen3-vl-flash`**다.
 
 **핵심 boundary**: AI는 surface 매핑 + scope/exclusion/clause writing만 한다. **Pricing은 deterministic** — painter price_rates table에서 server-side lookup. AI 출력 schema에서 rate/price/GST/total field 제거 + `lib/ai/apply-deterministic-pricing.ts` post-pass로 채움.
+
+2026-05-17 기준 AI pricing candidate 적용 전 선행 조건: Task 1B duplicate priced scope guard와 Task 2 Quick/Advanced snapshot/setup warning/stale-rate hardening이 완료되어야 한다.
 
 **v1 보조 AI**: Today Assistant(오늘 처리할 quote follow-up / overdue invoice / job 요약) + Follow-up Writer(고객에게 보낼 SMS/email 초안). 범용 Workspace Assistant 채팅은 v1에서 끄고, 이 두 helper만 노출한다.
 
@@ -177,6 +179,7 @@ Quote/customer/invoice detail에서 고객 메시지 초안을 만든다.
 ## 관련 문서
 
 - [V1-PLAN.md](./V1-PLAN.md) — full v1 wedge + work item 요약
+- [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md) — Quick/Advanced rate boundary + snapshot hardening 세부 계획
 - [../quote/AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md) — scope/pricing/clause data model + AI output contract
 - [../audit/AUDIT.md A3](../audit/AUDIT.md) — governance 활성 finding
 - [../../PLANS.md](../../PLANS.md) — Phase 2 progress
