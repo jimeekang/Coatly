@@ -1,7 +1,7 @@
 # Generated: DB Schema Summary
 
 > ⚠️ 이 파일은 참조용 스냅샷입니다. 정확한 스키마는 `supabase/migrations/`와 `types/database.ts`를 확인하세요.
-> 마지막 업데이트: 2026-05-15 (migration 049 기준)
+> 마지막 업데이트: 2026-05-17 (migration 049 + 20260517020123 Task 2 category constraint 기준)
 
 ## Tables
 
@@ -24,7 +24,7 @@
 `id(PK) | room_id(FK) | surface_type | area_sqm | coating_type | rate_per_sqm_cents | costs_cents | tier(complexity) | notes`
 
 ### quote_estimate_items
-`id(PK) | quote_id(FK) | category | label | quantity | unit_price_cents | total_cents | size | selected_surfaces | coating_multiplier_pct | condition_multiplier_pct | item_notes`
+`id(PK) | quote_id(FK) | category(entire_property|room|room_anchor|door|window|trim|skirting|modifier|quick_estimate) | label | quantity | unit_price_cents | total_cents | size | selected_surfaces | coating_multiplier_pct | condition_multiplier_pct | item_notes | metadata`
 
 ### invoices
 `id(PK) | user_id(FK) | customer_id(FK) | quote_id(FK,nullable) | invoice_number | status | invoice_type | totals_cents | amount_paid_cents | due_date | paid_at | public_share_token`
@@ -75,6 +75,6 @@
 | logos | Private (per user) | 비즈니스 로고 |
 | photos | Private (per user) | 현장 사진 |
 
-## Migrations (001–049)
+## Migrations (001–049 + timestamped Task 2)
 
-총 49개 마이그레이션. 041–049는 detailed quick estimate, invoice public PDF token, RPC 권한 축소, trigger search_path hardening, RLS/linter 성능 보정을 포함합니다.
+총 49개 numbered migration과 timestamped Task 2 category constraint migration이 있습니다. 041–049는 detailed quick estimate, invoice public PDF token, RPC 권한 축소, trigger search_path hardening, RLS/linter 성능 보정을 포함합니다. `20260517020123_quote_estimate_item_task2_categories.sql`은 `quote_estimate_items.category`에 `room_anchor`, `trim`, `quick_estimate`를 허용합니다.

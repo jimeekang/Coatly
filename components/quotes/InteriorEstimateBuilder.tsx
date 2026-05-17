@@ -73,6 +73,15 @@ export type InteriorEstimateRoomFormState = {
   source_rate_item_version?: number;
   source_rate_item_label?: string;
   rate_snapshot_version?: 1;
+  source_anchor_range_cents?: {
+    min: number;
+    median: number;
+    max: number;
+  };
+  source_surface_rate_multiplier?: number;
+  source_scope_multiplier?: number;
+  source_condition?: InteriorCondition;
+  source_wall_paint_system?: InteriorWallPaintSystem;
 };
 export type InteriorDoorFormState = {
   door_type: InteriorDoorType;
@@ -427,8 +436,6 @@ export function InteriorEstimateBuilder({
                         { key: 'include_walls', label: 'Walls' },
                         { key: 'include_ceiling', label: 'Ceiling' },
                         { key: 'include_trim', label: 'Trim' },
-                        { key: 'include_doors', label: 'Doors' },
-                        { key: 'include_windows', label: 'Windows' },
                       ] as const
                     ).map(({ key, label }) => (
                       <button
@@ -441,6 +448,13 @@ export function InteriorEstimateBuilder({
                       </button>
                     ))}
                   </div>
+                  {!room.include_walls &&
+                    !room.include_ceiling &&
+                    !room.include_trim && (
+                      <p className="mt-2 text-xs font-medium text-red-700">
+                        Select at least one surface for Room {index + 1}.
+                      </p>
+                    )}
                 </div>
               </div>
             ))}

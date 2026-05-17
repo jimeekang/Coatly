@@ -39,9 +39,12 @@ export type QuoteEstimateCategory = 'manual' | 'interior';
 export type QuoteEstimateItemCategory =
   | 'entire_property'
   | 'room'
+  | 'room_anchor'
   | 'door'
   | 'window'
+  | 'trim'
   | 'skirting'
+  | 'quick_estimate'
   | 'modifier';
 export type QuoteCoatingType =
   | 'refresh_1coat'
@@ -576,6 +579,17 @@ function normalizeInteriorEstimate(
       include_walls: room.include_walls,
       include_ceiling: room.include_ceiling,
       include_trim: room.include_trim,
+      source_rate_item_id: room.source_rate_item_id,
+      source_rate_item_version: room.source_rate_item_version,
+      source_rate_item_label: room.source_rate_item_label,
+      rate_snapshot_version: room.rate_snapshot_version,
+      source_anchor_range_cents: room.source_anchor_range_cents,
+      source_surface_rate_multiplier: room.source_surface_rate_multiplier,
+      source_scope_multiplier: room.source_scope_multiplier,
+      source_condition: room.source_condition,
+      source_wall_paint_system: normalizeInteriorWallPaintSystem(
+        room.source_wall_paint_system
+      ) ?? undefined,
     })),
     opening_items: estimate.opening_items.map((item) => ({
       opening_type: item.opening_type,
@@ -586,12 +600,17 @@ function normalizeInteriorEstimate(
       door_scope: item.door_scope,
       window_type: item.window_type,
       window_scope: item.window_scope,
+      rate_snapshot_version: item.rate_snapshot_version,
+      source_unit_price_cents: item.source_unit_price_cents,
+      source_quantity_scale_factor: item.source_quantity_scale_factor,
     })),
     trim_items: estimate.trim_items.map((item) => ({
       trim_type: item.trim_type,
       paint_system: item.paint_system,
       quantity: item.quantity,
       room_index: item.room_index ?? null,
+      rate_snapshot_version: item.rate_snapshot_version,
+      source_unit_price_cents: item.source_unit_price_cents,
     })),
   };
 }
@@ -881,6 +900,8 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
           is_optional,
           is_selected: is_optional ? (item.is_selected ?? false) : true,
           notes: item.notes?.trim() || undefined,
+          pricing_scope_key: item.pricing_scope_key?.trim() || undefined,
+          pricing_role: item.pricing_role,
         };
       }),
       rooms: parsed.data.rooms.map((room) => ({

@@ -18,7 +18,7 @@
 
 ## Implementation Review (2026-05-17)
 
-**Status:** PARTIAL. Task 1A인 canonical quote total path는 구현되어 있고 focused regression tests는 통과했다. Task 1B인 deterministic duplicate priced scope guard, linked-invoice/rollback edge tests, full safety verification은 아직 남아 있다.
+**Status:** COMPLETE. Task 1A canonical quote total path와 Task 1B deterministic duplicate priced scope guard가 구현됐고, linked-invoice/rollback edge tests, PDF route regression, full test suite, production build verification까지 통과했다.
 
 ### Completed
 
@@ -30,34 +30,34 @@
 | Optional add-on recalculation | Admin/public optional item selection이 `discount_cents`, `manual_adjustment_cents`를 select하고 `calculateQuoteTotals()`로 다음 total을 만든다. Public failure rollback 코드도 존재한다. |
 | Public quote preview | `PublicQuoteClient`가 `discount_cents`, `manual_adjustment_cents`, selected optional add-ons를 `calculateQuoteTotals()`로 다시 계산해 표시한다. |
 | Quote-to-invoice presets | `lib/invoice-quote-presets.ts`가 base quote scope line, selected optional add-ons, discounted single parity line, manual adjustment block을 처리한다. |
-| Focused regression | 2026-05-17 실행: `lib/quotes.test.ts app/actions/quotes.test.ts` 37 passed, `lib/invoices.test.ts app/actions/invoices.test.ts` 30 passed, `components/quotes/QuoteForm.test.tsx components/invoices/InvoiceForm.test.tsx` 35 passed. |
+| Create/update parity | `app/actions/quotes.test.ts`에 같은 day-rate fixture가 create/update에서 동일한 `subtotal_cents`, `gst_cents`, `total_cents`, `pricing_method_inputs`, line item snapshot을 저장하는 회귀 테스트가 있다. |
+| Optional linked invoice + rollback | Admin/public optional add-on selection은 linked invoice가 있으면 line item/quote total update를 하지 않는다. Public quote total update 실패 시 original `is_selected`로 rollback한다. |
+| Deterministic duplicate scope guard | `lib/quote-pricing-scopes.ts`가 Quick, Advanced interior, manual room, exterior scope keys를 만들고, `pricing_scope_key` + `pricing_role`이 중복 priced scope를 가리키면 create/update payload를 차단한다. Fuzzy free-text overlap은 UI warning만 표시한다. |
+| Focused regression | 2026-05-17 실행: `lib/quotes.test.ts app/actions/quotes.test.ts` 43 passed, `lib/invoices.test.ts app/actions/invoices.test.ts` 30 passed, `components/quotes/QuoteForm.test.tsx components/invoices/InvoiceForm.test.tsx` 37 passed, `app/api/pdf/quote/route.test.ts lib/quote-pricing-scopes.test.ts` 5 passed. |
+| Full safety verification | 2026-05-17 실행: `npm run test:run` 59 files / 366 tests passed, `npm run build` passed, `npm run lint` passed. |
 
 ### Still Needed Before Task 1 Is Complete
 
 | Gap | Why it matters | Suggested implementation |
 |-----|----------------|--------------------------|
-| Exact create/update parity fixture | create/update both use the helper, but tests do not yet prove the same input fixture produces identical saved totals across both flows. | Add one shared test fixture in `app/actions/quotes.test.ts`. Run it through create and update mocks, then assert identical `subtotal_cents`, `gst_cents`, `total_cents`, `pricing_method_inputs`, and estimate item totals. |
-| Admin/public optional linked-invoice tests | Code blocks optional changes when linked invoices exist, but the edge is not explicitly tested. | Add tests where `getLinkedInvoiceCountForQuote()` returns count > 0 for admin and public optional selection. Assert no line item update and no quote total update. |
-| Public rollback test | Public optional selection has rollback when quote total update fails, but it is not covered. | Add a test where line item update succeeds, quote update fails, and the original `is_selected` value is restored. |
-| Quote UI server fixture parity | `QuoteForm` uses `composeQuoteTotals()`, but the UI tests do not compare a known server fixture across preview/save semantics. | Add a fixture with base scope + selected add-on + unselected optional + discount + manual adjustment. Assert displayed subtotal/GST/total matches `calculateQuoteTotals()`. |
-| PDF quote total regression | PDF route/template is part of the customer-facing total story, but Task 1 focused run did not include PDF route tests. | Run and, if needed, add `app/api/pdf/quote/route.test.ts` coverage for discount, adjustment, selected optional add-on, and unselected optional item. |
-| Deterministic duplicate priced scope guard | This is the largest missing guardrail. Current code still cannot block a structured duplicate like "Bedroom 1 walls" already included by quick/advanced scope unless the input carries a deterministic scope key. | Add `lib/quote-pricing-scopes.ts` with structured scope key builders and validation. If existing columns are insufficient, introduce a small reviewed schema change such as `quote_line_items.pricing_scope_key text null` and `quote_line_items.pricing_role text null check (...)`, or defer persistence to Task 3 scope tables but block duplicates in the create/edit payload first. |
-| Full safety verification | Task 1 completion criteria require full test suite and build, not only focused tests. | After duplicate guard/tests land, run `npm run test:run` and `npm run build`. |
+| None for Task 1 | Task 1 scope is closed for v1 pricing foundation. | Task 2 follow-on work is also complete as of 2026-05-17. Next pricing-related follow-on is Task 4 legacy quote reconstruction and Task 3 AI candidate schema boundary. |
 
 ### Recommended Split
 
-Treat the implemented work as **Task 1A: canonical quote totals and invoice parity**. Keep Task 1 open as **Task 1B: duplicate priced scope guard and final safety verification** before starting AI pricing candidates, Qwen adapter, or photo helper work.
+Task 1 is now closed as **Task 1A: canonical quote totals and invoice parity** plus **Task 1B: duplicate priced scope guard and final safety verification**. Task 2 rate-boundary hardening is also complete; AI pricing candidates, Qwen adapter, and photo helper now wait for Task 3 quote form structure schema and deterministic candidate review.
 
 ## Files
 
 **Modify:**
 - `lib/quotes.ts`
+- `lib/quote-pricing-scopes.ts`
 - `app/actions/quotes.ts`
 - `components/quotes/QuoteForm.tsx`
 - `components/quotes/public/PublicQuoteClient.tsx`
 - `lib/invoices.ts`
 - `components/invoices/InvoiceForm.tsx`
 - `lib/quotes.test.ts`
+- `lib/quote-pricing-scopes.test.ts`
 - `app/actions/quotes.test.ts`
 - `lib/invoices.test.ts`
 - `app/actions/invoices.test.ts`
@@ -79,11 +79,11 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
 | Finding | 2026-05-17 status |
 |---------|-------------------|
 | `lib/quotes.ts` had `composeQuoteTotals()` but did not expose `discounted_subtotal_cents` under an explicit canonical name | Fixed. `calculateQuoteTotals()` exists and `composeQuoteTotals()` delegates to it |
-| `createQuote()` and `updateQuote()` repeated pricing-method resolution logic | Mostly fixed. `resolveQuotePricingPreviewForSave()` centralizes the logic; exact same-fixture create/update parity test still needed |
+| `createQuote()` and `updateQuote()` repeated pricing-method resolution logic | Fixed. `resolveQuotePricingPreviewForSave()` centralizes the logic and a same-fixture create/update parity test proves identical saved totals |
 | Optional add-on selection recalculated GST/total manually and did not include `discount_cents` | Fixed in code. Admin/public optional selection selects discount/manual adjustment and uses `calculateQuoteTotals()` |
 | Public quote preview recalculated totals locally without discount/manual adjustment parity | Fixed in code. Public quote detail select and client preview include discount/manual adjustment |
 | Quote-to-invoice defaults could miss base quote scope or mishandle add-ons | Fixed for presets. Base quote scope, selected optional add-ons, discount parity line, and manual adjustment block are implemented |
-| Reliable duplicate-priced-scope blocking cannot depend only on free-text line item names | Still open. Deterministic scope keys/validator are not implemented yet |
+| Reliable duplicate-priced-scope blocking cannot depend only on free-text line item names | Fixed for v1 payload validation. `lib/quote-pricing-scopes.ts` blocks structured duplicate `pricing_scope_key` rows and warns, but does not block, fuzzy free-text overlaps |
 
 ## Canonical Money Contract
 
@@ -112,6 +112,7 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
 | `quotes.estimate_context` / `pricing_snapshot` | Keep as the saved audit snapshot for interior/exterior estimate inputs and rate snapshot |
 | `quote_estimate_items.total_cents` | Method detail rows only; never added again if already included in `base_subtotal_cents` |
 | `quote_line_items.total_cents` | Add-on/service/material rows only; optional unselected rows are excluded from totals |
+| `quote_line_items.pricing_scope_key` / `pricing_role` | Not persisted in v1. These optional payload fields are validated before save to block duplicate priced scope rows, then omitted from existing DB inserts. A future Task 3 schema can persist them if scope tables are introduced. |
 | Supabase migration | No new migration should be required for canonical totals. If implementation proves a persisted scope key is required, stop and add that as a separate reviewed schema task instead of silently overloading existing columns |
 
 ## Authoritative Price Source Map
@@ -166,9 +167,9 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
   - Call `calculateQuoteTotals()` once after the base subtotal is known.
   - Keep AI and photo analysis out of the calculation path.
 
-  **Implementation review:** Done at helper level. `resolveQuotePricingPreviewForSave()` centralizes save preview resolution and both create/update consume it. Follow-up: add exact same-fixture create/update parity test.
+  **Implementation review:** Done. `resolveQuotePricingPreviewForSave()` centralizes save preview resolution, both create/update consume it, and same-fixture parity coverage is in `app/actions/quotes.test.ts`.
 
-- [ ] **Step 4: Replace create/update quote total writes**
+- [x] **Step 4: Replace create/update quote total writes**
 
   In both quote create and quote update flows:
 
@@ -177,9 +178,9 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
   - Keep relation inserts (`quote_rooms`, `quote_room_surfaces`, `quote_estimate_items`, `quote_line_items`) as detail snapshots, not separate total authorities.
   - Add tests in `app/actions/quotes.test.ts` proving create and update produce identical totals for the same input.
 
-  **Status:** Partial. Create/update writes now use the helper totals. Remaining work is the exact same-input create/update parity test requested above.
+  **Implementation review:** Done. Create/update writes use helper totals, and `app/actions/quotes.test.ts` proves the same fixture produces identical saved totals and line item snapshots.
 
-- [ ] **Step 5: Fix optional add-on selection recalculation**
+- [x] **Step 5: Fix optional add-on selection recalculation**
 
   In `setQuoteOptionalLineItemSelection()` and `setPublicQuoteOptionalLineItemSelection()`:
 
@@ -189,9 +190,9 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
   - Preserve the current rollback behavior when the public update fails.
   - Add tests for admin/public optional selection with discount present, unselected optional item present, and linked invoice lock present.
 
-  **Status:** Partial. Admin/public optional selection recalculation now uses `calculateQuoteTotals()` and discount/manual adjustment fields. Remaining tests: linked-invoice lock for admin/public and public rollback on quote update failure.
+  **Implementation review:** Done. Admin/public optional selection recalculation uses `calculateQuoteTotals()` with discount/manual adjustment fields. Tests cover linked-invoice lock for admin/public and public rollback when quote total update fails.
 
-- [ ] **Step 6: Update quote UI preview to match the server contract**
+- [x] **Step 6: Update quote UI preview to match the server contract**
 
   In `components/quotes/QuoteForm.tsx`:
 
@@ -201,7 +202,7 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
   - Ensure Quick and Advanced previews do not add the same scope twice when extra line items are entered.
   - Add `components/quotes/QuoteForm.test.tsx` coverage for displayed total parity with server test fixtures.
 
-  **Status:** Partial. `QuoteForm` uses `composeQuoteTotals()` and optional add-ons are excluded while optional. Remaining work is server-fixture parity coverage and duplicate priced scope warning/blocking.
+  **Implementation review:** Done. `QuoteForm` uses `composeQuoteTotals()`, optional add-ons remain excluded until selected, a canonical day-rate fixture test compares UI totals with `calculateQuoteTotals()`, and fuzzy duplicate scope names show a warning instead of blocking.
 
 - [x] **Step 7: Update public quote total preview**
 
@@ -225,7 +226,7 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
 
   **Implementation review:** Done. `buildQuoteInvoicePresetLines()` creates base scope lines, includes selected optional add-ons only, uses a discounted parity-safe single line, and blocks manual adjustments with a clear error. Covered by invoice library, action, and form tests.
 
-- [ ] **Step 9: Add deterministic duplicate priced scope guard**
+- [x] **Step 9: Add deterministic duplicate priced scope guard**
 
   In `lib/quotes.ts` and `lib/supabase/validators.ts` if needed:
 
@@ -234,7 +235,7 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
   - For fuzzy free-text overlaps, show a UI warning instead of blocking. Example: custom line item name "Living room walls" should warn if living room walls are already included, but it should not block unless the source key is deterministic.
   - Add tests showing duplicate walls/ceiling/trim are blocked or downgraded to non-priced scope, while legitimate add-ons like wallpaper removal, patch repair, travel, scaffold, and premium paint upgrade remain allowed.
 
-  **Status:** Not implemented. No deterministic scope key builder or duplicate priced scope validator exists yet. This is the main blocker before Task 1 can close.
+  **Implementation review:** Done. `lib/quote-pricing-scopes.ts` builds Quick, Advanced interior, manual room, and exterior keys; create/update actions block duplicate `priced_scope` line items; `QuoteForm` warns for fuzzy free-text overlaps. No Supabase migration was introduced.
 
 - [x] **Step 10: Run focused regression tests**
 
@@ -252,9 +253,9 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
   npm run test:run -- app/api/pdf/quote/route.test.ts
   ```
 
-  **Verification run (2026-05-17):** quote action/library tests 37 passed, invoice action/library tests 30 passed, quote/invoice form tests 35 passed. PDF route test was not rerun in this review.
+  **Verification run (2026-05-17):** quote action/library tests 43 passed, invoice action/library tests 30 passed, quote/invoice form tests 37 passed, PDF route + pricing scope tests 5 passed.
 
-- [ ] **Step 11: Run full safety verification**
+- [x] **Step 11: Run full safety verification**
 
   Before Task 1 is considered complete:
 
@@ -270,4 +271,4 @@ Treat the implemented work as **Task 1A: canonical quote totals and invoice pari
   - No Supabase schema migration is introduced unless the duplicate-scope guard cannot be made deterministic with existing data.
   - AI still has no access to write quote prices.
 
-  **Status:** Not complete. Full `npm run test:run` and `npm run build` were not rerun after this review, and Step 9 duplicate scope guard is still open.
+  **Verification run (2026-05-17):** `npm run test:run` passed 59 files / 366 tests, `npm run build` passed, and `npm run lint` passed.

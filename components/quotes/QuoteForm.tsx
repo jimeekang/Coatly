@@ -21,10 +21,18 @@ import {
   calculateInteriorEstimate,
   isInteriorEstimateInput,
   normalizeInteriorWallPaintSystem,
+  snapshotInteriorEstimateInput,
   type InteriorEstimateInput,
   type InteriorRoomType,
 } from '@/lib/interior-estimates';
 import { mapQuickQuoteToInteriorEstimate } from '@/lib/quick-quote-mapper';
+import { findQuotePricingScopeIssues } from '@/lib/quote-pricing-scopes';
+import {
+  getFirstBlockingRateSetupIssue,
+  getSelectedAdvancedEstimateIssues,
+  getSelectedQuickEstimateIssues,
+  type RateSetupIssue,
+} from '@/lib/rate-setup-diagnostics';
 import {
   calculateDepositCents,
   calculateQuoteLineItemsSubtotal,
@@ -41,7 +49,7 @@ import type {
   MaterialItem,
   QuoteLineItemFormInput,
 } from '@/lib/supabase/validators';
-import type { UserRateSettings } from '@/lib/rate-settings';
+import { DEFAULT_RATE_SETTINGS, type UserRateSettings } from '@/lib/rate-settings';
 import { LineItemsSection } from '@/components/quotes/LineItemsSection';
 import {
   QuoteExtraLineItems,
@@ -258,6 +266,11 @@ function buildInitialAdvancedEstimate(
         source_rate_item_version: room.source_rate_item_version,
         source_rate_item_label: room.source_rate_item_label,
         rate_snapshot_version: room.rate_snapshot_version,
+        source_anchor_range_cents: room.source_anchor_range_cents,
+        source_surface_rate_multiplier: room.source_surface_rate_multiplier,
+        source_scope_multiplier: room.source_scope_multiplier,
+        source_condition: room.source_condition,
+        source_wall_paint_system: room.source_wall_paint_system,
       })),
       doors: estimateContext.opening_items
         .filter((item) => item.opening_type === 'door')
@@ -318,8 +331,19 @@ function buildInitialAdvancedEstimate(
   };
 }
 
+function hasInvalidSpecificAreaRoom(estimate: InteriorEstimateFormState) {
+  return (
+    estimate.estimate_mode === 'specific_areas' &&
+    estimate.rooms.some(
+      (room) =>
+        !room.include_walls && !room.include_ceiling && !room.include_trim
+    )
+  );
+}
+
 function buildAdvancedEstimatePayload(
-  estimate: InteriorEstimateFormState
+  estimate: InteriorEstimateFormState,
+  rateSettings?: UserRateSettings | null
 ): InteriorEstimateInput {
   const property_details =
     estimate.property_type === 'apartment'
@@ -352,7 +376,7 @@ function buildAdvancedEstimatePayload(
     };
   }
 
-  return {
+  const payload: InteriorEstimateInput = {
     property_type: estimate.property_type,
     estimate_mode: estimate.estimate_mode,
     condition: estimate.condition,
@@ -373,6 +397,11 @@ function buildAdvancedEstimatePayload(
       source_rate_item_version: room.source_rate_item_version,
       source_rate_item_label: room.source_rate_item_label,
       rate_snapshot_version: room.rate_snapshot_version,
+      source_anchor_range_cents: room.source_anchor_range_cents,
+      source_surface_rate_multiplier: room.source_surface_rate_multiplier,
+      source_scope_multiplier: room.source_scope_multiplier,
+      source_condition: room.source_condition,
+      source_wall_paint_system: room.source_wall_paint_system,
     })),
     opening_items: [
       ...estimate.doors
@@ -406,6 +435,12 @@ function buildAdvancedEstimatePayload(
         room_index: t.room_index === '' ? null : intVal(t.room_index, 0),
       })),
   };
+
+  if (!rateSettings || hasInvalidSpecificAreaRoom(estimate)) {
+    return payload;
+  }
+
+  return snapshotInteriorEstimateInput(payload, rateSettings);
 }
 
 function getCustomerEmails(customer: QuoteCustomerOption | null) {
@@ -435,6 +470,38 @@ function getCustomerProperties(customer: QuoteCustomerOption | null) {
       address: customer.address,
     },
   ] satisfies QuoteCustomerPropertyOption[];
+}
+
+function getQuoteRateSetupIssues(
+  payload: QuoteCreateInput,
+  rateSettings: UserRateSettings
+): RateSetupIssue[] {
+  if (
+    payload.pricing_method === 'detailed_quick' &&
+    payload.pricing_method_inputs?.method === 'detailed_quick'
+  ) {
+    return getSelectedQuickEstimateIssues(
+      payload.pricing_method_inputs.inputs,
+      rateSettings
+    );
+  }
+
+  if (payload.interior_estimate) {
+    const interiorEstimate = {
+      ...payload.interior_estimate,
+      wall_paint_system:
+        normalizeInteriorWallPaintSystem(
+          payload.interior_estimate.wall_paint_system
+        ) ?? 'repaint_2coat',
+    } as InteriorEstimateInput;
+
+    return getSelectedAdvancedEstimateIssues(
+      interiorEstimate,
+      rateSettings
+    );
+  }
+
+  return [];
 }
 
 function PricingSummaryPanel({
@@ -978,8 +1045,9 @@ export function QuoteForm({
       quoteScope !== 'interior'
     )
       return null;
+    if (hasInvalidSpecificAreaRoom(advancedEstimate)) return null;
     return calculateInteriorEstimate(
-      buildAdvancedEstimatePayload(advancedEstimate),
+      buildAdvancedEstimatePayload(advancedEstimate, rateSettings),
       rateSettings
     );
   }, [
@@ -1067,6 +1135,14 @@ export function QuoteForm({
 
   const displayTotal =
     composedMethodPreview?.total_cents ?? hybridTotals?.total_cents ?? 0;
+  const effectiveRateSettings = rateSettings ?? DEFAULT_RATE_SETTINGS;
+  const currentPayload = buildPayload();
+  const rateSetupIssues = getQuoteRateSetupIssues(
+    currentPayload,
+    effectiveRateSettings
+  );
+  const blockingRateSetupIssue =
+    getFirstBlockingRateSetupIssue(rateSetupIssues);
   const depositCents = calculateDepositCents(displayTotal, depositPercent);
   const activeMethodLabel =
     pricingStrategy === 'hybrid'
@@ -1199,6 +1275,7 @@ export function QuoteForm({
     form.customer_id &&
     form.title.trim() &&
     form.valid_until &&
+    !blockingRateSetupIssue &&
     (pricingStrategy === 'day_rate' ||
       pricingStrategy === 'manual' ||
       (pricingStrategy === 'room_rate' && roomRateItems.length > 0) ||
@@ -1381,7 +1458,10 @@ export function QuoteForm({
           rooms: quickState.rooms,
         });
       } else {
-        interior_estimate = buildAdvancedEstimatePayload(advancedEstimate);
+        interior_estimate = buildAdvancedEstimatePayload(
+          advancedEstimate,
+          rateSettings
+        );
       }
       payload = {
         customer_id: form.customer_id,
@@ -1422,9 +1502,24 @@ export function QuoteForm({
   ) {
     if (!onSubmit) return;
 
+    const rateIssue = getFirstBlockingRateSetupIssue(
+      getQuoteRateSetupIssues(payload, effectiveRateSettings)
+    );
+    if (rateIssue) {
+      setError(rateIssue.message);
+      return;
+    }
+
     const parsed = parseQuoteCreateInput(payload);
     if (!parsed.success) {
       setError(parsed.error);
+      return;
+    }
+
+    const pricingScopeIssue = findQuotePricingScopeIssues(parsed.data)
+      .errors[0];
+    if (pricingScopeIssue) {
+      setError(pricingScopeIssue.message);
       return;
     }
 
@@ -1451,6 +1546,14 @@ export function QuoteForm({
     const parsed = parseQuoteCreateInput(payload);
     if (!parsed.success) {
       setError(parsed.error);
+      return;
+    }
+
+    const rateIssue = getFirstBlockingRateSetupIssue(
+      getQuoteRateSetupIssues(payload, effectiveRateSettings)
+    );
+    if (rateIssue) {
+      setError(rateIssue.message);
       return;
     }
 
@@ -1487,6 +1590,9 @@ export function QuoteForm({
 
     submitQuote(buildPayload(), 'save');
   }
+
+  const pricingScopeWarnings =
+    findQuotePricingScopeIssues(currentPayload).warnings;
 
   function addManualRoomRateItem() {
     setRoomRateItems((prev) => [
@@ -2264,6 +2370,57 @@ export function QuoteForm({
             value={extraLineItems}
             onChange={setExtraLineItems}
           />
+
+          {rateSetupIssues.length > 0 && (
+            <div
+              className={`rounded-xl border px-4 py-3 ${
+                blockingRateSetupIssue
+                  ? 'border-red-200 bg-red-50'
+                  : 'border-amber-200 bg-amber-50'
+              }`}
+            >
+              <p
+                className={`text-xs font-semibold uppercase tracking-wide ${
+                  blockingRateSetupIssue ? 'text-red-800' : 'text-amber-800'
+                }`}
+              >
+                Rate setup check
+              </p>
+              <div className="mt-1 space-y-1">
+                {rateSetupIssues.map((issue) => (
+                  <p
+                    key={`${issue.code}-${issue.source_id ?? issue.message}`}
+                    className={`text-sm ${
+                      blockingRateSetupIssue ? 'text-red-800' : 'text-amber-800'
+                    }`}
+                  >
+                    {issue.message}{' '}
+                    <Link href="/price-rates" className="font-medium underline">
+                      Open Price Rates
+                    </Link>
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {pricingScopeWarnings.length > 0 && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                Scope warning
+              </p>
+              <div className="mt-1 space-y-1">
+                {pricingScopeWarnings.map((warning) => (
+                  <p
+                    key={`${warning.line_item_name}-${warning.scope_label}`}
+                    className="text-sm text-amber-800"
+                  >
+                    {warning.message}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">

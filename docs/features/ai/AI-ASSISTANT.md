@@ -8,7 +8,7 @@
 
 **핵심 boundary**: AI는 surface 매핑 + scope/exclusion/clause writing만 한다. **Pricing은 deterministic** — painter price_rates table에서 server-side lookup. AI 출력 schema에서 rate/price/GST/total field 제거 + `lib/ai/apply-deterministic-pricing.ts` post-pass로 채움.
 
-2026-05-17 기준 AI pricing candidate 적용 전 선행 조건: Task 1B duplicate priced scope guard와 Task 2 Quick/Advanced snapshot/setup warning/stale-rate hardening이 완료되어야 한다.
+2026-05-17 기준 AI pricing candidate 적용 전 선행 조건: Task 1 duplicate priced scope guard와 Task 2 Quick/Advanced snapshot/setup warning/stale-rate hardening은 완료됐다. 다음 선행 조건은 Task 3 quote form structure schema와 AI candidate를 deterministic pricing review path로만 적용하는 서버 검증이다.
 
 **v1 보조 AI**: Today Assistant(오늘 처리할 quote follow-up / overdue invoice / job 요약) + Follow-up Writer(고객에게 보낼 SMS/email 초안). 범용 Workspace Assistant 채팅은 v1에서 끄고, 이 두 helper만 노출한다.
 

@@ -29,8 +29,17 @@ import {
   type PublicQuoteDetail,
   type QuoteSurfaceType,
 } from '@/lib/quotes';
-import { calculateInteriorEstimate } from '@/lib/interior-estimates';
+import {
+  calculateInteriorEstimate,
+  snapshotInteriorEstimateInput,
+} from '@/lib/interior-estimates';
 import { calculateExteriorEstimate } from '@/lib/exterior-estimates';
+import { getFirstBlockingQuotePricingScopeError } from '@/lib/quote-pricing-scopes';
+import {
+  getFirstBlockingRateSetupIssue,
+  getSelectedAdvancedEstimateIssues,
+  getSelectedQuickEstimateIssues,
+} from '@/lib/rate-setup-diagnostics';
 import {
   getBusinessDocumentBranding,
   getBusinessRateSettings,
@@ -199,6 +208,16 @@ function buildQuickEstimateItemRows(quoteId: string, inputs: QuickInputs) {
     item_notes: room.notes ?? null,
     metadata: {
       room_id: room.room_id,
+      source_rate_item_id: room.source_rate_item_id ?? null,
+      source_rate_item_version: room.source_rate_item_version ?? null,
+      source_rate_item_label: room.source_rate_item_label ?? null,
+      rate_snapshot_version: room.rate_snapshot_version ?? null,
+      walls_cents: room.walls_cents,
+      ceiling_cents: room.ceiling_cents,
+      trim_cents: room.trim_cents,
+      selected_surfaces: room.selected_surfaces,
+      coating_multiplier_pct: room.coating_multiplier_pct,
+      condition_multiplier_pct: room.condition_multiplier_pct,
       global_coating: inputs.global_coating,
       global_condition: inputs.global_condition,
     },
@@ -307,8 +326,11 @@ function resolveQuotePricingPreviewForSave(
   data: ParsedQuoteCreateData,
   effectiveRates: UserRateSettings
 ) {
-  const interiorEstimate = data.interior_estimate
-    ? calculateInteriorEstimate(data.interior_estimate, effectiveRates)
+  const interiorEstimateContext = data.interior_estimate
+    ? snapshotInteriorEstimateInput(data.interior_estimate, effectiveRates)
+    : null;
+  const interiorEstimate = interiorEstimateContext
+    ? calculateInteriorEstimate(interiorEstimateContext, effectiveRates)
     : null;
   const exteriorEstimateResult = data.exterior_estimate
     ? calculateExteriorEstimate(
@@ -436,11 +458,41 @@ function resolveQuotePricingPreviewForSave(
     discountCents,
     exteriorEstimateResult,
     interiorEstimate,
+    interiorEstimateContext,
     lineItems,
     preview,
     pricingMethod,
     resolvedPricingInputs,
   };
+}
+
+function getFirstQuoteRateBoundaryError(
+  data: ParsedQuoteCreateData,
+  effectiveRates: UserRateSettings
+) {
+  const pricingMethod = data.pricing_method ?? 'hybrid';
+  const methodInputs = data.pricing_method_inputs;
+
+  if (
+    pricingMethod === 'detailed_quick' &&
+    methodInputs?.method === 'detailed_quick'
+  ) {
+    return (
+      getFirstBlockingRateSetupIssue(
+        getSelectedQuickEstimateIssues(methodInputs.inputs, effectiveRates)
+      )?.message ?? null
+    );
+  }
+
+  if (data.interior_estimate) {
+    return (
+      getFirstBlockingRateSetupIssue(
+        getSelectedAdvancedEstimateIssues(data.interior_estimate, effectiveRates)
+      )?.message ?? null
+    );
+  }
+
+  return null;
 }
 
 async function sendQuoteDocumentEmail(input: {
@@ -1368,6 +1420,11 @@ export async function createQuote(
     return { error: parsed.error };
   }
 
+  const pricingScopeError = getFirstBlockingQuotePricingScopeError(parsed.data);
+  if (pricingScopeError) {
+    return { error: pricingScopeError };
+  }
+
   const subscription = await getSubscriptionSnapshotForUser(supabase, user.id);
   if (!subscription.active) {
     return { error: getActiveSubscriptionRequiredMessage('quote creation') };
@@ -1438,12 +1495,21 @@ export async function createQuote(
 
   const { data: userRates } = await getBusinessRateSettings(supabase, user.id);
   const effectiveRates = userRates ?? DEFAULT_RATE_SETTINGS;
+  const rateBoundaryError = getFirstQuoteRateBoundaryError(
+    parsed.data,
+    effectiveRates
+  );
+  if (rateBoundaryError) {
+    return { error: rateBoundaryError };
+  }
+
   const {
     adjustmentCents,
     depositPercent,
     discountCents,
     exteriorEstimateResult,
     interiorEstimate,
+    interiorEstimateContext,
     lineItems,
     preview,
     pricingMethod,
@@ -1491,7 +1557,7 @@ export async function createQuote(
     property_type: parsed.data.interior_estimate?.property_type ?? null,
     estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
     estimate_context:
-      parsed.data.interior_estimate ?? parsed.data.exterior_estimate ?? {},
+      interiorEstimateContext ?? parsed.data.exterior_estimate ?? {},
     pricing_snapshot:
       interiorEstimate?.snapshot ?? exteriorEstimateResult?.snapshot ?? {},
     pricing_method: pricingMethod,
@@ -2318,6 +2384,11 @@ export async function updateQuote(
     return { error: parsed.error };
   }
 
+  const pricingScopeError = getFirstBlockingQuotePricingScopeError(parsed.data);
+  if (pricingScopeError) {
+    return { error: pricingScopeError };
+  }
+
   // Verify ownership
   const { data: existing, error: existingError } = await supabase
     .from('quotes')
@@ -2372,12 +2443,21 @@ export async function updateQuote(
 
   const { data: userRates } = await getBusinessRateSettings(supabase, user.id);
   const effectiveRates = userRates ?? DEFAULT_RATE_SETTINGS;
+  const rateBoundaryError = getFirstQuoteRateBoundaryError(
+    parsed.data,
+    effectiveRates
+  );
+  if (rateBoundaryError) {
+    return { error: rateBoundaryError };
+  }
+
   const {
     adjustmentCents,
     depositPercent,
     discountCents,
     exteriorEstimateResult,
     interiorEstimate,
+    interiorEstimateContext,
     lineItems,
     preview,
     pricingMethod,
@@ -2472,7 +2552,7 @@ export async function updateQuote(
     property_type: parsed.data.interior_estimate?.property_type ?? null,
     estimate_mode: parsed.data.interior_estimate?.estimate_mode ?? null,
     estimate_context:
-      parsed.data.interior_estimate ?? parsed.data.exterior_estimate ?? {},
+      interiorEstimateContext ?? parsed.data.exterior_estimate ?? {},
     pricing_snapshot:
       interiorEstimate?.snapshot ?? exteriorEstimateResult?.snapshot ?? {},
     pricing_method: pricingMethod,

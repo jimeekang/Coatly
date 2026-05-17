@@ -217,9 +217,12 @@ const quoteEstimateModeSchema = z.enum(['entire_property', 'specific_areas']);
 const quoteLineItemCategorySchema = z.enum([
   'entire_property',
   'room',
+  'room_anchor',
   'door',
   'window',
+  'trim',
   'skirting',
+  'quick_estimate',
   'modifier',
 ]);
 const quoteJsonSchema: z.ZodType<
@@ -392,6 +395,12 @@ const interiorWallPaintSystemSchema = z
   .enum([...INTERIOR_WALL_PAINT_SYSTEMS, 'touch_up_2coat'] as const)
   .transform((value) => normalizeInteriorWallPaintSystem(value) ?? 'repaint_2coat');
 
+const interiorSourceAnchorRangeSchema = z.object({
+  min: z.number().int().min(0),
+  median: z.number().int().min(0),
+  max: z.number().int().min(0),
+});
+
 const interiorEstimateRoomSchema = z.object({
   name: z.string().trim().min(1, 'Room name is required'),
   anchor_room_type: z.string().trim().min(1),
@@ -406,6 +415,11 @@ const interiorEstimateRoomSchema = z.object({
   source_rate_item_version: z.number().int().min(1).optional(),
   source_rate_item_label: z.string().optional(),
   rate_snapshot_version: z.literal(1).optional(),
+  source_anchor_range_cents: interiorSourceAnchorRangeSchema.optional(),
+  source_surface_rate_multiplier: z.number().min(0).optional(),
+  source_scope_multiplier: z.number().min(0).optional(),
+  source_condition: z.enum(INTERIOR_CONDITIONS).optional(),
+  source_wall_paint_system: interiorWallPaintSystemSchema.optional(),
 });
 
 const interiorOpeningItemSchema = z
@@ -421,6 +435,9 @@ const interiorOpeningItemSchema = z
     door_scope: z.enum(INTERIOR_DOOR_SCOPES).optional(),
     window_type: z.enum(INTERIOR_WINDOW_TYPES).optional(),
     window_scope: z.enum(INTERIOR_WINDOW_SCOPES).optional(),
+    rate_snapshot_version: z.literal(1).optional(),
+    source_unit_price_cents: z.number().int().min(0).optional(),
+    source_quantity_scale_factor: z.number().min(0).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.opening_type === 'door') {
@@ -468,6 +485,8 @@ const interiorTrimItemSchema = z.object({
       message: 'Skirting value must be a number',
     }),
   room_index: z.number().int().min(0).nullable().optional(),
+  rate_snapshot_version: z.literal(1).optional(),
+  source_unit_price_cents: z.number().int().min(0).optional(),
 });
 
 export const interiorEstimateSchema = z
@@ -642,6 +661,10 @@ export const quoteCreateSchema = z.object({
       is_optional: z.boolean().default(false),
       is_selected: z.boolean().default(true),
       notes: z.string().trim().max(500).optional(),
+      pricing_scope_key: z.string().trim().min(1).max(160).optional(),
+      pricing_role: z
+        .enum(['priced_scope', 'addon', 'material', 'optional_addon'] as const)
+        .optional(),
     }).superRefine((item, ctx) => {
       if (item.category === 'paint' && !Number.isInteger(item.quantity)) {
         ctx.addIssue({

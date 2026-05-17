@@ -288,6 +288,72 @@ describe('calculateQuickEstimate', () => {
     expect(result.subtotal_cents).toBe(30000);
   });
 
+  it('keeps quote A on version 1 snapshot while quote B uses version 2 prices', () => {
+    const rates = makeSettings();
+
+    const quoteA: QuickInputs = {
+      rooms: [
+        {
+          room_id: 'room-1',
+          source_rate_item_id: 'room-1',
+          source_rate_item_version: 1,
+          source_rate_item_label: 'Bedroom',
+          rate_snapshot_version: 1,
+          label: 'Bedroom',
+          size: 'medium',
+          selected_surfaces: ['walls', 'ceiling'],
+          walls_cents: 30000,
+          ceiling_cents: 15000,
+          trim_cents: 15000,
+          coating_multiplier_pct: 100,
+          condition_multiplier_pct: 100,
+          total_cents: 45000,
+        },
+      ],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+
+    rates.quick_estimate.rooms[0] = {
+      ...rates.quick_estimate.rooms[0],
+      version: 2,
+      sizes: {
+        ...rates.quick_estimate.rooms[0].sizes,
+        medium: {
+          walls_cents: 80000,
+          ceiling_cents: 20000,
+          trim_cents: 15000,
+        },
+      },
+    };
+
+    const quoteB: QuickInputs = {
+      rooms: [
+        {
+          room_id: 'room-1',
+          source_rate_item_id: 'room-1',
+          source_rate_item_version: 2,
+          source_rate_item_label: 'Bedroom',
+          rate_snapshot_version: 1,
+          label: 'Bedroom',
+          size: 'medium',
+          selected_surfaces: ['walls', 'ceiling'],
+          walls_cents: 80000,
+          ceiling_cents: 20000,
+          trim_cents: 15000,
+          coating_multiplier_pct: 100,
+          condition_multiplier_pct: 100,
+          total_cents: 100000,
+        },
+      ],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+
+    expect(calculateQuickEstimate(quoteA, rates).subtotal_cents).toBe(45000);
+    expect(calculateQuickEstimate(quoteB, rates).subtotal_cents).toBe(100000);
+  });
+
   it('uses stored snapshot multipliers when Price Rates multipliers change later', () => {
     const rates = makeSettings();
     rates.quick_estimate.coating_multipliers.one_coat_refresh_pct = 50;

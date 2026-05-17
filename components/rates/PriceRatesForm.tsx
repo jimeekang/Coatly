@@ -61,6 +61,11 @@ import {
   type WindowType,
 } from '@/lib/rate-settings';
 import { INTERIOR_ROOM_TYPES } from '@/lib/interior-estimates';
+import {
+  getAdvancedEstimateSetupIssues,
+  getQuickEstimateSetupIssues,
+  type RateSetupIssue,
+} from '@/lib/rate-setup-diagnostics';
 import type { PricingMethod } from '@/types/quote';
 import { QuickEstimateTab } from '@/components/rates/QuickEstimateTab';
 
@@ -88,6 +93,57 @@ function createClientId(prefix: string) {
     return globalThis.crypto.randomUUID();
   }
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function countIssues(issues: RateSetupIssue[], codes: RateSetupIssue['code'][]) {
+  return issues.filter((issue) => codes.includes(issue.code)).length;
+}
+
+function RateSetupSummary({
+  title,
+  items,
+  issues,
+}: {
+  title: string;
+  items: Array<{ label: string; value: string }>;
+  issues: RateSetupIssue[];
+}) {
+  return (
+    <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-on-surface">{title}</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {items.map((item) => (
+              <span
+                key={item.label}
+                className="rounded-lg border border-outline-variant bg-surface-container-low px-2.5 py-1 text-xs font-medium text-on-surface-variant"
+              >
+                {item.value} {item.label}
+              </span>
+            ))}
+          </div>
+        </div>
+        {issues.length > 0 && (
+          <span className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+            {issues.length} setup warning{issues.length === 1 ? '' : 's'}
+          </span>
+        )}
+      </div>
+      {issues.length > 0 && (
+        <div className="mt-3 space-y-1">
+          {issues.slice(0, 3).map((issue) => (
+            <p
+              key={`${issue.code}-${issue.source_id ?? issue.message}`}
+              className="text-xs text-amber-800"
+            >
+              {issue.message}
+            </p>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 // ─── Shared UI atoms ──────────────────────────────────────────────────────────
@@ -2098,8 +2154,59 @@ export function PriceRatesForm({
     persistRates(nextRates);
   }
 
+  const quickSetupIssues = getQuickEstimateSetupIssues(rates);
+  const advancedSetupIssues = getAdvancedEstimateSetupIssues(rates);
+  const missingOrZeroAnchorCount = countIssues(advancedSetupIssues, [
+    'missing_advanced_anchor',
+    'zero_advanced_anchor',
+  ]);
+  const zeroDoorWindowCount = countIssues(advancedSetupIssues, [
+    'zero_door_unit_rate',
+    'zero_window_unit_rate',
+  ]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <RateSetupSummary
+          title="Quick setup"
+          items={[
+            {
+              label: 'room configured',
+              value: String(rates.quick_estimate.rooms.length),
+            },
+            {
+              label: 'zero priced surface',
+              value: String(
+                countIssues(quickSetupIssues, ['zero_quick_surface_price'])
+              ),
+            },
+            {
+              label: saved ? 'saved' : 'unsaved edits',
+              value: saved ? 'Rates' : 'Has',
+            },
+          ]}
+          issues={quickSetupIssues}
+        />
+        <RateSetupSummary
+          title="Advanced setup"
+          items={[
+            {
+              label: 'room item',
+              value: String(rates.detailed_estimate_items.advanced_rooms.length),
+            },
+            {
+              label: 'missing/zero anchor',
+              value: String(missingOrZeroAnchorCount),
+            },
+            {
+              label: 'zero door/window unit',
+              value: String(zeroDoorWindowCount),
+            },
+          ]}
+          issues={advancedSetupIssues}
+        />
+      </div>
       {/* ── Method bar ──────────────────────────────────────────────────────── */}
       <div>
         <div

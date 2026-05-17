@@ -60,7 +60,7 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 | ID | 영역 | 핵심 |
 |----|------|------|
 | T0 | Price rate + quote calculation foundation | `quick_estimate`, `detailed_estimate_anchors`, `detailed_estimate_items`, `room_rate_presets`, `quote_estimate_items`, `quote_line_items`의 역할을 분리. "one priced scope, one anchor" 규칙, canonical subtotal/GST/total calculator, snapshot/version 기준 확정 |
-| T0A | Quick + Advanced hardening | Quick은 room size + selected surfaces + coating/condition multiplier. Advanced는 room anchor + explicit opening/trim. duplicate room anchor, stale rate, preview/save/PDF/invoice mismatch 테스트 작성 |
+| T0A | Quick + Advanced hardening | 완료. Quick은 room size + selected surfaces + coating/condition multiplier snapshot. Advanced는 room anchor + explicit opening/trim numeric snapshot. duplicate room anchor, stale rate, preview/save/PDF/invoice mismatch 테스트 작성 |
 | T0B | Quote form data model | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` 구조 확정. 기존 `quote_estimate_items`/`quote_line_items`와 연결. interior/exterior taxonomy와 clause library seed 작성 |
 | T1 | AI input schema + provider adapter | `photos`, `price_rates_snapshot`, `job_type`, `scope_notes`, `rough_measurements` 추가 / `customers`, `quotes` context 제거 (P1 cost 보호). `lib/ai/providers/qwen.ts` 같은 얇은 adapter로 `qwen3-vl-flash` 호출을 숨김. **AI 역할 boundary: `scope_sections`, `pricing_candidates`, `clauses`만 생성하고 pricing은 T0 calculator가 deterministic 처리** |
 | T2 | Photo upload + multimodal | Qwen3-VL-Flash vision input 사용. Supabase Storage RLS, Basic quote당 3장/월 15장, Pro quote당 5장/월 100장, 1920px JPEG 85%, photo-only auto takeoff 금지 |
@@ -81,14 +81,13 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 
 | 영역 | 상태 | 다음 필요 작업 |
 |------|------|----------------|
-| T0 / Task 1A canonical totals | 구현됨. `calculateQuoteTotals()`가 quote total authority가 되었고 optional add-on, public quote preview, quote-to-invoice preset parity가 focused tests를 통과했다 | PDF route regression과 full suite/build를 Task 1 종료 전에 실행 |
-| T0 / Task 1B duplicate priced scope guard | 미완료. 아직 structured scope key validator가 없어 quick/advanced scope와 custom line item의 이중 청구를 deterministic하게 막지 못한다 | `lib/quote-pricing-scopes.ts` 또는 Task 3 scope tables와 연결되는 scope key 설계 후 create/edit validation 적용 |
-| T0A Quick/Advanced hardening | 부분 구현. Quick schema/UI/snapshot helper와 Advanced room item library/source copy는 있음. duplicate guard, Advanced numeric snapshot, setup warnings, quote-level stale-rate tests는 미완료 | [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)에 따라 Task 1B dependency 후 구현 |
-| AI provider / Qwen work | 시작 전 | AI pricing candidates는 Task 1B와 Task 2가 끝난 뒤에만 연결 |
+| T0 / Task 1 canonical totals + duplicate scope guard | 완료. `calculateQuoteTotals()`가 quote total authority가 되었고 optional add-on, public quote preview, quote-to-invoice preset parity, deterministic duplicate priced scope guard, PDF route regression, full suite/build/lint가 통과했다 | 완료 |
+| T0A Quick/Advanced hardening | 완료. Quick metadata completeness, Advanced numeric snapshot, setup diagnostics, A$0 selected-source blocking, invalid surface blocking, stale-rate tests, quote/PDF/invoice regression이 통과했다 | Task 3 quote form structure schema로 이동 |
+| AI provider / Qwen work | 시작 전 | AI pricing candidates는 Task 3 quote form structure schema와 deterministic candidate review path가 준비된 뒤 연결 |
 
 ## AI 역할 boundary (D6 / Codex Hybrid)
 
-- Precondition: T0/T0A에서 price rate 구조와 canonical quote calculator가 먼저 안정돼야 한다.
+- Precondition: T0/T0A price rate 구조와 canonical quote calculator는 완료됐다. Task 3 schema 이후 AI candidate 적용을 시작한다.
 - AI **does**: free-text notes → `quote_scope_sections`, `quote_scope_steps`, assumptions, exclusions, risk disclosure, `quote_clause_items` 초안
 - AI **does**: surface/area 후보를 `pricing_candidates`로 제안
 - AI **does NOT**: rate 결정, `quote_estimate_items.total_cents` 생성, GST 계산 — 출력 schema에서 price/rate field 제거
@@ -121,10 +120,10 @@ v1 quote 계산은 "어떤 항목이 돈을 만드는가"를 먼저 고정한다
 
 2026-05-17 implementation note:
 
-- Quick estimate는 unit-level snapshot behavior가 준비되어 있지만 `quote_estimate_items.metadata`에 source id/version/label, snapshot version, per-surface cents를 추가해야 한다.
-- Advanced estimate는 source id/version/label이 payload에 저장되지만 numeric anchor snapshot immutability가 아직 부족하다.
-- room-level `include_doors` / `include_windows` toggles는 calculator input과 직접 연결되지 않으므로 v1에서는 제거하거나 explicit opening item 생성으로 wire해야 한다.
-- 세부 구현 순서는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 따른다.
+- Task 2 is complete. Quick estimate saves complete source metadata in `pricing_method_inputs` and `quote_estimate_items.metadata`.
+- Advanced estimate saves numeric room anchor, opening, and trim snapshots. Old quotes keep saved totals after `price_rates` / `detailed_estimate_anchors` changes.
+- room-level `include_doors` / `include_windows` toggles were removed from the priced room surface row. Doors/windows are explicit opening items only.
+- 세부 구현 결과는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)에 기록한다.
 
 ## AI-assisted Quote Form Builder Structure
 
@@ -305,7 +304,7 @@ Build start는 승인됐지만 사용량 tracking은 build/deploy/onboarding 이
 
 ## Critical Gaps & Deferrals
 
-- **Quick/Advanced duplicate anchor risk** — v1에서 deferred 불가. T0/T0A에서 quote calculation boundary, snapshot, regression tests를 먼저 정리한다.
+- **Quick/Advanced duplicate anchor risk** — 완료. T0/T0A에서 quote calculation boundary, snapshot, selected-source diagnostics, and regression tests를 정리했다.
 - **Quote form structure gap** — v1에서 deferred 불가. T0B에서 customer-visible `scope_sections`와 pricing rows, clause library를 분리하지 않으면 AI output이 PDF/public quote/invoice 흐름을 오염시킨다.
 - **Stale `price_rates` race** (painter mid-AI-call price_rates 수정) — v1.1 deferred. v1 mitigation: T6 UI에 "AI가 사용한 rates" snapshot 표시 ("이 quote는 2026-05-15 16:30 기준 rate로 생성됨"). 자세한 건 [/TODOS.md](../../../TODOS.md).
 - **Billing trial/conversion productization** — Phase 0 gate는 선결제가 아니라 Pro 1개월 무료 trial 후 A$59 conversion으로 검증한다. public launch 전에는 Stripe trial/cancel 상태와 app plan state mismatch를 막는 webhook/idempotency 검증이 필요하다.

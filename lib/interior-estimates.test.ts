@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { calculateInteriorEstimate } from '@/lib/interior-estimates';
+import {
+  calculateInteriorEstimate,
+  snapshotInteriorEstimateInput,
+} from '@/lib/interior-estimates';
 import { buildDefaultRateSettings } from '@/lib/rate-settings';
 
 describe('calculateInteriorEstimate', () => {
@@ -275,6 +278,116 @@ describe('calculateInteriorEstimate', () => {
     );
 
     expect(result.pricing_items[0]?.unit_price_cents).toBe(200000);
+  });
+
+  it('uses stored advanced room anchor snapshots when current anchors change later', () => {
+    const ratesV1 = buildDefaultRateSettings();
+    ratesV1.detailed_estimate_anchors.interior_rooms['Bedroom 1'] = {
+      min: 180000,
+      median: 200000,
+      max: 230000,
+    };
+
+    const savedInput = snapshotInteriorEstimateInput(
+      {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'excellent',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom repaint',
+            anchor_room_type: 'Bedroom 1',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: true,
+            source_rate_item_id: 'adv-bedroom',
+            source_rate_item_version: 1,
+            source_rate_item_label: 'Bedroom repaint',
+            rate_snapshot_version: 1,
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+      ratesV1
+    );
+
+    const ratesV2 = buildDefaultRateSettings();
+    ratesV2.detailed_estimate_anchors.interior_rooms['Bedroom 1'] = {
+      min: 480000,
+      median: 500000,
+      max: 530000,
+    };
+
+    const oldQuote = calculateInteriorEstimate(savedInput, ratesV2);
+    const newQuote = calculateInteriorEstimate(
+      {
+        ...savedInput,
+        rooms: savedInput.rooms.map((room) => ({
+          name: room.name,
+          anchor_room_type: room.anchor_room_type,
+          room_type: room.room_type,
+          length_m: room.length_m,
+          width_m: room.width_m,
+          height_m: room.height_m,
+          include_walls: room.include_walls,
+          include_ceiling: room.include_ceiling,
+          include_trim: room.include_trim,
+        })),
+      },
+      ratesV2
+    );
+
+    expect(savedInput.rooms[0]).toEqual(
+      expect.objectContaining({
+        source_anchor_range_cents: {
+          min: 180000,
+          median: 200000,
+          max: 230000,
+        },
+        source_surface_rate_multiplier: expect.any(Number),
+        source_scope_multiplier: 1,
+        source_condition: 'excellent',
+        source_wall_paint_system: 'repaint_2coat',
+      })
+    );
+    expect(oldQuote.pricing_items[0]?.unit_price_cents).toBe(200000);
+    expect(newQuote.pricing_items[0]?.unit_price_cents).toBe(500000);
+  });
+
+  it('rejects specific-area rooms with no selected walls, ceiling, or trim', () => {
+    expect(() =>
+      calculateInteriorEstimate({
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Deselected room',
+            anchor_room_type: 'Living Room',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: false,
+            include_ceiling: false,
+            include_trim: false,
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      })
+    ).toThrow(/at least one surface/i);
   });
 
   it('does not use room flat rate presets for detailed estimates', () => {

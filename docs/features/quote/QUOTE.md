@@ -12,9 +12,9 @@ v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 �
 |------|------|-----------|
 | Quote CRUD | 구현됨 | `app/actions/quotes.ts`, `app/(dashboard)/quotes/*` |
 | Room/surface 견적 | 구현됨 | `QuoteForm`, `quote_rooms`, `quote_room_surfaces` |
-| Quick/Detailed estimate | 구현됨, Task 2 hardening 남음 | `QuickQuoteBuilder`, `QuickEstimateBuilder`, `InteriorEstimateBuilder`, migration 041–042 |
+| Quick/Detailed estimate | 구현됨, Task 2 hardening 완료 | `QuickQuoteBuilder`, `QuickEstimateBuilder`, `InteriorEstimateBuilder`, migration 041–042 + Task 2 category constraint |
 | Exterior estimate | 구현됨, 감사 항목 남음 | `ExteriorEstimateBuilder`, audit 참고 |
-| Rate settings | 구현됨, setup diagnostics 남음 | `PriceRatesForm`, `QuickEstimateTab`, `lib/rate-settings.ts` |
+| Rate settings | 구현됨, setup diagnostics 완료 | `PriceRatesForm`, `QuickEstimateTab`, `lib/rate-settings.ts`, `lib/rate-setup-diagnostics.ts` |
 | Material/service line items | 구현됨 | `material_items`, `quote_line_items` |
 | Quote templates | 구현됨 | `quote_templates`, `TemplatePicker` |
 | AI quote drafting | 구현됨 | `AIDraftPanel`, `generateAIDraft()` |
@@ -23,7 +23,7 @@ v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 �
 | Public approval | 구현됨 | `/q/[token]`, signature, approve/reject |
 | Public booking | 구현됨 | approved quote → job booking |
 | Quote → invoice | 구현됨 | invoice quote option/line item 흐름 |
-| Canonical quote totals | 부분 구현됨 | `calculateQuoteTotals()`, optional add-on/public quote/invoice preset parity. Duplicate priced scope guard는 미완료 |
+| Canonical quote totals | 구현됨 | `calculateQuoteTotals()`, optional add-on/public quote/invoice preset parity, deterministic duplicate priced scope guard, full suite/build/lint 통과 |
 | AI Quote Form Builder | 설계 필요 | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` |
 
 ## Quote Modes
@@ -104,7 +104,7 @@ draft -> sent -> approved -> booked/job/invoice
 - Canonical total contract: `base_subtotal_cents + selected quote_line_items - discount_cents → discounted_subtotal_cents → gst_cents → total_cents`.
 - 기존 manual adjustment는 현재 quote 동작처럼 GST 밖에서 더합니다. 과세 처리 변경은 별도 decision이 필요합니다.
 - Labour/material margin은 별도 percent로 저장합니다.
-- Quick estimate는 저장 시 authoritative snapshot을 남겨 이후 단가 변경에 흔들리지 않게 합니다. 현재 unit-level snapshot helper는 구현됐고, `quote_estimate_items.metadata` completeness가 Task 2 남은 작업입니다.
+- Quick estimate는 저장 시 authoritative snapshot을 `pricing_method_inputs`와 `quote_estimate_items.metadata`에 남겨 이후 단가 변경에 흔들리지 않게 합니다.
 - Basic은 제한된 AI quote/photo/follow-up 사용량을 제공하고, Pro는 full AI Quote Form Builder와 더 높은 AI limit을 제공합니다.
 - v1 AI-assisted Quote Form Builder 이전에 quote calculation boundary를 먼저 정리합니다.
 - `quote_estimate_items`는 estimate engine이 만든 priced rows만 저장합니다.
@@ -115,7 +115,7 @@ draft -> sent -> approved -> booked/job/invoice
 
 ## Quick / Advanced Pricing Boundary
 
-세부 구현 계획과 현재 gap은 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](../ai/V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)에 둔다. 2026-05-17 기준 Quick schema/UI/snapshot helper와 Advanced room item source copy는 구현됐지만 Advanced numeric snapshot immutability, setup warnings, duplicate scope guard는 아직 남아 있다.
+세부 구현 결과는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](../ai/V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)에 둔다. 2026-05-17 기준 Quick complete source metadata, Advanced numeric anchor/opening/trim snapshot, duplicate scope guard, setup diagnostics, A$0 selected-source blocking, invalid surface validation, and stale-rate tests가 구현됐다.
 
 | 영역 | Authoritative source | 저장 위치 | 주의점 |
 |------|----------------------|-----------|--------|
@@ -152,15 +152,18 @@ draft -> sent -> approved -> booked/job/invoice
 - [x] public quote total preview with selected optional add-ons
 - [x] quote-to-invoice preset base scope + selected optional add-on handling
 - [x] discounted quote invoice parity-safe line and manual adjustment block
+- [x] deterministic duplicate priced scope guard for structured Quick/Advanced/manual/exterior scope keys
+- [x] fuzzy duplicate line item warning in QuoteForm
+- [x] Quick estimate row metadata completeness and stale-rate A/B coverage
+- [x] Advanced numeric snapshot immutability for room anchors, openings, and trim
+- [x] Price Rates setup diagnostics and Quote Builder selected-source A$0 blocking
 
 ## Active Risks / Next Work
 
 | 우선순위 | 항목 | 내용 |
 |----------|------|------|
-| P0 | Duplicate priced scope guard | Canonical total path는 구현됐지만, Quick/Advanced 견적에서 room anchor, quick estimate item, custom line item이 같은 scope를 중복 계산하지 않도록 structured scope key validator가 아직 필요 |
-| P0 | Quick/Advanced rate boundary hardening | Quick row metadata completeness, Advanced numeric anchor snapshot, A$0 setup warning, invalid surface validation, stale-rate quote A/B tests가 필요 |
 | P0 | AI Quote Form Builder structure | 고객용 scope section, 가격 row, clause library를 분리하고 legacy interior/exterior quote form을 재현 가능한 데이터 구조로 정리 |
-| P0 | Quote total parity hardening | Optional add-on/public quote/invoice preset parity는 focused tests 통과. 남은 작업은 exact create/update same-fixture test, PDF route regression, full suite/build |
+| P0 | Quote total parity hardening | Task 1 parity scope와 Task 2 Quick/Advanced snapshot/setup diagnostics는 통과. 남은 quote-related hardening은 Task 4 legacy fixture reconstruction |
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |
 | P1 | Exterior edit safety | 편집 시 exterior snapshot 손실 여부 회귀 테스트 강화 |
 | P1 | Exterior PDF/detail | 모든 exterior cost/line item이 상세/PDF에 일관 렌더되는지 검증 |
