@@ -82,12 +82,12 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 | 영역 | 상태 | 다음 필요 작업 |
 |------|------|----------------|
 | T0 / Task 1 canonical totals + duplicate scope guard | 완료. `calculateQuoteTotals()`가 quote total authority가 되었고 optional add-on, public quote preview, quote-to-invoice preset parity, deterministic duplicate priced scope guard, PDF route regression, full suite/build/lint가 통과했다 | 완료 |
-| T0A Quick/Advanced hardening | 완료. Quick metadata completeness, Advanced numeric snapshot, setup diagnostics, A$0 selected-source blocking, invalid surface blocking, stale-rate tests, quote/PDF/invoice regression이 통과했다 | Task 3 quote form structure schema로 이동 |
-| AI provider / Qwen work | 시작 전 | AI pricing candidates는 Task 3 quote form structure schema와 deterministic candidate review path가 준비된 뒤 연결 |
+| T0A Quick/Advanced hardening | 완료. Quick metadata completeness, Advanced numeric snapshot, setup diagnostics, A$0 selected-source blocking, invalid surface blocking, stale-rate tests, quote/PDF/invoice regression이 통과했다 | Task 3 Room Price Library redesign으로 이동 |
+| AI provider / Qwen work | 시작 전 | AI pricing candidates는 Task 3 Room Price Library redesign과 Task 4 quote form structure schema, deterministic candidate review path가 준비된 뒤 연결 |
 
 ## AI 역할 boundary (D6 / Codex Hybrid)
 
-- Precondition: T0/T0A price rate 구조와 canonical quote calculator는 완료됐다. Task 3 schema 이후 AI candidate 적용을 시작한다.
+- Precondition: T0/T0A price rate 구조와 canonical quote calculator는 완료됐다. Task 3 Room Price Library redesign과 Task 4 schema 이후 AI candidate 적용을 시작한다.
 - AI **does**: free-text notes → `quote_scope_sections`, `quote_scope_steps`, assumptions, exclusions, risk disclosure, `quote_clause_items` 초안
 - AI **does**: surface/area 후보를 `pricing_candidates`로 제안
 - AI **does NOT**: rate 결정, `quote_estimate_items.total_cents` 생성, GST 계산 — 출력 schema에서 price/rate field 제거

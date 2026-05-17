@@ -16,7 +16,7 @@
 | 0 | Foundation | 완료 | 프로젝트, Supabase, Auth, Stripe, Vercel |
 | 1 | Core Features | 완료 | 고객, 견적, PDF, invoice, billing |
 | 2 | AI & Operations | 진행 중 | AI, schedule, email, public quote, jobs 고도화 |
-| **v1 AI Quote Writer push** | **wedge 재정의** | **Phase 0 GREEN / build 진행 중** | **AI Quote Writer = Basic A$29 limited AI + Pro A$59 full AI wedge. Task 1 pricing foundation과 Task 2 Quick/Advanced rate boundary 완료. 다음은 Task 3 quote form structure. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md)** |
+| **v1 AI Quote Writer push** | **wedge 재정의** | **Phase 0 GREEN / build 진행 중** | **AI Quote Writer = Basic A$29 limited AI + Pro A$59 full AI wedge. Task 1 pricing foundation과 Task 2 Quick/Advanced rate boundary 완료. 다음은 Task 3 Room Price Library redesign, 이후 Task 4 quote form structure. 자세한 건 [features/ai/V1-PLAN.md](./features/ai/V1-PLAN.md)** |
 | 3 | Integrations & Scale | 계획 | accounting sync, 운영/분석 고도화 |
 
 ## Implemented Progress
@@ -68,7 +68,7 @@
 | Step | 기간 | 상태 | 산출물 |
 |------|------|------|--------|
 | Phase 0 validation (인터뷰 5명, cost spreadsheet, golden set) | 2주 | GREEN 완료 | Basic/Pro 가격, Pro trial 정책, Qwen model, quote form structure 확정 |
-| v1 build (pricing-first — T0~T14) | 6–8주 | 진행 중 | Task 1 canonical quote totals + invoice preset parity + duplicate priced scope guard 완료. Task 2 Quick/Advanced metadata/snapshot/setup diagnostics/stale-rate hardening 완료. 다음은 Task 3 quote form structure, 이후 AI Draft, ai_usage_logs, AU prompt, validator, manual edit UX, Today Assistant, Follow-up Writer |
+| v1 build (pricing-first — T0~T14) | 6–8주 | 진행 중 | Task 1 canonical quote totals + invoice preset parity + duplicate priced scope guard 완료. Task 2 Quick/Advanced metadata/snapshot/setup diagnostics/stale-rate hardening 완료. 다음은 Task 3 Room Price Library redesign, Task 4 quote form structure, 이후 AI Draft, ai_usage_logs, AU prompt, validator, manual edit UX, Today Assistant, Follow-up Writer |
 | Production deploy + integration | 1주 | post-build | Vercel prod, Qwen API key, 3 migrations |
 | Free Pro Trial + paid conversion tracking | 4주 | post-deploy | Pro 1개월 무료 trial, ≥1 A$59 Pro conversion, cancel reason 기록 |
 
@@ -79,7 +79,7 @@
 | Priority | 작업 | 현재 상태 | 담당 |
 |----------|------|-----------|------|
 | P1 | Quote/Invoice 저장 원자성 | 다중 쿼리 경로 존재, RPC transaction 검토 필요 | Codex |
-| P1 | v1 Task 3 quote form structure schema | Task 1-2 pricing boundary 완료. 다음은 `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` schema와 deterministic AI candidate review path | Codex |
+| P1 | v1 Task 3 Room Price Library redesign | Task 1-2 pricing boundary 완료. Quick room matrix를 canonical Room Price Library로 승격하고 Detailed Estimate Anchors를 derived/legacy fallback으로 낮춘 뒤 Task 4 quote form schema로 진행 | Codex |
 | P1 | Google Calendar booking fail-closed | 연결/표시는 구현, write 실패 정책 보강 필요 | Codex |
 | P1 | AI usage governance | Basic/Pro/Pro trial limit 정책 확정, v1 plan T4 (`ai_usage_logs`)로 `quote_draft`, `today_assistant`, `follow_up_writer` cost+limit 보강 | Codex |
 | P1 | Exterior estimate 회귀 | 기능 존재, edit/PDF/detail 일관성 테스트 강화 필요 | Codex |

@@ -163,7 +163,7 @@ draft -> sent -> approved -> booked/job/invoice
 | 우선순위 | 항목 | 내용 |
 |----------|------|------|
 | P0 | AI Quote Form Builder structure | 고객용 scope section, 가격 row, clause library를 분리하고 legacy interior/exterior quote form을 재현 가능한 데이터 구조로 정리 |
-| P0 | Quote total parity hardening | Task 1 parity scope와 Task 2 Quick/Advanced snapshot/setup diagnostics는 통과. 남은 quote-related hardening은 Task 4 legacy fixture reconstruction |
+| P0 | Quote total parity hardening | Task 1 parity scope와 Task 2 Quick/Advanced snapshot/setup diagnostics는 통과. 다음 quote-related hardening은 Task 3 Room Price Library redesign과 Task 5 legacy fixture reconstruction |
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |
 | P1 | Exterior edit safety | 편집 시 exterior snapshot 손실 여부 회귀 테스트 강화 |
 | P1 | Exterior PDF/detail | 모든 exterior cost/line item이 상세/PDF에 일관 렌더되는지 검증 |

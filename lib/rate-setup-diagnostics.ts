@@ -80,7 +80,7 @@ export function getQuickEstimateSetupIssues(
             area: 'quick',
             severity: 'warning',
             code: 'zero_quick_surface_price',
-            source_id: room.id,
+            source_id: `${room.id}:${size}:${surface}`,
             source_label: room.label,
             message: `${room.label} ${QUICK_SIZE_LABELS[size]} ${QUICK_SURFACE_LABELS[surface]} is A$0. Keep it only if this source is intentionally free.`,
           });
@@ -103,11 +103,12 @@ export function getSelectedQuickEstimateIssues(
   inputs.rooms.forEach((room) => {
     room.selected_surfaces.forEach((surface) => {
       if (quickRoomSurfaceCents(room, surface) === 0) {
+        const sourceId = room.source_rate_item_id ?? room.room_id;
         issues.push({
           area: 'quick',
           severity: 'blocking',
           code: 'zero_quick_surface_price',
-          source_id: room.source_rate_item_id ?? room.room_id,
+          source_id: `${sourceId}:${surface}`,
           source_label: room.source_rate_item_label ?? room.label,
           message: `${room.label} ${QUICK_SURFACE_LABELS[surface]} is A$0. Update Price Rates or remove that surface before saving this quote.`,
         });

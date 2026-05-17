@@ -40,11 +40,11 @@
 
 | Gap | Why it matters | Suggested implementation |
 |-----|----------------|--------------------------|
-| None for Task 1 | Task 1 scope is closed for v1 pricing foundation. | Task 2 follow-on work is also complete as of 2026-05-17. Next pricing-related follow-on is Task 4 legacy quote reconstruction and Task 3 AI candidate schema boundary. |
+| None for Task 1 | Task 1 scope is closed for v1 pricing foundation. | Task 2 follow-on work is also complete as of 2026-05-17. Next pricing-related follow-on is Task 3 Room Price Library redesign, then Task 4 quote form schema and Task 5 legacy quote reconstruction. |
 
 ### Recommended Split
 
-Task 1 is now closed as **Task 1A: canonical quote totals and invoice parity** plus **Task 1B: duplicate priced scope guard and final safety verification**. Task 2 rate-boundary hardening is also complete; AI pricing candidates, Qwen adapter, and photo helper now wait for Task 3 quote form structure schema and deterministic candidate review.
+Task 1 is now closed as **Task 1A: canonical quote totals and invoice parity** plus **Task 1B: duplicate priced scope guard and final safety verification**. Task 2 rate-boundary hardening is also complete; AI pricing candidates, Qwen adapter, and photo helper now wait for Task 3 Room Price Library redesign, Task 4 quote form structure schema, and deterministic candidate review.
 
 ## Files
 

@@ -44,7 +44,7 @@ describe('rate setup diagnostics', () => {
         expect.objectContaining({
           area: 'quick',
           code: 'zero_quick_surface_price',
-          source_id: 'quick-bedroom',
+          source_id: 'quick-bedroom:small:ceiling',
           source_label: 'Bedroom',
         }),
       ])
@@ -61,6 +61,49 @@ describe('rate setup diagnostics', () => {
           severity: 'blocking',
           code: 'missing_quick_rooms',
         }),
+      ])
+    );
+  });
+
+  it('keeps quick setup zero-price issue identifiers unique per size and surface', () => {
+    const settings = buildDefaultRateSettings();
+    settings.quick_estimate.rooms = [
+      {
+        id: 'default-0',
+        version: 1,
+        label: 'Bedroom',
+        enabled_surfaces: ['walls', 'ceiling', 'trim'],
+        sizes: {
+          small: {
+            walls_cents: 0,
+            ceiling_cents: 0,
+            trim_cents: 0,
+          },
+          medium: {
+            walls_cents: 0,
+            ceiling_cents: 0,
+            trim_cents: 0,
+          },
+          large: {
+            walls_cents: 0,
+            ceiling_cents: 0,
+            trim_cents: 0,
+          },
+        },
+        sort_order: 0,
+      },
+    ];
+
+    const issueIds = getQuickEstimateSetupIssues(settings)
+      .filter((issue) => issue.code === 'zero_quick_surface_price')
+      .map((issue) => issue.source_id);
+
+    expect(new Set(issueIds).size).toBe(issueIds.length);
+    expect(issueIds).toEqual(
+      expect.arrayContaining([
+        'default-0:small:walls',
+        'default-0:small:ceiling',
+        'default-0:small:trim',
       ])
     );
   });
@@ -101,6 +144,41 @@ describe('rate setup diagnostics', () => {
         code: 'zero_quick_surface_price',
         message: expect.stringContaining('Bedroom ceiling'),
       }),
+    ]);
+  });
+
+  it('keeps selected quick zero-price issue identifiers unique per surface', () => {
+    const settings = buildDefaultRateSettings();
+
+    const issues = getSelectedQuickEstimateIssues(
+      {
+        global_coating: 'two_coats_repaint',
+        global_condition: 'average',
+        rooms: [
+          {
+            room_id: 'quick-bedroom',
+            source_rate_item_id: 'quick-bedroom',
+            source_rate_item_version: 1,
+            source_rate_item_label: 'Bedroom',
+            rate_snapshot_version: 1,
+            label: 'Bedroom',
+            size: 'medium',
+            selected_surfaces: ['walls', 'ceiling'],
+            walls_cents: 0,
+            ceiling_cents: 0,
+            trim_cents: 25000,
+            coating_multiplier_pct: 100,
+            condition_multiplier_pct: 100,
+            total_cents: 0,
+          },
+        ],
+      },
+      settings
+    );
+
+    expect(issues.map((issue) => issue.source_id)).toEqual([
+      'quick-bedroom:walls',
+      'quick-bedroom:ceiling',
     ]);
   });
 

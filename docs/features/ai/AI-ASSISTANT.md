@@ -1,6 +1,6 @@
 # Feature: AI Assistant
 
-> Phase 2 AI draft panel + Workspace Assistant seed가 부분 구현된 상태. v1 wedge는 "AI-assisted Quote Form Builder"이고, 보조 AI 범위는 Today Assistant + Follow-up Writer로 제한됨 — 자세한 v1 build 계획은 [V1-PLAN.md](./V1-PLAN.md), quote form 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md), pricing foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md), Quick/Advanced rate boundary는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md).
+> Phase 2 AI draft panel + Workspace Assistant seed가 부분 구현된 상태. v1 wedge는 "AI-assisted Quote Form Builder"이고, 보조 AI 범위는 Today Assistant + Follow-up Writer로 제한됨 — 자세한 v1 build 계획은 [V1-PLAN.md](./V1-PLAN.md), quote form 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md), pricing foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md), Quick/Advanced rate boundary는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md), Room Price Library redesign은 [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md).
 
 ## v1 Wedge (2026-05-15 APPROVED)
 
@@ -8,7 +8,7 @@
 
 **핵심 boundary**: AI는 surface 매핑 + scope/exclusion/clause writing만 한다. **Pricing은 deterministic** — painter price_rates table에서 server-side lookup. AI 출력 schema에서 rate/price/GST/total field 제거 + `lib/ai/apply-deterministic-pricing.ts` post-pass로 채움.
 
-2026-05-17 기준 AI pricing candidate 적용 전 선행 조건: Task 1 duplicate priced scope guard와 Task 2 Quick/Advanced snapshot/setup warning/stale-rate hardening은 완료됐다. 다음 선행 조건은 Task 3 quote form structure schema와 AI candidate를 deterministic pricing review path로만 적용하는 서버 검증이다.
+2026-05-17 기준 AI pricing candidate 적용 전 선행 조건: Task 1 duplicate priced scope guard와 Task 2 Quick/Advanced snapshot/setup warning/stale-rate hardening은 완료됐다. 다음 선행 조건은 Task 3 Room Price Library redesign, Task 4 quote form structure schema, 그리고 AI candidate를 deterministic pricing review path로만 적용하는 서버 검증이다.
 
 **v1 보조 AI**: Today Assistant(오늘 처리할 quote follow-up / overdue invoice / job 요약) + Follow-up Writer(고객에게 보낼 SMS/email 초안). 범용 Workspace Assistant 채팅은 v1에서 끄고, 이 두 helper만 노출한다.
 
