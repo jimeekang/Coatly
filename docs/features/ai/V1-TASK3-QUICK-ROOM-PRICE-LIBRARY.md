@@ -19,9 +19,20 @@
 
 ## Status
 
-**Status:** DESIGN READY. Not implemented yet.
+**Status:** COMPLETE as of 2026-05-17.
 
-Task 1 and Task 2 made quote totals canonical and snapshot-safe. Task 3 fixes the remaining product/data-model issue: the app currently asks painters to maintain detailed room prices in Quick Estimate and a second room anchor list in Detailed Estimate Anchors. That duplication should be removed before quote form schema and AI candidate mapping are built.
+Task 1 and Task 2 made quote totals canonical and snapshot-safe. Task 3 now removes the remaining product/data-model duplication: Quick Estimate room prices are the canonical Room Price Library, Advanced room presets reference room templates, and Detailed Estimate Anchors remain only as legacy fallback.
+
+## Implementation Snapshot
+
+- Added `source_room_template_id`, `source_room_template_version`, and `default_size` to Advanced room items while preserving legacy `anchor_room_type`.
+- Added `lib/room-price-library.ts` for template lookup, selected-surface totals, derived anchor ranges, and typed missing/disabled-source issues.
+- Updated Price Rates so Quick rooms are framed as Room Price Library, Advanced presets select a template and default size, and legacy anchors are collapsed under compatibility copy.
+- Updated Advanced quote builder so presets and manual rooms can carry template source id/version/label/size, and quote payloads snapshot numeric per-surface prices.
+- Updated server-side save/normalize/validation so `estimate_context` and `quote_estimate_items.metadata` include room template source metadata and old anchor-only quotes still calculate.
+- Updated diagnostics and duplicate scope guard so new Advanced room sources use the same stable room/surface keys as Quick Estimate.
+- No Supabase migration was required; Task 3 extends existing JSONB rate settings and saved quote metadata only.
+- Verified focused Task 3 tests: `npm run test:run -- lib/rate-settings.test.ts lib/room-price-library.test.ts lib/interior-estimates.test.ts lib/quote-pricing-scopes.test.ts app/actions/quotes.test.ts components/rates/PriceRatesForm.test.tsx components/quotes/QuoteForm.test.tsx` passed 109 tests.
 
 ## Current Problem
 
@@ -157,13 +168,13 @@ Quick and Advanced should feel related, not duplicated.
 
 ### Step 1: Add Failing Tests First
 
-- [ ] `lib/rate-settings.test.ts`: parsing old `advanced_rooms[].anchor_room_type` still works.
-- [ ] `lib/rate-settings.test.ts`: new `advanced_rooms[].source_room_template_id` points to Quick room template.
-- [ ] `lib/interior-estimates.test.ts`: Advanced room using Quick template snapshot keeps old total after Quick template price changes.
-- [ ] `components/rates/PriceRatesForm.test.tsx`: Detailed Estimate Anchors are not shown as a primary duplicated price list.
-- [ ] `components/rates/PriceRatesForm.test.tsx`: Advanced room preset can select a Room Price Library template and default size.
-- [ ] `components/quotes/QuoteForm.test.tsx`: Advanced quote selected from room template saves template id/version/label/size and numeric source prices.
-- [ ] `app/actions/quotes.test.ts`: create/update stores Advanced estimate metadata from Quick room template source, not from a second editable anchor list.
+- [x] `lib/rate-settings.test.ts`: parsing old `advanced_rooms[].anchor_room_type` still works.
+- [x] `lib/rate-settings.test.ts`: new `advanced_rooms[].source_room_template_id` points to Quick room template.
+- [x] `lib/interior-estimates.test.ts`: Advanced room using Quick template snapshot keeps old total after Quick template price changes.
+- [x] `components/rates/PriceRatesForm.test.tsx`: Detailed Estimate Anchors are not shown as a primary duplicated price list.
+- [x] `components/rates/PriceRatesForm.test.tsx`: Advanced room preset can select a Room Price Library template and default size.
+- [x] `components/quotes/QuoteForm.test.tsx`: Advanced quote selected from room template saves template id/version/label/size and numeric source prices.
+- [x] `app/actions/quotes.test.ts`: create/update stores Advanced estimate metadata from Quick room template source, not from a second editable anchor list.
 
 ### Step 2: Extend Rate Settings Schema Safely
 
@@ -174,12 +185,12 @@ Modify:
 
 Required behavior:
 
-- [ ] Add optional `source_room_template_id` to `AdvancedEstimateRoomItem`.
-- [ ] Add optional `source_room_template_version` to `AdvancedEstimateRoomItem`.
-- [ ] Add optional `default_size: 'small' | 'medium' | 'large'`.
-- [ ] Keep `anchor_room_type` optional or legacy-readable during transition.
-- [ ] Parse old settings without data loss.
-- [ ] When both new and legacy fields exist, prefer `source_room_template_id`.
+- [x] Add optional `source_room_template_id` to `AdvancedEstimateRoomItem`.
+- [x] Add optional `source_room_template_version` to `AdvancedEstimateRoomItem`.
+- [x] Add optional `default_size: 'small' | 'medium' | 'large'`.
+- [x] Keep `anchor_room_type` optional or legacy-readable during transition.
+- [x] Parse old settings without data loss.
+- [x] When both new and legacy fields exist, prefer `source_room_template_id`.
 
 ### Step 3: Add Room Price Library Helpers
 
@@ -222,12 +233,12 @@ Modify:
 
 Required behavior:
 
-- [ ] Reframe Quick tab/section copy as Room Price Library or make the relationship explicit.
-- [ ] Advanced Room Items choose a room template from `quick_estimate.rooms`.
-- [ ] Advanced Room Items choose a default size.
-- [ ] Advanced Room Items keep default walls/ceiling/trim toggles.
-- [ ] Detailed Estimate Anchors is hidden from the primary flow or collapsed as legacy compatibility.
-- [ ] Setup summary counts missing template references instead of missing anchor strings for new items.
+- [x] Reframe Quick tab/section copy as Room Price Library or make the relationship explicit.
+- [x] Advanced Room Items choose a room template from `quick_estimate.rooms`.
+- [x] Advanced Room Items choose a default size.
+- [x] Advanced Room Items keep default walls/ceiling/trim toggles.
+- [x] Detailed Estimate Anchors is hidden from the primary flow or collapsed as legacy compatibility.
+- [x] Setup summary counts missing template references instead of missing anchor strings for new items.
 
 ### Step 5: Update Advanced Quote Builder
 
@@ -239,11 +250,11 @@ Modify:
 
 Required behavior:
 
-- [ ] Selecting an Advanced room item copies `source_room_template_id`, version, label, default size, and included surfaces.
-- [ ] Manual Advanced room can still pick a room template directly.
-- [ ] The quote payload stores `source_room_template_id`, `source_room_template_version`, `source_room_template_label`, `source_room_template_size`, and numeric per-surface price snapshot.
-- [ ] Existing saved quotes that only have `source_anchor_range_cents` continue to calculate and render.
-- [ ] Existing manual measured rooms do not lose dimensions or user labels.
+- [x] Selecting an Advanced room item copies `source_room_template_id`, version, label, default size, and included surfaces.
+- [x] Manual Advanced room can still pick a room template directly.
+- [x] The quote payload stores `source_room_template_id`, `source_room_template_version`, `source_room_template_label`, `source_room_template_size`, and numeric per-surface price snapshot.
+- [x] Existing saved quotes that only have `source_anchor_range_cents` continue to calculate and render.
+- [x] Existing manual measured rooms do not lose dimensions or user labels.
 
 ### Step 6: Update Server-Side Snapshot and Save Rows
 
@@ -256,11 +267,11 @@ Modify:
 
 Required behavior:
 
-- [ ] Server action resolves Advanced room price from Room Price Library before save.
-- [ ] `quote_estimate_items.metadata` includes room template source id/version/label/size.
-- [ ] Numeric snapshot still includes per-surface cents and resolved total cents.
-- [ ] `detailed_estimate_anchors` remains accepted for legacy quote/rate settings.
-- [ ] Create and update paths write the same shape.
+- [x] Server action resolves Advanced room price from Room Price Library before save.
+- [x] `quote_estimate_items.metadata` includes room template source id/version/label/size.
+- [x] Numeric snapshot still includes per-surface cents and resolved total cents.
+- [x] `detailed_estimate_anchors` remains accepted for legacy quote/rate settings.
+- [x] Create and update paths write the same shape.
 
 ### Step 7: Update Diagnostics and Duplicate Scope Guard
 
@@ -271,10 +282,10 @@ Modify:
 
 Required behavior:
 
-- [ ] Quick zero-price warnings become Room Price Library warnings.
-- [ ] Advanced missing-source warning checks missing `source_room_template_id` first.
-- [ ] Legacy missing anchor warning remains only for legacy items.
-- [ ] Duplicate scope guard keeps room/surface keys stable across Quick and Advanced.
+- [x] Quick zero-price warnings become Room Price Library warnings.
+- [x] Advanced missing-source warning checks missing `source_room_template_id` first.
+- [x] Legacy missing anchor warning remains only for legacy items.
+- [x] Duplicate scope guard keeps room/surface keys stable across Quick and Advanced.
 
 ### Step 8: Document Migration and UI Copy
 
@@ -286,10 +297,10 @@ Modify:
 
 Required behavior:
 
-- [ ] Document that Room Price Library is the single room price source.
-- [ ] Document that Detailed Estimate Anchors is compatibility/derived only.
-- [ ] Document old quote compatibility and no-retroactive-repricing rule.
-- [ ] Document AI candidate mapping to room template + size + surfaces.
+- [x] Document that Room Price Library is the single room price source.
+- [x] Document that Detailed Estimate Anchors is compatibility/derived only.
+- [x] Document old quote compatibility and no-retroactive-repricing rule.
+- [x] Document AI candidate mapping to room template + size + surfaces.
 
 ## Migration Strategy
 
@@ -346,4 +357,3 @@ After Task 3, AI candidate shape should prefer room-template language:
 ```
 
 The deterministic pricing pass maps that candidate to the painter's Room Price Library snapshot. The AI still does not output price, rate, GST, or total.
-

@@ -403,10 +403,10 @@ Task 2 is complete only when:
 ## Strengthening Notes For Next Tasks
 
 - A local Supabase migration was added to keep `quote_estimate_items.category` aligned with Task 2 generated categories: `room_anchor`, `trim`, and `quick_estimate`. Apply it to remote Supabase before relying on those categories in deployed environments.
-- Task 3 should add customer-visible scope/clause tables without moving price fields into AI output. AI pricing candidates must map to existing deterministic scope keys and remain review-only until the server calculator produces estimate rows.
+- Task 3 Room Price Library redesign is complete. Task 4 should add customer-visible scope/clause tables without moving price fields into AI output. AI pricing candidates must map to existing deterministic scope keys and remain review-only until the server calculator produces estimate rows.
 - Task 5 legacy reconstruction should use the new stale-rate fixtures as a pattern: every golden quote should assert preview/save/detail/PDF/invoice totals from the same stored snapshots.
 - The remaining v1.1 stale-rate race is narrower now: saved quotes are immutable, but an AI draft should still display the rate snapshot timestamp used during draft generation if the painter edits Price Rates mid-draft.
 
 ## AI Build Gate
 
-Task 2 no longer blocks the v1 AI build. AI pricing candidates, Qwen draft application, and photo-assisted scope helper work may proceed only after Task 3 completes the Room Price Library source redesign, Task 4 defines the quote form structure schema, and the candidate-to-deterministic-pricing review path is in place.
+Task 2 no longer blocks the v1 AI build, and Task 3 Room Price Library source redesign is complete. AI pricing candidates, Qwen draft application, and photo-assisted scope helper work may proceed only after Task 4 defines the quote form structure schema and the candidate-to-deterministic-pricing review path is in place.

@@ -280,17 +280,29 @@ describe('QuoteForm', () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const rateSettings = buildDefaultRateSettings();
-    rateSettings.detailed_estimate_anchors.interior_rooms['Bedroom 1'] = {
-      min: 180000,
-      median: 200000,
-      max: 230000,
-    };
+    rateSettings.quick_estimate.rooms = [
+      {
+        id: 'quick-bedroom',
+        version: 2,
+        label: 'Bedroom',
+        enabled_surfaces: ['walls', 'ceiling', 'trim'],
+        sizes: {
+          small: { walls_cents: 90000, ceiling_cents: 30000, trim_cents: 10000 },
+          medium: { walls_cents: 120000, ceiling_cents: 45000, trim_cents: 15000 },
+          large: { walls_cents: 150000, ceiling_cents: 60000, trim_cents: 20000 },
+        },
+        sort_order: 0,
+      },
+    ];
     rateSettings.detailed_estimate_items.advanced_rooms = [
       {
         id: 'adv-bedroom-repaint',
         version: 2,
         label: 'Bedroom repaint',
-        anchor_room_type: 'Bedroom 1',
+        anchor_room_type: 'Bedroom',
+        source_room_template_id: 'quick-bedroom',
+        source_room_template_version: 2,
+        default_size: 'medium',
         include_walls: true,
         include_ceiling: true,
         include_trim: false,
@@ -324,7 +336,7 @@ describe('QuoteForm', () => {
     expect(payload.interior_estimate.rooms).toEqual([
       expect.objectContaining({
         name: 'Bedroom repaint',
-        anchor_room_type: 'Bedroom 1',
+        anchor_room_type: 'Bedroom',
         height_m: 2.7,
         include_walls: true,
         include_ceiling: true,
@@ -332,14 +344,23 @@ describe('QuoteForm', () => {
         source_rate_item_id: 'adv-bedroom-repaint',
         source_rate_item_version: 2,
         source_rate_item_label: 'Bedroom repaint',
+        source_room_template_id: 'quick-bedroom',
+        source_room_template_version: 2,
+        source_room_template_label: 'Bedroom',
+        source_room_template_size: 'medium',
+        source_room_template_surface_prices_cents: {
+          walls_cents: 120000,
+          ceiling_cents: 45000,
+          trim_cents: 0,
+        },
         rate_snapshot_version: 1,
         source_anchor_range_cents: {
-          min: 180000,
-          median: 200000,
-          max: 230000,
+          min: 120000,
+          median: 165000,
+          max: 210000,
         },
         source_surface_rate_multiplier: 1,
-        source_scope_multiplier: expect.any(Number),
+        source_scope_multiplier: 1,
         source_condition: 'fair',
         source_wall_paint_system: 'repaint_2coat',
       }),

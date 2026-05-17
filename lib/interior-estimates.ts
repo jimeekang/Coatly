@@ -3,7 +3,15 @@ import {
   INTERIOR_SCOPE_SHARE,
 } from '@/config/interior-estimate-anchors';
 import { PAINT_RATES } from '@/config/paint-rates';
-import type { UserRateSettings } from '@/lib/rate-settings';
+import {
+  getRoomTemplateSurfaceSnapshotTotalCents,
+  resolveAdvancedRoomPriceSource,
+} from '@/lib/room-price-library';
+import type {
+  QuickRoomSize,
+  QuickRoomSurfacePriceSnapshot,
+  UserRateSettings,
+} from '@/lib/rate-settings';
 
 export const INTERIOR_APARTMENT_TYPES = [
   'studio',
@@ -177,6 +185,13 @@ export type InteriorEstimateInput = {
     source_rate_item_id?: string;
     source_rate_item_version?: number;
     source_rate_item_label?: string;
+    source_room_template_id?: string;
+    source_room_template_version?: number;
+    source_room_template_label?: string;
+    source_room_template_size?: QuickRoomSize;
+    source_room_template_surface_prices_cents?: QuickRoomSurfacePriceSnapshot;
+    source_room_template_coating_multiplier_pct?: number;
+    source_room_template_condition_multiplier_pct?: number;
     rate_snapshot_version?: 1;
     source_anchor_range_cents?: RangeCents;
     source_surface_rate_multiplier?: number;
@@ -832,6 +847,53 @@ function getRoomAnchorForCalculation(
   );
 }
 
+function getRoomTemplateCoatingMultiplierPct(
+  userRates: UserRateSettings | null | undefined,
+  wallPaintSystem: InteriorWallPaintSystem
+) {
+  const multipliers = userRates?.quick_estimate.coating_multipliers;
+  if (!multipliers) return 100;
+
+  if (wallPaintSystem === 'refresh_1coat') {
+    return multipliers.one_coat_refresh_pct;
+  }
+  if (wallPaintSystem === 'new_plaster_3coat') {
+    return multipliers.three_coats_new_plaster_pct;
+  }
+  return multipliers.two_coats_repaint_pct;
+}
+
+function getRoomTemplateConditionMultiplierPct(
+  userRates: UserRateSettings | null | undefined,
+  condition: InteriorCondition
+) {
+  const multipliers = userRates?.quick_estimate.condition_multipliers;
+  if (!multipliers) return 100;
+
+  if (condition === 'excellent') return multipliers.good_pct;
+  if (condition === 'poor') return multipliers.poor_pct;
+  return multipliers.average_pct;
+}
+
+function hasSavedRoomTemplateSnapshot(
+  room: InteriorEstimateInput['rooms'][number]
+) {
+  return (
+    room.rate_snapshot_version === 1 &&
+    room.source_room_template_surface_prices_cents != null
+  );
+}
+
+function getRoomTemplateSnapshotTotalCents(
+  room: InteriorEstimateInput['rooms'][number]
+) {
+  return room.source_room_template_surface_prices_cents
+    ? getRoomTemplateSurfaceSnapshotTotalCents(
+        room.source_room_template_surface_prices_cents
+      )
+    : null;
+}
+
 export function snapshotInteriorEstimateInput(
   input: InteriorEstimateInput,
   userRates?: UserRateSettings | null
@@ -848,8 +910,30 @@ export function snapshotInteriorEstimateInput(
     rooms: input.rooms.map((room, roomIndex) => {
       assertSpecificAreaRoomHasSurface(room, roomIndex);
       const roomScope = getRoomScope(room);
+      const savedTemplateSnapshot = hasSavedRoomTemplateSnapshot(room);
+      const resolvedRoomPriceSource = !savedTemplateSnapshot && userRates
+        ? resolveAdvancedRoomPriceSource(userRates, room)
+        : null;
+      const templateSource =
+        resolvedRoomPriceSource?.ok && resolvedRoomPriceSource.kind === 'room_template'
+          ? resolvedRoomPriceSource
+          : null;
+      const coatingMultiplierPct =
+        room.rate_snapshot_version === 1 &&
+        typeof room.source_room_template_coating_multiplier_pct === 'number'
+          ? room.source_room_template_coating_multiplier_pct
+          : getRoomTemplateCoatingMultiplierPct(userRates, wallPaintSystem);
+      const conditionMultiplierPct =
+        room.rate_snapshot_version === 1 &&
+        typeof room.source_room_template_condition_multiplier_pct === 'number'
+          ? room.source_room_template_condition_multiplier_pct
+          : getRoomTemplateConditionMultiplierPct(userRates, input.condition);
       const anchor =
-        room.rate_snapshot_version === 1 && room.source_anchor_range_cents
+        templateSource
+          ? templateSource.range_cents
+          : savedTemplateSnapshot && room.source_anchor_range_cents
+          ? room.source_anchor_range_cents
+          : room.rate_snapshot_version === 1 && room.source_anchor_range_cents
           ? room.source_anchor_range_cents
           : getSpecificAreaRoomAnchor(
               input.property_type,
@@ -857,12 +941,16 @@ export function snapshotInteriorEstimateInput(
               userRates
             );
       const surfaceRateMultiplier =
-        room.rate_snapshot_version === 1 &&
+        templateSource || savedTemplateSnapshot
+          ? coatingMultiplierPct / 100
+          : room.rate_snapshot_version === 1 &&
         typeof room.source_surface_rate_multiplier === 'number'
           ? room.source_surface_rate_multiplier
           : getSurfaceRateMultiplier(roomScope, wallPaintSystem, userRates);
       const scopeMultiplier =
-        room.rate_snapshot_version === 1 &&
+        templateSource || savedTemplateSnapshot
+          ? 1
+          : room.rate_snapshot_version === 1 &&
         typeof room.source_scope_multiplier === 'number'
           ? room.source_scope_multiplier
           : getScopeMultiplier(roomScope);
@@ -870,6 +958,21 @@ export function snapshotInteriorEstimateInput(
       return {
         ...room,
         rate_snapshot_version: 1,
+        ...(templateSource
+          ? {
+              source_room_template_id: templateSource.room_template_id,
+              source_room_template_version:
+                templateSource.room_template_version,
+              source_room_template_label: templateSource.room_template_label,
+              source_room_template_size: templateSource.size,
+              source_room_template_surface_prices_cents:
+                templateSource.surface_prices_cents,
+              source_room_template_coating_multiplier_pct:
+                coatingMultiplierPct,
+              source_room_template_condition_multiplier_pct:
+                conditionMultiplierPct,
+            }
+          : {}),
         source_anchor_range_cents: anchor,
         source_surface_rate_multiplier: surfaceRateMultiplier,
         source_scope_multiplier: scopeMultiplier,
@@ -959,37 +1062,69 @@ function calculateSpecificAreasEstimate(
   input.rooms.forEach((room, roomIndex) => {
     assertSpecificAreaRoomHasSurface(room, roomIndex);
     const activeScope = getRoomScope(room);
-    const scopeMultiplier =
-      room.rate_snapshot_version === 1 &&
-      typeof room.source_scope_multiplier === 'number'
+    const roomTemplateSnapshotTotal = getRoomTemplateSnapshotTotalCents(room);
+    const usesRoomTemplateSource =
+      roomTemplateSnapshotTotal != null || room.source_room_template_id != null;
+    const resolvedRoomTemplateSource =
+      usesRoomTemplateSource && userRates
+        ? resolveAdvancedRoomPriceSource(userRates, room)
+        : null;
+    const roomTemplateSource =
+      resolvedRoomTemplateSource?.ok &&
+      resolvedRoomTemplateSource.kind === 'room_template'
+        ? resolvedRoomTemplateSource
+        : null;
+    const scopeMultiplier = usesRoomTemplateSource
+      ? 1
+      : room.rate_snapshot_version === 1 &&
+          typeof room.source_scope_multiplier === 'number'
         ? room.source_scope_multiplier
         : getScopeMultiplier(activeScope);
-    const surfaceRateMultiplier =
-      room.rate_snapshot_version === 1 &&
-      typeof room.source_surface_rate_multiplier === 'number'
+    const surfaceRateMultiplier = usesRoomTemplateSource
+      ? (room.rate_snapshot_version === 1 &&
+          typeof room.source_room_template_coating_multiplier_pct === 'number'
+          ? room.source_room_template_coating_multiplier_pct
+          : getRoomTemplateCoatingMultiplierPct(userRates, wallPaintSystem)) /
+        100
+      : room.rate_snapshot_version === 1 &&
+          typeof room.source_surface_rate_multiplier === 'number'
         ? room.source_surface_rate_multiplier
-        : getSurfaceRateMultiplier(
-            activeScope,
-            wallPaintSystem,
-            userRates
-          );
-    const anchor = getRoomAnchorForCalculation(
-      room,
-      input.property_type,
-      userRates
-    );
+        : getSurfaceRateMultiplier(activeScope, wallPaintSystem, userRates);
+    const conditionMultiplier = usesRoomTemplateSource
+      ? (room.rate_snapshot_version === 1 &&
+          typeof room.source_room_template_condition_multiplier_pct === 'number'
+          ? room.source_room_template_condition_multiplier_pct
+          : getRoomTemplateConditionMultiplierPct(userRates, input.condition)) /
+        100
+      : conditionMedian;
+    const anchor =
+      roomTemplateSnapshotTotal != null
+        ? (room.source_anchor_range_cents ?? {
+            min: roomTemplateSnapshotTotal,
+            median: roomTemplateSnapshotTotal,
+            max: roomTemplateSnapshotTotal,
+          })
+        : roomTemplateSource
+          ? roomTemplateSource.range_cents
+          : getRoomAnchorForCalculation(
+              room,
+              input.property_type,
+              userRates
+            );
+    const medianSourceCents =
+      roomTemplateSnapshotTotal ?? roomTemplateSource?.total_cents ?? anchor.median;
     const itemMedian = cap(
-      anchor.median *
+      medianSourceCents *
         scopeMultiplier *
         storey_multiplier *
-        conditionMedian *
+        conditionMultiplier *
         surfaceRateMultiplier
     );
     min += cap(
       anchor.min *
         scopeMultiplier *
         storey_multiplier *
-        condition.min_mult *
+        (usesRoomTemplateSource ? conditionMultiplier : condition.min_mult) *
         surfaceRateMultiplier
     );
     median += itemMedian;
@@ -997,7 +1132,7 @@ function calculateSpecificAreasEstimate(
       anchor.max *
         scopeMultiplier *
         storey_multiplier *
-        condition.max_mult *
+        (usesRoomTemplateSource ? conditionMultiplier : condition.max_mult) *
         surfaceRateMultiplier
     );
     pricing_items.push({
@@ -1016,6 +1151,21 @@ function calculateSpecificAreasEstimate(
         source_rate_item_id: room.source_rate_item_id ?? null,
         source_rate_item_version: room.source_rate_item_version ?? null,
         source_rate_item_label: room.source_rate_item_label ?? null,
+        source_room_template_id: room.source_room_template_id ?? null,
+        source_room_template_version:
+          room.source_room_template_version ?? null,
+        source_room_template_label: room.source_room_template_label ?? null,
+        source_room_template_size: room.source_room_template_size ?? null,
+        source_room_template_surface_walls_cents:
+          room.source_room_template_surface_prices_cents?.walls_cents ?? null,
+        source_room_template_surface_ceiling_cents:
+          room.source_room_template_surface_prices_cents?.ceiling_cents ?? null,
+        source_room_template_surface_trim_cents:
+          room.source_room_template_surface_prices_cents?.trim_cents ?? null,
+        source_room_template_coating_multiplier_pct:
+          room.source_room_template_coating_multiplier_pct ?? null,
+        source_room_template_condition_multiplier_pct:
+          room.source_room_template_condition_multiplier_pct ?? null,
         rate_snapshot_version: room.rate_snapshot_version ?? null,
         source_anchor_range_min_cents: anchor.min,
         source_anchor_range_median_cents: anchor.median,

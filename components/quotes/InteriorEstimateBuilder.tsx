@@ -35,7 +35,7 @@ import {
   type InteriorWindowScope,
   type InteriorWindowType,
 } from '@/lib/interior-estimates';
-import type { UserRateSettings } from '@/lib/rate-settings';
+import type { QuickRoomSize, UserRateSettings } from '@/lib/rate-settings';
 
 const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface';
 const LABEL = 'mb-1.5 block text-sm font-medium text-on-surface';
@@ -72,6 +72,17 @@ export type InteriorEstimateRoomFormState = {
   source_rate_item_id?: string;
   source_rate_item_version?: number;
   source_rate_item_label?: string;
+  source_room_template_id?: string;
+  source_room_template_version?: number;
+  source_room_template_label?: string;
+  source_room_template_size?: QuickRoomSize;
+  source_room_template_surface_prices_cents?: {
+    walls_cents: number;
+    ceiling_cents: number;
+    trim_cents: number;
+  };
+  source_room_template_coating_multiplier_pct?: number;
+  source_room_template_condition_multiplier_pct?: number;
   rate_snapshot_version?: 1;
   source_anchor_range_cents?: {
     min: number;
@@ -206,10 +217,14 @@ export function InteriorEstimateBuilder({
   function createRoomFromLibraryItem(
     item: NonNullable<UserRateSettings['detailed_estimate_items']>['advanced_rooms'][number]
   ): InteriorEstimateRoomFormState {
+    const template = rateSettings?.quick_estimate.rooms.find(
+      (room) => room.id === item.source_room_template_id
+    );
+
     return {
       ...createEmptyInteriorRoom(),
       name: item.label,
-      anchor_room_type: item.anchor_room_type,
+      anchor_room_type: item.anchor_room_type || template?.label || item.label,
       height_m: String(item.default_height_m),
       include_walls: item.include_walls,
       include_ceiling: item.include_ceiling,
@@ -217,6 +232,11 @@ export function InteriorEstimateBuilder({
       source_rate_item_id: item.id,
       source_rate_item_version: item.version ?? 1,
       source_rate_item_label: item.label,
+      source_room_template_id: template?.id ?? item.source_room_template_id,
+      source_room_template_version:
+        template?.version ?? item.source_room_template_version,
+      source_room_template_label: template?.label,
+      source_room_template_size: item.default_size ?? 'medium',
       rate_snapshot_version: INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION,
     };
   }
@@ -254,6 +274,9 @@ export function InteriorEstimateBuilder({
   ) as InteriorWindowType[];
   const advancedRoomItems = [
     ...(rateSettings?.detailed_estimate_items?.advanced_rooms ?? []),
+  ].sort((a, b) => a.sort_order - b.sort_order);
+  const roomPriceTemplates = [
+    ...(rateSettings?.quick_estimate?.rooms ?? []),
   ].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
@@ -386,6 +409,77 @@ export function InteriorEstimateBuilder({
                     <Trash2 size={18} />
                   </button>
                 </div>
+
+                {roomPriceTemplates.length > 0 && (
+                  <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_140px]">
+                    <div>
+                      <label
+                        htmlFor={`room-price-source-${index}`}
+                        className="mb-1 block text-xs text-on-surface-variant"
+                      >
+                        Room Price Library Source
+                      </label>
+                      <select
+                        id={`room-price-source-${index}`}
+                        value={room.source_room_template_id ?? ''}
+                        onChange={(event) => {
+                          const template = roomPriceTemplates.find(
+                            (item) => item.id === event.target.value
+                          );
+                          setRoom(index, {
+                            source_room_template_id: template?.id,
+                            source_room_template_version: template
+                              ? (template.version ?? 1)
+                              : undefined,
+                            source_room_template_label: template?.label,
+                            source_room_template_size:
+                              room.source_room_template_size ?? 'medium',
+                            anchor_room_type:
+                              template?.label ?? room.anchor_room_type,
+                            rate_snapshot_version: template
+                              ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
+                              : undefined,
+                          });
+                        }}
+                        className={FIELD}
+                      >
+                        <option value="">Legacy anchor / manual</option>
+                        {roomPriceTemplates.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`room-price-size-${index}`}
+                        className="mb-1 block text-xs text-on-surface-variant"
+                      >
+                        Size
+                      </label>
+                      <select
+                        id={`room-price-size-${index}`}
+                        value={room.source_room_template_size ?? 'medium'}
+                        onChange={(event) =>
+                          setRoom(index, {
+                            source_room_template_size:
+                              event.target.value as QuickRoomSize,
+                            rate_snapshot_version:
+                              room.source_room_template_id != null
+                                ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
+                                : room.rate_snapshot_version,
+                          })
+                        }
+                        className={FIELD}
+                      >
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 {/* Row 2: L × W × H compact 3-col */}
                 <div className="grid grid-cols-3 gap-2">

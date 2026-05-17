@@ -401,6 +401,12 @@ const interiorSourceAnchorRangeSchema = z.object({
   max: z.number().int().min(0),
 });
 
+const interiorRoomTemplateSurfacePricesSchema = z.object({
+  walls_cents: z.number().int().min(0),
+  ceiling_cents: z.number().int().min(0),
+  trim_cents: z.number().int().min(0),
+});
+
 const interiorEstimateRoomSchema = z.object({
   name: z.string().trim().min(1, 'Room name is required'),
   anchor_room_type: z.string().trim().min(1),
@@ -414,6 +420,14 @@ const interiorEstimateRoomSchema = z.object({
   source_rate_item_id: z.string().optional(),
   source_rate_item_version: z.number().int().min(1).optional(),
   source_rate_item_label: z.string().optional(),
+  source_room_template_id: z.string().trim().min(1).optional(),
+  source_room_template_version: z.number().int().min(1).optional(),
+  source_room_template_label: z.string().trim().min(1).optional(),
+  source_room_template_size: z.enum(['small', 'medium', 'large']).optional(),
+  source_room_template_surface_prices_cents:
+    interiorRoomTemplateSurfacePricesSchema.optional(),
+  source_room_template_coating_multiplier_pct: z.number().min(0).optional(),
+  source_room_template_condition_multiplier_pct: z.number().min(0).optional(),
   rate_snapshot_version: z.literal(1).optional(),
   source_anchor_range_cents: interiorSourceAnchorRangeSchema.optional(),
   source_surface_rate_multiplier: z.number().min(0).optional(),

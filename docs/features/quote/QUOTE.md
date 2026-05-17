@@ -4,7 +4,7 @@
 
 페인터가 현장에서 빠르게 견적을 만들고, 고객에게 PDF/공개 링크로 보내고, 승인 이후 invoice/job으로 이어지게 합니다.
 
-v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 따른다. 고객에게 보이는 quote form은 **scope section + pricing row + clause library**로 분리한다. 가격 계산 boundary와 quote total parity 세부 구현은 [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)를 따른다. Quick/Advanced rate boundary와 snapshot hardening은 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](../ai/V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 따른다.
+v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 따른다. 고객에게 보이는 quote form은 **scope section + pricing row + clause library**로 분리한다. 가격 계산 boundary와 quote total parity 세부 구현은 [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)를 따른다. Quick/Advanced rate boundary와 snapshot hardening은 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](../ai/V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 따른다. Room Price Library source redesign은 [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](../ai/V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md)를 따른다.
 
 ## Current Status
 
@@ -12,9 +12,9 @@ v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 �
 |------|------|-----------|
 | Quote CRUD | 구현됨 | `app/actions/quotes.ts`, `app/(dashboard)/quotes/*` |
 | Room/surface 견적 | 구현됨 | `QuoteForm`, `quote_rooms`, `quote_room_surfaces` |
-| Quick/Detailed estimate | 구현됨, Task 2 hardening 완료 | `QuickQuoteBuilder`, `QuickEstimateBuilder`, `InteriorEstimateBuilder`, migration 041–042 + Task 2 category constraint |
+| Quick/Detailed estimate | 구현됨, Task 2-3 hardening 완료 | `QuickQuoteBuilder`, `QuickEstimateBuilder`, `InteriorEstimateBuilder`, migration 041–042 + Task 2 category constraint + Room Price Library snapshot metadata |
 | Exterior estimate | 구현됨, 감사 항목 남음 | `ExteriorEstimateBuilder`, audit 참고 |
-| Rate settings | 구현됨, setup diagnostics 완료 | `PriceRatesForm`, `QuickEstimateTab`, `lib/rate-settings.ts`, `lib/rate-setup-diagnostics.ts` |
+| Rate settings | 구현됨, Room Price Library + setup diagnostics 완료 | `PriceRatesForm`, `QuickEstimateTab`, `lib/rate-settings.ts`, `lib/room-price-library.ts`, `lib/rate-setup-diagnostics.ts` |
 | Material/service line items | 구현됨 | `material_items`, `quote_line_items` |
 | Quote templates | 구현됨 | `quote_templates`, `TemplatePicker` |
 | AI quote drafting | 구현됨 | `AIDraftPanel`, `generateAIDraft()` |
@@ -163,7 +163,7 @@ draft -> sent -> approved -> booked/job/invoice
 | 우선순위 | 항목 | 내용 |
 |----------|------|------|
 | P0 | AI Quote Form Builder structure | 고객용 scope section, 가격 row, clause library를 분리하고 legacy interior/exterior quote form을 재현 가능한 데이터 구조로 정리 |
-| P0 | Quote total parity hardening | Task 1 parity scope와 Task 2 Quick/Advanced snapshot/setup diagnostics는 통과. 다음 quote-related hardening은 Task 3 Room Price Library redesign과 Task 5 legacy fixture reconstruction |
+| P0 | Quote total parity hardening | Task 1 parity scope, Task 2 Quick/Advanced snapshot/setup diagnostics, Task 3 Room Price Library redesign은 통과. 다음 quote-related hardening은 Task 4 quote form schema와 Task 5 legacy fixture reconstruction |
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |
 | P1 | Exterior edit safety | 편집 시 exterior snapshot 손실 여부 회귀 테스트 강화 |
 | P1 | Exterior PDF/detail | 모든 exterior cost/line item이 상세/PDF에 일관 렌더되는지 검증 |

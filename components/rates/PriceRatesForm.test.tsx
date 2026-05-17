@@ -9,18 +9,34 @@ vi.mock('@/app/actions/settings', () => ({
 }));
 
 describe('PriceRatesForm detailed estimate anchors', () => {
-  it('shows detailed estimate anchor settings separately from room flat rate presets', () => {
+  it('shows legacy anchors as compatibility instead of the primary room price list', () => {
     render(<PriceRatesForm defaultRates={buildDefaultRateSettings()} />);
 
-    expect(screen.getByText('Detailed Estimate Anchors')).toBeInTheDocument();
+    expect(screen.queryByText('Detailed Estimate Anchors')).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Room flat rate presets stay separate/i)
-    ).toBeInTheDocument();
+      screen.getAllByText(/Legacy room anchor/i).length
+    ).toBeGreaterThan(0);
   });
 
-  it('lets users add advanced room library items inside detailed estimate settings', async () => {
+  it('lets advanced room presets select a Room Price Library template and default size', async () => {
     const user = userEvent.setup();
-    render(<PriceRatesForm defaultRates={buildDefaultRateSettings()} />);
+    const rates = buildDefaultRateSettings();
+    rates.quick_estimate.rooms = [
+      {
+        id: 'quick-bedroom',
+        version: 2,
+        label: 'Bedroom',
+        enabled_surfaces: ['walls', 'ceiling', 'trim'],
+        sizes: {
+          small: { walls_cents: 90000, ceiling_cents: 30000, trim_cents: 10000 },
+          medium: { walls_cents: 120000, ceiling_cents: 45000, trim_cents: 15000 },
+          large: { walls_cents: 150000, ceiling_cents: 60000, trim_cents: 20000 },
+        },
+        sort_order: 0,
+      },
+    ];
+
+    render(<PriceRatesForm defaultRates={rates} />);
 
     expect(screen.getByText('Advanced Room Items')).toBeInTheDocument();
 
@@ -30,6 +46,17 @@ describe('PriceRatesForm detailed estimate anchors', () => {
 
     expect(screen.getByDisplayValue('New advanced room')).toBeInTheDocument();
     expect(screen.getByDisplayValue('2.7')).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByLabelText(/Room Price Library source/i),
+      'quick-bedroom'
+    );
+    await user.selectOptions(screen.getByLabelText(/Default size/i), 'large');
+
+    expect(screen.getByLabelText(/Room Price Library source/i)).toHaveValue(
+      'quick-bedroom'
+    );
+    expect(screen.getByLabelText(/Default size/i)).toHaveValue('large');
   });
 
   it('shows quick and advanced setup warnings for zero or missing required rates', () => {
@@ -77,13 +104,13 @@ describe('PriceRatesForm detailed estimate anchors', () => {
 
     render(<PriceRatesForm defaultRates={rates} />);
 
-    expect(screen.getByText(/Quick setup/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 room configured/i)).toBeInTheDocument();
+    expect(screen.getByText(/Room Price Library setup/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 room template/i)).toBeInTheDocument();
     expect(screen.getByText(/zero priced surface/i)).toBeInTheDocument();
 
     expect(screen.getByText(/Advanced setup/i)).toBeInTheDocument();
     expect(screen.getByText(/1 room item/i)).toBeInTheDocument();
-    expect(screen.getByText(/missing\/zero anchor/i)).toBeInTheDocument();
+    expect(screen.getByText(/missing\/zero room source/i)).toBeInTheDocument();
     expect(screen.getByText(/zero door\/window unit/i)).toBeInTheDocument();
   });
 });

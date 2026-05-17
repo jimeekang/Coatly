@@ -40,7 +40,7 @@
 | 아직 남은 validation 기록 | D11 cost spreadsheet 숫자 확정, painter별 anonymized quote 추가 회수, W4 numeric golden set fixture |
 | Task 1 implementation review | 2026-05-17 기준 COMPLETE. canonical quote totals/invoice parity, deterministic duplicate priced scope guard, rollback/lock edge tests, PDF route regression, full test suite, build, lint 통과 |
 | Task 2 implementation review | 2026-05-17 기준 COMPLETE. Quick row metadata completeness, Advanced numeric snapshot immutability, setup diagnostics, A$0 selected-source blocking, invalid surface blocking, door/window explicit item boundary, stale-rate tests, full suite/build/lint 통과 |
-| Task 3 design decision | Quick Estimate의 room/size/surface matrix를 v1 canonical Room Price Library로 승격한다. Detailed Estimate Anchors는 직접 가격 입력 UI가 아니라 derived adapter 또는 legacy fallback으로 낮춘다 |
+| Task 3 implementation review | 2026-05-17 기준 COMPLETE. Quick Estimate room matrix를 canonical Room Price Library로 승격했고, Advanced room presets/quote payload/server metadata가 template id/version/label/size/per-surface snapshot을 저장한다. Detailed Estimate Anchors는 legacy compatibility로 축소됐다 |
 
 ## Build Rule
 
@@ -59,7 +59,7 @@
 
 | 영역 | 주요 파일 |
 |------|-----------|
-| Quote calculation | `lib/quotes.ts`, `lib/interior-estimates.ts`, `lib/exterior-estimates.ts`, `lib/detailed-estimate-anchors.ts`, `lib/quick-quote-mapper.ts` |
+| Quote calculation | `lib/quotes.ts`, `lib/interior-estimates.ts`, `lib/exterior-estimates.ts`, `lib/detailed-estimate-anchors.ts`, `lib/quick-quote-mapper.ts`, `lib/room-price-library.ts` |
 | Quote server actions | `app/actions/quotes.ts`, `app/actions/quotes.test.ts` |
 | Quote UI | `components/quotes/QuoteCreateScreen.tsx`, `components/quotes/QuoteEditScreen.tsx`, `components/quotes/QuoteForm.tsx`, `components/quotes/QuickQuoteBuilder.tsx`, `components/quotes/QuickEstimateBuilder.tsx`, `components/quotes/InteriorEstimateBuilder.tsx`, `components/quotes/ExteriorEstimateBuilder.tsx`, `components/quotes/LineItemsSection.tsx`, `components/quotes/QuoteExtraLineItems.tsx` |
 | Price Rates | `app/(dashboard)/price-rates/page.tsx`, `components/rates/PriceRatesForm.tsx`, `components/rates/QuickEstimateTab.tsx`, `lib/rate-settings.ts`, `config/paint-rates.ts` |
@@ -78,8 +78,8 @@
 | Week | 날짜 | 목표 | 완료 기준 |
 |------|------|------|-----------|
 | W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | 완료. canonical calculator, optional add-on/public quote, invoice preset parity, duplicate priced scope guard, full safety verification 통과 |
-| W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + Room Price Library boundary | Task 2 Quick/Advanced rate boundary 완료. 다음은 Task 3 Room Price Library redesign |
-| W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | Task 3 이후 customer-visible scope와 priced row가 UI와 저장 구조에서 분리된다 |
+| W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + Room Price Library boundary | 완료. Task 2 Quick/Advanced rate boundary와 Task 3 Room Price Library redesign 모두 구현 |
+| W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | 다음은 Task 4 quote form structure schema. customer-visible scope와 priced row를 UI와 저장 구조에서 분리 |
 | W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Winchester, Edgar, Paint Buddy quote form을 scope/pricing/clause 구조로 재현하고 가격 회귀 테스트가 통과한다 |
 | W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + Basic/Pro usage logging | Qwen call이 adapter 뒤에 있고, AI output이 price-free schema를 통과하며, plan/trial별 cost log가 남는다 |
 | W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | quote create flow에서 AI draft를 만들고, user review 후 deterministic pricing pass로만 금액을 만든다 |
@@ -148,7 +148,7 @@
 
 - Done: `calculateQuoteTotals()` + compatibility wrapper, calculator tests, shared create/update pricing resolver, optional add-on recalculation with discount/manual adjustment, public quote canonical preview, invoice preset base scope/selected optional/discount/manual adjustment handling, deterministic duplicate priced scope guard, same-fixture create/update parity test, optional linked-invoice/rollback tests, QuoteForm canonical fixture parity, fuzzy duplicate scope warning.
 - Verified: focused quote/invoice/UI/PDF/scope tests passed, `npm run test:run` passed 59 files / 366 tests, `npm run build` passed, `npm run lint` passed.
-- Still required before AI pricing candidates: Task 3 Room Price Library redesign, Task 4 quote form structure schema, and deterministic AI candidate review path.
+- Still required before AI pricing candidates: Task 4 quote form structure schema and deterministic AI candidate review path.
 
 **Completion criteria:**
 
@@ -232,13 +232,13 @@
 - Done: shared rate setup diagnostics, Price Rates setup summary, Quote Builder blocking warnings, complete Quick metadata, Advanced numeric snapshot helper, server-side snapshot before save, invalid surface blocking, door/window explicit opening boundary, duplicate advanced trim guard, stale-rate fixtures.
 - DB: local migration `20260517020123_quote_estimate_item_task2_categories.sql` updates `quote_estimate_items.category` constraint for Task 2 generated categories.
 - Verified: focused Task 2 suites, quote/PDF/invoice regression, full `npm run test:run`, `npm run lint`, and `npm run build` passed.
-- Next: Task 3 Room Price Library redesign before quote form schema and AI candidate application.
+- Next: Task 4 quote form schema and deterministic AI candidate review path.
 
 ## Task 3: Room Price Library and Detailed Anchor Redesign
 
 **Detailed plan:** [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md)
 
-**Status:** DESIGN READY. Not implemented yet.
+**Status:** COMPLETE. 2026-05-17 기준 Room Price Library helper, rate settings schema, Price Rates UI, Advanced quote builder, server-side snapshot metadata, diagnostics, duplicate scope guard, focused tests가 구현됐다.
 
 **Goal:** Quick Estimate에 이미 존재하는 room/size/surface 가격 matrix를 v1의 canonical Room Price Library로 승격하고, Detailed Estimate Anchors를 user-facing duplicate price source가 아니라 derived adapter 또는 legacy fallback으로 낮춘다.
 
@@ -253,35 +253,37 @@
 - Modify: `app/actions/quotes.ts`
 - Modify: `lib/rate-setup-diagnostics.ts`
 - Test: `lib/rate-settings.test.ts`
+- Test: `lib/room-price-library.test.ts`
 - Test: `lib/rate-setup-diagnostics.test.ts`
 - Test: `lib/interior-estimates.test.ts`
+- Test: `lib/quote-pricing-scopes.test.ts`
 - Test: `components/rates/PriceRatesForm.test.tsx`
 - Test: `components/quotes/QuoteForm.test.tsx`
 - Test: `app/actions/quotes.test.ts`
 
 **Method:**
 
-- [ ] **Step 1: Treat Quick Estimate as Room Price Library**
+- [x] **Step 1: Treat Quick Estimate as Room Price Library**
 
   Keep `quick_estimate.rooms` in JSONB for backward compatibility, but domain/UI wording should treat it as the single editable interior room price library.
 
-- [ ] **Step 2: Add room price library helpers**
+- [x] **Step 2: Add room price library helpers**
 
   Add pure helpers to list room templates, resolve a template by id, sum selected surfaces for small/medium/large, and derive an internal anchor range from the same template when the old calculator path still needs one.
 
-- [ ] **Step 3: Change Advanced Room Items to reference room templates**
+- [x] **Step 3: Change Advanced Room Items to reference room templates**
 
   New advanced room presets should store `source_room_template_id`, `source_room_template_version`, `default_room_size`, and default selected surfaces. Legacy `anchor_room_type` stays as fallback only.
 
-- [ ] **Step 4: Reorder Price Rates UI**
+- [x] **Step 4: Reorder Price Rates UI**
 
   Room price setup becomes the primary interior pricing source. Detailed Estimate Anchors should be removed from the main workflow or collapsed as legacy/fallback settings so painters do not maintain two Bedroom prices.
 
-- [ ] **Step 5: Snapshot advanced rooms from room template source**
+- [x] **Step 5: Snapshot advanced rooms from room template source**
 
   Advanced quote rooms must save template id/version/label/size/surface prices so existing quotes remain stable after Room Price Library changes.
 
-- [ ] **Step 6: Update diagnostics and AI candidate boundary**
+- [x] **Step 6: Update diagnostics and AI candidate boundary**
 
   Missing anchors should not block when a valid room template exists. AI pricing candidates should target room template label/id, size, surfaces, and condition, never anchor names or price fields.
 
@@ -292,6 +294,15 @@
 - New advanced room presets do not require a separate room anchor list.
 - Existing quotes and legacy anchor-backed settings remain readable.
 - AI quote form schema can map candidates to room template id/size/surfaces without seeing price fields.
+
+**Implementation snapshot (2026-05-17):**
+
+- Done: Advanced room item schema accepts `source_room_template_id`, `source_room_template_version`, and `default_size`; legacy `anchor_room_type` remains readable.
+- Done: `lib/room-price-library.ts` resolves templates, selected surfaces, derived ranges, and typed missing/disabled-source issues.
+- Done: Price Rates shows Room Price Library setup, Advanced presets choose a template/default size, and legacy anchors are collapsed under compatibility copy.
+- Done: Advanced quote builder copies template source fields and allows manual rooms to select a template directly.
+- Done: Quote payload/server save rows snapshot template id/version/label/size, per-surface cents, derived range, and multiplier metadata.
+- Verified: focused Task 3 suites passed 7 files / 109 tests. Full suite/build/lint verification is tracked at branch completion.
 
 ## Task 4: Quote Form Structure Schema
 

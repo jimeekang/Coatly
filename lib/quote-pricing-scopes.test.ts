@@ -105,6 +105,56 @@ describe('quote pricing scope guard', () => {
     expect(issues.errors[0]?.message).toContain('already included');
   });
 
+  it('uses the Room Price Library template key for advanced room priced scopes', () => {
+    const issues = findQuotePricingScopeIssues({
+      pricing_method: 'hybrid',
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom repaint',
+            anchor_room_type: 'Bedroom',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: false,
+            include_trim: false,
+            source_room_template_id: 'quick-bedroom',
+            source_room_template_size: 'medium',
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+      line_items: [
+        {
+          name: 'Bedroom walls',
+          category: 'service',
+          unit: 'item',
+          quantity: 1,
+          unit_price_cents: 25000,
+          is_optional: false,
+          is_selected: true,
+          pricing_scope_key: buildQuickRoomScopeKey('quick-bedroom', 'walls'),
+          pricing_role: 'priced_scope',
+        },
+      ],
+    });
+
+    expect(issues.errors).toEqual([
+      expect.objectContaining({
+        pricing_scope_key: 'quick:quick-bedroom:walls',
+      }),
+    ]);
+  });
+
   it('warns but does not block fuzzy free-text line items that look like an included scope', () => {
     const issues = findQuotePricingScopeIssues({
       pricing_method: 'detailed_quick',

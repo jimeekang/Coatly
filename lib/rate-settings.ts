@@ -205,6 +205,15 @@ export type QuickEstimateRoom = {
   sort_order: number;
 };
 
+export const QUICK_ROOM_SIZE_TYPES = ['small', 'medium', 'large'] as const;
+export type QuickRoomSize = (typeof QUICK_ROOM_SIZE_TYPES)[number];
+export type QuickRoomSurface = 'walls' | 'ceiling' | 'trim';
+export type QuickRoomSurfacePriceSnapshot = {
+  walls_cents: number;
+  ceiling_cents: number;
+  trim_cents: number;
+};
+
 export type QuickEstimateSettings = {
   rooms: QuickEstimateRoom[];
   coating_multipliers: {
@@ -226,6 +235,9 @@ export type AdvancedEstimateRoomItem = {
   version?: number;
   label: string;
   anchor_room_type: string;
+  source_room_template_id?: string;
+  source_room_template_version?: number;
+  default_size: QuickRoomSize;
   include_walls: boolean;
   include_ceiling: boolean;
   include_trim: boolean;
@@ -465,7 +477,10 @@ const advancedEstimateRoomItemSchema = z.object({
   id: z.string().min(1),
   version: z.number().int().min(1).optional(),
   label: z.string().trim().min(1),
-  anchor_room_type: z.string().trim().min(1),
+  anchor_room_type: z.string().trim().min(1).optional(),
+  source_room_template_id: z.string().trim().min(1).optional(),
+  source_room_template_version: z.number().int().min(1).optional(),
+  default_size: z.enum(QUICK_ROOM_SIZE_TYPES).optional(),
   include_walls: z.boolean(),
   include_ceiling: z.boolean(),
   include_trim: z.boolean(),
@@ -651,6 +666,67 @@ export function buildDefaultRateSettings(): UserRateSettings {
 export const DEFAULT_RATE_SETTINGS: UserRateSettings =
   buildDefaultRateSettings();
 
+function normalizeTemplateLabel(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function findQuickRoomTemplateForAdvancedItem(
+  item: z.output<typeof advancedEstimateRoomItemSchema>,
+  quickEstimate: QuickEstimateSettings
+) {
+  if (item.source_room_template_id) {
+    const matchedById = quickEstimate.rooms.find(
+      (room) => room.id === item.source_room_template_id
+    );
+    if (matchedById) return matchedById;
+  }
+
+  const anchor = item.anchor_room_type?.trim();
+  if (anchor) {
+    const normalizedAnchor = normalizeTemplateLabel(anchor);
+    const matchedByAnchor = quickEstimate.rooms.find(
+      (room) => normalizeTemplateLabel(room.label) === normalizedAnchor
+    );
+    if (matchedByAnchor) return matchedByAnchor;
+  }
+
+  const normalizedLabel = normalizeTemplateLabel(item.label);
+  return quickEstimate.rooms.find(
+    (room) => normalizeTemplateLabel(room.label) === normalizedLabel
+  );
+}
+
+function normalizeAdvancedRoomItem(
+  item: z.output<typeof advancedEstimateRoomItemSchema>,
+  quickEstimate: QuickEstimateSettings
+): AdvancedEstimateRoomItem {
+  const matchedTemplate = findQuickRoomTemplateForAdvancedItem(
+    item,
+    quickEstimate
+  );
+  const sourceRoomTemplateId =
+    item.source_room_template_id ?? matchedTemplate?.id;
+  const sourceRoomTemplateVersion =
+    item.source_room_template_version ?? matchedTemplate?.version;
+
+  return {
+    ...item,
+    anchor_room_type:
+      item.anchor_room_type?.trim() || matchedTemplate?.label || item.label,
+    version: item.version ?? 1,
+    default_size: item.default_size ?? 'medium',
+    ...(sourceRoomTemplateId
+      ? { source_room_template_id: sourceRoomTemplateId }
+      : {}),
+    ...(sourceRoomTemplateVersion
+      ? { source_room_template_version: sourceRoomTemplateVersion }
+      : {}),
+  };
+}
+
 // ─── Parse ────────────────────────────────────────────────────────────────────
 
 /** Parse and validate rate settings from DB JSON. Falls back to defaults for missing entries. */
@@ -758,17 +834,6 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
     };
   }
 
-  if (parsed.data.detailed_estimate_items?.advanced_rooms) {
-    result.detailed_estimate_items = {
-      advanced_rooms: parsed.data.detailed_estimate_items.advanced_rooms.map(
-        (item) => ({
-          ...item,
-          version: item.version ?? 1,
-        })
-      ),
-    };
-  }
-
   // Pricing method settings
   if (parsed.data.pricing) {
     const p = parsed.data.pricing;
@@ -806,6 +871,14 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
     result.quick_estimate = parsed.data.quick_estimate as QuickEstimateSettings;
   } else {
     result.quick_estimate = hydrateQuickEstimate(result.room_rate_presets);
+  }
+
+  if (parsed.data.detailed_estimate_items?.advanced_rooms) {
+    result.detailed_estimate_items = {
+      advanced_rooms: parsed.data.detailed_estimate_items.advanced_rooms.map(
+        (item) => normalizeAdvancedRoomItem(item, result.quick_estimate)
+      ),
+    };
   }
 
   return result;

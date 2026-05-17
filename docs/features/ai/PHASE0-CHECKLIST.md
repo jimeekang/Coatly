@@ -35,8 +35,8 @@
 | Week | 날짜 | 목표 | 상세 방법 | 결과 기록 |
 |------|------|------|-----------|-----------|
 | Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 + [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | 완료. 2026-05-17 기준 canonical totals/optional add-on/public quote/invoice preset parity, duplicate priced scope guard, PDF regression, full suite/build/lint 통과 |
-| Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + Room Price Library boundary | Task 2-3. Task 2 세부 계획: [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md), Task 3 세부 계획: [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md) | Task 2 완료. Quick metadata completeness, Advanced numeric snapshot, setup diagnostics, A$0 selected-source blocking, invalid surface validation, stale-rate tests, full suite/build/lint 통과. 다음은 Task 3 Room Price Library redesign |
-| Build W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | Task 4-5 | Task 3 이후 customer-visible scope/clause UI 구현으로 진행 |
+| Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + Room Price Library boundary | Task 2-3. Task 2 세부 계획: [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md), Task 3 세부 계획: [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md) | 완료. Task 2 Quick/Advanced metadata/snapshot/setup diagnostics와 Task 3 Room Price Library source redesign/focused tests 통과 |
+| Build W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | Task 4-5 | 다음은 Task 4 quote form schema. customer-visible scope/clause UI 구현으로 진행 |
 | Build W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Task 5 + Test matrix | 미기록 |
 | Build W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + usage logging | Task 6-7 | 미기록 |
 | Build W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | Task 8 | 미기록 |

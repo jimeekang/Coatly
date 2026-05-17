@@ -1,5 +1,9 @@
 import type { InteriorEstimateInput } from '@/lib/interior-estimates';
 import {
+  getRoomTemplateSurfaceSnapshotTotalCents,
+  resolveAdvancedRoomPriceSource,
+} from '@/lib/room-price-library';
+import {
   INTERIOR_DOOR_SCOPE_LABELS,
   INTERIOR_DOOR_TYPE_LABELS,
   INTERIOR_WINDOW_SCOPE_LABELS,
@@ -23,7 +27,9 @@ export type RateSetupIssue = {
     | 'zero_quick_surface_price'
     | 'missing_advanced_room_items'
     | 'missing_advanced_anchor'
+    | 'missing_room_template'
     | 'zero_advanced_anchor'
+    | 'zero_room_template_source'
     | 'zero_door_unit_rate'
     | 'zero_window_unit_rate'
     | 'no_advanced_room_surfaces';
@@ -142,6 +148,33 @@ export function getAdvancedEstimateSetupIssues(
   }
 
   roomItems.forEach((item) => {
+    const resolved = resolveAdvancedRoomPriceSource(settings, item);
+    if (!resolved.ok && item.source_room_template_id) {
+      issues.push({
+        area: 'advanced',
+        severity: 'warning',
+        code: 'missing_room_template',
+        source_id: item.id,
+        source_label: item.label,
+        message: resolved.issue.message,
+      });
+      return;
+    }
+
+    if (resolved.ok && resolved.kind === 'room_template') {
+      if (resolved.total_cents === 0) {
+        issues.push({
+          area: 'advanced',
+          severity: 'warning',
+          code: 'zero_room_template_source',
+          source_id: item.id,
+          source_label: item.label,
+          message: `${item.label} Room Price Library source is A$0 for its selected size and surfaces.`,
+        });
+      }
+      return;
+    }
+
     const anchor = getAdvancedAnchor(settings, item.anchor_room_type);
     if (!anchor) {
       issues.push({
@@ -237,6 +270,52 @@ export function getSelectedAdvancedEstimateIssues(
         source_label: roomLabel,
         message: `Select at least one surface for ${roomLabel}.`,
       });
+      return;
+    }
+
+    const snapshotTemplateTotal = room.source_room_template_surface_prices_cents
+      ? getRoomTemplateSurfaceSnapshotTotalCents(
+          room.source_room_template_surface_prices_cents
+        )
+      : null;
+
+    if (snapshotTemplateTotal != null) {
+      if (snapshotTemplateTotal === 0) {
+        issues.push({
+          area: 'advanced',
+          severity: 'blocking',
+          code: 'zero_room_template_source',
+          source_id: room.source_room_template_id ?? room.source_rate_item_id,
+          source_label: roomLabel,
+          message: `${roomLabel} Room Price Library source is A$0. Open Price Rates and set a non-zero room source before saving this quote.`,
+        });
+      }
+      return;
+    }
+
+    if (room.source_room_template_id) {
+      const resolved = resolveAdvancedRoomPriceSource(settings, room);
+      if (!resolved.ok) {
+        issues.push({
+          area: 'advanced',
+          severity: 'blocking',
+          code: 'missing_room_template',
+          source_id: room.source_room_template_id,
+          source_label: roomLabel,
+          message: `${roomLabel} uses missing Room Price Library source "${room.source_room_template_id}". Open Price Rates and choose a valid room template before saving this quote.`,
+        });
+        return;
+      }
+      if (resolved.kind === 'room_template' && resolved.total_cents === 0) {
+        issues.push({
+          area: 'advanced',
+          severity: 'blocking',
+          code: 'zero_room_template_source',
+          source_id: room.source_room_template_id,
+          source_label: roomLabel,
+          message: `${roomLabel} Room Price Library source is A$0. Open Price Rates and set a non-zero room source before saving this quote.`,
+        });
+      }
       return;
     }
 

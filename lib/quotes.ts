@@ -582,6 +582,16 @@ function normalizeInteriorEstimate(
       source_rate_item_id: room.source_rate_item_id,
       source_rate_item_version: room.source_rate_item_version,
       source_rate_item_label: room.source_rate_item_label,
+      source_room_template_id: room.source_room_template_id,
+      source_room_template_version: room.source_room_template_version,
+      source_room_template_label: room.source_room_template_label,
+      source_room_template_size: room.source_room_template_size,
+      source_room_template_surface_prices_cents:
+        room.source_room_template_surface_prices_cents,
+      source_room_template_coating_multiplier_pct:
+        room.source_room_template_coating_multiplier_pct,
+      source_room_template_condition_multiplier_pct:
+        room.source_room_template_condition_multiplier_pct,
       rate_snapshot_version: room.rate_snapshot_version,
       source_anchor_range_cents: room.source_anchor_range_cents,
       source_surface_rate_multiplier: room.source_surface_rate_multiplier,

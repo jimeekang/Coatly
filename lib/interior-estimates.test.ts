@@ -362,6 +362,104 @@ describe('calculateInteriorEstimate', () => {
     expect(newQuote.pricing_items[0]?.unit_price_cents).toBe(500000);
   });
 
+  it('uses Room Price Library snapshots for advanced rooms when quick template prices change later', () => {
+    const ratesV1 = buildDefaultRateSettings();
+    ratesV1.quick_estimate.rooms = [
+      {
+        id: 'quick-bedroom',
+        version: 2,
+        label: 'Bedroom',
+        enabled_surfaces: ['walls', 'ceiling', 'trim'],
+        sizes: {
+          small: { walls_cents: 90000, ceiling_cents: 30000, trim_cents: 10000 },
+          medium: { walls_cents: 120000, ceiling_cents: 45000, trim_cents: 15000 },
+          large: { walls_cents: 150000, ceiling_cents: 60000, trim_cents: 20000 },
+        },
+        sort_order: 0,
+      },
+    ];
+
+    const savedInput = snapshotInteriorEstimateInput(
+      {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom repaint',
+            anchor_room_type: 'Bedroom',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: false,
+            source_room_template_id: 'quick-bedroom',
+            source_room_template_version: 2,
+            source_room_template_label: 'Bedroom',
+            source_room_template_size: 'medium',
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+      ratesV1
+    );
+
+    const ratesV2 = buildDefaultRateSettings();
+    ratesV2.quick_estimate.rooms = [
+      {
+        ...ratesV1.quick_estimate.rooms[0],
+        version: 3,
+        sizes: {
+          small: { walls_cents: 190000, ceiling_cents: 130000, trim_cents: 10000 },
+          medium: { walls_cents: 220000, ceiling_cents: 145000, trim_cents: 15000 },
+          large: { walls_cents: 250000, ceiling_cents: 160000, trim_cents: 20000 },
+        },
+      },
+    ];
+
+    const oldQuote = calculateInteriorEstimate(savedInput, ratesV2);
+    const newQuote = calculateInteriorEstimate(
+      {
+        ...savedInput,
+        rooms: savedInput.rooms.map((room) => ({
+          ...room,
+          rate_snapshot_version: undefined,
+          source_room_template_surface_prices_cents: undefined,
+          source_anchor_range_cents: undefined,
+        })),
+      },
+      ratesV2
+    );
+
+    expect(savedInput.rooms[0]).toEqual(
+      expect.objectContaining({
+        rate_snapshot_version: 1,
+        source_room_template_id: 'quick-bedroom',
+        source_room_template_version: 2,
+        source_room_template_label: 'Bedroom',
+        source_room_template_size: 'medium',
+        source_room_template_surface_prices_cents: {
+          walls_cents: 120000,
+          ceiling_cents: 45000,
+          trim_cents: 0,
+        },
+        source_anchor_range_cents: {
+          min: 120000,
+          median: 165000,
+          max: 210000,
+        },
+      })
+    );
+    expect(oldQuote.pricing_items[0]?.unit_price_cents).toBe(165000);
+    expect(newQuote.pricing_items[0]?.unit_price_cents).toBe(365000);
+  });
+
   it('rejects specific-area rooms with no selected walls, ceiling, or trim', () => {
     expect(() =>
       calculateInteriorEstimate({

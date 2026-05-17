@@ -2004,6 +2004,248 @@ describe('updateQuote', () => {
     );
   });
 
+  it('stores Room Price Library source metadata when updating a hybrid interior quote', async () => {
+    const captured: {
+      quoteUpdate?: Record<string, unknown>;
+      estimateItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-1',
+                  quote_number: 'QUO-0010',
+                  customer_id: 'customer-1',
+                },
+                error: null,
+              }),
+            })),
+            update: vi.fn((payload) => {
+              captured.quoteUpdate = payload;
+              return {
+                error: null,
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          const invoiceQuery = {
+            count: 0,
+            error: null,
+            eq: vi.fn().mockReturnThis(),
+          };
+          return {
+            select: vi.fn(() => invoiceQuery),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: {
+                  id: 'customer-1',
+                  email: 'client@example.com',
+                  emails: ['client@example.com'],
+                  address_line1: '128 Beach Street',
+                  address_line2: null,
+                  city: 'Manly',
+                  state: 'NSW',
+                  postcode: '2095',
+                  properties: [],
+                },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: {
+                  default_rates: {
+                    quick_estimate: {
+                      rooms: [
+                        {
+                          id: 'quick-bedroom',
+                          version: 2,
+                          label: 'Bedroom',
+                          enabled_surfaces: ['walls', 'ceiling', 'trim'],
+                          sizes: {
+                            small: {
+                              walls_cents: 90000,
+                              ceiling_cents: 30000,
+                              trim_cents: 10000,
+                            },
+                            medium: {
+                              walls_cents: 120000,
+                              ceiling_cents: 45000,
+                              trim_cents: 15000,
+                            },
+                            large: {
+                              walls_cents: 150000,
+                              ceiling_cents: 60000,
+                              trim_cents: 20000,
+                            },
+                          },
+                          sort_order: 0,
+                        },
+                      ],
+                      coating_multipliers: {
+                        one_coat_refresh_pct: 70,
+                        two_coats_repaint_pct: 100,
+                        three_coats_new_plaster_pct: 140,
+                      },
+                      condition_multipliers: {
+                        good_pct: 90,
+                        average_pct: 100,
+                        poor_pct: 130,
+                      },
+                    },
+                  },
+                },
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+            insert: vi.fn(async (payload) => {
+              captured.estimateItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Updated room template bedroom',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [],
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom repaint',
+            anchor_room_type: 'Bedroom',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: false,
+            source_room_template_id: 'quick-bedroom',
+            source_room_template_size: 'medium',
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteUpdate?.subtotal_cents).toBe(165000);
+    expect(captured.quoteUpdate?.estimate_context).toEqual(
+      expect.objectContaining({
+        rooms: [
+          expect.objectContaining({
+            rate_snapshot_version: 1,
+            source_room_template_id: 'quick-bedroom',
+            source_room_template_version: 2,
+            source_room_template_label: 'Bedroom',
+            source_room_template_size: 'medium',
+            source_room_template_surface_prices_cents: {
+              walls_cents: 120000,
+              ceiling_cents: 45000,
+              trim_cents: 0,
+            },
+            source_anchor_range_cents: {
+              min: 120000,
+              median: 165000,
+              max: 210000,
+            },
+          }),
+        ],
+      })
+    );
+    expect(captured.estimateItemsInsert?.[0]).toEqual(
+      expect.objectContaining({
+        category: 'room_anchor',
+        label: 'Bedroom repaint',
+        unit_price_cents: 165000,
+        total_cents: 165000,
+        metadata: expect.objectContaining({
+          source_room_template_id: 'quick-bedroom',
+          source_room_template_version: 2,
+          source_room_template_label: 'Bedroom',
+          source_room_template_size: 'medium',
+          source_room_template_surface_walls_cents: 120000,
+          source_room_template_surface_ceiling_cents: 45000,
+          source_room_template_surface_trim_cents: 0,
+          source_anchor_range_median_cents: 165000,
+        }),
+      })
+    );
+  });
+
   it('re-inserts Quick Estimate items when updating a detailed quick quote', async () => {
     const captured: {
       quoteUpdate?: Record<string, unknown>;

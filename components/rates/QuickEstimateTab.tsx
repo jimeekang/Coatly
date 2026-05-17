@@ -318,8 +318,11 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-on-surface text-base font-semibold">
-            Rooms ({settings.rooms.length})
+            Room Price Library ({settings.rooms.length})
           </h3>
+          <p className="text-on-surface-variant mt-1 text-sm">
+            Used by Quick Estimate, Advanced room presets, and future AI draft pricing.
+          </p>
         </div>
 
         {settings.rooms.length === 0 && (

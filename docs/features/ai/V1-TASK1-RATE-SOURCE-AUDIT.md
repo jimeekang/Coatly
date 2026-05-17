@@ -40,11 +40,11 @@
 
 | Gap | Why it matters | Suggested implementation |
 |-----|----------------|--------------------------|
-| None for Task 1 | Task 1 scope is closed for v1 pricing foundation. | Task 2 follow-on work is also complete as of 2026-05-17. Next pricing-related follow-on is Task 3 Room Price Library redesign, then Task 4 quote form schema and Task 5 legacy quote reconstruction. |
+| None for Task 1 | Task 1 scope is closed for v1 pricing foundation. | Task 2 follow-on and Task 3 Room Price Library redesign are complete as of 2026-05-17. Next pricing-related follow-on is Task 4 quote form schema and Task 5 legacy quote reconstruction. |
 
 ### Recommended Split
 
-Task 1 is now closed as **Task 1A: canonical quote totals and invoice parity** plus **Task 1B: duplicate priced scope guard and final safety verification**. Task 2 rate-boundary hardening is also complete; AI pricing candidates, Qwen adapter, and photo helper now wait for Task 3 Room Price Library redesign, Task 4 quote form structure schema, and deterministic candidate review.
+Task 1 is now closed as **Task 1A: canonical quote totals and invoice parity** plus **Task 1B: duplicate priced scope guard and final safety verification**. Task 2 rate-boundary hardening and Task 3 Room Price Library redesign are also complete; AI pricing candidates, Qwen adapter, and photo helper now wait for Task 4 quote form structure schema and deterministic candidate review.
 
 ## Files
 
@@ -112,7 +112,7 @@ Task 1 is now closed as **Task 1A: canonical quote totals and invoice parity** p
 | `quotes.estimate_context` / `pricing_snapshot` | Keep as the saved audit snapshot for interior/exterior estimate inputs and rate snapshot |
 | `quote_estimate_items.total_cents` | Method detail rows only; never added again if already included in `base_subtotal_cents` |
 | `quote_line_items.total_cents` | Add-on/service/material rows only; optional unselected rows are excluded from totals |
-| `quote_line_items.pricing_scope_key` / `pricing_role` | Not persisted in v1. These optional payload fields are validated before save to block duplicate priced scope rows, then omitted from existing DB inserts. A future Task 3 schema can persist them if scope tables are introduced. |
+| `quote_line_items.pricing_scope_key` / `pricing_role` | Not persisted in v1. These optional payload fields are validated before save to block duplicate priced scope rows, then omitted from existing DB inserts. A future Task 4 schema can persist them if scope tables are introduced. |
 | Supabase migration | No new migration should be required for canonical totals. If implementation proves a persisted scope key is required, stop and add that as a separate reviewed schema task instead of silently overloading existing columns |
 
 ## Authoritative Price Source Map

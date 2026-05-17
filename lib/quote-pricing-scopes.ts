@@ -29,6 +29,7 @@ type InteriorScopeRoomInput = {
   include_ceiling?: boolean;
   include_trim?: boolean;
   source_rate_item_id?: string;
+  source_room_template_id?: string;
 };
 
 type InteriorScopeInput = {
@@ -215,6 +216,16 @@ function addInteriorScopes(
 
     surfaceFlags.forEach(([surface, included]) => {
       if (!included) return;
+      if (room.source_room_template_id) {
+        addScope(scopes, {
+          key: buildQuickRoomScopeKey(room.source_room_template_id, surface),
+          label: `${roomLabel} ${SURFACE_LABELS[surface]}`,
+          roomLabel,
+          surface,
+        });
+        return;
+      }
+
       addScope(scopes, {
         key: buildInteriorRoomScopeKey(roomKey, surface),
         label: `${roomLabel} ${SURFACE_LABELS[surface]}`,

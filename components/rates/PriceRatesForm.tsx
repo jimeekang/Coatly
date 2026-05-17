@@ -56,11 +56,11 @@ import {
   type SqmSurfaceType,
   type TrimPaintSystem,
   type QuickEstimateSettings,
+  type QuickEstimateRoom,
   type UserRateSettings,
   type WindowScope,
   type WindowType,
 } from '@/lib/rate-settings';
-import { INTERIOR_ROOM_TYPES } from '@/lib/interior-estimates';
 import {
   getAdvancedEstimateSetupIssues,
   getQuickEstimateSetupIssues,
@@ -1227,16 +1227,21 @@ function ManualTab() {
 
 function AdvancedRoomItemsSection({
   items,
+  quickRooms,
   onAdd,
   onUpdate,
   onDelete,
 }: {
   items: AdvancedEstimateRoomItem[];
+  quickRooms: QuickEstimateRoom[];
   onAdd: () => void;
   onUpdate: (id: string, patch: Partial<AdvancedEstimateRoomItem>) => void;
   onDelete: (id: string) => void;
 }) {
   const sortedItems = [...items].sort((a, b) => a.sort_order - b.sort_order);
+  const sortedQuickRooms = [...quickRooms].sort(
+    (a, b) => a.sort_order - b.sort_order
+  );
 
   return (
     <section className="space-y-4">
@@ -1268,7 +1273,7 @@ function AdvancedRoomItemsSection({
               key={item.id}
               className="border-outline rounded-2xl border bg-white p-4 shadow-sm sm:p-5"
             >
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_140px_52px] lg:items-end">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_130px_120px_52px] lg:items-end">
                 <div className="space-y-2">
                   <label
                     htmlFor={'advanced-room-item-' + item.id}
@@ -1294,26 +1299,61 @@ function AdvancedRoomItemsSection({
 
                 <div className="space-y-2">
                   <label
-                    htmlFor={'advanced-room-anchor-' + item.id}
+                    htmlFor={'advanced-room-template-' + item.id}
                     className="text-on-surface-variant text-sm font-medium"
                   >
-                    Anchor
+                    Room Price Library source
                   </label>
                   <select
-                    id={'advanced-room-anchor-' + item.id}
-                    value={item.anchor_room_type}
+                    id={'advanced-room-template-' + item.id}
+                    value={item.source_room_template_id ?? ''}
+                    onChange={(event) => {
+                      const template = sortedQuickRooms.find(
+                        (room) => room.id === event.target.value
+                      );
+                      onUpdate(item.id, {
+                        source_room_template_id: template?.id,
+                        source_room_template_version: template
+                          ? (template.version ?? 1)
+                          : undefined,
+                        anchor_room_type:
+                          template?.label ?? item.anchor_room_type,
+                      });
+                    }}
+                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                  >
+                    <option value="">Legacy anchor fallback</option>
+                    {sortedQuickRooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor={'advanced-room-size-' + item.id}
+                    className="text-on-surface-variant text-sm font-medium"
+                  >
+                    Default size
+                  </label>
+                  <select
+                    id={'advanced-room-size-' + item.id}
+                    value={item.default_size ?? 'medium'}
                     onChange={(event) =>
                       onUpdate(item.id, {
-                        anchor_room_type: event.target.value,
+                        default_size: event.target.value as
+                          | 'small'
+                          | 'medium'
+                          | 'large',
                       })
                     }
                     className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
                   >
-                    {INTERIOR_ROOM_TYPES.map((roomType) => (
-                      <option key={roomType} value={roomType}>
-                        {roomType}
-                      </option>
-                    ))}
+                    <option value="small">Small</option>
+                    <option value="medium">Medium</option>
+                    <option value="large">Large</option>
                   </select>
                 </div>
 
@@ -1481,8 +1521,8 @@ function DetailedEstimateAnchorsTab({
     <section className="space-y-4">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <SectionHeading
-          title="Detailed Estimate Anchors"
-          subtitle="Set the base room prices used by Detailed Estimate. Room flat rate presets stay separate."
+          title="Legacy Room Anchor Fallback"
+          subtitle="Compatibility-only fallback for old detailed estimate data. New room pricing should come from the Room Price Library."
         />
         <AddRateItemButton label="Add Room Anchor" onClick={addRoomAnchor} />
       </div>
@@ -1932,11 +1972,21 @@ export function PriceRatesForm({
 
   // ── Advanced detailed estimate room library handlers ───────────────────────
   function handleAdvancedRoomItemAdd() {
+    const firstTemplate = rates.quick_estimate.rooms
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order)[0];
     const item: AdvancedEstimateRoomItem = {
       id: createClientId('advanced-room'),
       version: 1,
       label: 'New advanced room',
-      anchor_room_type: 'Living Room',
+      anchor_room_type: firstTemplate?.label ?? 'Living Room',
+      default_size: 'medium',
+      ...(firstTemplate
+        ? {
+            source_room_template_id: firstTemplate.id,
+            source_room_template_version: firstTemplate.version ?? 1,
+          }
+        : {}),
       include_walls: true,
       include_ceiling: true,
       include_trim: false,
@@ -2158,7 +2208,9 @@ export function PriceRatesForm({
   const advancedSetupIssues = getAdvancedEstimateSetupIssues(rates);
   const missingOrZeroAnchorCount = countIssues(advancedSetupIssues, [
     'missing_advanced_anchor',
+    'missing_room_template',
     'zero_advanced_anchor',
+    'zero_room_template_source',
   ]);
   const zeroDoorWindowCount = countIssues(advancedSetupIssues, [
     'zero_door_unit_rate',
@@ -2169,10 +2221,10 @@ export function PriceRatesForm({
     <form onSubmit={handleSubmit} className="space-y-8">
       <div className="grid gap-3 lg:grid-cols-2">
         <RateSetupSummary
-          title="Quick setup"
+          title="Room Price Library setup"
           items={[
             {
-              label: 'room configured',
+              label: 'room template',
               value: String(rates.quick_estimate.rooms.length),
             },
             {
@@ -2196,7 +2248,7 @@ export function PriceRatesForm({
               value: String(rates.detailed_estimate_items.advanced_rooms.length),
             },
             {
-              label: 'missing/zero anchor',
+              label: 'missing/zero room source',
               value: String(missingOrZeroAnchorCount),
             },
             {
@@ -2318,14 +2370,22 @@ export function PriceRatesForm({
             <div className="space-y-5">
               <AdvancedRoomItemsSection
                 items={rates.detailed_estimate_items.advanced_rooms}
+                quickRooms={rates.quick_estimate.rooms}
                 onAdd={handleAdvancedRoomItemAdd}
                 onUpdate={handleAdvancedRoomItemUpdate}
                 onDelete={handleAdvancedRoomItemDelete}
               />
-              <DetailedEstimateAnchorsTab
-                rates={rates}
-                onChange={handleDetailedEstimateAnchorsChange}
-              />
+              <details className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm">
+                <summary className="cursor-pointer text-sm font-semibold text-on-surface">
+                  Legacy room anchor compatibility
+                </summary>
+                <div className="mt-4">
+                  <DetailedEstimateAnchorsTab
+                    rates={rates}
+                    onChange={handleDetailedEstimateAnchorsChange}
+                  />
+                </div>
+              </details>
               <WallCeilingRatesSection
                 rates={rates}
                 onSurfaceChange={handleSurfaceChange}
