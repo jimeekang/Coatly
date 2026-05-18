@@ -25,7 +25,6 @@ import {
   type InteriorEstimateInput,
   type InteriorRoomType,
 } from '@/lib/interior-estimates';
-import { mapQuickQuoteToInteriorEstimate } from '@/lib/quick-quote-mapper';
 import { findQuotePricingScopeIssues } from '@/lib/quote-pricing-scopes';
 import {
   getFirstBlockingRateSetupIssue,
@@ -81,12 +80,6 @@ import {
   type InteriorEstimateFormState,
 } from '@/components/quotes/InteriorEstimateBuilder';
 import {
-  QuickQuoteBuilder,
-  createEmptyQuickQuoteState,
-  calculateQuickQuotePreview,
-  type QuickQuoteBuilderState,
-} from '@/components/quotes/QuickQuoteBuilder';
-import {
   ExteriorEstimateBuilder,
   createEmptyExteriorEstimateState,
   buildExteriorEstimatePayload,
@@ -95,8 +88,6 @@ import {
 import { calculateExteriorEstimate } from '@/lib/exterior-estimates';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type EstimateMode = 'quick' | 'advanced';
 
 /** Which high-level pricing strategy the user has chosen */
 type PricingStrategy = 'hybrid' | 'day_rate' | 'room_rate' | 'manual' | 'detailed_quick';
@@ -233,6 +224,11 @@ function buildInitialAdvancedEstimate(
   if (estimateContext) {
     const roomOptions =
       estimateContext.rooms.length > 0 ? estimateContext.rooms : base.rooms;
+    const trimPaintSystem =
+      estimateContext.trim_paint_system ??
+      estimateContext.opening_items[0]?.paint_system ??
+      estimateContext.trim_items[0]?.paint_system ??
+      base.trim_paint_system;
 
     return {
       ...base,
@@ -243,6 +239,7 @@ function buildInitialAdvancedEstimate(
       wall_paint_system:
         normalizeInteriorWallPaintSystem(estimateContext.wall_paint_system) ??
         base.wall_paint_system,
+      trim_paint_system: trimPaintSystem,
       apartment_type:
         estimateContext.property_details.apartment_type ?? base.apartment_type,
       apartment_sqm: str(estimateContext.property_details.sqm),
@@ -256,12 +253,21 @@ function buildInitialAdvancedEstimate(
         anchor_room_type: room.anchor_room_type,
         length_m: str(room.length_m),
         width_m: str(room.width_m),
-        height_m: str(room.height_m ?? 2.7),
+        height_m: str(room.height_m),
         include_walls: room.include_walls,
         include_ceiling: room.include_ceiling,
         include_trim: room.include_trim,
         include_doors: false,
         include_windows: false,
+        condition: room.source_condition ?? estimateContext.condition,
+        wall_paint_system:
+          normalizeInteriorWallPaintSystem(room.source_wall_paint_system) ??
+          normalizeInteriorWallPaintSystem(estimateContext.wall_paint_system) ??
+          base.wall_paint_system,
+        trim_paint_system:
+          room.source_trim_paint_system ??
+          estimateContext.trim_paint_system ??
+          trimPaintSystem,
         source_rate_item_id: room.source_rate_item_id,
         source_rate_item_version: room.source_rate_item_version,
         source_rate_item_label: room.source_rate_item_label,
@@ -281,6 +287,7 @@ function buildInitialAdvancedEstimate(
         source_scope_multiplier: room.source_scope_multiplier,
         source_condition: room.source_condition,
         source_wall_paint_system: room.source_wall_paint_system,
+        source_trim_paint_system: room.source_trim_paint_system,
       })),
       doors: estimateContext.opening_items
         .filter((item) => item.opening_type === 'door')
@@ -337,6 +344,9 @@ function buildInitialAdvancedEstimate(
         room.surfaces?.some((s) => s.surface_type === 'doors') ?? false,
       include_windows:
         room.surfaces?.some((s) => s.surface_type === 'windows') ?? false,
+      condition: base.condition,
+      wall_paint_system: base.wall_paint_system,
+      trim_paint_system: base.trim_paint_system,
     })),
   };
 }
@@ -355,8 +365,17 @@ function buildAdvancedEstimatePayload(
   estimate: InteriorEstimateFormState,
   rateSettings?: UserRateSettings | null
 ): InteriorEstimateInput {
+  const emptySpecificAreaDetails = {
+    apartment_type: null,
+    sqm: null,
+    bedrooms: null,
+    bathrooms: null,
+    storeys: null,
+  };
   const property_details =
-    estimate.property_type === 'apartment'
+    estimate.estimate_mode === 'specific_areas'
+      ? emptySpecificAreaDetails
+      : estimate.property_type === 'apartment'
       ? {
           apartment_type: estimate.apartment_type,
           sqm: num(estimate.apartment_sqm),
@@ -379,6 +398,7 @@ function buildAdvancedEstimatePayload(
       condition: estimate.condition,
       scope: estimate.scope,
       wall_paint_system: estimate.wall_paint_system,
+      trim_paint_system: estimate.trim_paint_system,
       property_details,
       rooms: [],
       opening_items: [],
@@ -392,6 +412,7 @@ function buildAdvancedEstimatePayload(
     condition: estimate.condition,
     scope: estimate.scope,
     wall_paint_system: estimate.wall_paint_system,
+    trim_paint_system: estimate.trim_paint_system,
     property_details,
     rooms: estimate.rooms.map((room) => ({
       name: room.name.trim() || room.anchor_room_type,
@@ -403,6 +424,9 @@ function buildAdvancedEstimatePayload(
       include_walls: room.include_walls,
       include_ceiling: room.include_ceiling,
       include_trim: room.include_trim,
+      source_condition: room.condition,
+      source_wall_paint_system: room.wall_paint_system,
+      source_trim_paint_system: room.trim_paint_system,
       source_rate_item_id: room.source_rate_item_id,
       source_rate_item_version: room.source_rate_item_version,
       source_rate_item_label: room.source_rate_item_label,
@@ -420,15 +444,13 @@ function buildAdvancedEstimatePayload(
       source_anchor_range_cents: room.source_anchor_range_cents,
       source_surface_rate_multiplier: room.source_surface_rate_multiplier,
       source_scope_multiplier: room.source_scope_multiplier,
-      source_condition: room.source_condition,
-      source_wall_paint_system: room.source_wall_paint_system,
     })),
     opening_items: [
       ...estimate.doors
         .filter((door) => intVal(door.quantity, 0) > 0)
         .map((door) => ({
           opening_type: 'door' as const,
-          paint_system: door.paint_system,
+          paint_system: estimate.trim_paint_system,
           quantity: intVal(door.quantity, 1),
           room_index:
             door.room_index === '' ? null : intVal(door.room_index, 0),
@@ -439,7 +461,7 @@ function buildAdvancedEstimatePayload(
         .filter((w) => intVal(w.quantity, 0) > 0)
         .map((w) => ({
           opening_type: 'window' as const,
-          paint_system: w.paint_system,
+          paint_system: estimate.trim_paint_system,
           quantity: intVal(w.quantity, 1),
           room_index: w.room_index === '' ? null : intVal(w.room_index, 0),
           window_type: w.window_type,
@@ -450,7 +472,7 @@ function buildAdvancedEstimatePayload(
       .filter((t) => Number(t.quantity) > 0)
       .map((t) => ({
         trim_type: 'skirting' as const,
-        paint_system: t.paint_system,
+        paint_system: estimate.trim_paint_system,
         quantity: Number(t.quantity),
         room_index: t.room_index === '' ? null : intVal(t.room_index, 0),
       })),
@@ -900,17 +922,6 @@ export function QuoteForm({
   const [showDepositEditor, setShowDepositEditor] = useState(
     (defaultValues?.deposit_percent ?? 0) > 0
   );
-  const hasSavedInteriorEstimate = isInteriorEstimateInput(
-    defaultValues?.interior_estimate
-  );
-
-  // If pre-filled rooms exist (e.g., AI draft), start in advanced mode
-  const [estimateMode, setEstimateMode] = useState<EstimateMode>(
-    hasSavedInteriorEstimate || defaultValues?.rooms?.length
-      ? 'advanced'
-      : 'quick'
-  );
-
   // Pricing strategy (which method to use for this quote)
   const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>(
     () => {
@@ -985,12 +996,19 @@ export function QuoteForm({
       saved.inputs &&
       typeof saved.inputs === 'object'
     ) {
-      return saved.inputs as QuickInputs;
+      const inputs = saved.inputs as QuickInputs;
+      return {
+        ...inputs,
+        global_trim_paint_system:
+          inputs.global_trim_paint_system ?? 'oil_2coat',
+      };
     }
     return {
+      property_preset: null,
       rooms: [],
       global_coating: 'two_coats_repaint',
       global_condition: 'average',
+      global_trim_paint_system: 'oil_2coat',
     };
   });
 
@@ -1038,11 +1056,6 @@ export function QuoteForm({
     'interior'
   );
 
-  // Quick mode state
-  const [quickState, setQuickState] = useState<QuickQuoteBuilderState>(
-    createEmptyQuickQuoteState
-  );
-
   // Advanced mode state
   const [advancedEstimate, setAdvancedEstimate] = useState(() =>
     buildInitialAdvancedEstimate(defaultValues)
@@ -1053,15 +1066,9 @@ export function QuoteForm({
     useState<ExteriorEstimateFormState>(createEmptyExteriorEstimateState);
 
   // Live preview totals
-  const quickPreview = useMemo(
-    () => calculateQuickQuotePreview(quickState, rateSettings),
-    [quickState, rateSettings]
-  );
-
   const advancedPreview = useMemo(() => {
     if (
       pricingStrategy !== 'hybrid' ||
-      estimateMode !== 'advanced' ||
       quoteScope !== 'interior'
     )
       return null;
@@ -1072,7 +1079,6 @@ export function QuoteForm({
     );
   }, [
     advancedEstimate,
-    estimateMode,
     pricingStrategy,
     quoteScope,
     rateSettings,
@@ -1093,9 +1099,7 @@ export function QuoteForm({
     pricingStrategy === 'hybrid'
       ? quoteScope === 'exterior'
         ? (exteriorPreview?.subtotal_cents ?? 0)
-        : estimateMode === 'quick'
-          ? quickPreview.subtotal_cents
-          : (advancedPreview?.subtotal_cents ?? 0)
+        : (advancedPreview?.subtotal_cents ?? 0)
       : 0;
   const labourMarkupCents = Math.round(
     (hybridBaseSubtotal * labourMarkupPct) / 100
@@ -1105,10 +1109,7 @@ export function QuoteForm({
   );
   const subtotalWithMarkup =
     hybridBaseSubtotal + labourMarkupCents + materialMarkupCents;
-  const adjustmentCents =
-    pricingStrategy === 'hybrid' && estimateMode === 'quick'
-      ? quickPreview.adjustment_cents
-      : 0;
+  const adjustmentCents = 0;
   // Merge M&S library items with extra line items (excluding items with empty names)
   const allLineItems = useMemo(
     () => [
@@ -1166,17 +1167,9 @@ export function QuoteForm({
   const depositCents = calculateDepositCents(displayTotal, depositPercent);
   const activeMethodLabel =
     pricingStrategy === 'hybrid'
-      ? `Detailed Estimate · ${estimateMode === 'quick' ? 'Quick' : 'Advanced'}`
+      ? 'Detailed Estimate'
       : PRICING_METHOD_LABELS[pricingStrategy];
-  const roomSummaryLines =
-    pricingStrategy === 'hybrid' &&
-    estimateMode === 'quick' &&
-    quickState.rooms.length > 0
-      ? quickState.rooms.map((room, idx) => ({
-          label: room.name || `Room ${idx + 1}`,
-          value: quickPreview.per_room_cents[idx] ?? 0,
-        }))
-      : [];
+  const roomSummaryLines: SummaryLine[] = [];
   const summaryLines: SummaryLine[] = (() => {
     const discountLine =
       discountCents > 0
@@ -1300,12 +1293,16 @@ export function QuoteForm({
       pricingStrategy === 'manual' ||
       (pricingStrategy === 'room_rate' && roomRateItems.length > 0) ||
       (pricingStrategy === 'detailed_quick' &&
-        quickInputs.rooms.length > 0 &&
+        (quickInputs.property_preset != null || quickInputs.rooms.length > 0) &&
         quickInputs.rooms.every((r) => r.selected_surfaces.length > 0)) ||
       (pricingStrategy === 'hybrid' &&
         (quoteScope === 'exterior'
           ? (exteriorPreview?.subtotal_cents ?? 0) > 0
-          : estimateMode === 'advanced' || quickState.rooms.length > 0)))
+          : advancedEstimate.estimate_mode === 'entire_property'
+            ? (advancedPreview?.subtotal_cents ?? 0) > 0
+            : advancedEstimate.rooms.length > 0 &&
+              (advancedPreview?.subtotal_cents ?? 0) > 0 &&
+              !hasInvalidSpecificAreaRoom(advancedEstimate))))
   );
 
   function handleDiscountInputChange(value: string) {
@@ -1471,18 +1468,10 @@ export function QuoteForm({
       };
     } else {
       // hybrid / sqm_rate — interior estimate builder
-      let interior_estimate: InteriorEstimateInput;
-      if (estimateMode === 'quick') {
-        interior_estimate = mapQuickQuoteToInteriorEstimate({
-          wall_paint_system: quickState.wall_paint_system,
-          rooms: quickState.rooms,
-        });
-      } else {
-        interior_estimate = buildAdvancedEstimatePayload(
-          advancedEstimate,
-          rateSettings
-        );
-      }
+      const interior_estimate = buildAdvancedEstimatePayload(
+        advancedEstimate,
+        rateSettings
+      );
       payload = {
         customer_id: form.customer_id,
         customer_address,
@@ -1493,8 +1482,7 @@ export function QuoteForm({
         complexity: 'standard',
         labour_margin_percent: labourMarkupPct,
         material_margin_percent: materialMarkupPct,
-        manual_adjustment_cents:
-          estimateMode === 'quick' ? quickState.manual_adjustment_cents : 0,
+        manual_adjustment_cents: 0,
         notes: form.notes,
         internal_notes: form.internal_notes,
         rooms: [],
@@ -2306,63 +2294,14 @@ export function QuoteForm({
 
           {/* Estimate builder — only shown for hybrid method */}
           {pricingStrategy === 'hybrid' && quoteScope === 'interior' && (
-            <>
-              {/* Mode toggle — Quick vs Advanced */}
-              <div className="border-outline-variant flex overflow-hidden rounded-xl border bg-white">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEstimateMode('quick');
-                    setError(null);
-                  }}
-                  className={[
-                    'flex flex-1 flex-col items-center gap-0.5 py-3 text-sm font-semibold transition-colors',
-                    estimateMode === 'quick'
-                      ? 'bg-primary text-white'
-                      : 'text-on-surface-variant hover:text-on-surface',
-                  ].join(' ')}
-                >
-                  <span className="text-base">⚡</span>
-                  Quick
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEstimateMode('advanced');
-                    setError(null);
-                  }}
-                  className={[
-                    'flex flex-1 flex-col items-center gap-0.5 py-3 text-sm font-semibold transition-colors',
-                    estimateMode === 'advanced'
-                      ? 'bg-primary text-white'
-                      : 'text-on-surface-variant hover:text-on-surface',
-                  ].join(' ')}
-                >
-                  <span className="text-base">🔧</span>
-                  Advanced
-                </button>
-              </div>
-
-              {estimateMode === 'quick' ? (
-                <QuickQuoteBuilder
-                  value={quickState}
-                  onChange={(next) => {
-                    setQuickState(next);
-                    setError(null);
-                  }}
-                  rateSettings={rateSettings}
-                />
-              ) : (
-                <InteriorEstimateBuilder
-                  value={advancedEstimate}
-                  onChange={(next) => {
-                    setAdvancedEstimate(next);
-                    setError(null);
-                  }}
-                  rateSettings={rateSettings}
-                />
-              )}
-            </>
+            <InteriorEstimateBuilder
+              value={advancedEstimate}
+              onChange={(next) => {
+                setAdvancedEstimate(next);
+                setError(null);
+              }}
+              rateSettings={rateSettings}
+            />
           )}
 
           {/* Exterior estimate builder */}

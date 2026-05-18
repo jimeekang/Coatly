@@ -34,6 +34,86 @@ function makeSettings(overrides?: Partial<ReturnType<typeof buildDefaultRateSett
 }
 
 describe('calculateQuickEstimate', () => {
+  it('prices a selected 2 bed 2 bath apartment whole-property preset from anchors', () => {
+    const rates = makeSettings();
+    const inputs: QuickInputs = {
+      property_preset: {
+        preset_id: 'preset-2-bed-2-bath',
+        label: '2 Bed 2 Bath Apartment',
+        property_type: 'apartment',
+        apartment_type: '2_bedroom_standard',
+        bedrooms: 2,
+        bathrooms: 2,
+        sqm: 89,
+        storeys: null,
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        subtotal_cents: 0,
+        gst_cents: 0,
+        total_cents: 0,
+      },
+      rooms: [],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+
+    const result = calculateQuickEstimate(inputs, rates);
+
+    expect(result.property_preset?.subtotal_cents).toBe(495650);
+    expect(result.subtotal_cents).toBe(495650);
+    expect(result.gst_cents).toBe(49565);
+    expect(result.total_cents).toBe(545215);
+  });
+
+  it('prices whole-property trim higher when Water Base is selected', () => {
+    const rates = makeSettings();
+    const oilInputs: QuickInputs = {
+      property_preset: {
+        preset_id: 'preset-trim-oil',
+        label: '2 Bed 2 Bath Apartment',
+        property_type: 'apartment',
+        apartment_type: '2_bedroom_standard',
+        bedrooms: 2,
+        bathrooms: 2,
+        sqm: 89,
+        storeys: null,
+        condition: 'fair',
+        scope: ['trim'],
+        wall_paint_system: 'repaint_2coat',
+        trim_paint_system: 'oil_2coat',
+        subtotal_cents: 0,
+        gst_cents: 0,
+        total_cents: 0,
+      },
+      rooms: [],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+      global_trim_paint_system: 'oil_2coat',
+    };
+    const waterInputs: QuickInputs = {
+      ...oilInputs,
+      property_preset: oilInputs.property_preset
+        ? {
+            ...oilInputs.property_preset,
+            preset_id: 'preset-trim-water',
+            trim_paint_system: 'water_3coat_white_finish',
+            subtotal_cents: 0,
+            gst_cents: 0,
+            total_cents: 0,
+          }
+        : null,
+      global_trim_paint_system: 'water_3coat_white_finish',
+    };
+
+    const oilResult = calculateQuickEstimate(oilInputs, rates);
+    const waterResult = calculateQuickEstimate(waterInputs, rates);
+
+    expect(waterResult.subtotal_cents).toBeGreaterThan(
+      oilResult.subtotal_cents
+    );
+  });
+
   it('single room, walls only, 2coats/average = 100%×100% baseline', () => {
     const rates = makeSettings();
     const inputs: QuickInputs = {

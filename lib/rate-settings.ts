@@ -4,7 +4,16 @@ import {
   buildDefaultDetailedEstimateAnchors,
   type DetailedEstimateAnchors,
 } from '@/lib/detailed-estimate-anchors';
-import type { PricingMethod } from '@/types/quote';
+import type {
+  PricingMethod,
+  QuickApartmentType,
+  QuickPropertyCondition,
+  QuickPropertyScope,
+  QuickPropertyType,
+  QuickPropertyWallPaintSystem,
+  QuickStoreys,
+  QuickTrimPaintSystem,
+} from '@/types/quote';
 
 // ─── Surface / coating types ──────────────────────────────────────────────────
 
@@ -198,10 +207,28 @@ export type QuickEstimateRoom = {
   label: string;
   enabled_surfaces: ('walls' | 'ceiling' | 'trim')[];
   sizes: {
-    small: { walls_cents: number; ceiling_cents: number; trim_cents: number };
-    medium: { walls_cents: number; ceiling_cents: number; trim_cents: number };
-    large: { walls_cents: number; ceiling_cents: number; trim_cents: number };
+    small: QuickRoomSurfacePriceSnapshot;
+    medium: QuickRoomSurfacePriceSnapshot;
+    large: QuickRoomSurfacePriceSnapshot;
   };
+  sort_order: number;
+};
+
+export type QuickPropertyPreset = {
+  estimate_category?: 'interior';
+  id: string;
+  version?: number;
+  label: string;
+  property_type: QuickPropertyType;
+  apartment_type?: QuickApartmentType | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  storeys?: QuickStoreys | null;
+  sqm?: number | null;
+  condition: QuickPropertyCondition;
+  scope: QuickPropertyScope[];
+  wall_paint_system: QuickPropertyWallPaintSystem;
+  trim_paint_system?: QuickTrimPaintSystem;
   sort_order: number;
 };
 
@@ -212,9 +239,12 @@ export type QuickRoomSurfacePriceSnapshot = {
   walls_cents: number;
   ceiling_cents: number;
   trim_cents: number;
+  trim_oil_cents?: number;
+  trim_water_cents?: number;
 };
 
 export type QuickEstimateSettings = {
+  property_presets: QuickPropertyPreset[];
   rooms: QuickEstimateRoom[];
   coating_multipliers: {
     one_coat_refresh_pct: number;
@@ -492,10 +522,33 @@ const detailedEstimateItemsSchema = z.object({
   advanced_rooms: z.array(advancedEstimateRoomItemSchema),
 });
 
+const quickPropertyPresetSchema = z.object({
+  estimate_category: z.literal('interior').optional(),
+  id: z.string().min(1),
+  version: z.number().int().min(1).optional(),
+  label: z.string().trim().min(1),
+  property_type: z.enum(['apartment', 'house']),
+  apartment_type: z
+    .enum(['studio', '1_bedroom', '2_bedroom_standard', '2_bedroom_large', '3_bedroom'])
+    .nullable()
+    .optional(),
+  bedrooms: z.number().int().min(0).nullable().optional(),
+  bathrooms: z.number().int().min(0).nullable().optional(),
+  storeys: z.enum(['1_storey', '2_storey', '3_storey']).nullable().optional(),
+  sqm: z.number().positive().nullable().optional(),
+  condition: z.enum(['excellent', 'fair', 'poor']),
+  scope: z.array(z.enum(['walls', 'ceiling', 'trim'])).min(1),
+  wall_paint_system: z.enum(['refresh_1coat', 'repaint_2coat', 'new_plaster_3coat']),
+  trim_paint_system: z.enum(TRIM_PAINT_SYSTEMS).optional(),
+  sort_order: z.number().int().min(0),
+});
+
 const quickEstimateSurfacePriceSchema = z.object({
   walls_cents: z.number().int().min(0),
   ceiling_cents: z.number().int().min(0),
   trim_cents: z.number().int().min(0),
+  trim_oil_cents: z.number().int().min(0).optional(),
+  trim_water_cents: z.number().int().min(0).optional(),
 });
 
 const quickEstimateRoomSchema = z.object({
@@ -512,6 +565,7 @@ const quickEstimateRoomSchema = z.object({
 });
 
 const quickEstimateSchema = z.object({
+  property_presets: z.array(quickPropertyPresetSchema).optional(),
   rooms: z.array(quickEstimateRoomSchema),
   coating_multipliers: z.object({
     one_coat_refresh_pct: z.number().min(0),
@@ -605,10 +659,39 @@ export const DEFAULT_QUICK_ROOM_LABELS = [
   'Laundry',
 ] as const;
 
-const EMPTY_SURFACE_PRICE = { walls_cents: 0, ceiling_cents: 0, trim_cents: 0 };
+const EMPTY_SURFACE_PRICE = {
+  walls_cents: 0,
+  ceiling_cents: 0,
+  trim_cents: 0,
+  trim_oil_cents: 0,
+  trim_water_cents: 0,
+};
+
+export function buildDefaultQuickPropertyPresets(): QuickPropertyPreset[] {
+  return [
+    {
+      estimate_category: 'interior',
+      id: 'default-2-bed-2-bath-apartment',
+      version: 1,
+      label: '2 Bed 2 Bath Apartment',
+      property_type: 'apartment',
+      apartment_type: '2_bedroom_standard',
+      bedrooms: 2,
+      bathrooms: 2,
+      storeys: null,
+      sqm: 89,
+      condition: 'fair',
+      scope: ['walls', 'ceiling', 'trim'],
+      wall_paint_system: 'repaint_2coat',
+      trim_paint_system: 'oil_2coat',
+      sort_order: 0,
+    },
+  ];
+}
 
 export function buildDefaultQuickEstimateSettings(): QuickEstimateSettings {
   return {
+    property_presets: buildDefaultQuickPropertyPresets(),
     rooms: DEFAULT_QUICK_ROOM_LABELS.map((label, i) => ({
       id: `default-${i}`,
       label,
@@ -724,6 +807,42 @@ function normalizeAdvancedRoomItem(
     ...(sourceRoomTemplateVersion
       ? { source_room_template_version: sourceRoomTemplateVersion }
       : {}),
+  };
+}
+
+function normalizeQuickSurfacePrice(
+  price: z.output<typeof quickEstimateSurfacePriceSchema>
+): QuickRoomSurfacePriceSnapshot {
+  return {
+    ...price,
+    trim_oil_cents: price.trim_oil_cents ?? price.trim_cents,
+    trim_water_cents: price.trim_water_cents ?? price.trim_cents,
+  };
+}
+
+function normalizeQuickRoom(room: QuickEstimateRoom): QuickEstimateRoom {
+  return {
+    ...room,
+    sizes: {
+      small: normalizeQuickSurfacePrice(room.sizes.small),
+      medium: normalizeQuickSurfacePrice(room.sizes.medium),
+      large: normalizeQuickSurfacePrice(room.sizes.large),
+    },
+  };
+}
+
+function normalizeQuickEstimateSettings(
+  quickEstimate: z.output<typeof quickEstimateSchema>
+): QuickEstimateSettings {
+  return {
+    ...quickEstimate,
+    property_presets:
+      quickEstimate.property_presets?.map((preset) => ({
+        ...preset,
+        estimate_category: 'interior',
+        trim_paint_system: preset.trim_paint_system ?? 'oil_2coat',
+      })) ?? buildDefaultQuickPropertyPresets(),
+    rooms: quickEstimate.rooms.map(normalizeQuickRoom),
   };
 }
 
@@ -868,7 +987,9 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
 
   // Quick estimate settings — stored in DB; if missing, hydrate from room_rate_presets
   if (parsed.data.quick_estimate) {
-    result.quick_estimate = parsed.data.quick_estimate as QuickEstimateSettings;
+    result.quick_estimate = normalizeQuickEstimateSettings(
+      parsed.data.quick_estimate
+    );
   } else {
     result.quick_estimate = hydrateQuickEstimate(result.room_rate_presets);
   }
@@ -887,15 +1008,19 @@ export function parseUserRateSettings(json: unknown): UserRateSettings {
 // ─── Quick estimate hydration helpers ────────────────────────────────────────
 
 /** Split a flat room rate into walls/ceiling/trim: 50% / 25% / 25% */
-export function splitToSurfaces(total_cents: number): {
-  walls_cents: number;
-  ceiling_cents: number;
-  trim_cents: number;
-} {
+export function splitToSurfaces(
+  total_cents: number
+): QuickRoomSurfacePriceSnapshot {
   const walls_cents = Math.round(total_cents * 0.5);
   const ceiling_cents = Math.round(total_cents * 0.25);
   const trim_cents = total_cents - walls_cents - ceiling_cents;
-  return { walls_cents, ceiling_cents, trim_cents };
+  return {
+    walls_cents,
+    ceiling_cents,
+    trim_cents,
+    trim_oil_cents: trim_cents,
+    trim_water_cents: trim_cents,
+  };
 }
 
 /**
@@ -932,6 +1057,7 @@ export function hydrateQuickEstimate(
         }));
 
   return {
+    property_presets: buildDefaultQuickPropertyPresets(),
     rooms,
     coating_multipliers: {
       one_coat_refresh_pct: 70,

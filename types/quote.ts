@@ -46,6 +46,7 @@ export interface SelectedQuickRoom {
   label: string;
   size: 'small' | 'medium' | 'large';
   selected_surfaces: ('walls' | 'ceiling' | 'trim')[];
+  trim_paint_system?: QuickTrimPaintSystem;
   notes?: string;
   walls_cents: number;
   ceiling_cents: number;
@@ -55,10 +56,54 @@ export interface SelectedQuickRoom {
   total_cents: number;
 }
 
+export type QuickPropertyType = 'apartment' | 'house';
+export type QuickApartmentType =
+  | 'studio'
+  | '1_bedroom'
+  | '2_bedroom_standard'
+  | '2_bedroom_large'
+  | '3_bedroom';
+export type QuickStoreys = '1_storey' | '2_storey' | '3_storey';
+export type QuickPropertyCondition = 'excellent' | 'fair' | 'poor';
+export type QuickPropertyScope = 'walls' | 'ceiling' | 'trim';
+export type QuickPropertyWallPaintSystem =
+  | 'refresh_1coat'
+  | 'repaint_2coat'
+  | 'new_plaster_3coat';
+export type QuickTrimPaintSystem =
+  | 'oil_2coat'
+  | 'water_3coat_white_finish';
+
+/** Quick Estimate: one selected whole-property preset from Price Rates */
+export interface SelectedQuickPropertyPreset {
+  estimate_category?: 'interior';
+  preset_id: string;
+  source_rate_item_id?: string;
+  source_rate_item_version?: number;
+  source_rate_item_label?: string;
+  rate_snapshot_version?: 1;
+  label: string;
+  property_type: QuickPropertyType;
+  apartment_type?: QuickApartmentType | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  storeys?: QuickStoreys | null;
+  sqm?: number | null;
+  condition: QuickPropertyCondition;
+  scope: QuickPropertyScope[];
+  wall_paint_system: QuickPropertyWallPaintSystem;
+  trim_paint_system?: QuickTrimPaintSystem;
+  subtotal_cents: number;
+  gst_cents: number;
+  total_cents: number;
+}
+
 export interface QuickInputs {
+  property_preset?: SelectedQuickPropertyPreset | null;
   rooms: SelectedQuickRoom[];
   global_coating: 'one_coat_refresh' | 'two_coats_repaint' | 'three_coats_new_plaster';
   global_condition: 'good' | 'average' | 'poor';
+  global_trim_paint_system?: QuickTrimPaintSystem;
 }
 
 /** Union of all method-specific inputs */

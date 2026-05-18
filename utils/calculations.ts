@@ -1,5 +1,15 @@
 import { DEFAULT_COVERAGE_PER_LITRE, STANDARD_DOOR_AREA_M2, STANDARD_WINDOW_AREA_M2 } from '@/config/constants';
-import type { DayRateInputs, RoomRateInputs, ManualInputs, QuickInputs } from '@/types/quote';
+import {
+  calculateInteriorEstimate,
+  type InteriorEstimateInput,
+} from '@/lib/interior-estimates';
+import type {
+  DayRateInputs,
+  RoomRateInputs,
+  ManualInputs,
+  QuickInputs,
+  SelectedQuickPropertyPreset,
+} from '@/types/quote';
 import type { RoomRatePreset, UserRateSettings } from '@/lib/rate-settings';
 
 /**
@@ -158,6 +168,7 @@ export interface QuickEstimateRoomResult {
 }
 
 export interface QuickEstimateResult extends PricingResult {
+  property_preset?: SelectedQuickPropertyPreset | null;
   rooms: QuickEstimateRoomResult[];
 }
 
@@ -216,6 +227,65 @@ function isSnapshotQuickRoom(room: QuickInputs['rooms'][number]): boolean {
   );
 }
 
+function buildQuickPropertyPresetInteriorInput(
+  preset: SelectedQuickPropertyPreset
+): InteriorEstimateInput {
+  return {
+    property_type: preset.property_type,
+    estimate_mode: 'entire_property',
+    condition: preset.condition,
+    scope: preset.scope,
+    wall_paint_system: preset.wall_paint_system,
+    trim_paint_system: preset.trim_paint_system ?? 'oil_2coat',
+    property_details:
+      preset.property_type === 'apartment'
+        ? {
+            apartment_type: preset.apartment_type ?? '2_bedroom_standard',
+            sqm: preset.sqm ?? null,
+            bedrooms: preset.bedrooms ?? null,
+            bathrooms: preset.bathrooms ?? null,
+            storeys: null,
+          }
+        : {
+            apartment_type: null,
+            sqm: preset.sqm ?? null,
+            bedrooms: preset.bedrooms ?? null,
+            bathrooms: preset.bathrooms ?? null,
+            storeys: preset.storeys ?? '1_storey',
+          },
+    rooms: [],
+    opening_items: [],
+    trim_items: [],
+  };
+}
+
+function calculateQuickPropertyPresetSnapshot(
+  preset: SelectedQuickPropertyPreset,
+  rateSettings: UserRateSettings
+): SelectedQuickPropertyPreset {
+  if (
+    preset.rate_snapshot_version === QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION &&
+    preset.subtotal_cents > 0
+  ) {
+    return preset;
+  }
+
+  const result = calculateInteriorEstimate(
+    buildQuickPropertyPresetInteriorInput(preset),
+    rateSettings
+  );
+
+  return {
+    ...preset,
+    estimate_category: 'interior',
+    trim_paint_system: preset.trim_paint_system ?? 'oil_2coat',
+    rate_snapshot_version: QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,
+    subtotal_cents: result.subtotal_cents,
+    gst_cents: result.gst_cents,
+    total_cents: result.total_cents,
+  };
+}
+
 export function snapshotQuickEstimateInputs(
   inputs: QuickInputs,
   rateSettings: UserRateSettings
@@ -225,6 +295,13 @@ export function snapshotQuickEstimateInputs(
 
   return {
     ...inputs,
+    global_trim_paint_system: inputs.global_trim_paint_system ?? 'oil_2coat',
+    property_preset: inputs.property_preset
+      ? calculateQuickPropertyPresetSnapshot(
+          inputs.property_preset,
+          rateSettings
+        )
+      : null,
     rooms: inputs.rooms.map((room) => ({
       ...room,
       rate_snapshot_version: QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,
@@ -251,6 +328,13 @@ export function normalizeQuickEstimateInputsForCalculation(
 
   return {
     ...inputs,
+    global_trim_paint_system: inputs.global_trim_paint_system ?? 'oil_2coat',
+    property_preset: inputs.property_preset
+      ? calculateQuickPropertyPresetSnapshot(
+          inputs.property_preset,
+          rateSettings
+        )
+      : null,
     rooms: inputs.rooms.map((room) => {
       const useStoredSnapshot = isSnapshotQuickRoom(room);
       const coatingPct = useStoredSnapshot
@@ -307,14 +391,25 @@ export function calculateQuickEstimate(
     };
   });
 
-  const subtotal_cents = rooms.reduce((sum, r) => sum + r.total_cents, 0);
+  const propertyPreset = normalizedInputs.property_preset ?? null;
+  const propertyPresetSubtotal = propertyPreset?.subtotal_cents ?? 0;
+  const subtotal_cents =
+    propertyPresetSubtotal + rooms.reduce((sum, r) => sum + r.total_cents, 0);
   const labourSharePct = rateSettings.pricing.material_cost_percent;
   const labor_cents = Math.round(subtotal_cents * (1 - labourSharePct / 100));
   const material_cents = subtotal_cents - labor_cents;
   const gst_cents = Math.round(subtotal_cents * 0.1);
   const total_cents = subtotal_cents + gst_cents;
 
-  return { subtotal_cents, gst_cents, total_cents, labor_cents, material_cents, rooms };
+  return {
+    subtotal_cents,
+    gst_cents,
+    total_cents,
+    labor_cents,
+    material_cents,
+    property_preset: propertyPreset,
+    rooms,
+  };
 }
 
 /**

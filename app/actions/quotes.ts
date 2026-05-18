@@ -192,37 +192,112 @@ function materialItemCategoryOrOther(category: string): MaterialItemCategory {
     : 'other';
 }
 
-function buildQuickEstimateItemRows(quoteId: string, inputs: QuickInputs) {
-  return inputs.rooms.map((room, index) => ({
-    quote_id: quoteId,
-    category: 'quick_estimate',
-    label: room.label,
-    quantity: 1,
-    unit: 'room',
-    unit_price_cents: room.total_cents,
-    total_cents: room.total_cents,
-    size: room.size,
-    selected_surfaces: room.selected_surfaces,
-    coating_multiplier_pct: room.coating_multiplier_pct,
-    condition_multiplier_pct: room.condition_multiplier_pct,
-    item_notes: room.notes ?? null,
-    metadata: {
-      room_id: room.room_id,
-      source_rate_item_id: room.source_rate_item_id ?? null,
-      source_rate_item_version: room.source_rate_item_version ?? null,
-      source_rate_item_label: room.source_rate_item_label ?? null,
-      rate_snapshot_version: room.rate_snapshot_version ?? null,
-      walls_cents: room.walls_cents,
-      ceiling_cents: room.ceiling_cents,
-      trim_cents: room.trim_cents,
+type QuickEstimateItemRow = {
+  quote_id: string;
+  category: 'quick_estimate';
+  label: string;
+  quantity: number;
+  unit: 'job' | 'room';
+  unit_price_cents: number;
+  total_cents: number;
+  size: string | null;
+  selected_surfaces: string[];
+  coating_multiplier_pct: number | null;
+  condition_multiplier_pct: number | null;
+  item_notes: string | null;
+  metadata: Json;
+  sort_order: number;
+};
+
+function buildQuickEstimateItemRows(
+  quoteId: string,
+  inputs: QuickInputs
+): QuickEstimateItemRow[] {
+  const rows: QuickEstimateItemRow[] = [];
+
+  if (inputs.property_preset) {
+    const preset = inputs.property_preset;
+    rows.push({
+      quote_id: quoteId,
+      category: 'quick_estimate',
+      label: preset.label,
+      quantity: 1,
+      unit: 'job',
+      unit_price_cents: preset.subtotal_cents,
+      total_cents: preset.subtotal_cents,
+      size: null,
+      selected_surfaces: preset.scope,
+      coating_multiplier_pct: null,
+      condition_multiplier_pct: null,
+      item_notes: null,
+      metadata: jsonColumnValue({
+        kind: 'whole_property',
+        estimate_category: preset.estimate_category ?? 'interior',
+        preset_id: preset.preset_id,
+        source_rate_item_id: preset.source_rate_item_id ?? null,
+        source_rate_item_version: preset.source_rate_item_version ?? null,
+        source_rate_item_label: preset.source_rate_item_label ?? null,
+        rate_snapshot_version: preset.rate_snapshot_version ?? null,
+        property_type: preset.property_type,
+        apartment_type: preset.apartment_type ?? null,
+        bedrooms: preset.bedrooms ?? null,
+        bathrooms: preset.bathrooms ?? null,
+        storeys: preset.storeys ?? null,
+        sqm: preset.sqm ?? null,
+        condition: preset.condition,
+        scope: preset.scope,
+        wall_paint_system: preset.wall_paint_system,
+        trim_paint_system: preset.trim_paint_system ?? 'oil_2coat',
+        subtotal_cents: preset.subtotal_cents,
+        gst_cents: preset.gst_cents,
+        total_cents: preset.total_cents,
+      }),
+      sort_order: 0,
+    });
+  }
+
+  const roomSortOffset = rows.length;
+  inputs.rooms.forEach((room, index) => {
+    rows.push({
+      quote_id: quoteId,
+      category: 'quick_estimate',
+      label: room.label,
+      quantity: 1,
+      unit: 'room',
+      unit_price_cents: room.total_cents,
+      total_cents: room.total_cents,
+      size: room.size,
       selected_surfaces: room.selected_surfaces,
       coating_multiplier_pct: room.coating_multiplier_pct,
       condition_multiplier_pct: room.condition_multiplier_pct,
-      global_coating: inputs.global_coating,
-      global_condition: inputs.global_condition,
-    },
-    sort_order: index,
-  }));
+      item_notes: room.notes ?? null,
+      metadata: jsonColumnValue({
+        kind: 'room',
+        room_id: room.room_id,
+        source_rate_item_id: room.source_rate_item_id ?? null,
+        source_rate_item_version: room.source_rate_item_version ?? null,
+        source_rate_item_label: room.source_rate_item_label ?? null,
+        rate_snapshot_version: room.rate_snapshot_version ?? null,
+        walls_cents: room.walls_cents,
+        ceiling_cents: room.ceiling_cents,
+        trim_cents: room.trim_cents,
+        trim_paint_system:
+          room.trim_paint_system ??
+          inputs.global_trim_paint_system ??
+          'oil_2coat',
+        selected_surfaces: room.selected_surfaces,
+        coating_multiplier_pct: room.coating_multiplier_pct,
+        condition_multiplier_pct: room.condition_multiplier_pct,
+        global_coating: inputs.global_coating,
+        global_condition: inputs.global_condition,
+        global_trim_paint_system:
+          inputs.global_trim_paint_system ?? 'oil_2coat',
+      }),
+      sort_order: roomSortOffset + index,
+    });
+  });
+
+  return rows;
 }
 
 const QUOTE_CUSTOMER_SELECT =
@@ -1630,11 +1705,14 @@ export async function createQuote(
     pricingMethod === 'detailed_quick' &&
     resolvedPricingInputs?.method === 'detailed_quick'
   ) {
-    const quickRooms = resolvedPricingInputs.inputs.rooms;
-    if (quickRooms.length > 0) {
+    const quickItemRows = buildQuickEstimateItemRows(
+      quote.id,
+      resolvedPricingInputs.inputs
+    );
+    if (quickItemRows.length > 0) {
       const { error: quickItemsError } = await supabase
         .from('quote_estimate_items')
-        .insert(buildQuickEstimateItemRows(quote.id, resolvedPricingInputs.inputs));
+        .insert(quickItemRows);
 
       if (quickItemsError) {
         await supabase
@@ -2615,11 +2693,14 @@ export async function updateQuote(
     pricingMethod === 'detailed_quick' &&
     resolvedPricingInputs?.method === 'detailed_quick'
   ) {
-    const quickRooms = resolvedPricingInputs.inputs.rooms;
-    if (quickRooms.length > 0) {
+    const quickItemRows = buildQuickEstimateItemRows(
+      quoteId,
+      resolvedPricingInputs.inputs
+    );
+    if (quickItemRows.length > 0) {
       const { error: quickItemsError } = await supabase
         .from('quote_estimate_items')
-        .insert(buildQuickEstimateItemRows(quoteId, resolvedPricingInputs.inputs));
+        .insert(quickItemRows);
       if (quickItemsError) return { error: quickItemsError.message };
     }
   } else {

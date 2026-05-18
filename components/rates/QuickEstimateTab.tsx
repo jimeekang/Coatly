@@ -2,7 +2,15 @@
 
 import { useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
-import type { QuickEstimateSettings, QuickEstimateRoom } from '@/lib/rate-settings';
+import type {
+  QuickEstimateSettings,
+  QuickEstimateRoom,
+  QuickPropertyPreset,
+} from '@/lib/rate-settings';
+import {
+  TRIM_PAINT_SYSTEM_LABELS,
+  buildDefaultQuickPropertyPresets,
+} from '@/lib/rate-settings';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,6 +52,102 @@ const SIZE_LABELS: Record<'small' | 'medium' | 'large', string> = {
   large: 'Large',
 };
 
+const PROPERTY_TYPE_LABELS: Record<'apartment' | 'house', string> = {
+  apartment: 'Apartment',
+  house: 'House',
+};
+
+const APARTMENT_TYPE_LABELS: Record<
+  NonNullable<QuickPropertyPreset['apartment_type']>,
+  string
+> = {
+  studio: 'Studio',
+  '1_bedroom': '1 Bedroom',
+  '2_bedroom_standard': '2 Bedroom (Standard)',
+  '2_bedroom_large': '2 Bedroom (Large)',
+  '3_bedroom': '3 Bedroom',
+};
+
+const CONDITION_LABELS: Record<QuickPropertyPreset['condition'], string> = {
+  excellent: 'Excellent',
+  fair: 'Fair',
+  poor: 'Poor',
+};
+
+const WALL_PAINT_SYSTEM_LABELS: Record<
+  QuickPropertyPreset['wall_paint_system'],
+  string
+> = {
+  refresh_1coat: 'Refresh (1 coat)',
+  repaint_2coat: 'Repaint (2 coats)',
+  new_plaster_3coat: 'New Plaster (3 coats)',
+};
+
+const STOREY_LABELS: Record<NonNullable<QuickPropertyPreset['storeys']>, string> = {
+  '1_storey': '1 Storey',
+  '2_storey': '2 Storey',
+  '3_storey': '3 Storey',
+};
+
+const TRIM_PRICE_FIELDS = [
+  {
+    key: 'trim_oil_cents',
+    label: TRIM_PAINT_SYSTEM_LABELS.oil_2coat,
+  },
+  {
+    key: 'trim_water_cents',
+    label: TRIM_PAINT_SYSTEM_LABELS.water_3coat_white_finish,
+  },
+] as const;
+
+function numberOrNull(value: string) {
+  if (value.trim() === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function createPropertyPreset(
+  id: string,
+  sortOrder: number,
+  propertyType: QuickPropertyPreset['property_type']
+): QuickPropertyPreset {
+  return propertyType === 'apartment'
+    ? {
+        estimate_category: 'interior',
+        id,
+        version: 1,
+        label: '2 Bed 2 Bath Apartment',
+        property_type: 'apartment',
+        apartment_type: '2_bedroom_standard',
+        bedrooms: 2,
+        bathrooms: 2,
+        storeys: null,
+        sqm: 89,
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        trim_paint_system: 'oil_2coat',
+        sort_order: sortOrder,
+      }
+    : {
+        estimate_category: 'interior',
+        id,
+        version: 1,
+        label: '3 Bed 2 Bath House',
+        property_type: 'house',
+        apartment_type: null,
+        bedrooms: 3,
+        bathrooms: 2,
+        storeys: '1_storey',
+        sqm: 140,
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        trim_paint_system: 'oil_2coat',
+        sort_order: sortOrder,
+      };
+}
+
 // ─── Room card ────────────────────────────────────────────────────────────────
 
 function RoomCard({
@@ -56,19 +160,29 @@ function RoomCard({
   onDelete: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(true);
+  const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [draftLabel, setDraftLabel] = useState(room.label);
 
   function handleSurfaceCentsChange(
     size: 'small' | 'medium' | 'large',
     surface: 'walls' | 'ceiling' | 'trim',
-    value: string
+    value: string,
+    trimField?: 'trim_oil_cents' | 'trim_water_cents'
   ) {
     const cents = displayToCents(value);
     if (cents === null) return;
+    const field =
+      surface === 'trim' && trimField ? trimField : `${surface}_cents`;
+    const nextSize = {
+      ...room.sizes[size],
+      [field]: cents,
+      ...(trimField === 'trim_oil_cents' ? { trim_cents: cents } : {}),
+    };
     onUpdate({
       ...room,
       sizes: {
         ...room.sizes,
-        [size]: { ...room.sizes[size], [`${surface}_cents`]: cents },
+        [size]: nextSize,
       },
     });
   }
@@ -80,6 +194,15 @@ function RoomCard({
     onUpdate({ ...room, enabled_surfaces: enabled });
   }
 
+  function commitLabel() {
+    const label = draftLabel.trim() || room.label;
+    setDraftLabel(label);
+    setIsEditingLabel(false);
+    if (label !== room.label) {
+      onUpdate({ ...room, label });
+    }
+  }
+
   return (
     <div className="border-outline rounded-2xl border bg-white">
       <div className="flex min-h-[44px] items-center justify-between px-4 py-3">
@@ -87,15 +210,47 @@ function RoomCard({
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="text-on-surface flex items-center gap-2 text-sm font-medium"
+            className="text-on-surface flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg"
+            aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${room.label} prices`}
           >
             {collapsed ? (
               <ChevronDown className="h-4 w-4" />
             ) : (
               <ChevronUp className="h-4 w-4" />
             )}
-            {room.label}
           </button>
+          {isEditingLabel ? (
+            <input
+              aria-label="Room Price Library item name"
+              value={draftLabel}
+              onChange={(event) => setDraftLabel(event.target.value)}
+              onBlur={commitLabel}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitLabel();
+                }
+                if (event.key === 'Escape') {
+                  setDraftLabel(room.label);
+                  setIsEditingLabel(false);
+                }
+              }}
+              autoFocus
+              className="border-outline h-11 min-w-0 rounded-xl border bg-white px-3 text-sm font-semibold text-on-surface"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setDraftLabel(room.label);
+                setIsEditingLabel(true);
+              }}
+              className="text-on-surface min-h-[44px] text-left text-sm font-medium"
+              aria-label={`Edit ${room.label} name`}
+            >
+              {room.label}
+            </button>
+          )}
         </div>
         <button
           type="button"
@@ -134,32 +289,79 @@ function RoomCard({
               <thead>
                 <tr className="text-on-surface-variant text-xs">
                   <th className="pb-2 text-left font-semibold">Size</th>
-                  {room.enabled_surfaces.map((s) => (
-                    <th key={s} className="pb-2 text-right font-semibold">
-                      {SURFACE_LABELS[s]}
-                    </th>
-                  ))}
+                  {room.enabled_surfaces.map((s) =>
+                    s === 'trim' ? (
+                      <th key={s} className="pb-2 text-right font-semibold">
+                        Trim Base
+                      </th>
+                    ) : (
+                      <th key={s} className="pb-2 text-right font-semibold">
+                        {SURFACE_LABELS[s]}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-outline divide-y">
                 {(['small', 'medium', 'large'] as const).map((size) => (
                   <tr key={size}>
                     <td className="py-2 text-sm font-medium">{SIZE_LABELS[size]}</td>
-                    {room.enabled_surfaces.map((s) => (
-                      <td key={s} className="py-2 pl-2 text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <span className="text-on-surface-variant text-xs">$</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            defaultValue={centsToDisplay(room.sizes[size][`${s}_cents`])}
-                            onBlur={(e) => handleSurfaceCentsChange(size, s, e.target.value)}
-                            className="border-outline w-20 rounded-lg border bg-white px-2 py-1.5 text-right text-sm"
-                          />
-                        </div>
-                      </td>
-                    ))}
+                    {room.enabled_surfaces.map((s) => {
+                      if (s === 'trim') {
+                        return (
+                          <td key={s} className="py-2 pl-2 text-right">
+                            <div className="flex min-w-[156px] flex-col gap-2">
+                              {TRIM_PRICE_FIELDS.map((field) => (
+                                <label
+                                  key={field.key}
+                                  className="grid grid-cols-[52px_1fr] items-center gap-2 text-xs text-on-surface-variant"
+                                >
+                                  <span>{field.label}</span>
+                                  <span className="border-outline inline-flex items-center gap-1 rounded-lg border bg-white px-2">
+                                    <span>$</span>
+                                    <input
+                                      aria-label={`${room.label} ${SIZE_LABELS[size]} Trim ${field.label} price`}
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      defaultValue={centsToDisplay(
+                                        room.sizes[size][field.key] ??
+                                          room.sizes[size].trim_cents
+                                      )}
+                                      onBlur={(event) =>
+                                        handleSurfaceCentsChange(
+                                          size,
+                                          s,
+                                          event.target.value,
+                                          field.key
+                                        )
+                                      }
+                                      className="w-20 bg-transparent py-1.5 text-right text-sm text-on-surface outline-none"
+                                    />
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </td>
+                        );
+                      }
+
+                      return (
+                        <td key={s} className="py-2 pl-2 text-right">
+                          <div className="inline-flex items-center gap-1">
+                            <span className="text-on-surface-variant text-xs">$</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              defaultValue={centsToDisplay(room.sizes[size][`${s}_cents`])}
+                              onBlur={(e) => handleSurfaceCentsChange(size, s, e.target.value)}
+                              className="border-outline w-20 rounded-lg border bg-white px-2 py-1.5 text-right text-sm"
+                            />
+                          </div>
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -182,7 +384,10 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
   const [customLabel, setCustomLabel] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const generatedRoomIdPrefix = useId();
+  const propertyPresets =
+    settings.property_presets ?? buildDefaultQuickPropertyPresets();
   const nextRoomIdRef = useRef(settings.rooms.length);
+  const nextPropertyPresetIdRef = useRef(propertyPresets.length);
 
   function handleMultiplierChange(
     group: 'coating_multipliers' | 'condition_multipliers',
@@ -209,6 +414,60 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
   function handleRoomDelete(index: number) {
     const rooms = settings.rooms.filter((_, i) => i !== index);
     onChange({ ...settings, rooms });
+  }
+
+  function handlePropertyPresetUpdate(
+    id: string,
+    patch: Partial<QuickPropertyPreset>
+  ) {
+    onChange({
+      ...settings,
+      property_presets: propertyPresets.map((preset) =>
+        preset.id === id
+          ? {
+              ...preset,
+              ...patch,
+              version: (preset.version ?? 1) + 1,
+            }
+          : preset
+      ),
+    });
+  }
+
+  function handlePropertyPresetDelete(id: string) {
+    onChange({
+      ...settings,
+      property_presets: propertyPresets.filter(
+        (preset) => preset.id !== id
+      ),
+    });
+  }
+
+  function handlePropertyPresetScopeToggle(
+    preset: QuickPropertyPreset,
+    surface: 'walls' | 'ceiling' | 'trim'
+  ) {
+    const nextScope = preset.scope.includes(surface)
+      ? preset.scope.filter((item) => item !== surface)
+      : [...preset.scope, surface];
+    handlePropertyPresetUpdate(preset.id, {
+      scope: nextScope.length > 0 ? nextScope : [surface],
+    });
+  }
+
+  function addPropertyPreset(propertyType: QuickPropertyPreset['property_type']) {
+    nextPropertyPresetIdRef.current += 1;
+    onChange({
+      ...settings,
+      property_presets: [
+        ...propertyPresets,
+        createPropertyPreset(
+          `${generatedRoomIdPrefix}-property-${nextPropertyPresetIdRef.current}`,
+          propertyPresets.length,
+          propertyType
+        ),
+      ],
+    });
   }
 
   function addRoomFromTemplate(label: string) {
@@ -311,6 +570,330 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Whole-property presets */}
+      <section className="space-y-4">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-on-surface text-base font-semibold">
+            Interior Whole Property Presets ({propertyPresets.length})
+          </h3>
+          <p className="text-on-surface-variant mt-1 text-sm">
+            Interior-only apartment and house anchors for full-property quotes.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {propertyPresets.map((preset) => (
+            <div
+              key={preset.id}
+              className="border-outline rounded-2xl border bg-white p-4"
+            >
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_44px]">
+                <div>
+                  <label className="text-on-surface-variant mb-1 block text-xs font-medium">
+                    Preset name
+                  </label>
+                  <input
+                    value={preset.label}
+                    onChange={(event) =>
+                      handlePropertyPresetUpdate(preset.id, {
+                        label: event.target.value,
+                      })
+                    }
+                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={`property-type-${preset.id}`}
+                    className="text-on-surface-variant mb-1 block text-xs font-medium"
+                  >
+                    Property type
+                  </label>
+                  <select
+                    id={`property-type-${preset.id}`}
+                    aria-label={`Property type for ${preset.label}`}
+                    value={preset.property_type}
+                    onChange={(event) =>
+                      handlePropertyPresetUpdate(preset.id, {
+                        property_type: event.target
+                          .value as QuickPropertyPreset['property_type'],
+                        apartment_type:
+                          event.target.value === 'apartment'
+                            ? (preset.apartment_type ?? '2_bedroom_standard')
+                            : null,
+                        storeys:
+                          event.target.value === 'house'
+                            ? (preset.storeys ?? '1_storey')
+                            : null,
+                      })
+                    }
+                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  >
+                    {(['apartment', 'house'] as const).map((propertyType) => (
+                      <option key={propertyType} value={propertyType}>
+                        {PROPERTY_TYPE_LABELS[propertyType]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePropertyPresetDelete(preset.id)}
+                  className="text-on-surface-variant hover:text-red-500 flex min-h-[44px] min-w-[44px] items-center justify-center self-end"
+                  aria-label={`Delete ${preset.label}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {preset.property_type === 'apartment' && (
+                  <div>
+                    <label
+                      htmlFor={`apartment-type-${preset.id}`}
+                      className="text-on-surface-variant mb-1 block text-xs font-medium"
+                    >
+                      Apartment type
+                    </label>
+                    <select
+                      id={`apartment-type-${preset.id}`}
+                      value={preset.apartment_type ?? '2_bedroom_standard'}
+                      onChange={(event) =>
+                        handlePropertyPresetUpdate(preset.id, {
+                          apartment_type: event.target
+                            .value as QuickPropertyPreset['apartment_type'],
+                        })
+                      }
+                      className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    >
+                      {Object.entries(APARTMENT_TYPE_LABELS).map(
+                        ([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label
+                    htmlFor={`bedrooms-${preset.id}`}
+                    className="text-on-surface-variant mb-1 block text-xs font-medium"
+                  >
+                    Bedrooms
+                  </label>
+                  <input
+                    id={`bedrooms-${preset.id}`}
+                    aria-label={`Bedrooms for ${preset.label}`}
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={preset.bedrooms ?? ''}
+                    onChange={(event) =>
+                      handlePropertyPresetUpdate(preset.id, {
+                        bedrooms: numberOrNull(event.target.value),
+                      })
+                    }
+                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={`bathrooms-${preset.id}`}
+                    className="text-on-surface-variant mb-1 block text-xs font-medium"
+                  >
+                    Bathrooms
+                  </label>
+                  <input
+                    id={`bathrooms-${preset.id}`}
+                    aria-label={`Bathrooms for ${preset.label}`}
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={preset.bathrooms ?? ''}
+                    onChange={(event) =>
+                      handlePropertyPresetUpdate(preset.id, {
+                        bathrooms: numberOrNull(event.target.value),
+                      })
+                    }
+                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor={`sqm-${preset.id}`}
+                    className="text-on-surface-variant mb-1 block text-xs font-medium"
+                  >
+                    Sqm
+                  </label>
+                  <input
+                    id={`sqm-${preset.id}`}
+                    aria-label={`Sqm for ${preset.label}`}
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={preset.sqm ?? ''}
+                    onChange={(event) =>
+                      handlePropertyPresetUpdate(preset.id, {
+                        sqm: numberOrNull(event.target.value),
+                      })
+                    }
+                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  />
+                </div>
+                {preset.property_type === 'house' && (
+                  <div>
+                    <label
+                      htmlFor={`storeys-${preset.id}`}
+                      className="text-on-surface-variant mb-1 block text-xs font-medium"
+                    >
+                      Storeys
+                    </label>
+                    <select
+                      id={`storeys-${preset.id}`}
+                      aria-label={`Storeys for ${preset.label}`}
+                      value={preset.storeys ?? '1_storey'}
+                      onChange={(event) =>
+                        handlePropertyPresetUpdate(preset.id, {
+                          storeys: event.target
+                            .value as QuickPropertyPreset['storeys'],
+                        })
+                      }
+                      className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    >
+                      {Object.entries(STOREY_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                <div>
+                  <label
+                    htmlFor={`condition-${preset.id}`}
+                    className="text-on-surface-variant mb-1 block text-xs font-medium"
+                  >
+                    Condition
+                  </label>
+                  <select
+                    id={`condition-${preset.id}`}
+                    value={preset.condition}
+                    onChange={(event) =>
+                      handlePropertyPresetUpdate(preset.id, {
+                        condition: event.target
+                          .value as QuickPropertyPreset['condition'],
+                      })
+                    }
+                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  >
+                    {Object.entries(CONDITION_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor={`wall-paint-system-${preset.id}`}
+                    className="text-on-surface-variant mb-1 block text-xs font-medium"
+                  >
+                    Wall coating
+                  </label>
+                  <select
+                    id={`wall-paint-system-${preset.id}`}
+                    value={preset.wall_paint_system}
+                    onChange={(event) =>
+                      handlePropertyPresetUpdate(preset.id, {
+                        wall_paint_system: event.target
+                          .value as QuickPropertyPreset['wall_paint_system'],
+                      })
+                    }
+                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  >
+                    {Object.entries(WALL_PAINT_SYSTEM_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor={`trim-paint-system-${preset.id}`}
+                    className="text-on-surface-variant mb-1 block text-xs font-medium"
+                  >
+                    Trim base
+                  </label>
+                  <select
+                    id={`trim-paint-system-${preset.id}`}
+                    value={preset.trim_paint_system ?? 'oil_2coat'}
+                    onChange={(event) =>
+                      handlePropertyPresetUpdate(preset.id, {
+                        trim_paint_system: event.target
+                          .value as QuickPropertyPreset['trim_paint_system'],
+                      })
+                    }
+                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                  >
+                    {Object.entries(TRIM_PAINT_SYSTEM_LABELS).map(
+                      ([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(['walls', 'ceiling', 'trim'] as const).map((surface) => (
+                  <button
+                    key={surface}
+                    type="button"
+                    onClick={() =>
+                      handlePropertyPresetScopeToggle(preset, surface)
+                    }
+                    className={`min-h-[44px] rounded-full border px-4 text-sm font-medium transition-colors ${
+                      preset.scope.includes(surface)
+                        ? 'border-primary bg-primary/15 text-primary'
+                        : 'border-outline text-on-surface-variant'
+                    }`}
+                  >
+                    {SURFACE_LABELS[surface]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => addPropertyPreset('apartment')}
+            className="border-primary text-primary hover:bg-primary/15 min-h-[44px] rounded-full border px-4 text-sm font-medium transition-colors"
+          >
+            + Apartment preset
+          </button>
+          <button
+            type="button"
+            onClick={() => addPropertyPreset('house')}
+            className="border-primary text-primary hover:bg-primary/15 min-h-[44px] rounded-full border px-4 text-sm font-medium transition-colors"
+          >
+            + House preset
+          </button>
         </div>
       </section>
 

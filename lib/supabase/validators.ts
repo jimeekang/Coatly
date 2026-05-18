@@ -434,6 +434,7 @@ const interiorEstimateRoomSchema = z.object({
   source_scope_multiplier: z.number().min(0).optional(),
   source_condition: z.enum(INTERIOR_CONDITIONS).optional(),
   source_wall_paint_system: interiorWallPaintSystemSchema.optional(),
+  source_trim_paint_system: z.enum(INTERIOR_PAINT_SYSTEMS).optional(),
 });
 
 const interiorOpeningItemSchema = z
@@ -510,6 +511,7 @@ export const interiorEstimateSchema = z
     condition: z.enum(INTERIOR_CONDITIONS),
     scope: interiorScopeSchema,
     wall_paint_system: interiorWallPaintSystemSchema.default('repaint_2coat'),
+    trim_paint_system: z.enum(INTERIOR_PAINT_SYSTEMS).default('oil_2coat'),
     property_details: z.object({
       apartment_type: z.enum(INTERIOR_APARTMENT_TYPES).nullable().optional(),
       sqm: z.number().positive('Size must be greater than zero').nullable().optional(),
@@ -535,7 +537,11 @@ export const interiorEstimateSchema = z
       }
     }
 
-    if (value.property_type === 'house' && value.property_details.storeys == null) {
+    if (
+      value.property_type === 'house' &&
+      value.estimate_mode === 'entire_property' &&
+      value.property_details.storeys == null
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['property_details', 'storeys'],
@@ -732,6 +738,47 @@ export const quoteCreateSchema = z.object({
     z.object({
       method: z.literal('detailed_quick'),
       inputs: z.object({
+        property_preset: z
+          .object({
+            estimate_category: z.literal('interior').optional(),
+            preset_id: z.string(),
+            source_rate_item_id: z.string().optional(),
+            source_rate_item_version: z.number().int().min(1).optional(),
+            source_rate_item_label: z.string().optional(),
+            rate_snapshot_version: z.literal(1).optional(),
+            label: z.string(),
+            property_type: z.enum(['apartment', 'house']),
+            apartment_type: z
+              .enum([
+                'studio',
+                '1_bedroom',
+                '2_bedroom_standard',
+                '2_bedroom_large',
+                '3_bedroom',
+              ])
+              .nullable()
+              .optional(),
+            bedrooms: z.number().int().min(0).nullable().optional(),
+            bathrooms: z.number().int().min(0).nullable().optional(),
+            storeys: z
+              .enum(['1_storey', '2_storey', '3_storey'])
+              .nullable()
+              .optional(),
+            sqm: z.number().positive().nullable().optional(),
+            condition: z.enum(['excellent', 'fair', 'poor']),
+            scope: z.array(z.enum(['walls', 'ceiling', 'trim'])).min(1),
+            wall_paint_system: z.enum([
+              'refresh_1coat',
+              'repaint_2coat',
+              'new_plaster_3coat',
+            ]),
+            trim_paint_system: z.enum(INTERIOR_PAINT_SYSTEMS).optional(),
+            subtotal_cents: z.number().int().min(0),
+            gst_cents: z.number().int().min(0),
+            total_cents: z.number().int().min(0),
+          })
+          .nullable()
+          .optional(),
         rooms: z.array(z.object({
           room_id: z.string(),
           source_rate_item_id: z.string().optional(),
@@ -741,6 +788,7 @@ export const quoteCreateSchema = z.object({
           label: z.string(),
           size: z.enum(['small', 'medium', 'large']),
           selected_surfaces: z.array(z.enum(['walls', 'ceiling', 'trim'])),
+          trim_paint_system: z.enum(INTERIOR_PAINT_SYSTEMS).optional(),
           notes: z.string().optional(),
           walls_cents: z.number().int().min(0),
           ceiling_cents: z.number().int().min(0),
@@ -751,6 +799,7 @@ export const quoteCreateSchema = z.object({
         })),
         global_coating: z.enum(['one_coat_refresh', 'two_coats_repaint', 'three_coats_new_plaster']),
         global_condition: z.enum(['good', 'average', 'poor']),
+        global_trim_paint_system: z.enum(INTERIOR_PAINT_SYSTEMS).optional(),
       }),
     }),
   ]).optional(),

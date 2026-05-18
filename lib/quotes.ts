@@ -562,6 +562,7 @@ function normalizeInteriorEstimate(
     wall_paint_system:
       normalizeInteriorWallPaintSystem(estimate.wall_paint_system) ??
       'repaint_2coat',
+    trim_paint_system: estimate.trim_paint_system ?? 'oil_2coat',
     property_details: {
       apartment_type: estimate.property_details.apartment_type ?? null,
       sqm: estimate.property_details.sqm ?? null,
@@ -600,6 +601,7 @@ function normalizeInteriorEstimate(
       source_wall_paint_system: normalizeInteriorWallPaintSystem(
         room.source_wall_paint_system
       ) ?? undefined,
+      source_trim_paint_system: room.source_trim_paint_system,
     })),
     opening_items: estimate.opening_items.map((item) => ({
       opening_type: item.opening_type,

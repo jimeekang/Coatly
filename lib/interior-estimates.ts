@@ -165,6 +165,7 @@ export type InteriorEstimateInput = {
   condition: InteriorCondition;
   scope: InteriorScope[];
   wall_paint_system?: InteriorWallPaintSystem;
+  trim_paint_system?: InteriorPaintSystem;
   property_details: {
     apartment_type?: InteriorApartmentType | null;
     sqm?: number | null;
@@ -198,6 +199,7 @@ export type InteriorEstimateInput = {
     source_scope_multiplier?: number;
     source_condition?: InteriorCondition;
     source_wall_paint_system?: InteriorWallPaintSystem;
+    source_trim_paint_system?: InteriorPaintSystem;
   }>;
   opening_items: Array<{
     opening_type: 'door' | 'window';
@@ -247,6 +249,7 @@ export type InteriorPricingSnapshot = {
     estimate_mode: InteriorEstimateMode;
     condition: InteriorCondition;
     scope: InteriorScope[];
+    trim_paint_system: InteriorPaintSystem;
     property_details: InteriorEstimateInput['property_details'];
     range_cents: { min: number; median: number; max: number };
     adjustments: {
@@ -488,9 +491,48 @@ function getQuantityScaleFactor(quantity: number) {
   return 1;
 }
 
+function getTrimPaintSystemMultiplier(
+  trimPaintSystem: InteriorPaintSystem = 'oil_2coat',
+  userRates?: UserRateSettings | null
+) {
+  if (trimPaintSystem === 'oil_2coat') return 1;
+
+  const pairs = [
+    [
+      getDoorPrice(
+        trimPaintSystem,
+        'door_and_frame',
+        'standard',
+        userRates
+      ),
+      getDoorPrice('oil_2coat', 'door_and_frame', 'standard', userRates),
+    ],
+    [
+      getWindowPrice(
+        trimPaintSystem,
+        'normal',
+        'window_and_frame',
+        userRates
+      ),
+      getWindowPrice('oil_2coat', 'normal', 'window_and_frame', userRates),
+    ],
+    [
+      getSkirtingPrice(trimPaintSystem),
+      getSkirtingPrice('oil_2coat'),
+    ],
+  ];
+  const ratios = pairs
+    .map(([selected, oil]) => (oil > 0 ? selected / oil : 1))
+    .filter((ratio) => Number.isFinite(ratio) && ratio > 0);
+
+  if (ratios.length === 0) return 1;
+  return ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length;
+}
+
 function getSurfaceRateMultiplier(
   scope: InteriorScope[],
   wallPaintSystem: InteriorWallPaintSystem = 'repaint_2coat',
+  trimPaintSystem: InteriorPaintSystem = 'oil_2coat',
   userRates?: UserRateSettings | null
 ) {
   const normalized = [...new Set(scope)];
@@ -510,7 +552,9 @@ function getSurfaceRateMultiplier(
       userRates.ceiling[wallPaintSystem] /
       PAINT_RATES.ceiling[wallPaintSystem].ratePerSqm,
     trim:
-      userRates.trim.repaint_2coat / PAINT_RATES.trim.repaint_2coat.ratePerSqm,
+      (userRates.trim.repaint_2coat /
+        PAINT_RATES.trim.repaint_2coat.ratePerSqm) *
+      getTrimPaintSystemMultiplier(trimPaintSystem, userRates),
   };
 
   const totalWeight = normalized.reduce((sum, item) => sum + weights[item], 0);
@@ -596,6 +640,7 @@ function buildSnapshot(
       estimate_mode: input.estimate_mode,
       condition: input.condition,
       scope: [...new Set(input.scope)],
+      trim_paint_system: input.trim_paint_system ?? 'oil_2coat',
       property_details: input.property_details,
       range_cents: {
         min: cap(range.min),
@@ -618,6 +663,7 @@ function calculateEntireApartmentEstimate(
   const surface_rate_multiplier = getSurfaceRateMultiplier(
     input.scope,
     input.wall_paint_system ?? 'repaint_2coat',
+    input.trim_paint_system ?? 'oil_2coat',
     userRates
   );
   const baseRange =
@@ -720,6 +766,7 @@ function calculateEntireHouseEstimate(
   const surface_rate_multiplier = getSurfaceRateMultiplier(
     input.scope,
     input.wall_paint_system ?? 'repaint_2coat',
+    input.trim_paint_system ?? 'oil_2coat',
     userRates
   );
   const range = clampRangeGap(
@@ -918,16 +965,22 @@ export function snapshotInteriorEstimateInput(
         resolvedRoomPriceSource?.ok && resolvedRoomPriceSource.kind === 'room_template'
           ? resolvedRoomPriceSource
           : null;
+      const roomCondition = room.source_condition ?? input.condition;
+      const roomWallPaintSystem =
+        normalizeInteriorWallPaintSystem(room.source_wall_paint_system) ??
+        wallPaintSystem;
+      const roomTrimPaintSystem =
+        room.source_trim_paint_system ?? input.trim_paint_system ?? 'oil_2coat';
       const coatingMultiplierPct =
         room.rate_snapshot_version === 1 &&
         typeof room.source_room_template_coating_multiplier_pct === 'number'
           ? room.source_room_template_coating_multiplier_pct
-          : getRoomTemplateCoatingMultiplierPct(userRates, wallPaintSystem);
+          : getRoomTemplateCoatingMultiplierPct(userRates, roomWallPaintSystem);
       const conditionMultiplierPct =
         room.rate_snapshot_version === 1 &&
         typeof room.source_room_template_condition_multiplier_pct === 'number'
           ? room.source_room_template_condition_multiplier_pct
-          : getRoomTemplateConditionMultiplierPct(userRates, input.condition);
+          : getRoomTemplateConditionMultiplierPct(userRates, roomCondition);
       const anchor =
         templateSource
           ? templateSource.range_cents
@@ -946,7 +999,12 @@ export function snapshotInteriorEstimateInput(
           : room.rate_snapshot_version === 1 &&
         typeof room.source_surface_rate_multiplier === 'number'
           ? room.source_surface_rate_multiplier
-          : getSurfaceRateMultiplier(roomScope, wallPaintSystem, userRates);
+          : getSurfaceRateMultiplier(
+              roomScope,
+              roomWallPaintSystem,
+              roomTrimPaintSystem,
+              userRates
+            );
       const scopeMultiplier =
         templateSource || savedTemplateSnapshot
           ? 1
@@ -976,9 +1034,9 @@ export function snapshotInteriorEstimateInput(
         source_anchor_range_cents: anchor,
         source_surface_rate_multiplier: surfaceRateMultiplier,
         source_scope_multiplier: scopeMultiplier,
-        source_condition: room.source_condition ?? input.condition,
-        source_wall_paint_system:
-          room.source_wall_paint_system ?? wallPaintSystem,
+        source_condition: roomCondition,
+        source_wall_paint_system: roomWallPaintSystem,
+        source_trim_paint_system: roomTrimPaintSystem,
       };
     }),
     opening_items: input.opening_items.map((item) => {
@@ -1039,12 +1097,7 @@ function calculateSpecificAreasEstimate(
   input: InteriorEstimateInput,
   userRates?: UserRateSettings | null
 ): InteriorPricingSnapshot {
-  const condition = getCondition(input.property_type, input.condition);
-  const storey_multiplier =
-    input.property_type === 'house'
-      ? getStoreyMultiplier(input.property_details.storeys)
-      : 1;
-  const conditionMedian = (condition.min_mult + condition.max_mult) / 2;
+  const storey_multiplier = 1;
   const quantityScaleFactor = getQuantityScaleFactor(
     input.opening_items.reduce((sum, item) => sum + item.quantity, 0)
   );
@@ -1052,6 +1105,7 @@ function calculateSpecificAreasEstimate(
   const defaultSurfaceRateMultiplier = getSurfaceRateMultiplier(
     input.scope,
     wallPaintSystem,
+    input.trim_paint_system ?? 'oil_2coat',
     userRates
   );
   const pricing_items: InteriorPricingItem[] = [];
@@ -1062,6 +1116,14 @@ function calculateSpecificAreasEstimate(
   input.rooms.forEach((room, roomIndex) => {
     assertSpecificAreaRoomHasSurface(room, roomIndex);
     const activeScope = getRoomScope(room);
+    const roomCondition = room.source_condition ?? input.condition;
+    const condition = getCondition(input.property_type, roomCondition);
+    const conditionMedian = (condition.min_mult + condition.max_mult) / 2;
+    const roomWallPaintSystem =
+      normalizeInteriorWallPaintSystem(room.source_wall_paint_system) ??
+      wallPaintSystem;
+    const roomTrimPaintSystem =
+      room.source_trim_paint_system ?? input.trim_paint_system ?? 'oil_2coat';
     const roomTemplateSnapshotTotal = getRoomTemplateSnapshotTotalCents(room);
     const usesRoomTemplateSource =
       roomTemplateSnapshotTotal != null || room.source_room_template_id != null;
@@ -1084,17 +1146,22 @@ function calculateSpecificAreasEstimate(
       ? (room.rate_snapshot_version === 1 &&
           typeof room.source_room_template_coating_multiplier_pct === 'number'
           ? room.source_room_template_coating_multiplier_pct
-          : getRoomTemplateCoatingMultiplierPct(userRates, wallPaintSystem)) /
+          : getRoomTemplateCoatingMultiplierPct(userRates, roomWallPaintSystem)) /
         100
       : room.rate_snapshot_version === 1 &&
           typeof room.source_surface_rate_multiplier === 'number'
         ? room.source_surface_rate_multiplier
-        : getSurfaceRateMultiplier(activeScope, wallPaintSystem, userRates);
+        : getSurfaceRateMultiplier(
+            activeScope,
+            roomWallPaintSystem,
+            roomTrimPaintSystem,
+            userRates
+          );
     const conditionMultiplier = usesRoomTemplateSource
       ? (room.rate_snapshot_version === 1 &&
           typeof room.source_room_template_condition_multiplier_pct === 'number'
           ? room.source_room_template_condition_multiplier_pct
-          : getRoomTemplateConditionMultiplierPct(userRates, input.condition)) /
+          : getRoomTemplateConditionMultiplierPct(userRates, roomCondition)) /
         100
       : conditionMedian;
     const anchor =
@@ -1175,9 +1242,9 @@ function calculateSpecificAreasEstimate(
           surfaceRateMultiplier.toFixed(3)
         ),
         source_scope_multiplier: Number(scopeMultiplier.toFixed(3)),
-        source_condition: room.source_condition ?? input.condition,
-        source_wall_paint_system:
-          room.source_wall_paint_system ?? wallPaintSystem,
+        source_condition: roomCondition,
+        source_wall_paint_system: roomWallPaintSystem,
+        source_trim_paint_system: roomTrimPaintSystem,
       },
     });
   });
