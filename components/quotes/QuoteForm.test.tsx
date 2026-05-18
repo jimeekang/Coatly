@@ -413,11 +413,18 @@ describe('QuoteForm', () => {
         version: 2,
         label: 'Bedroom',
         enabled_surfaces: ['walls', 'ceiling', 'trim'],
-        sizes: {
-          small: { walls_cents: 90000, ceiling_cents: 30000, trim_cents: 10000 },
-          medium: { walls_cents: 120000, ceiling_cents: 45000, trim_cents: 15000 },
-          large: { walls_cents: 150000, ceiling_cents: 60000, trim_cents: 20000 },
-        },
+	        sizes: {
+	          small: { walls_cents: 90000, ceiling_cents: 30000, trim_cents: 10000 },
+	          medium: {
+	            walls_cents: 120000,
+	            ceiling_cents: 45000,
+	            trim_cents: 15000,
+	            wall_area_m2: 40,
+	            ceiling_area_m2: 12,
+	            trim_linear_m: 18,
+	          },
+	          large: { walls_cents: 150000, ceiling_cents: 60000, trim_cents: 20000 },
+	        },
         sort_order: 0,
       },
     ];
@@ -462,36 +469,30 @@ describe('QuoteForm', () => {
     const payload = onSubmit.mock.calls[0][0];
     expect(payload.interior_estimate.rooms).toEqual([
       expect.objectContaining({
-        name: 'Bedroom repaint',
-        anchor_room_type: 'Bedroom',
-        height_m: null,
-        include_walls: true,
-        include_ceiling: true,
-        include_trim: false,
+	        name: 'Bedroom repaint',
+	        anchor_room_type: 'Bedroom',
+	        height_m: null,
+	        pricing_model: 'measured',
+	        wall_area_m2: 40,
+	        ceiling_area_m2: 12,
+	        include_walls: true,
+	        include_ceiling: true,
+	        include_trim: false,
         source_rate_item_id: 'adv-bedroom-repaint',
         source_rate_item_version: 2,
         source_rate_item_label: 'Bedroom repaint',
         source_room_template_id: 'quick-bedroom',
-        source_room_template_version: 2,
-        source_room_template_label: 'Bedroom',
-        source_room_template_size: 'medium',
-        source_room_template_surface_prices_cents: {
-          walls_cents: 120000,
-          ceiling_cents: 45000,
-          trim_cents: 0,
-        },
-        rate_snapshot_version: 1,
-        source_anchor_range_cents: {
-          min: 120000,
-          median: 165000,
-          max: 210000,
-        },
-        source_surface_rate_multiplier: 1,
-        source_scope_multiplier: 1,
-        source_condition: 'fair',
-        source_wall_paint_system: 'repaint_2coat',
-      }),
-    ]);
+	        source_room_template_version: 2,
+	        source_room_template_label: 'Bedroom',
+	        source_room_template_size: 'medium',
+	        rate_snapshot_version: 1,
+	        source_condition: 'fair',
+	        source_wall_paint_system: 'repaint_2coat',
+	        source_wall_rate_cents_per_m2: 1800,
+	        source_ceiling_rate_cents_per_m2: 2000,
+	        source_condition_multiplier_pct: 100,
+	      }),
+	    ]);
   });
 
   it('removes room-level door and window toggles from advanced room surfaces', async () => {
@@ -570,12 +571,15 @@ describe('QuoteForm', () => {
     expect(room).toEqual(
       expect.objectContaining({
         include_trim: true,
-        source_condition: 'poor',
-        source_wall_paint_system: 'new_plaster_3coat',
-        source_trim_paint_system: 'water_3coat_white_finish',
-        source_surface_rate_multiplier: expect.any(Number),
-      })
-    );
+	        source_condition: 'poor',
+	        source_wall_paint_system: 'new_plaster_3coat',
+	        source_trim_paint_system: 'water_3coat_white_finish',
+	        source_condition_multiplier_pct: 130,
+	        source_wall_rate_cents_per_m2: 2800,
+	        source_ceiling_rate_cents_per_m2: 3000,
+	        source_trim_rate_cents_per_m: expect.any(Number),
+	      })
+	    );
   });
 
   it('keeps specific-area room trim base and dimensions out of the way until needed', async () => {
@@ -616,6 +620,43 @@ describe('QuoteForm', () => {
         length_m: null,
         width_m: null,
         height_m: null,
+      })
+    );
+  });
+
+  it('submits detailed specific rooms with measured wall ceiling and trim quantities', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(<QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} />);
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Measured room quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+
+    await user.clear(screen.getByLabelText('Wall area (sqm)'));
+    await user.type(screen.getByLabelText('Wall area (sqm)'), '40');
+    await user.clear(screen.getByLabelText('Ceiling area (sqm)'));
+    await user.type(screen.getByLabelText('Ceiling area (sqm)'), '12');
+    await user.click(screen.getByRole('button', { name: 'Trim' }));
+    await user.clear(screen.getByLabelText('Trim length (m)'));
+    await user.type(screen.getByLabelText('Trim length (m)'), '18');
+
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const room = onSubmit.mock.calls[0][0].interior_estimate.rooms[0];
+
+    expect(room).toEqual(
+      expect.objectContaining({
+        pricing_model: 'measured',
+        wall_area_m2: 40,
+        ceiling_area_m2: 12,
+        trim_linear_m: 18,
+        include_trim: true,
       })
     );
   });
@@ -684,6 +725,7 @@ describe('QuoteForm', () => {
     await user.click(screen.getByRole('tab', { name: /Detailed/i }));
 
     const specificAreasTotal = getEstimateTotalsKey();
+    expect(specificAreasTotal).toBe('0');
 
     await user.click(screen.getByRole('button', { name: 'Entire Property' }));
 
@@ -872,15 +914,15 @@ describe('QuoteForm', () => {
 
     expect(payload.interior_estimate.rooms[0]).toEqual(
       expect.objectContaining({
-        include_trim: true,
-        source_trim_paint_system: 'water_3coat_white_finish',
-        source_surface_rate_multiplier: expect.any(Number),
-      })
-    );
-    expect(
-      payload.interior_estimate.rooms[0].source_surface_rate_multiplier
-    ).toBeGreaterThan(1);
-  });
+	        include_trim: true,
+	        source_trim_paint_system: 'water_3coat_white_finish',
+	        source_trim_rate_cents_per_m: expect.any(Number),
+	      })
+	    );
+	    expect(
+	      payload.interior_estimate.rooms[0].source_trim_rate_cents_per_m
+	    ).toBeGreaterThan(3500);
+	  });
 
   it('ignores invalid saved interior estimate defaults instead of crashing edit mode', () => {
     render(

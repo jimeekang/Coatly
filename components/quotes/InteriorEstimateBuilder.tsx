@@ -43,6 +43,23 @@ const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-white px-
 const LABEL = 'mb-1.5 block text-sm font-medium text-on-surface';
 type RoomRef = '' | `${number}`;
 const INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION = 1;
+const MEASURED_ROOM_PRICING_MODEL = 'measured';
+
+function measurementToString(value: number | null | undefined) {
+  return value == null || value === 0 ? '' : String(value);
+}
+
+function getTemplateMeasurements(
+  template: UserRateSettings['quick_estimate']['rooms'][number] | undefined,
+  size: QuickRoomSize | undefined
+) {
+  const preset = template?.sizes[size ?? 'medium'];
+  return {
+    wall_area_m2: measurementToString(preset?.wall_area_m2),
+    ceiling_area_m2: measurementToString(preset?.ceiling_area_m2),
+    trim_linear_m: measurementToString(preset?.trim_linear_m),
+  };
+}
 
 function inferAnchorRoomType(
   name: string,
@@ -66,6 +83,10 @@ export type InteriorEstimateRoomFormState = {
   length_m: string;
   width_m: string;
   height_m: string;
+  pricing_model: 'anchor' | typeof MEASURED_ROOM_PRICING_MODEL;
+  wall_area_m2: string;
+  ceiling_area_m2: string;
+  trim_linear_m: string;
   include_walls: boolean;
   include_ceiling: boolean;
   include_trim: boolean;
@@ -94,6 +115,10 @@ export type InteriorEstimateRoomFormState = {
     median: number;
     max: number;
   };
+  source_wall_rate_cents_per_m2?: number;
+  source_ceiling_rate_cents_per_m2?: number;
+  source_trim_rate_cents_per_m?: number;
+  source_condition_multiplier_pct?: number;
   source_surface_rate_multiplier?: number;
   source_scope_multiplier?: number;
   source_condition?: InteriorCondition;
@@ -144,6 +169,10 @@ export const createEmptyInteriorRoom = (): InteriorEstimateRoomFormState => ({
   length_m: '',
   width_m: '',
   height_m: '',
+  pricing_model: MEASURED_ROOM_PRICING_MODEL,
+  wall_area_m2: '',
+  ceiling_area_m2: '',
+  trim_linear_m: '',
   include_walls: true,
   include_ceiling: true,
   include_trim: false,
@@ -222,6 +251,10 @@ export function InteriorEstimateBuilder({
   ) {
     setRoom(index, {
       ...patch,
+      source_wall_rate_cents_per_m2: undefined,
+      source_ceiling_rate_cents_per_m2: undefined,
+      source_trim_rate_cents_per_m: undefined,
+      source_condition_multiplier_pct: undefined,
       source_surface_rate_multiplier: undefined,
       source_room_template_coating_multiplier_pct: undefined,
       source_room_template_condition_multiplier_pct: undefined,
@@ -253,6 +286,9 @@ export function InteriorEstimateBuilder({
       room.length_m.trim() === '' &&
       room.width_m.trim() === '' &&
       room.height_m.trim() === '' &&
+      room.wall_area_m2.trim() === '' &&
+      room.ceiling_area_m2.trim() === '' &&
+      room.trim_linear_m.trim() === '' &&
       room.include_walls &&
       room.include_ceiling &&
       !room.include_trim &&
@@ -270,11 +306,14 @@ export function InteriorEstimateBuilder({
     const template = rateSettings?.quick_estimate.rooms.find(
       (room) => room.id === item.source_room_template_id
     );
+    const size = item.default_size ?? 'medium';
+    const measurements = getTemplateMeasurements(template, size);
 
     return {
       ...createEmptyInteriorRoom(),
       name: item.label,
       anchor_room_type: item.anchor_room_type || template?.label || item.label,
+      ...measurements,
       include_walls: item.include_walls,
       include_ceiling: item.include_ceiling,
       include_trim: item.include_trim,
@@ -285,7 +324,7 @@ export function InteriorEstimateBuilder({
       source_room_template_version:
         template?.version ?? item.source_room_template_version,
       source_room_template_label: template?.label,
-      source_room_template_size: item.default_size ?? 'medium',
+      source_room_template_size: size,
       rate_snapshot_version: INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION,
     };
   }
@@ -498,24 +537,29 @@ export function InteriorEstimateBuilder({
                       <select
                         id={`room-price-source-${index}`}
                         value={room.source_room_template_id ?? ''}
-                        onChange={(event) => {
-                          const template = roomPriceTemplates.find(
-                            (item) => item.id === event.target.value
+	                        onChange={(event) => {
+	                          const template = roomPriceTemplates.find(
+	                            (item) => item.id === event.target.value
+	                          );
+                          const size = room.source_room_template_size ?? 'medium';
+                          const measurements = getTemplateMeasurements(
+                            template,
+                            size
                           );
-                          setRoom(index, {
-                            source_room_template_id: template?.id,
-                            source_room_template_version: template
-                              ? (template.version ?? 1)
-                              : undefined,
-                            source_room_template_label: template?.label,
-                            source_room_template_size:
-                              room.source_room_template_size ?? 'medium',
-                            anchor_room_type:
-                              template?.label ?? room.anchor_room_type,
-                            rate_snapshot_version: template
-                              ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
-                              : undefined,
-                          });
+	                          setRoom(index, {
+	                            source_room_template_id: template?.id,
+	                            source_room_template_version: template
+	                              ? (template.version ?? 1)
+	                              : undefined,
+	                            source_room_template_label: template?.label,
+	                            source_room_template_size: size,
+	                            anchor_room_type:
+	                              template?.label ?? room.anchor_room_type,
+                              ...measurements,
+	                            rate_snapshot_version: template
+	                              ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
+	                              : undefined,
+	                          });
                         }}
                         className={FIELD}
                       >
@@ -536,19 +580,27 @@ export function InteriorEstimateBuilder({
                       </label>
                       <select
                         id={`room-price-size-${index}`}
-                        value={room.source_room_template_size ?? 'medium'}
-                        onChange={(event) =>
-                          setRoom(index, {
-                            source_room_template_size:
-                              event.target.value as QuickRoomSize,
-                            rate_snapshot_version:
-                              room.source_room_template_id != null
-                                ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
-                                : room.rate_snapshot_version,
-                          })
-                        }
-                        className={FIELD}
-                      >
+	                        value={room.source_room_template_size ?? 'medium'}
+	                        onChange={(event) => {
+                          const size = event.target.value as QuickRoomSize;
+                          const template = roomPriceTemplates.find(
+                            (item) => item.id === room.source_room_template_id
+                          );
+                          const measurements = getTemplateMeasurements(
+                            template,
+                            size
+                          );
+	                          setRoom(index, {
+	                            source_room_template_size: size,
+                              ...measurements,
+	                            rate_snapshot_version:
+	                              room.source_room_template_id != null
+	                                ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
+	                                : room.rate_snapshot_version,
+	                          })
+                        }}
+	                        className={FIELD}
+	                      >
                         <option value="small">Small</option>
                         <option value="medium">Medium</option>
                         <option value="large">Large</option>
@@ -599,17 +651,92 @@ export function InteriorEstimateBuilder({
                       </button>
                     ))}
                   </div>
-                  {!room.include_walls &&
-                    !room.include_ceiling &&
-                    !room.include_trim && (
-                      <p className="mt-2 text-xs font-medium text-red-700">
-                        Select at least one surface for Room {index + 1}.
-                      </p>
-                    )}
+	                  {!room.include_walls &&
+	                    !room.include_ceiling &&
+	                    !room.include_trim && (
+	                      <p className="mt-2 text-xs font-medium text-red-700">
+	                        Select at least one surface for Room {index + 1}.
+	                      </p>
+	                    )}
+	                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  {room.include_walls && (
+                    <div>
+                      <label
+                        htmlFor={`room-wall-area-${index}`}
+                        className="mb-1 block text-xs text-on-surface-variant"
+                      >
+                        Wall area (sqm)
+                      </label>
+                      <NumericInput
+                        id={`room-wall-area-${index}`}
+                        aria-label="Wall area (sqm)"
+                        inputMode="decimal"
+                        value={room.wall_area_m2}
+                        sanitize={sanitizeDecimalInput}
+                        onValueChange={(nextValue) =>
+                          setRoom(index, {
+                            wall_area_m2: nextValue,
+                            source_wall_rate_cents_per_m2: undefined,
+                          })
+                        }
+                        className={FIELD}
+                      />
+                    </div>
+                  )}
+                  {room.include_ceiling && (
+                    <div>
+                      <label
+                        htmlFor={`room-ceiling-area-${index}`}
+                        className="mb-1 block text-xs text-on-surface-variant"
+                      >
+                        Ceiling area (sqm)
+                      </label>
+                      <NumericInput
+                        id={`room-ceiling-area-${index}`}
+                        aria-label="Ceiling area (sqm)"
+                        inputMode="decimal"
+                        value={room.ceiling_area_m2}
+                        sanitize={sanitizeDecimalInput}
+                        onValueChange={(nextValue) =>
+                          setRoom(index, {
+                            ceiling_area_m2: nextValue,
+                            source_ceiling_rate_cents_per_m2: undefined,
+                          })
+                        }
+                        className={FIELD}
+                      />
+                    </div>
+                  )}
+                  {room.include_trim && (
+                    <div>
+                      <label
+                        htmlFor={`room-trim-length-${index}`}
+                        className="mb-1 block text-xs text-on-surface-variant"
+                      >
+                        Trim length (m)
+                      </label>
+                      <NumericInput
+                        id={`room-trim-length-${index}`}
+                        aria-label="Trim length (m)"
+                        inputMode="decimal"
+                        value={room.trim_linear_m}
+                        sanitize={sanitizeDecimalInput}
+                        onValueChange={(nextValue) =>
+                          setRoom(index, {
+                            trim_linear_m: nextValue,
+                            source_trim_rate_cents_per_m: undefined,
+                          })
+                        }
+                        className={FIELD}
+                      />
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-on-surface-variant">Wall &amp; Ceiling Coating</p>
+	                <div>
+	                  <p className="mb-1.5 text-xs font-medium text-on-surface-variant">Wall &amp; Ceiling Coating</p>
                   <div className="grid gap-2 md:grid-cols-3">
                     {INTERIOR_WALL_PAINT_SYSTEMS.map((paintSystem) => (
                       <button
@@ -690,9 +817,8 @@ export function InteriorEstimateBuilder({
             })}
           </div>
 
-          <div><label htmlFor="skirting-lm" className={LABEL}>Skirting Linear Metres</label><input id="skirting-lm" type="number" min="0" step="0.1" value={value.trim_items[0]?.quantity ?? ''} onChange={(event) => setValue('trim_items', event.target.value ? [{ quantity: event.target.value, paint_system: value.trim_paint_system, room_index: '' }] : [])} className={FIELD} /></div>
-        </>
-      ) : null}
+	        </>
+	      ) : null}
     </section>
   );
 }

@@ -259,9 +259,9 @@ export function getSelectedAdvancedEstimateIssues(
 
   const issues: RateSetupIssue[] = [];
 
-  input.rooms.forEach((room, index) => {
-    const roomLabel = room.name || `Room ${index + 1}`;
-    if (!room.include_walls && !room.include_ceiling && !room.include_trim) {
+	  input.rooms.forEach((room, index) => {
+	    const roomLabel = room.name || `Room ${index + 1}`;
+	    if (!room.include_walls && !room.include_ceiling && !room.include_trim) {
       issues.push({
         area: 'advanced',
         severity: 'blocking',
@@ -270,10 +270,14 @@ export function getSelectedAdvancedEstimateIssues(
         source_label: roomLabel,
         message: `Select at least one surface for ${roomLabel}.`,
       });
+	      return;
+	    }
+
+    if (room.pricing_model === 'measured') {
       return;
     }
 
-    const snapshotTemplateTotal = room.source_room_template_surface_prices_cents
+	    const snapshotTemplateTotal = room.source_room_template_surface_prices_cents
       ? getRoomTemplateSurfaceSnapshotTotalCents(
           room.source_room_template_surface_prices_cents
         )

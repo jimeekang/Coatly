@@ -117,10 +117,11 @@ type LegacyRoomDefault = {
   length_m: number | null;
   width_m: number | null;
   height_m: number | null;
-  surfaces?: Array<{
-    surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
-  }>;
-};
+	  surfaces?: Array<{
+	    surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
+	    area_m2?: number | null;
+	  }>;
+	};
 
 export type QuoteFormDefaultValues = {
   customer_id: string;
@@ -254,6 +255,10 @@ function buildInitialAdvancedEstimate(
         length_m: str(room.length_m),
         width_m: str(room.width_m),
         height_m: str(room.height_m),
+        pricing_model: room.pricing_model ?? 'measured',
+        wall_area_m2: str(room.wall_area_m2),
+        ceiling_area_m2: str(room.ceiling_area_m2),
+        trim_linear_m: str(room.trim_linear_m),
         include_walls: room.include_walls,
         include_ceiling: room.include_ceiling,
         include_trim: room.include_trim,
@@ -283,6 +288,10 @@ function buildInitialAdvancedEstimate(
           room.source_room_template_condition_multiplier_pct,
         rate_snapshot_version: room.rate_snapshot_version,
         source_anchor_range_cents: room.source_anchor_range_cents,
+        source_wall_rate_cents_per_m2: room.source_wall_rate_cents_per_m2,
+        source_ceiling_rate_cents_per_m2: room.source_ceiling_rate_cents_per_m2,
+        source_trim_rate_cents_per_m: room.source_trim_rate_cents_per_m,
+        source_condition_multiplier_pct: room.source_condition_multiplier_pct,
         source_surface_rate_multiplier: room.source_surface_rate_multiplier,
         source_scope_multiplier: room.source_scope_multiplier,
         source_condition: room.source_condition,
@@ -334,6 +343,16 @@ function buildInitialAdvancedEstimate(
       length_m: str(room.length_m),
       width_m: str(room.width_m),
       height_m: str(room.height_m),
+      pricing_model: 'measured',
+      wall_area_m2:
+        room.surfaces?.find((s) => s.surface_type === 'walls')?.area_m2 != null
+          ? str(room.surfaces.find((s) => s.surface_type === 'walls')?.area_m2)
+          : '',
+      ceiling_area_m2:
+        room.surfaces?.find((s) => s.surface_type === 'ceiling')?.area_m2 != null
+          ? str(room.surfaces.find((s) => s.surface_type === 'ceiling')?.area_m2)
+          : '',
+      trim_linear_m: '',
       include_walls:
         room.surfaces?.some((s) => s.surface_type === 'walls') ?? true,
       include_ceiling:
@@ -421,6 +440,10 @@ function buildAdvancedEstimatePayload(
       length_m: num(room.length_m),
       width_m: num(room.width_m),
       height_m: num(room.height_m),
+      pricing_model: room.pricing_model,
+      wall_area_m2: num(room.wall_area_m2),
+      ceiling_area_m2: num(room.ceiling_area_m2),
+      trim_linear_m: num(room.trim_linear_m),
       include_walls: room.include_walls,
       include_ceiling: room.include_ceiling,
       include_trim: room.include_trim,
@@ -442,6 +465,10 @@ function buildAdvancedEstimatePayload(
         room.source_room_template_condition_multiplier_pct,
       rate_snapshot_version: room.rate_snapshot_version,
       source_anchor_range_cents: room.source_anchor_range_cents,
+      source_wall_rate_cents_per_m2: room.source_wall_rate_cents_per_m2,
+      source_ceiling_rate_cents_per_m2: room.source_ceiling_rate_cents_per_m2,
+      source_trim_rate_cents_per_m: room.source_trim_rate_cents_per_m,
+      source_condition_multiplier_pct: room.source_condition_multiplier_pct,
       source_surface_rate_multiplier: room.source_surface_rate_multiplier,
       source_scope_multiplier: room.source_scope_multiplier,
     })),
@@ -1169,7 +1196,15 @@ export function QuoteForm({
     pricingStrategy === 'hybrid'
       ? 'Detailed Estimate'
       : PRICING_METHOD_LABELS[pricingStrategy];
-  const roomSummaryLines: SummaryLine[] = [];
+  const roomSummaryLines: SummaryLine[] =
+    pricingStrategy === 'hybrid' && advancedPreview
+      ? advancedPreview.pricing_items
+          .filter((item) => item.total_cents > 0)
+          .map((item) => ({
+            label: item.label,
+            value: item.total_cents,
+          }))
+      : [];
   const summaryLines: SummaryLine[] = (() => {
     const discountLine =
       discountCents > 0
@@ -1299,10 +1334,9 @@ export function QuoteForm({
         (quoteScope === 'exterior'
           ? (exteriorPreview?.subtotal_cents ?? 0) > 0
           : advancedEstimate.estimate_mode === 'entire_property'
-            ? (advancedPreview?.subtotal_cents ?? 0) > 0
-            : advancedEstimate.rooms.length > 0 &&
-              (advancedPreview?.subtotal_cents ?? 0) > 0 &&
-              !hasInvalidSpecificAreaRoom(advancedEstimate))))
+	            ? (advancedPreview?.subtotal_cents ?? 0) > 0
+	            : advancedEstimate.rooms.length > 0 &&
+	              !hasInvalidSpecificAreaRoom(advancedEstimate))))
   );
 
   function handleDiscountInputChange(value: string) {

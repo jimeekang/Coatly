@@ -144,6 +144,32 @@ describe('PriceRatesForm advanced room presets', () => {
     expect(waterInput).toHaveValue(420);
   });
 
+  it('lets painters set measured defaults for Room Price Library sizes', async () => {
+    const user = userEvent.setup();
+    const rates = buildDefaultRateSettings();
+    rates.pricing.preferred_pricing_method = 'detailed_quick';
+
+    render(<PriceRatesForm defaultRates={rates} />);
+
+    await user.click(screen.getByRole('button', { name: 'Expand Bedroom prices' }));
+
+    const wallArea = screen.getByLabelText('Bedroom Medium Wall area sqm');
+    const ceilingArea = screen.getByLabelText('Bedroom Medium Ceiling area sqm');
+    const trimLength = screen.getByLabelText('Bedroom Medium Trim length metres');
+
+    await user.clear(wallArea);
+    await user.type(wallArea, '40');
+    await user.clear(ceilingArea);
+    await user.type(ceilingArea, '12');
+    await user.clear(trimLength);
+    await user.type(trimLength, '18');
+    await user.tab();
+
+    expect(wallArea).toHaveValue(40);
+    expect(ceilingArea).toHaveValue(12);
+    expect(trimLength).toHaveValue(18);
+  });
+
   it('shows quick and advanced setup warnings for zero or missing required rates', () => {
     const rates = buildDefaultRateSettings();
     rates.quick_estimate.rooms = [

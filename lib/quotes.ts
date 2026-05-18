@@ -570,60 +570,116 @@ function normalizeInteriorEstimate(
       bathrooms: estimate.property_details.bathrooms ?? null,
       storeys: estimate.property_details.storeys ?? null,
     },
-    rooms: estimate.rooms.map((room) => ({
-      name: room.name.trim(),
-      anchor_room_type: room.anchor_room_type,
-      room_type: room.room_type,
-      length_m: room.length_m ?? null,
-      width_m: room.width_m ?? null,
-      height_m: room.height_m ?? null,
-      include_walls: room.include_walls,
-      include_ceiling: room.include_ceiling,
-      include_trim: room.include_trim,
-      source_rate_item_id: room.source_rate_item_id,
-      source_rate_item_version: room.source_rate_item_version,
-      source_rate_item_label: room.source_rate_item_label,
-      source_room_template_id: room.source_room_template_id,
-      source_room_template_version: room.source_room_template_version,
-      source_room_template_label: room.source_room_template_label,
-      source_room_template_size: room.source_room_template_size,
-      source_room_template_surface_prices_cents:
-        room.source_room_template_surface_prices_cents,
-      source_room_template_coating_multiplier_pct:
-        room.source_room_template_coating_multiplier_pct,
-      source_room_template_condition_multiplier_pct:
-        room.source_room_template_condition_multiplier_pct,
-      rate_snapshot_version: room.rate_snapshot_version,
-      source_anchor_range_cents: room.source_anchor_range_cents,
-      source_surface_rate_multiplier: room.source_surface_rate_multiplier,
-      source_scope_multiplier: room.source_scope_multiplier,
-      source_condition: room.source_condition,
-      source_wall_paint_system: normalizeInteriorWallPaintSystem(
+    rooms: estimate.rooms.map((room) => {
+      const normalizedRoom: NormalizedInteriorEstimateInput['rooms'][number] = {
+        name: room.name.trim(),
+        anchor_room_type: room.anchor_room_type,
+        room_type: room.room_type,
+        length_m: room.length_m ?? null,
+        width_m: room.width_m ?? null,
+        height_m: room.height_m ?? null,
+        include_walls: room.include_walls,
+        include_ceiling: room.include_ceiling,
+        include_trim: room.include_trim,
+      };
+
+      if (room.pricing_model) normalizedRoom.pricing_model = room.pricing_model;
+      if (room.wall_area_m2 != null) normalizedRoom.wall_area_m2 = room.wall_area_m2;
+      if (room.ceiling_area_m2 != null)
+        normalizedRoom.ceiling_area_m2 = room.ceiling_area_m2;
+      if (room.trim_linear_m != null)
+        normalizedRoom.trim_linear_m = room.trim_linear_m;
+      if (room.source_rate_item_id)
+        normalizedRoom.source_rate_item_id = room.source_rate_item_id;
+      if (room.source_rate_item_version != null)
+        normalizedRoom.source_rate_item_version = room.source_rate_item_version;
+      if (room.source_rate_item_label)
+        normalizedRoom.source_rate_item_label = room.source_rate_item_label;
+      if (room.source_room_template_id)
+        normalizedRoom.source_room_template_id = room.source_room_template_id;
+      if (room.source_room_template_version != null)
+        normalizedRoom.source_room_template_version =
+          room.source_room_template_version;
+      if (room.source_room_template_label)
+        normalizedRoom.source_room_template_label =
+          room.source_room_template_label;
+      if (room.source_room_template_size)
+        normalizedRoom.source_room_template_size = room.source_room_template_size;
+      if (room.source_room_template_surface_prices_cents)
+        normalizedRoom.source_room_template_surface_prices_cents =
+          room.source_room_template_surface_prices_cents;
+      if (room.source_room_template_coating_multiplier_pct != null)
+        normalizedRoom.source_room_template_coating_multiplier_pct =
+          room.source_room_template_coating_multiplier_pct;
+      if (room.source_room_template_condition_multiplier_pct != null)
+        normalizedRoom.source_room_template_condition_multiplier_pct =
+          room.source_room_template_condition_multiplier_pct;
+      if (room.rate_snapshot_version != null)
+        normalizedRoom.rate_snapshot_version = room.rate_snapshot_version;
+      if (room.source_anchor_range_cents)
+        normalizedRoom.source_anchor_range_cents = room.source_anchor_range_cents;
+      if (room.source_wall_rate_cents_per_m2 != null)
+        normalizedRoom.source_wall_rate_cents_per_m2 =
+          room.source_wall_rate_cents_per_m2;
+      if (room.source_ceiling_rate_cents_per_m2 != null)
+        normalizedRoom.source_ceiling_rate_cents_per_m2 =
+          room.source_ceiling_rate_cents_per_m2;
+      if (room.source_trim_rate_cents_per_m != null)
+        normalizedRoom.source_trim_rate_cents_per_m =
+          room.source_trim_rate_cents_per_m;
+      if (room.source_condition_multiplier_pct != null)
+        normalizedRoom.source_condition_multiplier_pct =
+          room.source_condition_multiplier_pct;
+      if (room.source_surface_rate_multiplier != null)
+        normalizedRoom.source_surface_rate_multiplier =
+          room.source_surface_rate_multiplier;
+      if (room.source_scope_multiplier != null)
+        normalizedRoom.source_scope_multiplier = room.source_scope_multiplier;
+      if (room.source_condition)
+        normalizedRoom.source_condition = room.source_condition;
+      const normalizedWallPaintSystem = normalizeInteriorWallPaintSystem(
         room.source_wall_paint_system
-      ) ?? undefined,
-      source_trim_paint_system: room.source_trim_paint_system,
-    })),
-    opening_items: estimate.opening_items.map((item) => ({
-      opening_type: item.opening_type,
-      paint_system: item.paint_system,
-      quantity: item.quantity,
-      room_index: item.room_index ?? null,
-      door_type: item.door_type,
-      door_scope: item.door_scope,
-      window_type: item.window_type,
-      window_scope: item.window_scope,
-      rate_snapshot_version: item.rate_snapshot_version,
-      source_unit_price_cents: item.source_unit_price_cents,
-      source_quantity_scale_factor: item.source_quantity_scale_factor,
-    })),
-    trim_items: estimate.trim_items.map((item) => ({
-      trim_type: item.trim_type,
-      paint_system: item.paint_system,
-      quantity: item.quantity,
-      room_index: item.room_index ?? null,
-      rate_snapshot_version: item.rate_snapshot_version,
-      source_unit_price_cents: item.source_unit_price_cents,
-    })),
+      );
+      if (normalizedWallPaintSystem)
+        normalizedRoom.source_wall_paint_system = normalizedWallPaintSystem;
+      if (room.source_trim_paint_system)
+        normalizedRoom.source_trim_paint_system = room.source_trim_paint_system;
+
+      return normalizedRoom;
+    }),
+    opening_items: estimate.opening_items.map((item) => {
+      const normalizedItem: NormalizedInteriorEstimateInput['opening_items'][number] = {
+        opening_type: item.opening_type,
+        paint_system: item.paint_system,
+        quantity: item.quantity,
+        room_index: item.room_index ?? null,
+        door_type: item.door_type,
+        door_scope: item.door_scope,
+        window_type: item.window_type,
+        window_scope: item.window_scope,
+      };
+      if (item.rate_snapshot_version != null)
+        normalizedItem.rate_snapshot_version = item.rate_snapshot_version;
+      if (item.source_unit_price_cents != null)
+        normalizedItem.source_unit_price_cents = item.source_unit_price_cents;
+      if (item.source_quantity_scale_factor != null)
+        normalizedItem.source_quantity_scale_factor =
+          item.source_quantity_scale_factor;
+      return normalizedItem;
+    }),
+    trim_items: estimate.trim_items.map((item) => {
+      const normalizedItem: NormalizedInteriorEstimateInput['trim_items'][number] = {
+        trim_type: item.trim_type,
+        paint_system: item.paint_system,
+        quantity: item.quantity,
+        room_index: item.room_index ?? null,
+      };
+      if (item.rate_snapshot_version != null)
+        normalizedItem.rate_snapshot_version = item.rate_snapshot_version;
+      if (item.source_unit_price_cents != null)
+        normalizedItem.source_unit_price_cents = item.source_unit_price_cents;
+      return normalizedItem;
+    }),
   };
 }
 

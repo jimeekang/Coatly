@@ -114,6 +114,81 @@ describe('calculateInteriorEstimate', () => {
     expect(result.snapshot.adjustments.quantity_scale_factor).toBe(0.92);
   });
 
+  it('prices measured specific-area rooms from per-surface quantities and saved rates', () => {
+    const userRates = buildDefaultRateSettings();
+    userRates.walls.repaint_2coat = 1800;
+    userRates.ceiling.repaint_2coat = 2000;
+    userRates.trim.repaint_2coat = 900;
+
+    const result = calculateInteriorEstimate(
+      {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        trim_paint_system: 'oil_2coat',
+        property_details: {
+          apartment_type: null,
+          sqm: null,
+          bedrooms: null,
+          bathrooms: null,
+          storeys: null,
+        },
+        rooms: [
+          {
+            name: 'Bedroom 1',
+            anchor_room_type: 'Bedroom 1',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            pricing_model: 'measured',
+            wall_area_m2: 40,
+            ceiling_area_m2: 12,
+            trim_linear_m: 18,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: true,
+          } as never,
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+      userRates
+    );
+
+    expect(result.subtotal_cents).toBe(112200);
+    expect(result.gst_cents).toBe(11220);
+    expect(result.line_items).toEqual([
+      expect.objectContaining({
+        category: 'room_anchor',
+        label: 'Bedroom 1 walls',
+        quantity: 40,
+        unit: 'sqm',
+        unit_price_cents: 1800,
+        total_cents: 72000,
+      }),
+      expect.objectContaining({
+        category: 'room_anchor',
+        label: 'Bedroom 1 ceiling',
+        quantity: 12,
+        unit: 'sqm',
+        unit_price_cents: 2000,
+        total_cents: 24000,
+      }),
+      expect.objectContaining({
+        category: 'room_anchor',
+        label: 'Bedroom 1 trim',
+        quantity: 18,
+        unit: 'linear_metre',
+        unit_price_cents: 900,
+        total_cents: 16200,
+      }),
+    ]);
+    expect(result.snapshot.price_source).toBe('mixed');
+  });
+
   it('uses saved user door rates in the detailed estimate engine', () => {
     const userRates = buildDefaultRateSettings();
     userRates.door_unit_rates.oil_2coat.standard.door_and_frame = 30000;
@@ -556,8 +631,47 @@ describe('calculateInteriorEstimate', () => {
     );
 
     expect(result.subtotal_cents).toBe(1150000);
-    expect(result.gst_cents).toBe(115000);
-    expect(result.total_cents).toBe(1265000);
-    expect(result.snapshot.price_source).toBe('anchor');
+	  expect(result.gst_cents).toBe(115000);
+	  expect(result.total_cents).toBe(1265000);
+	  expect(result.snapshot.price_source).toBe('anchor');
+	});
+
+  it('uses house sqm to scale entire-property house estimates within the selected configuration', () => {
+    const smallHouse = calculateInteriorEstimate({
+      property_type: 'house',
+      estimate_mode: 'entire_property',
+      condition: 'fair',
+      scope: ['walls', 'ceiling', 'trim'],
+      property_details: {
+        apartment_type: null,
+        sqm: 100,
+        bedrooms: 3,
+        bathrooms: 2,
+        storeys: '1_storey',
+      },
+      rooms: [],
+      opening_items: [],
+      trim_items: [],
+    });
+
+    const largeHouse = calculateInteriorEstimate({
+      property_type: 'house',
+      estimate_mode: 'entire_property',
+      condition: 'fair',
+      scope: ['walls', 'ceiling', 'trim'],
+      property_details: {
+        apartment_type: null,
+        sqm: 180,
+        bedrooms: 3,
+        bathrooms: 2,
+        storeys: '1_storey',
+      },
+      rooms: [],
+      opening_items: [],
+      trim_items: [],
+    });
+
+    expect(largeHouse.subtotal_cents).toBeGreaterThan(smallHouse.subtotal_cents);
+    expect(largeHouse.pricing_items[0]?.metadata?.sqm).toBe(180);
   });
 });

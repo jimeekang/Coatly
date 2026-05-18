@@ -241,6 +241,9 @@ export type QuickRoomSurfacePriceSnapshot = {
   trim_cents: number;
   trim_oil_cents?: number;
   trim_water_cents?: number;
+  wall_area_m2?: number;
+  ceiling_area_m2?: number;
+  trim_linear_m?: number;
 };
 
 export type QuickEstimateSettings = {
@@ -549,6 +552,9 @@ const quickEstimateSurfacePriceSchema = z.object({
   trim_cents: z.number().int().min(0),
   trim_oil_cents: z.number().int().min(0).optional(),
   trim_water_cents: z.number().int().min(0).optional(),
+  wall_area_m2: z.number().min(0).optional(),
+  ceiling_area_m2: z.number().min(0).optional(),
+  trim_linear_m: z.number().min(0).optional(),
 });
 
 const quickEstimateRoomSchema = z.object({
@@ -665,6 +671,9 @@ const EMPTY_SURFACE_PRICE = {
   trim_cents: 0,
   trim_oil_cents: 0,
   trim_water_cents: 0,
+  wall_area_m2: 0,
+  ceiling_area_m2: 0,
+  trim_linear_m: 0,
 };
 
 export function buildDefaultQuickPropertyPresets(): QuickPropertyPreset[] {
@@ -817,6 +826,9 @@ function normalizeQuickSurfacePrice(
     ...price,
     trim_oil_cents: price.trim_oil_cents ?? price.trim_cents,
     trim_water_cents: price.trim_water_cents ?? price.trim_cents,
+    wall_area_m2: price.wall_area_m2 ?? 0,
+    ceiling_area_m2: price.ceiling_area_m2 ?? 0,
+    trim_linear_m: price.trim_linear_m ?? 0,
   };
 }
 
@@ -1020,6 +1032,9 @@ export function splitToSurfaces(
     trim_cents,
     trim_oil_cents: trim_cents,
     trim_water_cents: trim_cents,
+    wall_area_m2: 0,
+    ceiling_area_m2: 0,
+    trim_linear_m: 0,
   };
 }
 

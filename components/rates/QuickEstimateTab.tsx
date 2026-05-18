@@ -100,6 +100,24 @@ const TRIM_PRICE_FIELDS = [
   },
 ] as const;
 
+const MEASUREMENT_FIELDS = [
+  {
+    key: 'wall_area_m2',
+    label: 'Wall area',
+    suffix: 'sqm',
+  },
+  {
+    key: 'ceiling_area_m2',
+    label: 'Ceiling area',
+    suffix: 'sqm',
+  },
+  {
+    key: 'trim_linear_m',
+    label: 'Trim length',
+    suffix: 'metres',
+  },
+] as const;
+
 function numberOrNull(value: string) {
   if (value.trim() === '') return null;
   const parsed = Number(value);
@@ -183,6 +201,25 @@ function RoomCard({
       sizes: {
         ...room.sizes,
         [size]: nextSize,
+      },
+    });
+  }
+
+  function handleMeasurementChange(
+    size: 'small' | 'medium' | 'large',
+    field: (typeof MEASUREMENT_FIELDS)[number]['key'],
+    value: string
+  ) {
+    const measurement = numberOrNull(value);
+    if (measurement === null) return;
+    onUpdate({
+      ...room,
+      sizes: {
+        ...room.sizes,
+        [size]: {
+          ...room.sizes[size],
+          [field]: measurement,
+        },
       },
     });
   }
@@ -366,6 +403,46 @@ function RoomCard({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-4 space-y-3 rounded-xl border border-outline-variant bg-surface-container-low/40 p-3">
+            <p className="text-xs font-semibold text-on-surface-variant">
+              Default measured quantities for Detailed Specific
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              {(['small', 'medium', 'large'] as const).map((size) => (
+                <div key={size} className="space-y-2 rounded-lg bg-white p-3">
+                  <p className="text-xs font-semibold text-on-surface">
+                    {SIZE_LABELS[size]}
+                  </p>
+                  {MEASUREMENT_FIELDS.map((field) => (
+                    <label
+                      key={field.key}
+                      className="grid gap-1 text-xs text-on-surface-variant"
+                    >
+                      <span>
+                        {field.label} ({field.suffix})
+                      </span>
+                      <input
+                        aria-label={`${room.label} ${SIZE_LABELS[size]} ${field.label} ${field.suffix}`}
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        defaultValue={room.sizes[size][field.key] ?? 0}
+                        onBlur={(event) =>
+                          handleMeasurementChange(
+                            size,
+                            field.key,
+                            event.target.value
+                          )
+                        }
+                        className="border-outline h-10 rounded-lg border bg-white px-2 text-right text-sm text-on-surface"
+                      />
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

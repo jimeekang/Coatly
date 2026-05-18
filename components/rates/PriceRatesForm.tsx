@@ -569,11 +569,11 @@ function TrimRatesSection({
             ? [{ key: 'trim', label: SQM_SURFACE_TYPE_LABELS.trim }]
             : []
         }
-        cols={TRIM_COATING_TYPES.map((c) => ({
-          key: c,
-          label: COATING_LABELS[c],
-        }))}
-        suffix="/sqm"
+	        cols={TRIM_COATING_TYPES.map((c) => ({
+	          key: c,
+	          label: COATING_LABELS[c],
+	        }))}
+	        suffix="/m"
         getValue={(_r, c) => (rates.trim as Record<string, number>)[c]}
         onChange={(_r, c, v) => onSurfaceChange('trim', c, v)}
         rowActions={() => (
