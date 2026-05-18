@@ -39,7 +39,11 @@ export async function GET(_request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (result.error) {
-    return NextResponse.json({ error: result.error.message }, { status: 500 });
+    console.error('Failed to load customer', result.error);
+    return NextResponse.json(
+      { error: 'Customer could not be loaded.' },
+      { status: 500 }
+    );
   }
 
   if (!result.data) {
@@ -87,7 +91,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (currentResult.error) {
-    return NextResponse.json({ error: currentResult.error.message }, { status: 500 });
+    console.error('Failed to load customer for update', currentResult.error);
+    return NextResponse.json(
+      { error: 'Customer could not be loaded.' },
+      { status: 500 }
+    );
   }
 
   if (!currentResult.data) {
@@ -124,7 +132,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (result.error) {
-    return NextResponse.json({ error: result.error.message }, { status: 500 });
+    console.error('Failed to update customer', result.error);
+    return NextResponse.json(
+      { error: 'Customer could not be updated.' },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ data: serializeCustomer(result.data) });
@@ -159,7 +171,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (result.error) {
-    return NextResponse.json({ error: result.error.message }, { status: 500 });
+    console.error('Failed to archive customer', result.error);
+    return NextResponse.json(
+      { error: 'Customer could not be archived.' },
+      { status: 500 }
+    );
   }
 
   if (!result.data) {

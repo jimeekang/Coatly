@@ -34,7 +34,7 @@ Task 2의 Quick/Advanced rate boundary hardening은 구현 완료됐다. Quick e
 | Quick save rows | `quote_estimate_items`를 insert함 | `app/actions/quotes.ts` | Done |
 | Quick row metadata completeness | row metadata가 source id/version/label, snapshot version, per-surface cents, selected surfaces, multipliers, global coating/condition을 포함함 | `buildQuickEstimateItemRows()`, `app/actions/quotes.test.ts` | Done |
 | Advanced room item schema | `detailed_estimate_items.advanced_rooms`가 source item library로 존재함 | `lib/rate-settings.ts` | Done |
-| Advanced room item UI | Price Rates 안에서 Advanced Room Items를 추가/수정/삭제함 | `components/rates/PriceRatesForm.tsx` | Done |
+| Advanced room preset UI | Price Rates 안에서 Advanced Room Presets를 추가/수정/삭제함. 가격은 Quick Room Price Library를 참조하고, preset은 default size/surfaces/height만 저장함 | `components/rates/PriceRatesForm.tsx` | Done |
 | Advanced quote builder source fields | library item을 quote room으로 복사할 때 source id/version/label, snapshot version을 넣음 | `components/quotes/InteriorEstimateBuilder.tsx`, `components/quotes/QuoteForm.test.tsx` | Done |
 | Advanced per-room surface toggle | room별 walls/ceiling/trim toggle이 있음 | `InteriorEstimateBuilder` | Done |
 | Advanced numeric snapshot | room anchor range, surface/scope multiplier, condition, wall paint system, door/window unit rate, trim unit rate를 snapshot으로 저장하고 계산 시 우선 사용함 | `lib/interior-estimates.ts`, `components/quotes/QuoteForm.tsx`, `app/actions/quotes.ts` | Done |
@@ -370,7 +370,7 @@ Browser testing is optional for Task 2 unless UI behavior changes are visually c
 - [x] Quick calculator uses stored snapshot cents/multipliers for source rooms.
 - [x] `utils/calculations.test.ts` has Quick snapshot unit coverage.
 - [x] `detailed_estimate_items.advanced_rooms` schema exists.
-- [x] Price Rates Advanced Room Items UI exists.
+- [x] Price Rates Advanced Room Presets UI exists and is treated as an optional shortcut over the Room Price Library, not a separate pricing anchor.
 - [x] Quote form copies Advanced room library source id/version/label into payload.
 - [x] `components/quotes/QuoteForm.test.tsx` covers Advanced room source copy.
 - [x] Custom detailed estimate anchors and door/window user rates are parsed and tested.

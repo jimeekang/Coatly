@@ -1223,7 +1223,7 @@ function ManualTab() {
   );
 }
 
-// ─── Detailed Estimate advanced room item library ────────────────────────────
+// ─── Detailed Estimate advanced room preset library ──────────────────────────
 
 function AdvancedRoomItemsSection({
   items,
@@ -1247,23 +1247,26 @@ function AdvancedRoomItemsSection({
     <section className="space-y-4">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <SectionHeading
-          title="Advanced Room Items"
-          subtitle="Create reusable room presets for New Quote advanced detailed estimates. Quotes copy these values when added."
+          title="Advanced Room Presets"
+          subtitle="Optional shortcuts for New Quote Advanced mode. Each preset reuses the Room Price Library price source, then stores default size, surfaces, and height."
         />
-        <AddRateItemButton label="Add Advanced Room Item" onClick={onAdd} />
+        {sortedItems.length > 0 && (
+          <AddRateItemButton label="Add Advanced Room Preset" onClick={onAdd} />
+        )}
       </div>
 
       {sortedItems.length === 0 ? (
         <div className="border-outline bg-surface-container-low/50 rounded-2xl border border-dashed p-6 text-center sm:p-8">
           <div className="mx-auto max-w-md space-y-3">
             <h4 className="text-on-surface text-base font-semibold">
-              No advanced room items yet
+              No advanced room presets yet
             </h4>
             <p className="text-on-surface-variant text-sm leading-6">
-              Add reusable rooms such as Bedroom repaint, Bathroom ceiling, or
-              Feature wall. They appear in New Quote Advanced mode.
+              Add presets only for repeated advanced quote patterns, such as
+              Bedroom repaint, Bathroom ceiling, or Feature wall. Room prices
+              still come from the Room Price Library.
             </p>
-            <AddRateItemButton label="Add Advanced Room Item" onClick={onAdd} />
+            <AddRateItemButton label="Add Advanced Room Preset" onClick={onAdd} />
           </div>
         </div>
       ) : (
@@ -1419,197 +1422,6 @@ function AdvancedRoomItemsSection({
                     </button>
                   ))}
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-// ─── Tab content: Detailed Estimate anchors ──────────────────────────────────
-
-function DetailedEstimateAnchorsTab({
-  rates,
-  onChange,
-}: {
-  rates: UserRateSettings;
-  onChange: (anchors: UserRateSettings['detailed_estimate_anchors']) => void;
-}) {
-  const anchors = rates.detailed_estimate_anchors.interior_rooms;
-  const rooms = Object.entries(anchors);
-  const [roomNameDrafts, setRoomNameDrafts] = useState<
-    Partial<Record<string, string>>
-  >({});
-
-  function updateAnchors(interiorRooms: typeof anchors) {
-    onChange({
-      ...rates.detailed_estimate_anchors,
-      interior_rooms: interiorRooms,
-    });
-  }
-
-  function makeUniqueRoomName(baseName: string) {
-    if (!anchors[baseName]) return baseName;
-
-    let index = 2;
-    while (anchors[baseName + ' ' + index]) index += 1;
-    return baseName + ' ' + index;
-  }
-
-  function clearRoomNameDraft(roomName: string) {
-    setRoomNameDrafts((current) => {
-      const next = { ...current };
-      delete next[roomName];
-      return next;
-    });
-  }
-
-  function commitRoomName(currentRoom: string) {
-    const nextRoom = (roomNameDrafts[currentRoom] ?? currentRoom).trim();
-
-    if (!nextRoom || nextRoom === currentRoom) {
-      clearRoomNameDraft(currentRoom);
-      return;
-    }
-
-    if (anchors[nextRoom]) return;
-
-    updateAnchors(
-      Object.fromEntries(
-        rooms.map(([room, range]) => [
-          room === currentRoom ? nextRoom : room,
-          range,
-        ])
-      )
-    );
-    clearRoomNameDraft(currentRoom);
-  }
-
-  function updateRoomMedian(room: string, value: string) {
-    const dollars = value.trim() === '' ? 0 : Number(value);
-    if (!Number.isFinite(dollars) || dollars < 0) return;
-
-    const median = Math.round(dollars * 100);
-    updateAnchors({
-      ...anchors,
-      [room]: {
-        min: Math.round(median * 0.85),
-        median,
-        max: Math.round(median * 1.15),
-      },
-    });
-  }
-
-  function addRoomAnchor() {
-    const room = makeUniqueRoomName('New Room');
-    updateAnchors({
-      ...anchors,
-      [room]: { min: 0, median: 0, max: 0 },
-    });
-    setRoomNameDrafts((current) => ({ ...current, [room]: room }));
-  }
-
-  function deleteRoomAnchor(roomToDelete: string) {
-    updateAnchors(
-      Object.fromEntries(rooms.filter(([room]) => room !== roomToDelete))
-    );
-  }
-
-  return (
-    <section className="space-y-4">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeading
-          title="Legacy Room Anchor Fallback"
-          subtitle="Compatibility-only fallback for old detailed estimate data. New room pricing should come from the Room Price Library."
-        />
-        <AddRateItemButton label="Add Room Anchor" onClick={addRoomAnchor} />
-      </div>
-
-      {rooms.length === 0 ? (
-        <div className="border-outline bg-surface-container-low/50 rounded-2xl border border-dashed p-6 text-center sm:p-8">
-          <div className="mx-auto max-w-md space-y-3">
-            <h4 className="text-on-surface text-base font-semibold">
-              No room anchors yet
-            </h4>
-            <p className="text-on-surface-variant text-sm leading-6">
-              Add a room anchor to set default detailed estimate pricing for
-              bedrooms, kitchens, or custom work areas.
-            </p>
-            <AddRateItemButton label="Add Room Anchor" onClick={addRoomAnchor} />
-          </div>
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {rooms.map(([room, range]) => (
-            <div
-              key={room}
-              className="border-outline rounded-2xl border bg-white p-4 shadow-sm transition-colors hover:border-primary/50 sm:p-5"
-            >
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_52px] lg:items-end">
-                <div className="space-y-2">
-                  <label
-                    htmlFor={'room-anchor-' + room}
-                    className="text-on-surface-variant text-sm font-medium"
-                  >
-                    Room anchor
-                  </label>
-                  <input
-                    id={'room-anchor-' + room}
-                    value={roomNameDrafts[room] ?? room}
-                    onChange={(event) =>
-                      setRoomNameDrafts((current) => ({
-                        ...current,
-                        [room]: event.target.value,
-                      }))
-                    }
-                    onBlur={() => commitRoomName(room)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        commitRoomName(room);
-                      }
-                    }}
-                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-base font-medium focus:ring-2 focus:outline-none"
-                    aria-label={'Room anchor name for ' + room}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor={'room-anchor-price-' + room}
-                    className="text-on-surface-variant text-sm font-medium"
-                  >
-                    Base price
-                  </label>
-                  <div className="relative">
-                    <span className="text-on-surface-variant pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-base font-semibold">
-                      $
-                    </span>
-                    <NumericInput
-                      id={'room-anchor-price-' + room}
-                      inputMode="numeric"
-                      value={Math.round(range.median / 100).toString()}
-                      sanitize={sanitizeIntegerInput}
-                      onValueChange={(value) => updateRoomMedian(room, value)}
-                      className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white py-2 pr-3 pl-8 text-base font-semibold tabular-nums focus:ring-2 focus:outline-none"
-                      aria-label={'Base price for ' + room}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  aria-label={'Delete ' + room + ' room anchor'}
-                  onClick={() => deleteRoomAnchor(room)}
-                  className="border-error/30 text-error hover:bg-error-container inline-flex h-12 w-full items-center justify-center rounded-xl border bg-white lg:w-12"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="ml-2 text-base font-medium lg:sr-only">
-                    Delete
-                  </span>
-                </button>
               </div>
             </div>
           ))}
@@ -2164,13 +1976,6 @@ export function PriceRatesForm({
     }));
   }
 
-  function handleDetailedEstimateAnchorsChange(
-    detailed_estimate_anchors: UserRateSettings['detailed_estimate_anchors']
-  ) {
-    setSaved(false);
-    setRates((prev) => ({ ...prev, detailed_estimate_anchors }));
-  }
-
   // ── Tab change — also sets preferred method ──────────────────────────────────
   function handleTabChange(method: PricingMethod) {
     setActiveTab(method);
@@ -2375,17 +2180,6 @@ export function PriceRatesForm({
                 onUpdate={handleAdvancedRoomItemUpdate}
                 onDelete={handleAdvancedRoomItemDelete}
               />
-              <details className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm">
-                <summary className="cursor-pointer text-sm font-semibold text-on-surface">
-                  Legacy room anchor compatibility
-                </summary>
-                <div className="mt-4">
-                  <DetailedEstimateAnchorsTab
-                    rates={rates}
-                    onChange={handleDetailedEstimateAnchorsChange}
-                  />
-                </div>
-              </details>
               <WallCeilingRatesSection
                 rates={rates}
                 onSurfaceChange={handleSurfaceChange}

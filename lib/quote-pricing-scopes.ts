@@ -9,6 +9,10 @@ type PricingScopeRole =
 
 type PricingScopeLineItem = {
   name: string;
+  category?: string | null;
+  unit?: string | null;
+  quantity?: number | null;
+  unit_price_cents?: number | null;
   is_optional?: boolean | null;
   is_selected?: boolean | null;
   pricing_scope_key?: string | null;
@@ -25,17 +29,30 @@ type RoomScopeInput = {
 type InteriorScopeRoomInput = {
   name?: string;
   anchor_room_type?: string;
+  room_type?: string;
+  length_m?: number | null;
+  width_m?: number | null;
+  height_m?: number | null;
   include_walls?: boolean;
   include_ceiling?: boolean;
   include_trim?: boolean;
   source_rate_item_id?: string;
+  source_rate_item_version?: number;
+  source_rate_item_label?: string;
+  rate_snapshot_version?: number;
   source_room_template_id?: string;
+  source_room_template_size?: string;
 };
 
 type InteriorScopeInput = {
+  property_type?: string;
   estimate_mode?: 'entire_property' | 'specific_areas';
+  condition?: string;
   scope?: ScopeSurface[];
+  wall_paint_system?: string;
+  property_details?: Record<string, unknown>;
   rooms?: InteriorScopeRoomInput[];
+  opening_items?: Array<Record<string, unknown>>;
   trim_items?: Array<{
     trim_type?: 'skirting';
     room_index?: number | null;

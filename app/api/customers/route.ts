@@ -30,7 +30,11 @@ export async function GET() {
     .order('name', { ascending: true });
 
   if (result.error) {
-    return NextResponse.json({ error: result.error.message }, { status: 500 });
+    console.error('Failed to load customers', result.error);
+    return NextResponse.json(
+      { error: 'Customers could not be loaded.' },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({
@@ -95,7 +99,11 @@ export async function POST(request: Request) {
     .single();
 
   if (result.error) {
-    return NextResponse.json({ error: result.error.message }, { status: 500 });
+    console.error('Failed to create customer', result.error);
+    return NextResponse.json(
+      { error: 'Customer could not be created.' },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ data: serializeCustomer(result.data) }, { status: 201 });

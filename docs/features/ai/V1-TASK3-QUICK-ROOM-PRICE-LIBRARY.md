@@ -27,7 +27,7 @@ Task 1 and Task 2 made quote totals canonical and snapshot-safe. Task 3 now remo
 
 - Added `source_room_template_id`, `source_room_template_version`, and `default_size` to Advanced room items while preserving legacy `anchor_room_type`.
 - Added `lib/room-price-library.ts` for template lookup, selected-surface totals, derived anchor ranges, and typed missing/disabled-source issues.
-- Updated Price Rates so Quick rooms are framed as Room Price Library, Advanced presets select a template and default size, and legacy anchors are collapsed under compatibility copy.
+- Updated Price Rates so Quick rooms are framed as Room Price Library and Advanced presets select a template/default size. The legacy anchor compatibility editor has been removed from the user-facing UI.
 - Updated Advanced quote builder so presets and manual rooms can carry template source id/version/label/size, and quote payloads snapshot numeric per-surface prices.
 - Updated server-side save/normalize/validation so `estimate_context` and `quote_estimate_items.metadata` include room template source metadata and old anchor-only quotes still calculate.
 - Updated diagnostics and duplicate scope guard so new Advanced room sources use the same stable room/surface keys as Quick Estimate.
@@ -40,7 +40,7 @@ Task 1 and Task 2 made quote totals canonical and snapshot-safe. Task 3 now remo
 |--------------|---------|---------|
 | Quick Estimate room matrix | Already has detailed room price by size and surface | Correct source is available but treated as a quick-only mode |
 | Detailed Estimate Anchors | Duplicates room-level price names and min/median/max values | Painter may update Quick but forget anchors, causing Advanced to price from stale source |
-| Advanced Room Items | Currently point to `anchor_room_type` string | A string anchor is weaker than a versioned Quick room template source |
+| Advanced Room Presets | Previously pointed to `anchor_room_type` string | A string anchor is weaker than a versioned Quick room template source |
 | Price Rates UI | Shows Quick setup and Detailed Estimate Anchors as separate pricing areas | User does not know which room price list is authoritative |
 | AI quote future | AI needs one stable room price library to map photo/notes candidates | Two room-price sources make AI candidate matching less trustworthy |
 
@@ -147,12 +147,14 @@ Recommended layout:
 2. **Advanced Detailed Presets**
    - Advanced room presets choose a Room Price Library template.
    - Preset can set default size and included surfaces.
+   - Preset is a workflow shortcut only, not a second room price table.
+   - Empty state shows one add button; the header add button appears only after presets exist.
    - Door/window/skirting unit rates stay explicit.
 
 3. **Legacy Detailed Anchors**
-   - Hidden by default or collapsed under a legacy compatibility section.
-   - Shows read-only derived values where possible.
-   - Allows manual legacy recovery only if existing data cannot map to a room template.
+   - No user-facing editor in Price Rates.
+   - Internal parser/calculator fallback only for existing saved data that cannot map to a room template.
+   - New testing data should not be created from this source.
 
 ### Quote Builder
 
@@ -171,7 +173,7 @@ Quick and Advanced should feel related, not duplicated.
 - [x] `lib/rate-settings.test.ts`: parsing old `advanced_rooms[].anchor_room_type` still works.
 - [x] `lib/rate-settings.test.ts`: new `advanced_rooms[].source_room_template_id` points to Quick room template.
 - [x] `lib/interior-estimates.test.ts`: Advanced room using Quick template snapshot keeps old total after Quick template price changes.
-- [x] `components/rates/PriceRatesForm.test.tsx`: Detailed Estimate Anchors are not shown as a primary duplicated price list.
+- [x] `components/rates/PriceRatesForm.test.tsx`: Detailed Estimate Anchors and legacy anchor controls are not shown in Price Rates.
 - [x] `components/rates/PriceRatesForm.test.tsx`: Advanced room preset can select a Room Price Library template and default size.
 - [x] `components/quotes/QuoteForm.test.tsx`: Advanced quote selected from room template saves template id/version/label/size and numeric source prices.
 - [x] `app/actions/quotes.test.ts`: create/update stores Advanced estimate metadata from Quick room template source, not from a second editable anchor list.
@@ -234,10 +236,11 @@ Modify:
 Required behavior:
 
 - [x] Reframe Quick tab/section copy as Room Price Library or make the relationship explicit.
-- [x] Advanced Room Items choose a room template from `quick_estimate.rooms`.
-- [x] Advanced Room Items choose a default size.
-- [x] Advanced Room Items keep default walls/ceiling/trim toggles.
-- [x] Detailed Estimate Anchors is hidden from the primary flow or collapsed as legacy compatibility.
+- [x] Advanced Room Presets choose a room template from `quick_estimate.rooms`.
+- [x] Advanced Room Presets choose a default size.
+- [x] Advanced Room Presets keep default walls/ceiling/trim toggles.
+- [x] Advanced Room Presets are labelled as optional shortcuts and do not create a second pricing anchor.
+- [x] Detailed Estimate Anchors is removed from the Price Rates user-facing UI.
 - [x] Setup summary counts missing template references instead of missing anchor strings for new items.
 
 ### Step 5: Update Advanced Quote Builder
@@ -298,7 +301,7 @@ Modify:
 Required behavior:
 
 - [x] Document that Room Price Library is the single room price source.
-- [x] Document that Detailed Estimate Anchors is compatibility/derived only.
+- [x] Document that Detailed Estimate Anchors is internal compatibility/derived data only, with no Price Rates editor.
 - [x] Document old quote compatibility and no-retroactive-repricing rule.
 - [x] Document AI candidate mapping to room template + size + surfaces.
 
@@ -316,7 +319,7 @@ Use a compatibility-first migration:
 ## Completion Criteria
 
 - Painters maintain one room price library, not two room price lists.
-- Price Rates primary UI no longer makes Detailed Estimate Anchors look like the authoritative room price source.
+- Price Rates UI no longer exposes Detailed Estimate Anchors as an editable room price source.
 - Quick Estimate and Advanced Detailed Estimate both source room prices from `quick_estimate.rooms`.
 - Existing saved quotes keep old totals.
 - Existing rate settings with legacy anchors still load.

@@ -6,14 +6,11 @@ import {
   GOOGLE_CALENDAR_STATE_COOKIE,
   isGoogleCalendarOAuthConfigured,
 } from '@/lib/google-calendar/oauth';
+import { resolveSafeInternalPath } from '@/lib/security/paths';
 import { createServerClient } from '@/lib/supabase/server';
 
 function getSafeNextPath(next: string | null) {
-  if (!next || !next.startsWith('/') || next.startsWith('//')) {
-    return '/settings';
-  }
-
-  return next;
+  return resolveSafeInternalPath(next, '/settings', ['/settings']);
 }
 
 export async function GET(request: NextRequest) {

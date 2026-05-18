@@ -19,7 +19,7 @@
 | [AI-ASSISTANT.md](./AI-ASSISTANT.md) | AI 기능 범위, Qwen model policy, usage log 요약 |
 | [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | Task 1 detailed implementation plan for rate source audit, canonical quote totals, optional add-ons, public quote, and invoice parity |
 | [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md) | Task 2 detailed implementation plan for Quick/Advanced rate separation, snapshot immutability, setup warnings, and duplicate scope protection |
-| [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md) | Task 3 detailed design for making Quick Estimate room prices the canonical Room Price Library and demoting Detailed Estimate Anchors to derived/legacy fallback |
+| [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md) | Task 3 detailed design for making Quick Estimate room prices the canonical Room Price Library and removing Detailed Estimate Anchors from the user-facing Price Rates UI |
 | [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md) | quote form data model, AI output contract, legacy quote form 분석 |
 | [QUOTE.md](../quote/QUOTE.md) | 현재 quote builder 구조, pricing modes, active risks |
 | [BILLING.md](../billing/BILLING.md) | 기존 Stripe checkout, portal, webhook, subscription cache 구조 |
@@ -40,7 +40,7 @@
 | 아직 남은 validation 기록 | D11 cost spreadsheet 숫자 확정, painter별 anonymized quote 추가 회수, W4 numeric golden set fixture |
 | Task 1 implementation review | 2026-05-17 기준 COMPLETE. canonical quote totals/invoice parity, deterministic duplicate priced scope guard, rollback/lock edge tests, PDF route regression, full test suite, build, lint 통과 |
 | Task 2 implementation review | 2026-05-17 기준 COMPLETE. Quick row metadata completeness, Advanced numeric snapshot immutability, setup diagnostics, A$0 selected-source blocking, invalid surface blocking, door/window explicit item boundary, stale-rate tests, full suite/build/lint 통과 |
-| Task 3 implementation review | 2026-05-17 기준 COMPLETE. Quick Estimate room matrix를 canonical Room Price Library로 승격했고, Advanced room presets/quote payload/server metadata가 template id/version/label/size/per-surface snapshot을 저장한다. Detailed Estimate Anchors는 legacy compatibility로 축소됐다 |
+| Task 3 implementation review | 2026-05-18 기준 COMPLETE. Quick Estimate room matrix를 canonical Room Price Library로 승격했고, Advanced room presets/quote payload/server metadata가 template id/version/label/size/per-surface snapshot을 저장한다. Detailed Estimate Anchors는 Price Rates UI에서 제거됐고 내부 호환 데이터로만 남는다 |
 
 ## Build Rule
 
@@ -49,7 +49,7 @@
 3. AI output에는 `rate`, `unit_price_cents`, `subtotal_cents`, `gst_cents`, `total_cents`가 들어가면 안 된다.
 4. 같은 priced scope는 quick item, advanced room source, room/surface estimate, custom line item 중 하나에서만 subtotal을 만든다.
 5. Interior room pricing의 primary editable source는 Quick Estimate room matrix다. UI에서는 이를 Room Price Library로 취급한다.
-6. Detailed Estimate Anchors는 사용자에게 별도 bedroom/living room 가격표를 다시 입력시키는 메인 UI가 아니다. 새 detailed room preset은 Room Price Library template을 참조하고, anchors는 derived adapter 또는 legacy fallback으로만 유지한다.
+6. Detailed Estimate Anchors는 사용자에게 별도 bedroom/living room 가격표를 다시 입력시키는 UI가 아니다. 새 detailed room preset은 Room Price Library template을 참조하고, anchors는 기존 데이터 파싱을 위한 내부 fallback으로만 유지한다.
 7. Photo helper는 visible condition과 scope wording을 돕는다. 사진만 보고 sqm/lm/price를 확정하지 않는다.
 8. 모든 AI call은 provider, model, prompt version, token/cost, photo count, cache hit 여부를 `ai_usage_logs`에 남긴다.
 9. Free Pro Trial + Paid Conversion Tracking은 build, deploy, painter onboarding, price rate setup, 첫 draft smoke test가 끝난 뒤에만 시작한다.
@@ -271,13 +271,13 @@
 
   Add pure helpers to list room templates, resolve a template by id, sum selected surfaces for small/medium/large, and derive an internal anchor range from the same template when the old calculator path still needs one.
 
-- [x] **Step 3: Change Advanced Room Items to reference room templates**
+- [x] **Step 3: Change Advanced Room Presets to reference room templates**
 
-  New advanced room presets should store `source_room_template_id`, `source_room_template_version`, `default_room_size`, and default selected surfaces. Legacy `anchor_room_type` stays as fallback only.
+  New advanced room presets store `source_room_template_id`, `source_room_template_version`, `default_room_size`, and default selected surfaces. They are optional quote-entry shortcuts over the Room Price Library, not another room price table. Legacy `anchor_room_type` stays as fallback only.
 
 - [x] **Step 4: Reorder Price Rates UI**
 
-  Room price setup becomes the primary interior pricing source. Detailed Estimate Anchors should be removed from the main workflow or collapsed as legacy/fallback settings so painters do not maintain two Bedroom prices.
+  Room price setup becomes the primary interior pricing source. Detailed Estimate Anchors are removed from the Price Rates UI so painters cannot maintain two Bedroom prices.
 
 - [x] **Step 5: Snapshot advanced rooms from room template source**
 
@@ -299,7 +299,8 @@
 
 - Done: Advanced room item schema accepts `source_room_template_id`, `source_room_template_version`, and `default_size`; legacy `anchor_room_type` remains readable.
 - Done: `lib/room-price-library.ts` resolves templates, selected surfaces, derived ranges, and typed missing/disabled-source issues.
-- Done: Price Rates shows Room Price Library setup, Advanced presets choose a template/default size, and legacy anchors are collapsed under compatibility copy.
+- Done: Price Rates shows Room Price Library setup and Advanced presets choose a template/default size. Legacy anchor editing is removed from the UI.
+- Done: Advanced preset empty state now shows a single add button, and the section copy clarifies that presets reuse Room Price Library prices instead of creating separate anchors.
 - Done: Advanced quote builder copies template source fields and allows manual rooms to select a template directly.
 - Done: Quote payload/server save rows snapshot template id/version/label/size, per-surface cents, derived range, and multiplier metadata.
 - Verified: focused Task 3 suites passed 7 files / 109 tests. Full suite/build/lint verification is tracked at branch completion.

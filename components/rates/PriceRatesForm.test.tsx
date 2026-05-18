@@ -8,14 +8,13 @@ vi.mock('@/app/actions/settings', () => ({
   updateRateSettingsAction: vi.fn(),
 }));
 
-describe('PriceRatesForm detailed estimate anchors', () => {
-  it('shows legacy anchors as compatibility instead of the primary room price list', () => {
+describe('PriceRatesForm advanced room presets', () => {
+  it('removes legacy room anchor compatibility from the price rates UI', () => {
     render(<PriceRatesForm defaultRates={buildDefaultRateSettings()} />);
 
     expect(screen.queryByText('Detailed Estimate Anchors')).not.toBeInTheDocument();
-    expect(
-      screen.getAllByText(/Legacy room anchor/i).length
-    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/Legacy room anchor/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Add Room Anchor/i)).not.toBeInTheDocument();
   });
 
   it('lets advanced room presets select a Room Price Library template and default size', async () => {
@@ -38,10 +37,13 @@ describe('PriceRatesForm detailed estimate anchors', () => {
 
     render(<PriceRatesForm defaultRates={rates} />);
 
-    expect(screen.getByText('Advanced Room Items')).toBeInTheDocument();
+    expect(screen.getByText('Advanced Room Presets')).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: 'Add Advanced Room Preset' })
+    ).toHaveLength(1);
 
     await user.click(
-      screen.getAllByRole('button', { name: 'Add Advanced Room Item' })[0]
+      screen.getByRole('button', { name: 'Add Advanced Room Preset' })
     );
 
     expect(screen.getByDisplayValue('New advanced room')).toBeInTheDocument();
@@ -93,6 +95,7 @@ describe('PriceRatesForm detailed estimate anchors', () => {
         version: 1,
         label: 'Missing anchor room',
         anchor_room_type: 'Not configured',
+        default_size: 'medium',
         include_walls: true,
         include_ceiling: false,
         include_trim: false,

@@ -11,6 +11,11 @@ import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function getSafePdfFilename(prefix: string, value: string) {
+  const safeValue = value.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '');
+  return `${prefix}-${safeValue || 'document'}.pdf`;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const invoiceId = searchParams.get('id');
@@ -135,7 +140,8 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="invoice-${invoiceData.invoice_number}.pdf"`,
+      'Content-Disposition': `inline; filename="${getSafePdfFilename('invoice', invoiceData.invoice_number)}"`,
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }

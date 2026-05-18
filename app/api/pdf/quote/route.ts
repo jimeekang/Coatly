@@ -22,6 +22,11 @@ const QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, customer_id, quote_number, titl
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function getSafePdfFilename(prefix: string, value: string) {
+  const safeValue = value.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '');
+  return `${prefix}-${safeValue || 'document'}.pdf`;
+}
+
 type QuotePdfRow = {
   id: string;
   user_id: string;
@@ -226,7 +231,8 @@ export async function GET(request: NextRequest) {
   return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="quote-${quoteData.quote_number}.pdf"`,
+      'Content-Disposition': `inline; filename="${getSafePdfFilename('quote', quoteData.quote_number)}"`,
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }

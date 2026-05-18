@@ -7,6 +7,7 @@ import {
   GOOGLE_CALENDAR_STATE_COOKIE,
   parseGoogleCalendarOAuthState,
 } from '@/lib/google-calendar/oauth';
+import { resolveSafeInternalPath } from '@/lib/security/paths';
 import { createServerClient } from '@/lib/supabase/server';
 
 function buildSettingsRedirect(origin: string, message: string | null, next = '/settings') {
@@ -24,7 +25,9 @@ export async function GET(request: NextRequest) {
   const errorDescription = request.nextUrl.searchParams.get('error_description');
   const parsedState = parseGoogleCalendarOAuthState(request.nextUrl.searchParams.get('state'));
   const cookieState = request.cookies.get(GOOGLE_CALENDAR_STATE_COOKIE)?.value ?? null;
-  const nextPath = parsedState?.next ?? '/settings';
+  const nextPath = resolveSafeInternalPath(parsedState?.next, '/settings', [
+    '/settings',
+  ]);
 
   const clearCookieResponse = (url: URL) => {
     const response = NextResponse.redirect(url);

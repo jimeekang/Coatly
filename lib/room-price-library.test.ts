@@ -46,6 +46,9 @@ describe('Room Price Library helpers', () => {
     });
 
     expect(resolved.ok).toBe(false);
+    if (resolved.ok) {
+      throw new Error('Expected a missing template issue.');
+    }
     expect(resolved.issue.code).toBe('missing_room_template');
   });
 });
