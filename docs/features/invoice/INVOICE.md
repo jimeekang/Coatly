@@ -84,13 +84,16 @@ Design System UI kit(`coatly-design-system`) 기준으로 invoice list/detail �
 - **Activity 타임라인** (`ActivityTimeline`) — 생성/발송/연체/입금 이벤트. status·실데이터에서만 파생(추정값 생성 안 함).
 - 모든 색·폰트는 Material Design 3 토큰 사용. 레거시 `pm-*` 토큰 제거 완료.
 
-### New / Edit invoice (`/invoices/new`, `InvoiceForm`)
-디자인 번들에 별도 new-invoice 화면이 없어, list/detail 재설계와 **일관성 패스**만 적용:
-- 헤더는 detail과 동일 패턴 — `<BackLink>` 텍스트 백 링크 + `text-[22px]/sm:text-[26px]` 제목.
-- 카드 스타일을 redesign과 통일 (`rounded-2xl border-outline-variant/60 bg-surface-container-lowest p-5`), 섹션 타이틀 `font-bold`.
-- 헤더 eyebrow를 mono 처리, Total 박스 색 토큰 정리(`text-primary-container` 오용 → `text-success`).
-- non-MD3 raw 색상(`amber-*`) → `warning` 토큰으로 교체, 에러 박스는 `<ErrorAlert>` 재사용.
-- 소형 버튼 radius를 `rounded-lg`로 통일.
+### New / Edit invoice (`/invoices/new`, `/invoices/[id]/edit`, `InvoiceForm`)
+Design System UI kit의 New Invoice 화면(`NewInvoicePage.jsx`) 기준으로 `InvoiceForm` 재설계 적용 (2026-05-19). 기능/서버 액션/데이터 흐름은 그대로, 시각 표현만 변경.
+- 헤더는 detail과 동일 패턴 — `<BackLink>` 텍스트 백 링크 + `text-[22px]/sm:text-[26px]` 제목 (`page.tsx`). 폼 상단에는 mono invoice number eyebrow + 상태 배지 strip.
+- 섹션 카드 통일 — `rounded-2xl border-outline-variant/60 bg-surface-container-lowest p-5 sm:p-6`, 카드마다 `font-bold` 타이틀 + sub 설명문.
+- **Invoice type** — `<select>` → 4-카드 grid picker (`grid-cols-2 sm:grid-cols-4`), 아이콘 칩 + label + hint. 선택 시 `border-primary bg-primary/[0.06] ring-primary/20`.
+- **Payment method** — `<select>` → 카드 grid picker (`sm:grid-cols-2`), paid 상태/값 있을 때만 노출. 같은 카드 재클릭 시 선택 해제.
+- **Amount due 요약 레일** — 우측 sticky 패널을 `bg-primary text-on-primary` 큰 숫자 패널로 (Subtotal/GST/Type/Due meta 포함). `xl` 미만에서는 하단으로 stack.
+- Progress percent는 number input + quick % 버튼(25/50/75/100)을 카드 안에 배치.
+- 인라인 아이콘은 Lucide-style stroke path를 쓰는 로컬 `Icon` 컴포넌트 (런타임 의존성 없음).
+- 모든 색·폰트는 MD3 토큰. 터치 타겟 `min-h-11` 유지, 카드 grid는 모바일 2-col → 데스크톱 4-col 반응형.
 
 ## Acceptance Criteria
 

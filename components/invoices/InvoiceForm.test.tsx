@@ -73,14 +73,14 @@ describe('InvoiceForm', () => {
     );
 
     await user.selectOptions(screen.getByLabelText('Customer'), 'customer-1');
-    await user.selectOptions(screen.getByLabelText(/Linked Quote/), 'quote-1');
-    fireEvent.change(screen.getByLabelText(/Due Date/), {
+    await user.selectOptions(screen.getByLabelText(/Linked quote/), 'quote-1');
+    fireEvent.change(screen.getByLabelText(/Due date/), {
       target: { value: '2026-04-03' },
     });
     fireEvent.change(screen.getAllByLabelText('Description')[0], {
       target: { value: 'Deposit invoice' },
     });
-    fireEvent.change(screen.getAllByLabelText('Unit Price (A$)')[0], {
+    fireEvent.change(screen.getAllByLabelText('Unit price (A$)')[0], {
       target: { value: '250' },
     });
     fireEvent.change(screen.getByPlaceholderText('Add a payment note or job summary'), {
@@ -142,7 +142,7 @@ describe('InvoiceForm', () => {
 
     await user.selectOptions(screen.getByLabelText('Customer'), 'customer-1');
 
-    expect(screen.getByText('Customer Snapshot')).toBeInTheDocument();
+    expect(screen.getByText('Customer snapshot')).toBeInTheDocument();
     expect(screen.getAllByText('Harbor Cafe').length).toBeGreaterThan(0);
     expect(screen.getByText('sarah@example.com')).toBeInTheDocument();
   });
@@ -161,8 +161,8 @@ describe('InvoiceForm', () => {
     );
 
     expect(screen.getByLabelText('ABN')).toHaveValue('12345678901');
-    expect(screen.getByLabelText('Payment Terms')).toHaveValue('Payment due within 7 days');
-    expect(screen.getByLabelText('Bank Details')).toHaveValue(
+    expect(screen.getByLabelText('Payment terms')).toHaveValue('Payment due within 7 days');
+    expect(screen.getByLabelText('Bank details')).toHaveValue(
       'BSB: 123-456\nAccount: 12345678'
     );
   });
@@ -221,9 +221,9 @@ describe('InvoiceForm', () => {
     );
 
     await user.selectOptions(screen.getByLabelText('Customer'), 'customer-1');
-    await user.selectOptions(screen.getByLabelText(/Linked Quote/), 'quote-1');
+    await user.selectOptions(screen.getByLabelText(/Linked quote/), 'quote-1');
 
-    expect(screen.getAllByText('Linked Quote').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Linked quote/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Quote total')).toBeInTheDocument();
     expect(screen.getByText('Already invoiced')).toBeInTheDocument();
     expect(screen.getByText('Quote items')).toBeInTheDocument();
@@ -286,31 +286,31 @@ describe('InvoiceForm', () => {
     );
 
     await user.selectOptions(screen.getByLabelText('Customer'), 'customer-1');
-    await user.selectOptions(screen.getByLabelText(/Linked Quote/), 'quote-1');
-    await user.selectOptions(screen.getByLabelText('Type'), 'deposit');
+    await user.selectOptions(screen.getByLabelText(/Linked quote/), 'quote-1');
+    await user.click(screen.getByRole('button', { name: /Deposit/ }));
 
     expect(screen.getByLabelText('Description')).toHaveValue(
       'Deposit (20%) for QUO-0004 - Cafe repaint'
     );
-    expect(screen.getByLabelText('Unit Price (A$)')).toHaveValue(600);
+    expect(screen.getByLabelText('Unit price (A$)')).toHaveValue(600);
     expect(
       screen.getByText('Deposit invoice uses the 20% deposit saved on the linked quote.')
     ).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('Type'), 'progress');
+    await user.click(screen.getByRole('button', { name: /Progress/ }));
 
     expect(screen.getByLabelText('Description')).toHaveValue(
       'Progress claim (100%) for QUO-0004 - Cafe repaint'
     );
-    expect(screen.getByLabelText('Unit Price (A$)')).toHaveValue(1900);
+    expect(screen.getByLabelText('Unit price (A$)')).toHaveValue(1900);
 
-    await user.clear(screen.getByLabelText('Progress Percent (%)'));
-    await user.type(screen.getByLabelText('Progress Percent (%)'), '50');
+    await user.clear(screen.getByLabelText('Progress percent'));
+    await user.type(screen.getByLabelText('Progress percent'), '50');
 
     expect(screen.getByLabelText('Description')).toHaveValue(
       'Progress claim (50%) for QUO-0004 - Cafe repaint'
     );
-    expect(screen.getByLabelText('Unit Price (A$)')).toHaveValue(950);
+    expect(screen.getByLabelText('Unit price (A$)')).toHaveValue(950);
   });
 
   it('defaults the due date to 14 days ahead on create', () => {
@@ -319,7 +319,7 @@ describe('InvoiceForm', () => {
 
     render(<InvoiceForm customers={[]} quotes={[]} />);
 
-    expect(screen.getByLabelText(/Due Date/)).toHaveValue('2026-04-23');
+    expect(screen.getByLabelText(/Due date/)).toHaveValue('2026-04-23');
   });
 
   it('updates item GST and invoice totals in real time when line items change', () => {
@@ -331,7 +331,7 @@ describe('InvoiceForm', () => {
     fireEvent.change(screen.getByLabelText('Qty'), {
       target: { value: '2' },
     });
-    fireEvent.change(screen.getByLabelText('Unit Price (A$)'), {
+    fireEvent.change(screen.getByLabelText('Unit price (A$)'), {
       target: { value: '150' },
     });
 
@@ -345,7 +345,7 @@ describe('InvoiceForm', () => {
 
     render(<InvoiceForm customers={[]} quotes={[]} />);
 
-    await user.click(screen.getByRole('button', { name: '+ Add Item' }));
+    await user.click(screen.getByRole('button', { name: 'Add line item' }));
     expect(screen.getAllByLabelText('Description')).toHaveLength(2);
     expect(screen.getAllByLabelText('Qty')).toHaveLength(2);
 
@@ -367,7 +367,7 @@ describe('InvoiceForm', () => {
     );
 
     expect(screen.getByLabelText('Notes')).toBeInTheDocument();
-    expect(screen.getByLabelText('Payment Terms')).toHaveValue('Payment due within 14 days');
+    expect(screen.getByLabelText('Payment terms')).toHaveValue('Payment due within 14 days');
   });
 
   it('shows paid date and payment method fields when marking an invoice as paid', async () => {
@@ -393,14 +393,14 @@ describe('InvoiceForm', () => {
 
     await user.selectOptions(screen.getByLabelText('Customer'), 'customer-1');
     await user.selectOptions(screen.getByLabelText('Status'), 'paid');
-    fireEvent.change(screen.getByLabelText('Paid Date'), {
+    fireEvent.change(screen.getByLabelText('Paid date'), {
       target: { value: '2026-04-09' },
     });
-    await user.selectOptions(screen.getByLabelText('Payment Method'), 'card');
+    await user.click(screen.getByRole('button', { name: /Card/ }));
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Final invoice' },
     });
-    fireEvent.change(screen.getByLabelText('Unit Price (A$)'), {
+    fireEvent.change(screen.getByLabelText('Unit price (A$)'), {
       target: { value: '550' },
     });
 
@@ -442,7 +442,7 @@ describe('InvoiceForm', () => {
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Final invoice' },
     });
-    fireEvent.change(screen.getByLabelText('Unit Price (A$)'), {
+    fireEvent.change(screen.getByLabelText('Unit price (A$)'), {
       target: { value: '550' },
     });
 
@@ -484,6 +484,6 @@ describe('InvoiceForm', () => {
       />
     );
 
-    expect(screen.getByLabelText(/Due Date/)).toHaveValue('');
+    expect(screen.getByLabelText(/Due date/)).toHaveValue('');
   });
 });
