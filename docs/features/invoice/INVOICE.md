@@ -68,6 +68,21 @@ draft → sent → paid
 - 부분 납부: `0 < amount_paid_cents < total_cents` → 잔액 표시
 - 미납: `amount_paid_cents === 0`
 
+## UI / Screens
+
+Design System UI kit(`coatly-design-system`) 기준으로 invoice list/detail 화면 재설계 적용 (2026-05-19).
+스펙: [`INVOICE-UI-REDESIGN-SPEC.md`](./INVOICE-UI-REDESIGN-SPEC.md).
+
+### Invoices list (`/invoices`)
+- **KPI 밴드** (`components/invoices/InvoiceKpiBand.tsx`) — "This month" 3-tile: Outstanding(sent+overdue 잔액) / Overdue(연체 잔액 + 건수) / Paid this month(이번 달 Sydney 기준 결제액). 집계는 `summarizeInvoices()` (`lib/invoices.ts`).
+- **카드 행** — 상대적 due 라벨(`getInvoiceDueLabel()`): `7 days overdue` · `Due in 3 days` · `Due today` · `Paid · {date}`, tone 색상(overdue=error, due-soon=warning). 부분 결제 시 `{paid} of {total} received` 라인. 우측 금액 라벨은 paid면 `Paid`/총액, 그 외 `Balance`/잔액.
+
+### Invoice detail (`/invoices/[id]`)
+- **헤더** — invoice number(mono eyebrow) + 고객명 제목 + 상태 배지 + PDF/Send/Record payment CTA.
+- **결제 진행 밴드** (`PaymentProgressBand`) — Amount due 큰 숫자 + Invoiced/Received/Due meta + 진행 바 + 상태별 안내 문구. 상태별 tone(paid/overdue/sent/draft).
+- **Activity 타임라인** (`ActivityTimeline`) — 생성/발송/연체/입금 이벤트. status·실데이터에서만 파생(추정값 생성 안 함).
+- 모든 색·폰트는 Material Design 3 토큰 사용. 레거시 `pm-*` 토큰 제거 완료.
+
 ## Acceptance Criteria
 
 - [x] 청구서 번호 자동 채번 (INV-0001, user별 unique)

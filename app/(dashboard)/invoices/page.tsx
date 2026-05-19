@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { getInvoices } from '@/app/actions/invoices';
+import { InvoiceKpiBand } from '@/components/invoices/InvoiceKpiBand';
 import { InvoiceTable } from '@/components/invoices/InvoiceTable';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
+import { summarizeInvoices } from '@/lib/invoices';
 
 export const metadata: Metadata = { title: 'Invoices' };
 
@@ -20,7 +22,10 @@ export default async function InvoicesPage() {
       {error ? (
         <ErrorAlert>{error}</ErrorAlert>
       ) : (
-        <InvoiceTable invoices={invoices} />
+        <>
+          {invoices.length > 0 && <InvoiceKpiBand summary={summarizeInvoices(invoices)} />}
+          <InvoiceTable invoices={invoices} />
+        </>
       )}
     </div>
   );

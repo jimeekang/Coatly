@@ -33,7 +33,12 @@
       "Bash(npx next *)",
       "Bash(npm run *)",
       "Bash(curl -s -o /dev/null -w \"price-rates: %{http_code}\\\\n\" http://localhost:3000/price-rates)",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(curl -sL -w \"\\\\nHTTP_STATUS:%{http_code}\\\\n\" \"https://api.anthropic.com/v1/design/h/4A36mSUE27DETq0fjG0l2g\")",
+      "mcp__Claude_in_Chrome__list_connected_browsers",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__Claude_in_Chrome__navigate",
+      "WebFetch(domain:claude.ai)"
     ]
   }
 }

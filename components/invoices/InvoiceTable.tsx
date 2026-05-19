@@ -3,9 +3,72 @@
 import { useDeferredValue, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { markInvoiceAsPaid } from '@/app/actions/invoices';
-import { formatCustomerLocation, getSydneyTodayDateString } from '@/lib/invoices';
+import {
+  formatCustomerLocation,
+  getInvoiceDueLabel,
+  getSydneyTodayDateString,
+  type InvoiceDueTone,
+} from '@/lib/invoices';
 import type { InvoiceListItem, InvoiceStatus } from '@/types/invoice';
 import { formatAUD, formatDate } from '@/utils/format';
+
+const ICON_PROPS = {
+  width: 13,
+  height: 13,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const;
+
+function CalendarIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" {...ICON_PROPS}>
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" {...ICON_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function AlertTriangleIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" {...ICON_PROPS}>
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function WalletIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" {...ICON_PROPS}>
+      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+      <path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+    </svg>
+  );
+}
+
+const DUE_TONE_CLASS: Record<InvoiceDueTone, string> = {
+  overdue: 'text-error font-semibold',
+  'due-soon': 'text-warning font-semibold',
+  due: 'text-outline font-medium',
+  paid: 'text-outline font-medium',
+};
 
 const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
   draft:     'bg-surface-container-highest text-on-surface-variant',
@@ -244,6 +307,11 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               const borderClass = INVOICE_LEFT_BORDER[invoice.status] ?? 'border-l-outline';
               const canQuickMarkPaid = invoice.status === 'sent' || invoice.status === 'overdue';
               const isPaymentFormOpen = activePaymentInvoiceId === invoice.id;
+              const dueLabel = getInvoiceDueLabel(invoice);
+              const isPaid = invoice.status === 'paid';
+              const isPartiallyPaid =
+                invoice.amount_paid_cents > 0 &&
+                invoice.amount_paid_cents < invoice.total_cents;
               return (
                 <li
                   key={invoice.id}
@@ -272,32 +340,30 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                       <InvoiceStatusBadge status={invoice.status} />
                     </div>
                     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                      <div className="flex min-w-0 flex-col gap-0.5">
+                      <div className="flex min-w-0 flex-col gap-1">
                         <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
-                          </svg>
+                          <CalendarIcon />
                           Created {formatDate(invoice.created_at)}
                         </div>
-                        {invoice.due_date && (
-                          <div className={`flex min-w-0 items-center gap-1.5 text-xs font-medium ${
-                            invoice.status === 'overdue' ? 'text-error' : 'text-outline'
-                          }`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="12" cy="12" r="10"/>
-                              <polyline points="12 6 12 12 16 14"/>
-                            </svg>
-                            Due {formatDate(invoice.due_date)}
+                        {dueLabel && (
+                          <div className={`flex min-w-0 items-center gap-1.5 text-xs ${DUE_TONE_CLASS[dueLabel.tone]}`}>
+                            {dueLabel.tone === 'overdue' ? <AlertTriangleIcon /> : <ClockIcon />}
+                            {dueLabel.text}
+                          </div>
+                        )}
+                        {isPartiallyPaid && (
+                          <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-on-surface-variant">
+                            <WalletIcon />
+                            {formatAUD(invoice.amount_paid_cents)} of {formatAUD(invoice.total_cents)} received
                           </div>
                         )}
                       </div>
                       <div className="min-w-0 sm:text-right">
-                        <p className="text-[10px] text-outline font-bold uppercase tracking-wider">Balance</p>
-                        <p className="text-base font-extrabold text-on-surface sm:text-lg">
-                          {formatAUD(invoice.balance_cents)}{' '}
+                        <p className="text-[10px] text-outline font-bold uppercase tracking-wider">
+                          {isPaid ? 'Paid' : 'Balance'}
+                        </p>
+                        <p className="text-base font-extrabold tabular-nums text-on-surface sm:text-lg">
+                          {formatAUD(isPaid ? invoice.total_cents : invoice.balance_cents)}{' '}
                           <span className="text-[10px] font-bold text-outline">AUD</span>
                         </p>
                       </div>

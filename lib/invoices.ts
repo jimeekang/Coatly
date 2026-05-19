@@ -9,6 +9,7 @@ import type {
   InvoiceWithCustomer,
 } from '@/types/invoice';
 import { getGSTFromExAmount } from '@/utils/gst';
+import { formatDate } from '@/utils/format';
 
 type AppSupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -274,6 +275,101 @@ export function resolveInvoiceStatus(
   if (!dueDate) return status;
 
   return dueDate < getSydneyTodayDateString(now) ? 'overdue' : status;
+}
+
+export type InvoiceDueTone = 'paid' | 'overdue' | 'due-soon' | 'due';
+
+export interface InvoiceDueLabel {
+  tone: InvoiceDueTone;
+  text: string;
+}
+
+/**
+ * Compact, humanised due-date label for an invoice list row.
+ * Returns null for draft/cancelled invoices or invoices without a due date.
+ */
+export function getInvoiceDueLabel(
+  invoice: Pick<InvoiceListItem, 'status' | 'due_date' | 'paid_date'>,
+  now: Date = new Date()
+): InvoiceDueLabel | null {
+  if (invoice.status === 'paid') {
+    return {
+      tone: 'paid',
+      text: invoice.paid_date ? `Paid · ${formatDate(invoice.paid_date)}` : 'Paid',
+    };
+  }
+
+  if (invoice.status === 'draft' || invoice.status === 'cancelled' || !invoice.due_date) {
+    return null;
+  }
+
+  const today = new Date(`${getSydneyTodayDateString(now)}T00:00:00`);
+  const due = new Date(`${invoice.due_date}T00:00:00`);
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) {
+    const overdueDays = Math.abs(diffDays);
+    return {
+      tone: 'overdue',
+      text: `${overdueDays} ${overdueDays === 1 ? 'day' : 'days'} overdue`,
+    };
+  }
+
+  if (diffDays === 0) {
+    return { tone: 'due-soon', text: 'Due today' };
+  }
+
+  if (diffDays <= 7) {
+    return {
+      tone: 'due-soon',
+      text: `Due in ${diffDays} ${diffDays === 1 ? 'day' : 'days'}`,
+    };
+  }
+
+  return { tone: 'due', text: `Due ${formatDate(invoice.due_date)}` };
+}
+
+export interface InvoiceSummary {
+  /** Unpaid balance across sent + overdue invoices. */
+  outstanding_cents: number;
+  /** Unpaid balance limited to overdue invoices. */
+  overdue_cents: number;
+  /** Number of overdue invoices. */
+  overdue_count: number;
+  /** Payments settled within the current Sydney calendar month. */
+  paid_this_month_cents: number;
+}
+
+/**
+ * Aggregate the invoice list into the "This month" KPI band figures.
+ */
+export function summarizeInvoices(
+  invoices: InvoiceListItem[],
+  now: Date = new Date()
+): InvoiceSummary {
+  const monthPrefix = getSydneyTodayDateString(now).slice(0, 7); // YYYY-MM
+
+  let outstanding_cents = 0;
+  let overdue_cents = 0;
+  let overdue_count = 0;
+  let paid_this_month_cents = 0;
+
+  for (const invoice of invoices) {
+    if (invoice.status === 'sent' || invoice.status === 'overdue') {
+      outstanding_cents += invoice.balance_cents;
+    }
+
+    if (invoice.status === 'overdue') {
+      overdue_cents += invoice.balance_cents;
+      overdue_count += 1;
+    }
+
+    if (invoice.status === 'paid' && invoice.paid_date?.startsWith(monthPrefix)) {
+      paid_this_month_cents += invoice.amount_paid_cents;
+    }
+  }
+
+  return { outstanding_cents, overdue_cents, overdue_count, paid_this_month_cents };
 }
 
 export function mapInvoiceListItem(row: InvoiceListRow): InvoiceListItem {
