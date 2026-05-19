@@ -146,6 +146,7 @@ function makePropertyPresetFromTemplate(
     storeys: preset.storeys ?? null,
     condition: preset.condition,
     scope: [...preset.scope],
+    surface_price_share: preset.surface_price_share,
     wall_paint_system: preset.wall_paint_system,
     trim_paint_system: trimPaintSystem,
     subtotal_cents: 0,

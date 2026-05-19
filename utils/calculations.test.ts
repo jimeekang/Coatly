@@ -114,6 +114,56 @@ describe('calculateQuickEstimate', () => {
     );
   });
 
+  it('uses a whole-property preset surface price split for selected scope pricing', () => {
+    const rates = makeSettings();
+    const basePreset = {
+      preset_id: 'preset-surface-split',
+      label: '2 Bed 2 Bath Apartment',
+      property_type: 'apartment' as const,
+      apartment_type: '2_bedroom_standard' as const,
+      bedrooms: 2,
+      bathrooms: 2,
+      sqm: 89,
+      storeys: null,
+      condition: 'fair' as const,
+      scope: ['walls'] as const,
+      wall_paint_system: 'repaint_2coat' as const,
+      trim_paint_system: 'oil_2coat' as const,
+      subtotal_cents: 0,
+      gst_cents: 0,
+      total_cents: 0,
+    };
+    const defaultShare = calculateQuickEstimate(
+      {
+        property_preset: basePreset,
+        rooms: [],
+        global_coating: 'two_coats_repaint',
+        global_condition: 'average',
+      },
+      rates
+    );
+    const customShare = calculateQuickEstimate(
+      {
+        property_preset: {
+          ...basePreset,
+          surface_price_share: {
+            walls_pct: 60,
+            ceiling_pct: 20,
+            trim_pct: 20,
+          },
+        },
+        rooms: [],
+        global_coating: 'two_coats_repaint',
+        global_condition: 'average',
+      },
+      rates
+    );
+
+    expect(customShare.subtotal_cents).toBeGreaterThan(
+      defaultShare.subtotal_cents
+    );
+  });
+
   it('single room, walls only, 2coats/average = 100%×100% baseline', () => {
     const rates = makeSettings();
     const inputs: QuickInputs = {

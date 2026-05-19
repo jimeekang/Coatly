@@ -8,6 +8,7 @@ import type {
   QuickPropertyPreset,
 } from '@/lib/rate-settings';
 import {
+  DEFAULT_QUICK_SURFACE_PRICE_SHARE,
   TRIM_PAINT_SYSTEM_LABELS,
   buildDefaultQuickPropertyPresets,
 } from '@/lib/rate-settings';
@@ -100,6 +101,12 @@ const TRIM_PRICE_FIELDS = [
   },
 ] as const;
 
+const SURFACE_SHARE_FIELDS = [
+  { key: 'walls_pct', label: 'Walls', ariaLabel: 'Wall' },
+  { key: 'ceiling_pct', label: 'Ceiling', ariaLabel: 'Ceiling' },
+  { key: 'trim_pct', label: 'Trim', ariaLabel: 'Trim' },
+] as const;
+
 const MEASUREMENT_FIELDS = [
   {
     key: 'wall_area_m2',
@@ -124,6 +131,15 @@ function numberOrNull(value: string) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function numberOrZero(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function getSurfacePriceShare(preset: QuickPropertyPreset) {
+  return preset.surface_price_share ?? DEFAULT_QUICK_SURFACE_PRICE_SHARE;
+}
+
 function createPropertyPreset(
   id: string,
   sortOrder: number,
@@ -143,6 +159,7 @@ function createPropertyPreset(
         sqm: 89,
         condition: 'fair',
         scope: ['walls', 'ceiling', 'trim'],
+        surface_price_share: { ...DEFAULT_QUICK_SURFACE_PRICE_SHARE },
         wall_paint_system: 'repaint_2coat',
         trim_paint_system: 'oil_2coat',
         sort_order: sortOrder,
@@ -160,6 +177,7 @@ function createPropertyPreset(
         sqm: 140,
         condition: 'fair',
         scope: ['walls', 'ceiling', 'trim'],
+        surface_price_share: { ...DEFAULT_QUICK_SURFACE_PRICE_SHARE },
         wall_paint_system: 'repaint_2coat',
         trim_paint_system: 'oil_2coat',
         sort_order: sortOrder,
@@ -532,6 +550,19 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
     });
   }
 
+  function handlePropertyPresetShareChange(
+    preset: QuickPropertyPreset,
+    key: (typeof SURFACE_SHARE_FIELDS)[number]['key'],
+    value: string
+  ) {
+    handlePropertyPresetUpdate(preset.id, {
+      surface_price_share: {
+        ...getSurfacePriceShare(preset),
+        [key]: numberOrZero(value),
+      },
+    });
+  }
+
   function addPropertyPreset(propertyType: QuickPropertyPreset['property_type']) {
     nextPropertyPresetIdRef.current += 1;
     onChange({
@@ -661,12 +692,33 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
           </p>
         </div>
 
+        <div className="border-outline-variant bg-surface-container-low rounded-xl border px-4 py-3">
+          <p className="text-on-surface text-sm font-semibold">
+            How this price is calculated
+          </p>
+          <p className="text-on-surface-variant mt-1 text-sm">
+            Starts from the Detailed Estimate whole-property anchor, then adjusts
+            by apartment type or house bed/bath setup, sqm, selected scope,
+            condition, wall coating, and trim base. GST is added in the quote
+            total.
+          </p>
+        </div>
+
         <div className="space-y-3">
           {propertyPresets.map((preset) => (
             <div
               key={preset.id}
               className="border-outline rounded-2xl border bg-white p-4"
             >
+              {(() => {
+                const surfaceShare = getSurfacePriceShare(preset);
+                const surfaceShareTotal =
+                  surfaceShare.walls_pct +
+                  surfaceShare.ceiling_pct +
+                  surfaceShare.trim_pct;
+
+                return (
+                  <>
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_44px]">
                 <div>
                   <label className="text-on-surface-variant mb-1 block text-xs font-medium">
@@ -952,6 +1004,58 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                   </button>
                 ))}
               </div>
+              <div className="border-outline-variant bg-surface-container-low mt-4 rounded-xl border p-3">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-on-surface text-sm font-semibold">
+                    Surface price split
+                  </p>
+                  <p
+                    className={`text-xs font-semibold ${
+                      surfaceShareTotal === 100
+                        ? 'text-primary'
+                        : 'text-error'
+                    }`}
+                  >
+                    Surface price split: {surfaceShareTotal}% total
+                  </p>
+                </div>
+                <p className="text-on-surface-variant mt-1 text-xs">
+                  Controls how the whole-property anchor is split when only
+                  walls, ceiling, or trim are selected.
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  {SURFACE_SHARE_FIELDS.map((field) => (
+                    <div key={field.key}>
+                      <label
+                        htmlFor={`surface-share-${field.key}-${preset.id}`}
+                        className="text-on-surface-variant mb-1 block text-xs font-medium"
+                      >
+                        {field.label} %
+                      </label>
+                      <input
+                        id={`surface-share-${field.key}-${preset.id}`}
+                        aria-label={`${field.ariaLabel} price share for ${preset.label}`}
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={surfaceShare[field.key]}
+                        onChange={(event) =>
+                          handlePropertyPresetShareChange(
+                            preset,
+                            field.key,
+                            event.target.value
+                          )
+                        }
+                        className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>

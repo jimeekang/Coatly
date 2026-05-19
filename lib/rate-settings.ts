@@ -9,6 +9,7 @@ import type {
   QuickApartmentType,
   QuickPropertyCondition,
   QuickPropertyScope,
+  QuickSurfacePriceShare,
   QuickPropertyType,
   QuickPropertyWallPaintSystem,
   QuickStoreys,
@@ -227,9 +228,16 @@ export type QuickPropertyPreset = {
   sqm?: number | null;
   condition: QuickPropertyCondition;
   scope: QuickPropertyScope[];
+  surface_price_share?: QuickSurfacePriceShare;
   wall_paint_system: QuickPropertyWallPaintSystem;
   trim_paint_system?: QuickTrimPaintSystem;
   sort_order: number;
+};
+
+export const DEFAULT_QUICK_SURFACE_PRICE_SHARE: QuickSurfacePriceShare = {
+  walls_pct: 55,
+  ceiling_pct: 25,
+  trim_pct: 20,
 };
 
 export const QUICK_ROOM_SIZE_TYPES = ['small', 'medium', 'large'] as const;
@@ -541,6 +549,13 @@ const quickPropertyPresetSchema = z.object({
   sqm: z.number().positive().nullable().optional(),
   condition: z.enum(['excellent', 'fair', 'poor']),
   scope: z.array(z.enum(['walls', 'ceiling', 'trim'])).min(1),
+  surface_price_share: z
+    .object({
+      walls_pct: z.number().min(0),
+      ceiling_pct: z.number().min(0),
+      trim_pct: z.number().min(0),
+    })
+    .optional(),
   wall_paint_system: z.enum(['refresh_1coat', 'repaint_2coat', 'new_plaster_3coat']),
   trim_paint_system: z.enum(TRIM_PAINT_SYSTEMS).optional(),
   sort_order: z.number().int().min(0),
@@ -691,6 +706,7 @@ export function buildDefaultQuickPropertyPresets(): QuickPropertyPreset[] {
       sqm: 89,
       condition: 'fair',
       scope: ['walls', 'ceiling', 'trim'],
+      surface_price_share: { ...DEFAULT_QUICK_SURFACE_PRICE_SHARE },
       wall_paint_system: 'repaint_2coat',
       trim_paint_system: 'oil_2coat',
       sort_order: 0,
@@ -852,6 +868,8 @@ function normalizeQuickEstimateSettings(
       quickEstimate.property_presets?.map((preset) => ({
         ...preset,
         estimate_category: 'interior',
+        surface_price_share:
+          preset.surface_price_share ?? DEFAULT_QUICK_SURFACE_PRICE_SHARE,
         trim_paint_system: preset.trim_paint_system ?? 'oil_2coat',
       })) ?? buildDefaultQuickPropertyPresets(),
     rooms: quickEstimate.rooms.map(normalizeQuickRoom),

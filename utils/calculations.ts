@@ -235,6 +235,7 @@ function buildQuickPropertyPresetInteriorInput(
     estimate_mode: 'entire_property',
     condition: preset.condition,
     scope: preset.scope,
+    surface_price_share: preset.surface_price_share,
     wall_paint_system: preset.wall_paint_system,
     trim_paint_system: preset.trim_paint_system ?? 'oil_2coat',
     property_details:
@@ -278,6 +279,7 @@ function calculateQuickPropertyPresetSnapshot(
   return {
     ...preset,
     estimate_category: 'interior',
+    surface_price_share: preset.surface_price_share,
     trim_paint_system: preset.trim_paint_system ?? 'oil_2coat',
     rate_snapshot_version: QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,
     subtotal_cents: result.subtotal_cents,

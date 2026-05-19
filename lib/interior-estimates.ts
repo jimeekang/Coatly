@@ -8,6 +8,9 @@ import {
   resolveAdvancedRoomPriceSource,
 } from '@/lib/room-price-library';
 import type {
+  QuickSurfacePriceShare,
+} from '@/types/quote';
+import type {
   QuickRoomSize,
   QuickRoomSurfacePriceSnapshot,
   UserRateSettings,
@@ -164,6 +167,7 @@ export type InteriorEstimateInput = {
   estimate_mode: InteriorEstimateMode;
   condition: InteriorCondition;
   scope: InteriorScope[];
+  surface_price_share?: QuickSurfacePriceShare;
   wall_paint_system?: InteriorWallPaintSystem;
   trim_paint_system?: InteriorPaintSystem;
   property_details: {
@@ -374,8 +378,48 @@ function getScopeKey(scope: InteriorScope[]) {
   return 'full_repaint';
 }
 
-export function getScopeMultiplier(scope: InteriorScope[]) {
-  return INTERIOR_SCOPE_SHARE[getScopeKey(scope)];
+function getSurfaceShareWeight(
+  surfacePriceShare: QuickSurfacePriceShare | null | undefined,
+  surface: InteriorScope
+) {
+  if (!surfacePriceShare) {
+    if (surface === 'walls') return INTERIOR_SCOPE_SHARE.walls_only;
+    if (surface === 'ceiling') return INTERIOR_SCOPE_SHARE.ceiling_only;
+    return INTERIOR_SCOPE_SHARE.trim_only;
+  }
+
+  if (surface === 'walls') return surfacePriceShare.walls_pct;
+  if (surface === 'ceiling') return surfacePriceShare.ceiling_pct;
+  return surfacePriceShare.trim_pct;
+}
+
+export function getScopeMultiplier(
+  scope: InteriorScope[],
+  surfacePriceShare?: QuickSurfacePriceShare | null
+) {
+  if (!surfacePriceShare) return INTERIOR_SCOPE_SHARE[getScopeKey(scope)];
+
+  const totalShare =
+    surfacePriceShare.walls_pct +
+    surfacePriceShare.ceiling_pct +
+    surfacePriceShare.trim_pct;
+  if (totalShare <= 0) return INTERIOR_SCOPE_SHARE[getScopeKey(scope)];
+
+  const normalized = [...new Set(scope)];
+  return (
+    normalized.reduce(
+      (sum, surface) => sum + getSurfaceShareWeight(surfacePriceShare, surface),
+      0
+    ) / totalShare
+  );
+}
+
+function getSurfaceWeights(surfacePriceShare?: QuickSurfacePriceShare | null) {
+  return {
+    walls: getSurfaceShareWeight(surfacePriceShare, 'walls'),
+    ceiling: getSurfaceShareWeight(surfacePriceShare, 'ceiling'),
+    trim: getSurfaceShareWeight(surfacePriceShare, 'trim'),
+  };
 }
 
 function interpolateMedian(
@@ -556,16 +600,13 @@ function getSurfaceRateMultiplier(
   scope: InteriorScope[],
   wallPaintSystem: InteriorWallPaintSystem = 'repaint_2coat',
   trimPaintSystem: InteriorPaintSystem = 'oil_2coat',
-  userRates?: UserRateSettings | null
+  userRates?: UserRateSettings | null,
+  surfacePriceShare?: QuickSurfacePriceShare | null
 ) {
   const normalized = [...new Set(scope)];
   if (normalized.length === 0) return 1;
 
-  const weights: Record<InteriorScope, number> = {
-    walls: INTERIOR_SCOPE_SHARE.walls_only,
-    ceiling: INTERIOR_SCOPE_SHARE.ceiling_only,
-    trim: INTERIOR_SCOPE_SHARE.trim_only,
-  };
+  const weights = getSurfaceWeights(surfacePriceShare);
 
   const ratios: Record<InteriorScope, number> = {
     walls:
@@ -764,12 +805,16 @@ function calculateEntireApartmentEstimate(
   const apartmentType =
     input.property_details.apartment_type ?? '2_bedroom_standard';
   const condition = getCondition('apartment', input.condition);
-  const scope_multiplier = getScopeMultiplier(input.scope);
+  const scope_multiplier = getScopeMultiplier(
+    input.scope,
+    input.surface_price_share
+  );
   const surface_rate_multiplier = getSurfaceRateMultiplier(
     input.scope,
     input.wall_paint_system ?? 'repaint_2coat',
     input.trim_paint_system ?? 'oil_2coat',
-    userRates
+    userRates,
+    input.surface_price_share
   );
   const baseRange =
     input.property_details.sqm != null
@@ -867,13 +912,17 @@ function calculateEntireHouseEstimate(
     INTERIOR_ESTIMATE_ANCHORS.house.entire_property.by_config[config];
   const sqmScale = getHouseSqmScale(config, input.property_details.sqm);
   const condition = getCondition('house', input.condition);
-  const scope_multiplier = getScopeMultiplier(input.scope);
+  const scope_multiplier = getScopeMultiplier(
+    input.scope,
+    input.surface_price_share
+  );
   const storey_multiplier = getStoreyMultiplier(input.property_details.storeys);
   const surface_rate_multiplier = getSurfaceRateMultiplier(
     input.scope,
     input.wall_paint_system ?? 'repaint_2coat',
     input.trim_paint_system ?? 'oil_2coat',
-    userRates
+    userRates,
+    input.surface_price_share
   );
   const range = clampRangeGap(
     {

@@ -43,7 +43,6 @@ import {
   WINDOW_SCOPES,
   WINDOW_TYPE_LABELS,
   WINDOW_TYPES,
-  type AdvancedEstimateRoomItem,
   type CustomExteriorSurfaceRate,
   type DoorScope,
   type ExteriorCoatingType,
@@ -56,7 +55,6 @@ import {
   type SqmSurfaceType,
   type TrimPaintSystem,
   type QuickEstimateSettings,
-  type QuickEstimateRoom,
   type UserRateSettings,
   type WindowScope,
   type WindowType,
@@ -1223,214 +1221,6 @@ function ManualTab() {
   );
 }
 
-// ─── Detailed Estimate advanced room preset library ──────────────────────────
-
-function AdvancedRoomItemsSection({
-  items,
-  quickRooms,
-  onAdd,
-  onUpdate,
-  onDelete,
-}: {
-  items: AdvancedEstimateRoomItem[];
-  quickRooms: QuickEstimateRoom[];
-  onAdd: () => void;
-  onUpdate: (id: string, patch: Partial<AdvancedEstimateRoomItem>) => void;
-  onDelete: (id: string) => void;
-}) {
-  const sortedItems = [...items].sort((a, b) => a.sort_order - b.sort_order);
-  const sortedQuickRooms = [...quickRooms].sort(
-    (a, b) => a.sort_order - b.sort_order
-  );
-
-  return (
-    <section className="space-y-4">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeading
-          title="Advanced Room Presets"
-          subtitle="Optional shortcuts for New Quote Advanced mode. Each preset reuses the Room Price Library price source, then stores default size, surfaces, and height."
-        />
-        {sortedItems.length > 0 && (
-          <AddRateItemButton label="Add Advanced Room Preset" onClick={onAdd} />
-        )}
-      </div>
-
-      {sortedItems.length === 0 ? (
-        <div className="border-outline bg-surface-container-low/50 rounded-2xl border border-dashed p-6 text-center sm:p-8">
-          <div className="mx-auto max-w-md space-y-3">
-            <h4 className="text-on-surface text-base font-semibold">
-              No advanced room presets yet
-            </h4>
-            <p className="text-on-surface-variant text-sm leading-6">
-              Add presets only for repeated advanced quote patterns, such as
-              Bedroom repaint, Bathroom ceiling, or Feature wall. Room prices
-              still come from the Room Price Library.
-            </p>
-            <AddRateItemButton label="Add Advanced Room Preset" onClick={onAdd} />
-          </div>
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {sortedItems.map((item) => (
-            <div
-              key={item.id}
-              className="border-outline rounded-2xl border bg-white p-4 shadow-sm sm:p-5"
-            >
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_130px_120px_52px] lg:items-end">
-                <div className="space-y-2">
-                  <label
-                    htmlFor={'advanced-room-item-' + item.id}
-                    className="text-on-surface-variant text-sm font-medium"
-                  >
-                    Item name
-                  </label>
-                  <input
-                    id={'advanced-room-item-' + item.id}
-                    value={item.label}
-                    onChange={(event) =>
-                      onUpdate(item.id, { label: event.target.value })
-                    }
-                    onBlur={() =>
-                      onUpdate(item.id, {
-                        label: item.label.trim() || 'Advanced room item',
-                      })
-                    }
-                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-base font-medium focus:ring-2 focus:outline-none"
-                    aria-label={'Advanced room item name for ' + item.label}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor={'advanced-room-template-' + item.id}
-                    className="text-on-surface-variant text-sm font-medium"
-                  >
-                    Room Price Library source
-                  </label>
-                  <select
-                    id={'advanced-room-template-' + item.id}
-                    value={item.source_room_template_id ?? ''}
-                    onChange={(event) => {
-                      const template = sortedQuickRooms.find(
-                        (room) => room.id === event.target.value
-                      );
-                      onUpdate(item.id, {
-                        source_room_template_id: template?.id,
-                        source_room_template_version: template
-                          ? (template.version ?? 1)
-                          : undefined,
-                        anchor_room_type:
-                          template?.label ?? item.anchor_room_type,
-                      });
-                    }}
-                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
-                  >
-                    <option value="">Legacy anchor fallback</option>
-                    {sortedQuickRooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        {room.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor={'advanced-room-size-' + item.id}
-                    className="text-on-surface-variant text-sm font-medium"
-                  >
-                    Default size
-                  </label>
-                  <select
-                    id={'advanced-room-size-' + item.id}
-                    value={item.default_size ?? 'medium'}
-                    onChange={(event) =>
-                      onUpdate(item.id, {
-                        default_size: event.target.value as
-                          | 'small'
-                          | 'medium'
-                          | 'large',
-                      })
-                    }
-                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
-                  >
-                    <option value="small">Small</option>
-                    <option value="medium">Medium</option>
-                    <option value="large">Large</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor={'advanced-room-height-' + item.id}
-                    className="text-on-surface-variant text-sm font-medium"
-                  >
-                    Height
-                  </label>
-                  <NumericInput
-                    id={'advanced-room-height-' + item.id}
-                    inputMode="decimal"
-                    value={String(item.default_height_m)}
-                    sanitize={sanitizeDecimalInput}
-                    onValueChange={(value) => {
-                      const height = Number(value);
-                      if (Number.isFinite(height) && height > 0) {
-                        onUpdate(item.id, { default_height_m: height });
-                      }
-                    }}
-                    className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
-                    aria-label={'Default height for ' + item.label}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  aria-label={'Delete ' + item.label + ' advanced room item'}
-                  onClick={() => onDelete(item.id)}
-                  className="border-error/30 text-error hover:bg-error-container inline-flex h-12 w-full items-center justify-center rounded-xl border bg-white lg:w-12"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="ml-2 text-base font-medium lg:sr-only">
-                    Delete
-                  </span>
-                </button>
-              </div>
-
-              <div className="mt-4">
-                <p className="mb-2 text-xs font-medium text-on-surface-variant">
-                  Default surfaces
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      { key: 'include_walls', label: 'Walls' },
-                      { key: 'include_ceiling', label: 'Ceiling' },
-                      { key: 'include_trim', label: 'Trim' },
-                    ] as const
-                  ).map(({ key, label }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => onUpdate(item.id, { [key]: !item[key] })}
-                      className={`min-h-11 rounded-full border px-4 text-sm font-medium ${
-                        item[key]
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-outline bg-white text-on-surface'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
 // ─── Exterior rates ───────────────────────────────────────────────────────────
 
 function ExteriorRatesSection({
@@ -1782,75 +1572,6 @@ export function PriceRatesForm({
     setRates((prev) => ({ ...prev, quick_estimate }));
   }
 
-  // ── Advanced detailed estimate room library handlers ───────────────────────
-  function handleAdvancedRoomItemAdd() {
-    const firstTemplate = rates.quick_estimate.rooms
-      .slice()
-      .sort((a, b) => a.sort_order - b.sort_order)[0];
-    const item: AdvancedEstimateRoomItem = {
-      id: createClientId('advanced-room'),
-      version: 1,
-      label: 'New advanced room',
-      anchor_room_type: firstTemplate?.label ?? 'Living Room',
-      default_size: 'medium',
-      ...(firstTemplate
-        ? {
-            source_room_template_id: firstTemplate.id,
-            source_room_template_version: firstTemplate.version ?? 1,
-          }
-        : {}),
-      include_walls: true,
-      include_ceiling: true,
-      include_trim: false,
-      default_height_m: 2.7,
-      sort_order: rates.detailed_estimate_items.advanced_rooms.length,
-    };
-
-    setSaved(false);
-    setRates((prev) => ({
-      ...prev,
-      detailed_estimate_items: {
-        ...prev.detailed_estimate_items,
-        advanced_rooms: [
-          ...prev.detailed_estimate_items.advanced_rooms,
-          item,
-        ],
-      },
-    }));
-  }
-
-  function handleAdvancedRoomItemUpdate(
-    id: string,
-    patch: Partial<AdvancedEstimateRoomItem>
-  ) {
-    setSaved(false);
-    setRates((prev) => ({
-      ...prev,
-      detailed_estimate_items: {
-        ...prev.detailed_estimate_items,
-        advanced_rooms: prev.detailed_estimate_items.advanced_rooms.map(
-          (item) =>
-            item.id === id
-              ? { ...item, ...patch, version: (item.version ?? 1) + 1 }
-              : item
-        ),
-      },
-    }));
-  }
-
-  function handleAdvancedRoomItemDelete(id: string) {
-    setSaved(false);
-    setRates((prev) => ({
-      ...prev,
-      detailed_estimate_items: {
-        ...prev.detailed_estimate_items,
-        advanced_rooms: prev.detailed_estimate_items.advanced_rooms.filter(
-          (item) => item.id !== id
-        ),
-      },
-    }));
-  }
-
   // ── Room rate preset handlers (auto-save to DB) ──────────────────────────────
   function handleRoomPresetAdd(preset: RoomRatePreset) {
     const nextRates = {
@@ -2011,12 +1732,9 @@ export function PriceRatesForm({
 
   const quickSetupIssues = getQuickEstimateSetupIssues(rates);
   const advancedSetupIssues = getAdvancedEstimateSetupIssues(rates);
-  const missingOrZeroAnchorCount = countIssues(advancedSetupIssues, [
-    'missing_advanced_anchor',
-    'missing_room_template',
-    'zero_advanced_anchor',
-    'zero_room_template_source',
-  ]);
+  const detailedSetupIssues = advancedSetupIssues.filter((issue) =>
+    ['zero_door_unit_rate', 'zero_window_unit_rate'].includes(issue.code)
+  );
   const zeroDoorWindowCount = countIssues(advancedSetupIssues, [
     'zero_door_unit_rate',
     'zero_window_unit_rate',
@@ -2046,22 +1764,18 @@ export function PriceRatesForm({
           issues={quickSetupIssues}
         />
         <RateSetupSummary
-          title="Advanced setup"
+          title="Detailed setup"
           items={[
-            {
-              label: 'room item',
-              value: String(rates.detailed_estimate_items.advanced_rooms.length),
-            },
-            {
-              label: 'missing/zero room source',
-              value: String(missingOrZeroAnchorCount),
-            },
             {
               label: 'zero door/window unit',
               value: String(zeroDoorWindowCount),
             },
+            {
+              label: saved ? 'saved' : 'unsaved edits',
+              value: saved ? 'Rates' : 'Has',
+            },
           ]}
-          issues={advancedSetupIssues}
+          issues={detailedSetupIssues}
         />
       </div>
       {/* ── Method bar ──────────────────────────────────────────────────────── */}
@@ -2173,13 +1887,6 @@ export function PriceRatesForm({
 
           {activeScope === 'interior' && (
             <div className="space-y-5">
-              <AdvancedRoomItemsSection
-                items={rates.detailed_estimate_items.advanced_rooms}
-                quickRooms={rates.quick_estimate.rooms}
-                onAdd={handleAdvancedRoomItemAdd}
-                onUpdate={handleAdvancedRoomItemUpdate}
-                onDelete={handleAdvancedRoomItemDelete}
-              />
               <WallCeilingRatesSection
                 rates={rates}
                 onSurfaceChange={handleSurfaceChange}

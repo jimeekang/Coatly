@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { updateRateSettingsAction } from '@/app/actions/settings';
 import { PriceRatesForm } from '@/components/rates/PriceRatesForm';
 import { buildDefaultRateSettings } from '@/lib/rate-settings';
 
@@ -8,7 +9,7 @@ vi.mock('@/app/actions/settings', () => ({
   updateRateSettingsAction: vi.fn(),
 }));
 
-describe('PriceRatesForm advanced room presets', () => {
+describe('PriceRatesForm pricing setup', () => {
   it('lets painters configure whole-property quick presets with bed bath and sqm anchors', async () => {
     const user = userEvent.setup();
     const rates = buildDefaultRateSettings();
@@ -23,6 +24,21 @@ describe('PriceRatesForm advanced room presets', () => {
     expect(screen.getByLabelText('Bedrooms for 2 Bed 2 Bath Apartment')).toHaveValue(2);
     expect(screen.getByLabelText('Bathrooms for 2 Bed 2 Bath Apartment')).toHaveValue(2);
     expect(screen.getByLabelText('Sqm for 2 Bed 2 Bath Apartment')).toHaveValue(89);
+    expect(screen.getByLabelText('Wall price share for 2 Bed 2 Bath Apartment')).toHaveValue(55);
+    expect(screen.getByLabelText('Ceiling price share for 2 Bed 2 Bath Apartment')).toHaveValue(25);
+    expect(screen.getByLabelText('Trim price share for 2 Bed 2 Bath Apartment')).toHaveValue(20);
+    expect(screen.getByText('Surface price split: 100% total')).toBeInTheDocument();
+    expect(screen.getByText('How this price is calculated')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Starts from the Detailed Estimate whole-property anchor/i
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /scope, condition, wall coating, and trim base/i
+      )
+    ).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Sqm for 2 Bed 2 Bath Apartment'));
     await user.type(screen.getByLabelText('Sqm for 2 Bed 2 Bath Apartment'), '94');
@@ -33,6 +49,41 @@ describe('PriceRatesForm advanced room presets', () => {
 
     expect(screen.getByLabelText('Sqm for 2 Bed 2 Bath Apartment')).toHaveValue(94);
     expect(screen.getByLabelText('Storeys for 2 Bed 2 Bath Apartment')).toHaveValue('1_storey');
+  });
+
+  it('saves user-defined surface price shares for whole-property quick presets', async () => {
+    const user = userEvent.setup();
+    vi.mocked(updateRateSettingsAction).mockResolvedValue({
+      success: true,
+    });
+    const rates = buildDefaultRateSettings();
+    rates.pricing.preferred_pricing_method = 'detailed_quick';
+
+    render(<PriceRatesForm defaultRates={rates} />);
+
+    await user.clear(screen.getByLabelText('Wall price share for 2 Bed 2 Bath Apartment'));
+    await user.type(screen.getByLabelText('Wall price share for 2 Bed 2 Bath Apartment'), '60');
+    await user.clear(screen.getByLabelText('Ceiling price share for 2 Bed 2 Bath Apartment'));
+    await user.type(screen.getByLabelText('Ceiling price share for 2 Bed 2 Bath Apartment'), '20');
+    await user.clear(screen.getByLabelText('Trim price share for 2 Bed 2 Bath Apartment'));
+    await user.type(screen.getByLabelText('Trim price share for 2 Bed 2 Bath Apartment'), '20');
+    await user.click(screen.getByRole('button', { name: /Save Rates/i }));
+
+    expect(updateRateSettingsAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quick_estimate: expect.objectContaining({
+          property_presets: [
+            expect.objectContaining({
+              surface_price_share: {
+                walls_pct: 60,
+                ceiling_pct: 20,
+                trim_pct: 20,
+              },
+            }),
+          ],
+        }),
+      })
+    );
   });
 
   it('keeps Quick Estimate editable for saved rate settings without property presets', () => {
@@ -63,8 +114,7 @@ describe('PriceRatesForm advanced room presets', () => {
     expect(screen.queryByText(/Add Room Anchor/i)).not.toBeInTheDocument();
   });
 
-  it('lets advanced room presets select a Room Price Library template and default size', async () => {
-    const user = userEvent.setup();
+  it('keeps advanced room preset shortcuts out of the price rates UI', () => {
     const rates = buildDefaultRateSettings();
     rates.quick_estimate.rooms = [
       {
@@ -80,31 +130,30 @@ describe('PriceRatesForm advanced room presets', () => {
         sort_order: 0,
       },
     ];
+    rates.detailed_estimate_items.advanced_rooms = [
+      {
+        id: 'legacy-shortcut',
+        version: 1,
+        label: 'Bedroom repaint shortcut',
+        anchor_room_type: 'Bedroom',
+        source_room_template_id: 'quick-bedroom',
+        source_room_template_version: 2,
+        default_size: 'medium',
+        include_walls: true,
+        include_ceiling: true,
+        include_trim: false,
+        default_height_m: 2.7,
+        sort_order: 0,
+      },
+    ];
 
     render(<PriceRatesForm defaultRates={rates} />);
 
-    expect(screen.getByText('Advanced Room Presets')).toBeInTheDocument();
+    expect(screen.queryByText('Advanced Room Presets')).not.toBeInTheDocument();
     expect(
-      screen.getAllByRole('button', { name: 'Add Advanced Room Preset' })
-    ).toHaveLength(1);
-
-    await user.click(
-      screen.getByRole('button', { name: 'Add Advanced Room Preset' })
-    );
-
-    expect(screen.getByDisplayValue('New advanced room')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('2.7')).toBeInTheDocument();
-
-    await user.selectOptions(
-      screen.getByLabelText(/Room Price Library source/i),
-      'quick-bedroom'
-    );
-    await user.selectOptions(screen.getByLabelText(/Default size/i), 'large');
-
-    expect(screen.getByLabelText(/Room Price Library source/i)).toHaveValue(
-      'quick-bedroom'
-    );
-    expect(screen.getByLabelText(/Default size/i)).toHaveValue('large');
+      screen.queryByRole('button', { name: 'Add Advanced Room Preset' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Bedroom repaint shortcut')).not.toBeInTheDocument();
   });
 
   it('lets painters edit a Room Price Library item name by clicking it', async () => {
@@ -220,9 +269,9 @@ describe('PriceRatesForm advanced room presets', () => {
     expect(screen.getByText(/1 room template/i)).toBeInTheDocument();
     expect(screen.getByText(/zero priced surface/i)).toBeInTheDocument();
 
-    expect(screen.getByText(/Advanced setup/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 room item/i)).toBeInTheDocument();
-    expect(screen.getByText(/missing\/zero room source/i)).toBeInTheDocument();
+    expect(screen.getByText(/Detailed setup/i)).toBeInTheDocument();
+    expect(screen.queryByText(/room item/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/missing\/zero room source/i)).not.toBeInTheDocument();
     expect(screen.getByText(/zero door\/window unit/i)).toBeInTheDocument();
   });
 });

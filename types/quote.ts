@@ -74,6 +74,12 @@ export type QuickTrimPaintSystem =
   | 'oil_2coat'
   | 'water_3coat_white_finish';
 
+export type QuickSurfacePriceShare = {
+  walls_pct: number;
+  ceiling_pct: number;
+  trim_pct: number;
+};
+
 /** Quick Estimate: one selected whole-property preset from Price Rates */
 export interface SelectedQuickPropertyPreset {
   estimate_category?: 'interior';
@@ -91,6 +97,7 @@ export interface SelectedQuickPropertyPreset {
   sqm?: number | null;
   condition: QuickPropertyCondition;
   scope: QuickPropertyScope[];
+  surface_price_share?: QuickSurfacePriceShare;
   wall_paint_system: QuickPropertyWallPaintSystem;
   trim_paint_system?: QuickTrimPaintSystem;
   subtotal_cents: number;

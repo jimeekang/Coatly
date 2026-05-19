@@ -403,7 +403,7 @@ describe('QuoteForm', () => {
     );
   });
 
-  it('copies advanced room library items into the quote snapshot', async () => {
+  it('hides saved advanced room shortcuts and uses Room Price Library directly', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const rateSettings = buildDefaultRateSettings();
@@ -458,9 +458,19 @@ describe('QuoteForm', () => {
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
     await user.click(screen.getByRole('tab', { name: /Detailed/i }));
-    await user.click(screen.getByRole('button', { name: 'Bedroom repaint' }));
 
-    expect(screen.getByLabelText('Room Name')).toHaveValue('Bedroom repaint');
+    expect(
+      screen.queryByRole('button', { name: 'Bedroom repaint' })
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+    await user.type(screen.getByLabelText('Room Name'), 'Bedroom');
+    await user.selectOptions(
+      screen.getByLabelText('Room Price Library Source'),
+      'quick-bedroom'
+    );
+
+    expect(screen.getByLabelText('Room Name')).toHaveValue('Bedroom');
 
     await user.click(screen.getByRole('button', { name: 'Save Quote' }));
 
@@ -469,7 +479,7 @@ describe('QuoteForm', () => {
     const payload = onSubmit.mock.calls[0][0];
     expect(payload.interior_estimate.rooms).toEqual([
       expect.objectContaining({
-	        name: 'Bedroom repaint',
+	        name: 'Bedroom',
 	        anchor_room_type: 'Bedroom',
 	        height_m: null,
 	        pricing_model: 'measured',
@@ -478,9 +488,6 @@ describe('QuoteForm', () => {
 	        include_walls: true,
 	        include_ceiling: true,
 	        include_trim: false,
-        source_rate_item_id: 'adv-bedroom-repaint',
-        source_rate_item_version: 2,
-        source_rate_item_label: 'Bedroom repaint',
         source_room_template_id: 'quick-bedroom',
 	        source_room_template_version: 2,
 	        source_room_template_label: 'Bedroom',

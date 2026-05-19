@@ -280,64 +280,6 @@ export function InteriorEstimateBuilder({
     });
   }
 
-  function isEmptyPlaceholderRoom(room: InteriorEstimateRoomFormState) {
-    return (
-      room.name.trim() === '' &&
-      room.length_m.trim() === '' &&
-      room.width_m.trim() === '' &&
-      room.height_m.trim() === '' &&
-      room.wall_area_m2.trim() === '' &&
-      room.ceiling_area_m2.trim() === '' &&
-      room.trim_linear_m.trim() === '' &&
-      room.include_walls &&
-      room.include_ceiling &&
-      !room.include_trim &&
-      !room.include_doors &&
-      !room.include_windows &&
-      room.condition === 'fair' &&
-      room.wall_paint_system === 'repaint_2coat' &&
-      room.trim_paint_system === 'oil_2coat'
-    );
-  }
-
-  function createRoomFromLibraryItem(
-    item: NonNullable<UserRateSettings['detailed_estimate_items']>['advanced_rooms'][number]
-  ): InteriorEstimateRoomFormState {
-    const template = rateSettings?.quick_estimate.rooms.find(
-      (room) => room.id === item.source_room_template_id
-    );
-    const size = item.default_size ?? 'medium';
-    const measurements = getTemplateMeasurements(template, size);
-
-    return {
-      ...createEmptyInteriorRoom(),
-      name: item.label,
-      anchor_room_type: item.anchor_room_type || template?.label || item.label,
-      ...measurements,
-      include_walls: item.include_walls,
-      include_ceiling: item.include_ceiling,
-      include_trim: item.include_trim,
-      source_rate_item_id: item.id,
-      source_rate_item_version: item.version ?? 1,
-      source_rate_item_label: item.label,
-      source_room_template_id: template?.id ?? item.source_room_template_id,
-      source_room_template_version:
-        template?.version ?? item.source_room_template_version,
-      source_room_template_label: template?.label,
-      source_room_template_size: size,
-      rate_snapshot_version: INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION,
-    };
-  }
-
-  function addRoomFromLibraryItem(
-    item: NonNullable<UserRateSettings['detailed_estimate_items']>['advanced_rooms'][number]
-  ) {
-    const room = createRoomFromLibraryItem(item);
-    const shouldReplaceOnlyRoom =
-      value.rooms.length === 1 && isEmptyPlaceholderRoom(value.rooms[0]);
-    setValue('rooms', shouldReplaceOnlyRoom ? [room] : [...value.rooms, room]);
-  }
-
   function toggleScope(scope: InteriorScope) {
     const next = value.scope.includes(scope) ? value.scope.filter((item) => item !== scope) : [...value.scope, scope];
     setValue('scope', next.length > 0 ? next : [scope]);
@@ -360,9 +302,6 @@ export function InteriorEstimateBuilder({
       ? INTERIOR_WINDOW_TYPES.filter((type) => rateSettings.enabled_window_types.includes(type))
       : [...INTERIOR_WINDOW_TYPES]
   ) as InteriorWindowType[];
-  const advancedRoomItems = [
-    ...(rateSettings?.detailed_estimate_items?.advanced_rooms ?? []),
-  ].sort((a, b) => a.sort_order - b.sort_order);
   const roomPriceTemplates = [
     ...(rateSettings?.quick_estimate?.rooms ?? []),
   ].sort((a, b) => a.sort_order - b.sort_order);
@@ -482,20 +421,6 @@ export function InteriorEstimateBuilder({
           <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container/50 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-on-surface">Rooms</p>
-              {advancedRoomItems.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {advancedRoomItems.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => addRoomFromLibraryItem(item)}
-                      className="min-h-11 rounded-full border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface hover:border-primary"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
             {value.rooms.map((room, index) => (
               <div key={`room-${index}`} className="space-y-3 rounded-xl border border-outline-variant bg-white p-3">

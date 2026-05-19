@@ -775,6 +775,13 @@ export const quoteCreateSchema = z.object({
             sqm: z.number().positive().nullable().optional(),
             condition: z.enum(['excellent', 'fair', 'poor']),
             scope: z.array(z.enum(['walls', 'ceiling', 'trim'])).min(1),
+            surface_price_share: z
+              .object({
+                walls_pct: z.number().min(0),
+                ceiling_pct: z.number().min(0),
+                trim_pct: z.number().min(0),
+              })
+              .optional(),
             wall_paint_system: z.enum([
               'refresh_1coat',
               'repaint_2coat',
