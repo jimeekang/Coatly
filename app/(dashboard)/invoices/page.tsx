@@ -23,7 +23,7 @@ export default async function InvoicesPage() {
         <ErrorAlert>{error}</ErrorAlert>
       ) : (
         <>
-          {invoices.length > 0 && <InvoiceKpiBand summary={summarizeInvoices(invoices)} />}
+          <InvoiceKpiBand summary={summarizeInvoices(invoices)} />
           <InvoiceTable invoices={invoices} />
         </>
       )}
