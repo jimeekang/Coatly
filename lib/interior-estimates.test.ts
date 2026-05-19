@@ -349,4 +349,49 @@ describe('calculateInteriorEstimate', () => {
     expect(result.total_cents).toBe(1265000);
     expect(result.snapshot.price_source).toBe('anchor');
   });
+
+  it('applies selected trim base to entire-property estimates through the trim scope share', () => {
+    const userRates = buildDefaultRateSettings();
+    userRates.door_unit_rates.oil_2coat.standard.door_and_frame = 20000;
+    userRates.door_unit_rates.water_3coat_white_finish.standard.door_and_frame = 40000;
+    userRates.window_unit_rates.oil_2coat.normal.window_and_frame = 20000;
+    userRates.window_unit_rates.water_3coat_white_finish.normal.window_and_frame = 40000;
+
+    const baseEstimate = {
+      property_type: 'apartment' as const,
+      estimate_mode: 'entire_property' as const,
+      condition: 'fair' as const,
+      scope: ['walls', 'ceiling', 'trim'] as const,
+      wall_paint_system: 'repaint_2coat' as const,
+      property_details: {
+        apartment_type: '2_bedroom_standard' as const,
+        sqm: null,
+        bedrooms: null,
+        bathrooms: null,
+        storeys: null,
+      },
+      rooms: [],
+      opening_items: [],
+      trim_items: [],
+    };
+
+    const oilResult = calculateInteriorEstimate(
+      { ...baseEstimate, trim_paint_system: 'oil_2coat' },
+      userRates
+    );
+    const waterResult = calculateInteriorEstimate(
+      { ...baseEstimate, trim_paint_system: 'water_3coat_white_finish' },
+      userRates
+    );
+
+    expect(waterResult.subtotal_cents).toBeGreaterThan(
+      oilResult.subtotal_cents
+    );
+    expect(waterResult.snapshot.trim_paint_system).toBe(
+      'water_3coat_white_finish'
+    );
+    expect(waterResult.snapshot.adjustments.surface_rate_multiplier).toBeGreaterThan(
+      oilResult.snapshot.adjustments.surface_rate_multiplier
+    );
+  });
 });

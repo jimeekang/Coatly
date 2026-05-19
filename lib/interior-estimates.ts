@@ -157,6 +157,7 @@ export type InteriorEstimateInput = {
   condition: InteriorCondition;
   scope: InteriorScope[];
   wall_paint_system?: InteriorWallPaintSystem;
+  trim_paint_system?: InteriorPaintSystem;
   property_details: {
     apartment_type?: InteriorApartmentType | null;
     sqm?: number | null;
@@ -222,6 +223,7 @@ export type InteriorPricingSnapshot = {
     estimate_mode: InteriorEstimateMode;
     condition: InteriorCondition;
     scope: InteriorScope[];
+    trim_paint_system: InteriorPaintSystem;
     property_details: InteriorEstimateInput['property_details'];
     range_cents: { min: number; median: number; max: number };
     adjustments: {
@@ -463,13 +465,49 @@ function getQuantityScaleFactor(quantity: number) {
   return 1;
 }
 
+function getTrimPaintSystemMultiplier(
+  trimPaintSystem: InteriorPaintSystem = 'oil_2coat',
+  userRates?: UserRateSettings | null
+) {
+  if (trimPaintSystem === 'oil_2coat') return 1;
+
+  const pairs = [
+    [
+      getDoorPrice(
+        trimPaintSystem,
+        'door_and_frame',
+        'standard',
+        userRates
+      ),
+      getDoorPrice('oil_2coat', 'door_and_frame', 'standard', userRates),
+    ],
+    [
+      getWindowPrice(
+        trimPaintSystem,
+        'normal',
+        'window_and_frame',
+        userRates
+      ),
+      getWindowPrice('oil_2coat', 'normal', 'window_and_frame', userRates),
+    ],
+    [getSkirtingPrice(trimPaintSystem), getSkirtingPrice('oil_2coat')],
+  ];
+  const ratios = pairs
+    .map(([selected, oil]) => (oil > 0 ? selected / oil : 1))
+    .filter((ratio) => Number.isFinite(ratio) && ratio > 0);
+
+  if (ratios.length === 0) return 1;
+  return ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length;
+}
+
 function getSurfaceRateMultiplier(
   scope: InteriorScope[],
   wallPaintSystem: InteriorWallPaintSystem = 'repaint_2coat',
+  trimPaintSystem: InteriorPaintSystem = 'oil_2coat',
   userRates?: UserRateSettings | null
 ) {
   const normalized = [...new Set(scope)];
-  if (!userRates || normalized.length === 0) return 1;
+  if (normalized.length === 0) return 1;
 
   const weights: Record<InteriorScope, number> = {
     walls: INTERIOR_SCOPE_SHARE.walls_only,
@@ -479,13 +517,21 @@ function getSurfaceRateMultiplier(
 
   const ratios: Record<InteriorScope, number> = {
     walls:
-      userRates.walls[wallPaintSystem] /
-      PAINT_RATES.walls[wallPaintSystem].ratePerSqm,
+      userRates == null
+        ? 1
+        : userRates.walls[wallPaintSystem] /
+          PAINT_RATES.walls[wallPaintSystem].ratePerSqm,
     ceiling:
-      userRates.ceiling[wallPaintSystem] /
-      PAINT_RATES.ceiling[wallPaintSystem].ratePerSqm,
+      userRates == null
+        ? 1
+        : userRates.ceiling[wallPaintSystem] /
+          PAINT_RATES.ceiling[wallPaintSystem].ratePerSqm,
     trim:
-      userRates.trim.repaint_2coat / PAINT_RATES.trim.repaint_2coat.ratePerSqm,
+      (userRates == null
+        ? 1
+        : userRates.trim.repaint_2coat /
+          PAINT_RATES.trim.repaint_2coat.ratePerSqm) *
+      getTrimPaintSystemMultiplier(trimPaintSystem, userRates),
   };
 
   const totalWeight = normalized.reduce((sum, item) => sum + weights[item], 0);
@@ -571,6 +617,7 @@ function buildSnapshot(
       estimate_mode: input.estimate_mode,
       condition: input.condition,
       scope: [...new Set(input.scope)],
+      trim_paint_system: input.trim_paint_system ?? 'oil_2coat',
       property_details: input.property_details,
       range_cents: {
         min: cap(range.min),
@@ -593,6 +640,7 @@ function calculateEntireApartmentEstimate(
   const surface_rate_multiplier = getSurfaceRateMultiplier(
     input.scope,
     input.wall_paint_system ?? 'repaint_2coat',
+    input.trim_paint_system ?? 'oil_2coat',
     userRates
   );
   const baseRange =
@@ -695,6 +743,7 @@ function calculateEntireHouseEstimate(
   const surface_rate_multiplier = getSurfaceRateMultiplier(
     input.scope,
     input.wall_paint_system ?? 'repaint_2coat',
+    input.trim_paint_system ?? 'oil_2coat',
     userRates
   );
   const range = clampRangeGap(
@@ -801,6 +850,7 @@ function calculateSpecificAreasEstimate(
   const defaultSurfaceRateMultiplier = getSurfaceRateMultiplier(
     input.scope,
     wallPaintSystem,
+    input.trim_paint_system ?? 'oil_2coat',
     userRates
   );
   const pricing_items: InteriorPricingItem[] = [];
@@ -818,6 +868,7 @@ function calculateSpecificAreasEstimate(
     const surfaceRateMultiplier = getSurfaceRateMultiplier(
       activeScope,
       wallPaintSystem,
+      input.trim_paint_system ?? 'oil_2coat',
       userRates
     );
     const anchor = getSpecificAreaRoomAnchor(

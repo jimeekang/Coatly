@@ -11,6 +11,8 @@ import {
   INTERIOR_DOOR_SCOPES,
   INTERIOR_DOOR_TYPE_LABELS,
   INTERIOR_DOOR_TYPES,
+  INTERIOR_PAINT_SYSTEM_LABELS,
+  INTERIOR_PAINT_SYSTEMS,
   INTERIOR_ROOM_TYPES,
   INTERIOR_SCOPE_OPTIONS,
   INTERIOR_STOREY_LABELS,
@@ -105,6 +107,7 @@ export type InteriorEstimateFormState = {
   condition: InteriorCondition;
   scope: InteriorScope[];
   wall_paint_system: InteriorWallPaintSystem;
+  trim_paint_system: InteriorPaintSystem;
   rooms: InteriorEstimateRoomFormState[];
   doors: InteriorDoorFormState[];
   windows: InteriorWindowFormState[];
@@ -156,6 +159,7 @@ export function createEmptyInteriorEstimateState(): InteriorEstimateFormState {
     condition: 'fair',
     scope: ['walls', 'ceiling', 'trim'],
     wall_paint_system: 'repaint_2coat',
+    trim_paint_system: 'oil_2coat',
     rooms: [createEmptyInteriorRoom()],
     doors: [],
     windows: [],
@@ -178,6 +182,25 @@ export function InteriorEstimateBuilder({
 
   function setRoom(index: number, patch: Partial<InteriorEstimateRoomFormState>) {
     setValue('rooms', value.rooms.map((room, roomIndex) => (roomIndex === index ? { ...room, ...patch } : room)));
+  }
+
+  function setTrimPaintSystem(nextPaintSystem: InteriorPaintSystem) {
+    onChange({
+      ...value,
+      trim_paint_system: nextPaintSystem,
+      doors: value.doors.map((door) => ({
+        ...door,
+        paint_system: nextPaintSystem,
+      })),
+      windows: value.windows.map((windowItem) => ({
+        ...windowItem,
+        paint_system: nextPaintSystem,
+      })),
+      trim_items: value.trim_items.map((trimItem) => ({
+        ...trimItem,
+        paint_system: nextPaintSystem,
+      })),
+    });
   }
 
   function isEmptyPlaceholderRoom(room: InteriorEstimateRoomFormState) {
@@ -311,6 +334,30 @@ export function InteriorEstimateBuilder({
           ))}
         </div>
       </div>
+
+      {value.estimate_mode === 'entire_property' &&
+        value.scope.includes('trim') && (
+          <div>
+            <label className={LABEL}>Trim Base</label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {INTERIOR_PAINT_SYSTEMS.map((paintSystem) => (
+                <button
+                  key={paintSystem}
+                  type="button"
+                  onClick={() => setTrimPaintSystem(paintSystem)}
+                  aria-pressed={value.trim_paint_system === paintSystem}
+                  className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
+                    value.trim_paint_system === paintSystem
+                      ? 'border-primary bg-primary text-white'
+                      : 'border-outline-variant bg-white text-on-surface'
+                  }`}
+                >
+                  {INTERIOR_PAINT_SYSTEM_LABELS[paintSystem]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
       <div className="grid gap-4 md:grid-cols-2">
         {value.property_type === 'apartment' ? (

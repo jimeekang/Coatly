@@ -477,6 +477,7 @@ export const interiorEstimateSchema = z
     condition: z.enum(INTERIOR_CONDITIONS),
     scope: interiorScopeSchema,
     wall_paint_system: interiorWallPaintSystemSchema.default('repaint_2coat'),
+    trim_paint_system: z.enum(INTERIOR_PAINT_SYSTEMS).default('oil_2coat'),
     property_details: z.object({
       apartment_type: z.enum(INTERIOR_APARTMENT_TYPES).nullable().optional(),
       sqm: z.number().positive('Size must be greater than zero').nullable().optional(),

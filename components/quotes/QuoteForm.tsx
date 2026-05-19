@@ -235,6 +235,8 @@ function buildInitialAdvancedEstimate(
       wall_paint_system:
         normalizeInteriorWallPaintSystem(estimateContext.wall_paint_system) ??
         base.wall_paint_system,
+      trim_paint_system:
+        estimateContext.trim_paint_system ?? base.trim_paint_system,
       apartment_type:
         estimateContext.property_details.apartment_type ?? base.apartment_type,
       apartment_sqm: str(estimateContext.property_details.sqm),
@@ -345,6 +347,7 @@ function buildAdvancedEstimatePayload(
       condition: estimate.condition,
       scope: estimate.scope,
       wall_paint_system: estimate.wall_paint_system,
+      trim_paint_system: estimate.trim_paint_system,
       property_details,
       rooms: [],
       opening_items: [],
@@ -358,6 +361,7 @@ function buildAdvancedEstimatePayload(
     condition: estimate.condition,
     scope: estimate.scope,
     wall_paint_system: estimate.wall_paint_system,
+    trim_paint_system: estimate.trim_paint_system,
     property_details,
     rooms: estimate.rooms.map((room) => ({
       name: room.name.trim() || room.anchor_room_type,

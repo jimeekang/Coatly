@@ -348,6 +348,7 @@ describe('lib/quotes', () => {
           condition: 'fair',
           scope: ['walls', 'trim'],
           wall_paint_system: 'repaint_2coat',
+          trim_paint_system: 'oil_2coat',
           property_details: {
             apartment_type: '2_bedroom_standard',
             sqm: null,
