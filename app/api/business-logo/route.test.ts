@@ -39,6 +39,11 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 import { POST } from '@/app/api/business-logo/route';
 
+const PNG_BYTES = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00,
+]);
+const JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00]);
+
 function buildRequest(file?: File) {
   return {
     formData: vi.fn().mockResolvedValue({
@@ -92,7 +97,9 @@ describe('/api/business-logo', () => {
       },
     });
 
-    const response = await POST(buildRequest(new File(['logo'], 'logo.png', { type: 'image/png' })));
+    const response = await POST(
+      buildRequest(new File([PNG_BYTES], 'logo.png', { type: 'image/png' }))
+    );
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
@@ -100,7 +107,7 @@ describe('/api/business-logo', () => {
 
   it('uploads a logo and returns its public URL when the bucket exists', async () => {
     const response = await POST(
-      buildRequest(new File(['logo'], 'logo.png', { type: 'image/png' }))
+      buildRequest(new File([PNG_BYTES], 'logo.png', { type: 'image/png' }))
     );
 
     expect(response.status).toBe(200);
@@ -134,7 +141,7 @@ describe('/api/business-logo', () => {
     });
 
     const response = await POST(
-      buildRequest(new File(['logo'], 'logo.jpg', { type: 'image/jpeg' }))
+      buildRequest(new File([JPEG_BYTES], 'logo.jpg', { type: 'image/jpeg' }))
     );
 
     expect(response.status).toBe(200);
@@ -162,6 +169,18 @@ describe('/api/business-logo', () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
       error: 'Logo must be a PNG or JPEG image.',
+    });
+    expect(createAdminClientMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a spoofed PNG upload whose bytes are not an image', async () => {
+    const response = await POST(
+      buildRequest(new File(['not actually a png'], 'logo.png', { type: 'image/png' }))
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Logo must be a valid PNG or JPEG image.',
     });
     expect(createAdminClientMock).not.toHaveBeenCalled();
   });

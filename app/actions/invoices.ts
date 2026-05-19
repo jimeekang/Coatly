@@ -15,12 +15,12 @@ import {
   parseInvoiceCreateInput,
 } from '@/lib/invoices';
 import { getBusinessDocumentBranding, getBusinessInvoiceDefaults } from '@/lib/businesses';
-import { isQuoteLineItemIncluded } from '@/lib/quotes';
 import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
 import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
 } from '@/lib/subscription/access';
+import { buildQuoteInvoicePresetLines } from '@/lib/invoice-quote-presets';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
@@ -351,7 +351,10 @@ export async function getInvoiceFormOptions(): Promise<{
       title: string | null;
       customer_id: string;
       subtotal_cents: number;
+      gst_cents: number;
       total_cents: number;
+      discount_cents: number;
+      manual_adjustment_cents: number;
       deposit_percent: number;
       status: string;
       valid_until: string | null;
@@ -442,14 +445,16 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
     await Promise.all([
       supabase
         .from('quotes')
-        .select('id, customer_id, status, title, quote_number')
+        .select(
+          'id, customer_id, status, title, quote_number, subtotal_cents, total_cents, discount_cents, manual_adjustment_cents, deposit_percent'
+        )
         .eq('id', quoteId)
         .eq('user_id', user.id)
         .maybeSingle(),
       supabase
         .from('quote_line_items')
         .select(
-          'id, name, notes, quantity, unit_price_cents, is_optional, is_selected, sort_order'
+          'id, name, notes, quantity, unit_price_cents, total_cents, is_optional, is_selected, sort_order'
         )
         .eq('quote_id', quoteId)
         .order('sort_order', { ascending: true }),
@@ -482,13 +487,31 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
     return { data: null, error: 'Only approved quotes can be invoiced from the quote screen.' };
   }
 
-  const copiedLineItems = (lineItemsResult.data ?? [])
-    .filter((item) => isQuoteLineItemIncluded(item))
-    .map((item) => ({
+  const presetResult = buildQuoteInvoicePresetLines({
+    id: quote.id,
+    quote_number: quote.quote_number,
+    title: quote.title,
+    subtotal_cents: quote.subtotal_cents,
+    total_cents: quote.total_cents,
+    discount_cents: quote.discount_cents ?? 0,
+    manual_adjustment_cents: quote.manual_adjustment_cents ?? 0,
+    deposit_percent: quote.deposit_percent ?? 0,
+    billed_subtotal_cents:
+      quoteInvoiceLinkStateResult.data?.billed_subtotal_cents ?? 0,
+    line_items: (lineItemsResult.data ?? []).map((item) => ({
       description: buildInvoiceDescriptionFromQuoteLineItem(item),
       quantity: Number(item.quantity),
       unit_price_cents: item.unit_price_cents,
-    }));
+      total_cents:
+        item.total_cents ?? Math.round(Number(item.quantity) * item.unit_price_cents),
+      is_optional: item.is_optional ?? false,
+      is_selected: item.is_optional ? (item.is_selected ?? false) : true,
+    })),
+  });
+
+  if (presetResult.error) {
+    return { data: null, error: presetResult.error };
+  }
 
   return {
     data: {
@@ -507,7 +530,7 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
       notes: quote.title?.trim()
         ? `Linked to approved quote ${quote.quote_number} - ${quote.title.trim()}`
         : `Linked to approved quote ${quote.quote_number}`,
-      line_items: copiedLineItems,
+      line_items: presetResult.line_items,
     },
     error: null,
   };

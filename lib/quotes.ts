@@ -39,9 +39,12 @@ export type QuoteEstimateCategory = 'manual' | 'interior';
 export type QuoteEstimateItemCategory =
   | 'entire_property'
   | 'room'
+  | 'room_anchor'
   | 'door'
   | 'window'
+  | 'trim'
   | 'skirting'
+  | 'quick_estimate'
   | 'modifier';
 export type QuoteCoatingType =
   | 'refresh_1coat'
@@ -238,31 +241,56 @@ export function calculateQuoteLineItemsSubtotal(
   }, 0);
 }
 
-export function composeQuoteTotals({
+export function calculateQuoteTotals({
   base_subtotal_cents,
+  manual_adjustment_cents,
   adjustment_cents = 0,
   discount_cents = 0,
   line_items = [],
 }: {
   base_subtotal_cents: number;
+  manual_adjustment_cents?: number;
   adjustment_cents?: number;
   discount_cents?: number;
   line_items?: QuotePricedLineItem[];
 }) {
   const line_items_subtotal_cents = calculateQuoteLineItemsSubtotal(line_items);
-  const subtotal_cents = base_subtotal_cents + line_items_subtotal_cents;
+  const subtotal_cents =
+    Math.max(0, Math.round(base_subtotal_cents)) +
+    line_items_subtotal_cents;
+  const clampedDiscountCents = Math.min(
+    Math.max(0, Math.round(discount_cents)),
+    subtotal_cents
+  );
   const discounted_subtotal_cents = Math.max(
     0,
-    subtotal_cents - discount_cents
+    subtotal_cents - clampedDiscountCents
   );
   const gst_cents = Math.round(discounted_subtotal_cents * 0.1);
+  const resolvedAdjustmentCents = Math.round(
+    manual_adjustment_cents ?? adjustment_cents
+  );
 
   return {
     line_items_subtotal_cents,
     subtotal_cents,
+    discounted_subtotal_cents,
     gst_cents,
-    total_cents: discounted_subtotal_cents + gst_cents + adjustment_cents,
+    total_cents: Math.max(
+      0,
+      discounted_subtotal_cents + gst_cents + resolvedAdjustmentCents
+    ),
   };
+}
+
+export function composeQuoteTotals(input: {
+  base_subtotal_cents: number;
+  manual_adjustment_cents?: number;
+  adjustment_cents?: number;
+  discount_cents?: number;
+  line_items?: QuotePricedLineItem[];
+}) {
+  return calculateQuoteTotals(input);
 }
 
 export function calculateDepositCents(
@@ -315,6 +343,7 @@ export type QuoteDetail = {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  manual_adjustment_cents: number;
   discount_cents: number;
   deposit_percent: number;
   estimate_category: QuoteEstimateCategory;
@@ -390,6 +419,8 @@ export type PublicQuoteDetail = {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  discount_cents: number;
+  manual_adjustment_cents: number;
   working_days: number | null;
   customer: QuoteCustomerSummary;
   rooms: PublicQuoteRoom[];
@@ -539,33 +570,116 @@ function normalizeInteriorEstimate(
       bathrooms: estimate.property_details.bathrooms ?? null,
       storeys: estimate.property_details.storeys ?? null,
     },
-    rooms: estimate.rooms.map((room) => ({
-      name: room.name.trim(),
-      anchor_room_type: room.anchor_room_type,
-      room_type: room.room_type,
-      length_m: room.length_m ?? null,
-      width_m: room.width_m ?? null,
-      height_m: room.height_m ?? null,
-      include_walls: room.include_walls,
-      include_ceiling: room.include_ceiling,
-      include_trim: room.include_trim,
-    })),
-    opening_items: estimate.opening_items.map((item) => ({
-      opening_type: item.opening_type,
-      paint_system: item.paint_system,
-      quantity: item.quantity,
-      room_index: item.room_index ?? null,
-      door_type: item.door_type,
-      door_scope: item.door_scope,
-      window_type: item.window_type,
-      window_scope: item.window_scope,
-    })),
-    trim_items: estimate.trim_items.map((item) => ({
-      trim_type: item.trim_type,
-      paint_system: item.paint_system,
-      quantity: item.quantity,
-      room_index: item.room_index ?? null,
-    })),
+    rooms: estimate.rooms.map((room) => {
+      const normalizedRoom: NormalizedInteriorEstimateInput['rooms'][number] = {
+        name: room.name.trim(),
+        anchor_room_type: room.anchor_room_type,
+        room_type: room.room_type,
+        length_m: room.length_m ?? null,
+        width_m: room.width_m ?? null,
+        height_m: room.height_m ?? null,
+        include_walls: room.include_walls,
+        include_ceiling: room.include_ceiling,
+        include_trim: room.include_trim,
+      };
+
+      if (room.pricing_model) normalizedRoom.pricing_model = room.pricing_model;
+      if (room.wall_area_m2 != null) normalizedRoom.wall_area_m2 = room.wall_area_m2;
+      if (room.ceiling_area_m2 != null)
+        normalizedRoom.ceiling_area_m2 = room.ceiling_area_m2;
+      if (room.trim_linear_m != null)
+        normalizedRoom.trim_linear_m = room.trim_linear_m;
+      if (room.source_rate_item_id)
+        normalizedRoom.source_rate_item_id = room.source_rate_item_id;
+      if (room.source_rate_item_version != null)
+        normalizedRoom.source_rate_item_version = room.source_rate_item_version;
+      if (room.source_rate_item_label)
+        normalizedRoom.source_rate_item_label = room.source_rate_item_label;
+      if (room.source_room_template_id)
+        normalizedRoom.source_room_template_id = room.source_room_template_id;
+      if (room.source_room_template_version != null)
+        normalizedRoom.source_room_template_version =
+          room.source_room_template_version;
+      if (room.source_room_template_label)
+        normalizedRoom.source_room_template_label =
+          room.source_room_template_label;
+      if (room.source_room_template_size)
+        normalizedRoom.source_room_template_size = room.source_room_template_size;
+      if (room.source_room_template_surface_prices_cents)
+        normalizedRoom.source_room_template_surface_prices_cents =
+          room.source_room_template_surface_prices_cents;
+      if (room.source_room_template_coating_multiplier_pct != null)
+        normalizedRoom.source_room_template_coating_multiplier_pct =
+          room.source_room_template_coating_multiplier_pct;
+      if (room.source_room_template_condition_multiplier_pct != null)
+        normalizedRoom.source_room_template_condition_multiplier_pct =
+          room.source_room_template_condition_multiplier_pct;
+      if (room.rate_snapshot_version != null)
+        normalizedRoom.rate_snapshot_version = room.rate_snapshot_version;
+      if (room.source_anchor_range_cents)
+        normalizedRoom.source_anchor_range_cents = room.source_anchor_range_cents;
+      if (room.source_wall_rate_cents_per_m2 != null)
+        normalizedRoom.source_wall_rate_cents_per_m2 =
+          room.source_wall_rate_cents_per_m2;
+      if (room.source_ceiling_rate_cents_per_m2 != null)
+        normalizedRoom.source_ceiling_rate_cents_per_m2 =
+          room.source_ceiling_rate_cents_per_m2;
+      if (room.source_trim_rate_cents_per_m != null)
+        normalizedRoom.source_trim_rate_cents_per_m =
+          room.source_trim_rate_cents_per_m;
+      if (room.source_condition_multiplier_pct != null)
+        normalizedRoom.source_condition_multiplier_pct =
+          room.source_condition_multiplier_pct;
+      if (room.source_surface_rate_multiplier != null)
+        normalizedRoom.source_surface_rate_multiplier =
+          room.source_surface_rate_multiplier;
+      if (room.source_scope_multiplier != null)
+        normalizedRoom.source_scope_multiplier = room.source_scope_multiplier;
+      if (room.source_condition)
+        normalizedRoom.source_condition = room.source_condition;
+      const normalizedWallPaintSystem = normalizeInteriorWallPaintSystem(
+        room.source_wall_paint_system
+      );
+      if (normalizedWallPaintSystem)
+        normalizedRoom.source_wall_paint_system = normalizedWallPaintSystem;
+      if (room.source_trim_paint_system)
+        normalizedRoom.source_trim_paint_system = room.source_trim_paint_system;
+
+      return normalizedRoom;
+    }),
+    opening_items: estimate.opening_items.map((item) => {
+      const normalizedItem: NormalizedInteriorEstimateInput['opening_items'][number] = {
+        opening_type: item.opening_type,
+        paint_system: item.paint_system,
+        quantity: item.quantity,
+        room_index: item.room_index ?? null,
+        door_type: item.door_type,
+        door_scope: item.door_scope,
+        window_type: item.window_type,
+        window_scope: item.window_scope,
+      };
+      if (item.rate_snapshot_version != null)
+        normalizedItem.rate_snapshot_version = item.rate_snapshot_version;
+      if (item.source_unit_price_cents != null)
+        normalizedItem.source_unit_price_cents = item.source_unit_price_cents;
+      if (item.source_quantity_scale_factor != null)
+        normalizedItem.source_quantity_scale_factor =
+          item.source_quantity_scale_factor;
+      return normalizedItem;
+    }),
+    trim_items: estimate.trim_items.map((item) => {
+      const normalizedItem: NormalizedInteriorEstimateInput['trim_items'][number] = {
+        trim_type: item.trim_type,
+        paint_system: item.paint_system,
+        quantity: item.quantity,
+        room_index: item.room_index ?? null,
+      };
+      if (item.rate_snapshot_version != null)
+        normalizedItem.rate_snapshot_version = item.rate_snapshot_version;
+      if (item.source_unit_price_cents != null)
+        normalizedItem.source_unit_price_cents = item.source_unit_price_cents;
+      return normalizedItem;
+    }),
   };
 }
 
@@ -744,6 +858,8 @@ export function calculateQuotePreview(input: {
   complexity?: QuoteComplexity;
   labour_margin_percent: number;
   material_margin_percent: number;
+  discount_cents?: number;
+  manual_adjustment_cents?: number;
   line_items?: QuoteLineItemFormInput[];
   rooms: Array<{
     name: string;
@@ -790,6 +906,8 @@ export function calculateQuotePreview(input: {
   const totals = composeQuoteTotals({
     base_subtotal_cents:
       base_subtotal_cents + labour_margin_cents + material_margin_cents,
+    discount_cents: input.discount_cents ?? 0,
+    manual_adjustment_cents: input.manual_adjustment_cents ?? 0,
     line_items: input.line_items ?? [],
   });
 
@@ -850,6 +968,8 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
           is_optional,
           is_selected: is_optional ? (item.is_selected ?? false) : true,
           notes: item.notes?.trim() || undefined,
+          pricing_scope_key: item.pricing_scope_key?.trim() || undefined,
+          pricing_role: item.pricing_role,
         };
       }),
       rooms: parsed.data.rooms.map((room) => ({
@@ -947,6 +1067,7 @@ export function mapQuoteDetail(row: {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  manual_adjustment_cents?: number | null;
   discount_cents?: number | null;
   deposit_percent?: number | null;
   estimate_category?: string | null;
@@ -1009,6 +1130,7 @@ export function mapQuoteDetail(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
+    manual_adjustment_cents: row.manual_adjustment_cents ?? 0,
     estimate_category:
       (row.estimate_category as QuoteEstimateCategory | null) ?? 'manual',
     property_type: (row.property_type as QuoteDetail['property_type']) ?? null,
@@ -1078,6 +1200,8 @@ export function toPublicQuoteDetail(quote: QuoteDetail): PublicQuoteDetail {
     subtotal_cents: quote.subtotal_cents,
     gst_cents: quote.gst_cents,
     total_cents: quote.total_cents,
+    discount_cents: quote.discount_cents,
+    manual_adjustment_cents: quote.manual_adjustment_cents,
     working_days:
       (quote as unknown as { working_days?: number | null }).working_days ??
       null,
@@ -1136,6 +1260,8 @@ export function mapPublicQuoteDetail(row: {
   subtotal_cents: number;
   gst_cents: number;
   total_cents: number;
+  discount_cents?: number | null;
+  manual_adjustment_cents?: number | null;
   customer: QuoteCustomerSource | null;
   rooms: Array<{
     id: string;
@@ -1171,6 +1297,8 @@ export function mapPublicQuoteDetail(row: {
     subtotal_cents: row.subtotal_cents,
     gst_cents: row.gst_cents,
     total_cents: row.total_cents,
+    discount_cents: row.discount_cents ?? 0,
+    manual_adjustment_cents: row.manual_adjustment_cents ?? 0,
     working_days:
       (row as { working_days?: number | null }).working_days ?? null,
     customer: resolveQuoteCustomerSummary(row),

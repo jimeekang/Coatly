@@ -1,6 +1,10 @@
 # Feature: AI Assistant
 
+<<<<<<< HEAD
 > Phase 2 AI draft panel + Workspace Assistant seed가 부분 구현된 상태. v1 wedge는 "AI-assisted Quote Form Builder"이고, 보조 AI 범위는 Today Assistant + Follow-up Writer로 제한됨 — 자세한 v1 build 계획은 [V1-PLAN.md](./V1-PLAN.md), quote form 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md), pricing foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md).
+=======
+> Phase 2 AI draft panel + Workspace Assistant seed가 부분 구현된 상태. v1 wedge는 "AI-assisted Quote Form Builder"이고, 보조 AI 범위는 Today Assistant + Follow-up Writer로 제한됨 — 자세한 v1 build 계획은 [V1-PLAN.md](./V1-PLAN.md), quote form 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md), pricing foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md), Quick/Advanced rate boundary는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md), Room Price Library redesign은 [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md).
+>>>>>>> phrase0
 
 ## v1 Wedge (2026-05-15 APPROVED)
 
@@ -8,6 +12,7 @@
 
 **핵심 boundary**: AI는 surface 매핑 + scope/exclusion/clause writing만 한다. **Pricing은 deterministic** — painter price_rates table에서 server-side lookup. AI 출력 schema에서 rate/price/GST/total field 제거 + `lib/ai/apply-deterministic-pricing.ts` post-pass로 채움.
 
+<<<<<<< HEAD
 **v1 보조 AI**: Today Assistant(오늘 처리할 quote follow-up / overdue invoice / job 요약) + Follow-up Writer(고객에게 보낼 SMS/email 초안). 범용 Workspace Assistant 채팅은 v1에서 끄고, 이 두 helper만 노출한다.
 
 ## Price Rate Candidate Boundary
@@ -24,13 +29,22 @@
 | Paint System Upgrades | wet-area paint, enamel trim, new plaster 3 coats 후보 | painter 설정에 없는 product/upgrade 가격 생성 |
 
 `Bedroom 1 + walls only` 같은 partial room scope는 정상이다. AI validator는 room anchor를 full repaint로 자동 확장하지 않고, user-selected surface flags와 painter rate snapshot을 그대로 deterministic pricing pass에 넘겨야 한다.
+=======
+2026-05-17 기준 AI pricing candidate 적용 전 선행 조건: Task 1 duplicate priced scope guard, Task 2 Quick/Advanced snapshot/setup warning/stale-rate hardening, Task 3 Room Price Library redesign은 완료됐다. 다음 선행 조건은 Task 4 quote form structure schema와 AI candidate를 deterministic pricing review path로만 적용하는 서버 검증이다.
+
+**v1 보조 AI**: Today Assistant(오늘 처리할 quote follow-up / overdue invoice / job 요약) + Follow-up Writer(고객에게 보낼 SMS/email 초안). 범용 Workspace Assistant 채팅은 v1에서 끄고, 이 두 helper만 노출한다.
+>>>>>>> phrase0
 
 ## 현재 구현 vs v1 갭
 
 | 구성 | 위치 | 현재 | v1 목표 |
 |------|------|------|---------|
 | Legacy AI draft provider | `lib/ai/drafts.ts` | non-streaming, AU prompt 없음, usage limit 없음 | Qwen3-VL-Flash adapter로 전환, streaming + AU prompt + validator + price_rates context |
+<<<<<<< HEAD
 | AIDraftPanel | `components/ai/AIDraftPanel.tsx` | UI 존재, QuoteCreateScreen 미연결 | QuoteCreateScreen wire-up + inline 편집 + plan-aware gating |
+=======
+| AIDraftPanel | `components/ai/AIDraftPanel.tsx` | UI 존재, QuoteCreateScreen 미연결 | QuoteCreateScreen wire-up + inline 편집 + Pro gating |
+>>>>>>> phrase0
 | ai-drafts server action | `app/actions/ai-drafts.ts` | 기본 draft 생성 | photos + price_rates + usage check + streaming |
 | Draft schema | `lib/ai/draft-types.ts` | rooms/surfaces/coating | + photos, price_rates, job_type, scope_notes, rough_measurements, `scope_sections`, `pricing_candidates`, `clauses`. 사진은 scope 보조, 자동 면적 산출 아님 |
 | Quote form data model | quote feature | 고객용 scope 문서와 가격 row가 섞여 있음 | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots`로 분리 |
@@ -192,6 +206,10 @@ Quote/customer/invoice detail에서 고객 메시지 초안을 만든다.
 ## 관련 문서
 
 - [V1-PLAN.md](./V1-PLAN.md) — full v1 wedge + work item 요약
+<<<<<<< HEAD
+=======
+- [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md) — Quick/Advanced rate boundary + snapshot hardening 세부 계획
+>>>>>>> phrase0
 - [../quote/AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md) — scope/pricing/clause data model + AI output contract
 - [../audit/AUDIT.md A3](../audit/AUDIT.md) — governance 활성 finding
 - [../../PLANS.md](../../PLANS.md) — Phase 2 progress

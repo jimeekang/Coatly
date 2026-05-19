@@ -44,14 +44,18 @@ lib/pdf/
 - 헤더: 비즈니스 로고 + 상호명 + ABN + 연락처
 - 고객 정보: 이름, 주소
 - 항목 테이블: 설명, 수량, 단가, 금액
-- 합계: Subtotal, GST (10%), Total
+- 합계: Subtotal, discount가 있으면 discount, taxable subtotal 기준 GST (10%), manual adjustment가 있으면 adjustment, Total
 - 푸터: 결제 조건, 은행 정보 (청구서만)
 
 ### 견적서 추가 요소
 
 - 유효 기간 (valid_until)
 - 방별 면적 breakdown
+- scope sections, optional items, clauses 순서 보존
+- public quote optional item 선택 상태와 같은 total 표시
 - Good/Better/Best 티어 가격 비교 (선택)
+
+견적서 PDF total은 저장된 quote calculated fields를 기준으로 렌더링한다. Scope 문장이나 clause text에서 금액을 재계산하지 않는다.
 
 ## 브랜딩
 

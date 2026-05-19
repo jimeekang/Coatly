@@ -16,16 +16,57 @@
 - Task 1은 v1 build의 첫 구현 작업이다.
 - AI integration, Qwen adapter, photo helper는 Task 1 범위가 아니다.
 
+<<<<<<< HEAD
+=======
+## Implementation Review (2026-05-17)
+
+**Status:** COMPLETE. Task 1A canonical quote total path와 Task 1B deterministic duplicate priced scope guard가 구현됐고, linked-invoice/rollback edge tests, PDF route regression, full test suite, production build verification까지 통과했다.
+
+### Completed
+
+| Area | Evidence |
+|------|----------|
+| Canonical calculator | `lib/quotes.ts`에 `calculateQuoteTotals()`가 있고 `composeQuoteTotals()`가 이 함수를 호출한다. Return shape에 `line_items_subtotal_cents`, `subtotal_cents`, `discounted_subtotal_cents`, `gst_cents`, `total_cents`가 포함된다. |
+| Calculator tests | `lib/quotes.test.ts`가 selected add-on, unselected optional item, discount clamp, stored line item total snapshot을 테스트한다. |
+| Create/update quote pricing helper | `app/actions/quotes.ts`에 `resolveQuotePricingPreviewForSave()`가 있고 create/update quote가 같은 helper output으로 `subtotal_cents`, `gst_cents`, `total_cents`를 저장한다. |
+| Optional add-on recalculation | Admin/public optional item selection이 `discount_cents`, `manual_adjustment_cents`를 select하고 `calculateQuoteTotals()`로 다음 total을 만든다. Public failure rollback 코드도 존재한다. |
+| Public quote preview | `PublicQuoteClient`가 `discount_cents`, `manual_adjustment_cents`, selected optional add-ons를 `calculateQuoteTotals()`로 다시 계산해 표시한다. |
+| Quote-to-invoice presets | `lib/invoice-quote-presets.ts`가 base quote scope line, selected optional add-ons, discounted single parity line, manual adjustment block을 처리한다. |
+| Create/update parity | `app/actions/quotes.test.ts`에 같은 day-rate fixture가 create/update에서 동일한 `subtotal_cents`, `gst_cents`, `total_cents`, `pricing_method_inputs`, line item snapshot을 저장하는 회귀 테스트가 있다. |
+| Optional linked invoice + rollback | Admin/public optional add-on selection은 linked invoice가 있으면 line item/quote total update를 하지 않는다. Public quote total update 실패 시 original `is_selected`로 rollback한다. |
+| Deterministic duplicate scope guard | `lib/quote-pricing-scopes.ts`가 Quick, Advanced interior, manual room, exterior scope keys를 만들고, `pricing_scope_key` + `pricing_role`이 중복 priced scope를 가리키면 create/update payload를 차단한다. Fuzzy free-text overlap은 UI warning만 표시한다. |
+| Focused regression | 2026-05-17 실행: `lib/quotes.test.ts app/actions/quotes.test.ts` 43 passed, `lib/invoices.test.ts app/actions/invoices.test.ts` 30 passed, `components/quotes/QuoteForm.test.tsx components/invoices/InvoiceForm.test.tsx` 37 passed, `app/api/pdf/quote/route.test.ts lib/quote-pricing-scopes.test.ts` 5 passed. |
+| Full safety verification | 2026-05-17 실행: `npm run test:run` 59 files / 366 tests passed, `npm run build` passed, `npm run lint` passed. |
+
+### Still Needed Before Task 1 Is Complete
+
+| Gap | Why it matters | Suggested implementation |
+|-----|----------------|--------------------------|
+| None for Task 1 | Task 1 scope is closed for v1 pricing foundation. | Task 2 follow-on and Task 3 Room Price Library redesign are complete as of 2026-05-17. Next pricing-related follow-on is Task 4 quote form schema and Task 5 legacy quote reconstruction. |
+
+### Recommended Split
+
+Task 1 is now closed as **Task 1A: canonical quote totals and invoice parity** plus **Task 1B: duplicate priced scope guard and final safety verification**. Task 2 rate-boundary hardening and Task 3 Room Price Library redesign are also complete; AI pricing candidates, Qwen adapter, and photo helper now wait for Task 4 quote form structure schema and deterministic candidate review.
+
+>>>>>>> phrase0
 ## Files
 
 **Modify:**
 - `lib/quotes.ts`
+<<<<<<< HEAD
+=======
+- `lib/quote-pricing-scopes.ts`
+>>>>>>> phrase0
 - `app/actions/quotes.ts`
 - `components/quotes/QuoteForm.tsx`
 - `components/quotes/public/PublicQuoteClient.tsx`
 - `lib/invoices.ts`
 - `components/invoices/InvoiceForm.tsx`
 - `lib/quotes.test.ts`
+<<<<<<< HEAD
+=======
+- `lib/quote-pricing-scopes.test.ts`
+>>>>>>> phrase0
 - `app/actions/quotes.test.ts`
 - `lib/invoices.test.ts`
 - `app/actions/invoices.test.ts`
@@ -42,6 +83,7 @@
 - `supabase/migrations/041_detailed_quick_estimate.sql`
 - `supabase/migrations/042_allow_quick_estimate_items.sql`
 
+<<<<<<< HEAD
 ## Current Findings To Fix Before Implementation
 
 - `lib/quotes.ts` already has `composeQuoteTotals()`, but it does not expose `discounted_subtotal_cents`, and the name does not make it clear that this is the canonical quote total path.
@@ -51,6 +93,18 @@
 - Quote-to-invoice defaults in `lib/invoices.ts` and `components/invoices/InvoiceForm.tsx` can miss the base quoted scope when a quote has no copied line items or when line items are only add-ons.
 - Reliable duplicate-priced-scope blocking cannot depend only on free-text line item names. Task 1 should implement deterministic blocking where current data has enough structure, plus clear UI warnings. Formal `pricing_status` / scope section separation belongs to Task 3.
 - Follow-up decision from session `019e32de-aaa3-7940-aaa6-9c773d3ec251`: Task 1 must leave a clean path for Average Property Prices and freely toggleable room surfaces. Even if Task 1 does not build the full Rate Library UI, the canonical total code must not assume a room anchor always means walls + ceiling + trim together.
+=======
+## Original Findings and Current Status
+
+| Finding | 2026-05-17 status |
+|---------|-------------------|
+| `lib/quotes.ts` had `composeQuoteTotals()` but did not expose `discounted_subtotal_cents` under an explicit canonical name | Fixed. `calculateQuoteTotals()` exists and `composeQuoteTotals()` delegates to it |
+| `createQuote()` and `updateQuote()` repeated pricing-method resolution logic | Fixed. `resolveQuotePricingPreviewForSave()` centralizes the logic and a same-fixture create/update parity test proves identical saved totals |
+| Optional add-on selection recalculated GST/total manually and did not include `discount_cents` | Fixed in code. Admin/public optional selection selects discount/manual adjustment and uses `calculateQuoteTotals()` |
+| Public quote preview recalculated totals locally without discount/manual adjustment parity | Fixed in code. Public quote detail select and client preview include discount/manual adjustment |
+| Quote-to-invoice defaults could miss base quote scope or mishandle add-ons | Fixed for presets. Base quote scope, selected optional add-ons, discount parity line, and manual adjustment block are implemented |
+| Reliable duplicate-priced-scope blocking cannot depend only on free-text line item names | Fixed for v1 payload validation. `lib/quote-pricing-scopes.ts` blocks structured duplicate `pricing_scope_key` rows and warns, but does not block, fuzzy free-text overlaps |
+>>>>>>> phrase0
 
 ## Canonical Money Contract
 
@@ -79,6 +133,10 @@
 | `quotes.estimate_context` / `pricing_snapshot` | Keep as the saved audit snapshot for interior/exterior estimate inputs and rate snapshot |
 | `quote_estimate_items.total_cents` | Method detail rows only; never added again if already included in `base_subtotal_cents` |
 | `quote_line_items.total_cents` | Add-on/service/material rows only; optional unselected rows are excluded from totals |
+<<<<<<< HEAD
+=======
+| `quote_line_items.pricing_scope_key` / `pricing_role` | Not persisted in v1. These optional payload fields are validated before save to block duplicate priced scope rows, then omitted from existing DB inserts. A future Task 4 schema can persist them if scope tables are introduced. |
+>>>>>>> phrase0
 | Supabase migration | No new migration should be required for canonical totals. If implementation proves a persisted scope key is required, stop and add that as a separate reviewed schema task instead of silently overloading existing columns |
 
 ## Authoritative Price Source Map
@@ -88,7 +146,10 @@
 | Manual room/surface estimate (`sqm_rate` / `hybrid` rooms) | `quote_room_surfaces.total_cents` rolled into `quote_rooms.total_cents`, then quote base subtotal | `quote_line_items` selected rows | `quote_room_surfaces.area_m2`, `rate_per_m2_cents`, `coating_type`, `quote_rooms` dimensions |
 | Interior advanced estimate | `calculateInteriorEstimate()` result saved through `quote_estimate_items` and `quotes.estimate_context` | `quote_line_items` selected rows | `quotes.estimate_context`, `quotes.pricing_snapshot`, `quote_estimate_items.unit_price_cents`, `total_cents`, source rate metadata |
 | Exterior estimate | `calculateExteriorEstimate()` result saved through `quote_estimate_items` and `quotes.estimate_context` | `quote_line_items` selected rows | `quotes.estimate_context`, `quotes.pricing_snapshot`, custom exterior surface labels/rates |
+<<<<<<< HEAD
 | Average property price preset | Selected property-level anchor such as Apartment 2 bed 2 bath, saved as one base subtotal snapshot | Only non-overlapping add-ons | preset key, label, min/average/high choice, included surfaces, condition, ceiling height, rate version, source metadata |
+=======
+>>>>>>> phrase0
 | Detailed quick estimate | `calculateQuickEstimate()` result saved as `quote_estimate_items.category = 'quick_estimate'` | `quote_line_items` selected rows | `pricing_method_inputs.inputs.rooms`, room size, selected surfaces, coating/condition multipliers, source rate item id/version/label |
 | Room rate | `calculateRoomRateQuote()` from `pricing_method_inputs.inputs.rooms` | `quote_line_items` selected rows | room name/type/size/rate in `pricing_method_inputs` |
 | Day rate | `calculateDayRateQuote()` from days, daily rate, material method | `quote_line_items` selected rows | days, daily rate, material percent/flat in `pricing_method_inputs` |
@@ -96,7 +157,11 @@
 
 ## Implementation Tasks
 
+<<<<<<< HEAD
 - [ ] **Step 1: Write calculator tests before changing implementation**
+=======
+- [x] **Step 1: Write calculator tests before changing implementation**
+>>>>>>> phrase0
 
   In `lib/quotes.test.ts`, add direct tests for the canonical money contract:
 
@@ -105,7 +170,13 @@
   - Optional line item with `is_optional: true` and `is_selected: false` is excluded even when `total_cents` is present.
   - Stored line item `total_cents` wins over recomputing `quantity * unit_price_cents`, because saved quote rows are snapshots.
 
+<<<<<<< HEAD
 - [ ] **Step 2: Make `calculateQuoteTotals()` the canonical calculator**
+=======
+  **Implementation review:** Done. `lib/quotes.test.ts` covers canonical totals, discount clamp, unselected optional exclusion, and stored line item total snapshot.
+
+- [x] **Step 2: Make `calculateQuoteTotals()` the canonical calculator**
+>>>>>>> phrase0
 
   In `lib/quotes.ts`, add `calculateQuoteTotals()` and make `composeQuoteTotals()` call it for backwards compatibility during the refactor. Required return shape:
 
@@ -121,17 +192,32 @@
 
   The function must accept `base_subtotal_cents`, `line_items`, `discount_cents`, and `manual_adjustment_cents`/`adjustment_cents`. All total-producing code in Task 1 must call this function instead of hand-writing subtotal/GST math.
 
+<<<<<<< HEAD
 - [ ] **Step 3: Normalize one server-side quote preview resolver**
+=======
+  **Implementation review:** Done. `calculateQuoteTotals()` returns the required shape and `composeQuoteTotals()` delegates to it for backwards compatibility.
+
+- [x] **Step 3: Normalize one server-side quote preview resolver**
+>>>>>>> phrase0
 
   In `app/actions/quotes.ts`, extract the repeated create/update pricing logic into one internal helper, for example `resolveQuotePricingPreviewForSave()`. It must:
 
   - Resolve exactly one base subtotal path for `day_rate`, `detailed_quick`, `room_rate`, `manual`, exterior estimate, interior estimate, or room/surface estimate.
+<<<<<<< HEAD
   - Treat future property-level presets as one base subtotal path, not a bundle of hidden room line items.
+=======
+>>>>>>> phrase0
   - Return `resolvedPricingInputs`, `estimate_category`, `estimate_context`, `pricing_snapshot`, `rooms`, `estimate_items`, `base_subtotal_cents`, and canonical totals.
   - Call `calculateQuoteTotals()` once after the base subtotal is known.
   - Keep AI and photo analysis out of the calculation path.
 
+<<<<<<< HEAD
 - [ ] **Step 4: Replace create/update quote total writes**
+=======
+  **Implementation review:** Done. `resolveQuotePricingPreviewForSave()` centralizes save preview resolution, both create/update consume it, and same-fixture parity coverage is in `app/actions/quotes.test.ts`.
+
+- [x] **Step 4: Replace create/update quote total writes**
+>>>>>>> phrase0
 
   In both quote create and quote update flows:
 
@@ -140,7 +226,13 @@
   - Keep relation inserts (`quote_rooms`, `quote_room_surfaces`, `quote_estimate_items`, `quote_line_items`) as detail snapshots, not separate total authorities.
   - Add tests in `app/actions/quotes.test.ts` proving create and update produce identical totals for the same input.
 
+<<<<<<< HEAD
 - [ ] **Step 5: Fix optional add-on selection recalculation**
+=======
+  **Implementation review:** Done. Create/update writes use helper totals, and `app/actions/quotes.test.ts` proves the same fixture produces identical saved totals and line item snapshots.
+
+- [x] **Step 5: Fix optional add-on selection recalculation**
+>>>>>>> phrase0
 
   In `setQuoteOptionalLineItemSelection()` and `setPublicQuoteOptionalLineItemSelection()`:
 
@@ -150,7 +242,13 @@
   - Preserve the current rollback behavior when the public update fails.
   - Add tests for admin/public optional selection with discount present, unselected optional item present, and linked invoice lock present.
 
+<<<<<<< HEAD
 - [ ] **Step 6: Update quote UI preview to match the server contract**
+=======
+  **Implementation review:** Done. Admin/public optional selection recalculation uses `calculateQuoteTotals()` with discount/manual adjustment fields. Tests cover linked-invoice lock for admin/public and public rollback when quote total update fails.
+
+- [x] **Step 6: Update quote UI preview to match the server contract**
+>>>>>>> phrase0
 
   In `components/quotes/QuoteForm.tsx`:
 
@@ -160,7 +258,13 @@
   - Ensure Quick and Advanced previews do not add the same scope twice when extra line items are entered.
   - Add `components/quotes/QuoteForm.test.tsx` coverage for displayed total parity with server test fixtures.
 
+<<<<<<< HEAD
 - [ ] **Step 7: Update public quote total preview**
+=======
+  **Implementation review:** Done. `QuoteForm` uses `composeQuoteTotals()`, optional add-ons remain excluded until selected, a canonical day-rate fixture test compares UI totals with `calculateQuoteTotals()`, and fuzzy duplicate scope names show a warning instead of blocking.
+
+- [x] **Step 7: Update public quote total preview**
+>>>>>>> phrase0
 
   In `lib/quotes.ts`, `app/actions/quotes.ts`, and `components/quotes/public/PublicQuoteClient.tsx`:
 
@@ -169,7 +273,13 @@
   - Show discount and adjustment rows only when non-zero.
   - Ensure the public approval total matches the stored quote total after the server action returns.
 
+<<<<<<< HEAD
 - [ ] **Step 8: Harden quote-to-invoice defaults**
+=======
+  **Implementation review:** Done for public quote display and public optional selection recalculation. Covered by `PublicQuoteClient.test.tsx` and public optional selection action tests.
+
+- [x] **Step 8: Harden quote-to-invoice defaults**
+>>>>>>> phrase0
 
   In `lib/invoices.ts` and `components/invoices/InvoiceForm.tsx`:
 
@@ -178,6 +288,7 @@
   - For discounted or manually adjusted quotes, either generate a parity-safe single quote line or block invoice preset creation with a clear message until invoice adjustment support exists. Do not silently create an invoice total that differs from the approved quote.
   - Add `lib/invoices.test.ts`, `app/actions/invoices.test.ts`, and `components/invoices/InvoiceForm.test.tsx` coverage for full invoice, deposit invoice, progress invoice, selected optional add-on, unselected optional add-on, discount, and manual adjustment.
 
+<<<<<<< HEAD
 - [ ] **Step 9: Add deterministic duplicate priced scope guard**
 
   In `lib/quotes.ts` and `lib/supabase/validators.ts` if needed:
@@ -190,6 +301,22 @@
   - Add tests showing duplicate walls/ceiling/trim are blocked or downgraded to non-priced scope, while legitimate add-ons like wallpaper removal, patch repair, travel, scaffold, and premium paint upgrade remain allowed.
 
 - [ ] **Step 10: Run focused regression tests**
+=======
+  **Implementation review:** Done. `buildQuoteInvoicePresetLines()` creates base scope lines, includes selected optional add-ons only, uses a discounted parity-safe single line, and blocks manual adjustments with a clear error. Covered by invoice library, action, and form tests.
+
+- [x] **Step 9: Add deterministic duplicate priced scope guard**
+
+  In `lib/quotes.ts` and `lib/supabase/validators.ts` if needed:
+
+  - Build priced scope keys from structured inputs, not AI text. Examples: `interior:room:<room_key>:walls`, `interior:room:<room_key>:ceiling`, `interior:room:<room_key>:trim`, `quick:<room_id>:walls`, `quick:<room_id>:ceiling`, `quick:<room_id>:trim`, `exterior:<surface_key>`.
+  - Block duplicates when a structured line item or mapped saved service clearly targets a priced scope already included in the selected pricing method.
+  - For fuzzy free-text overlaps, show a UI warning instead of blocking. Example: custom line item name "Living room walls" should warn if living room walls are already included, but it should not block unless the source key is deterministic.
+  - Add tests showing duplicate walls/ceiling/trim are blocked or downgraded to non-priced scope, while legitimate add-ons like wallpaper removal, patch repair, travel, scaffold, and premium paint upgrade remain allowed.
+
+  **Implementation review:** Done. `lib/quote-pricing-scopes.ts` builds Quick, Advanced interior, manual room, and exterior keys; create/update actions block duplicate `priced_scope` line items; `QuoteForm` warns for fuzzy free-text overlaps. No Supabase migration was introduced.
+
+- [x] **Step 10: Run focused regression tests**
+>>>>>>> phrase0
 
   Required commands before marking Task 1 complete:
 
@@ -205,7 +332,13 @@
   npm run test:run -- app/api/pdf/quote/route.test.ts
   ```
 
+<<<<<<< HEAD
 - [ ] **Step 11: Run full safety verification**
+=======
+  **Verification run (2026-05-17):** quote action/library tests 43 passed, invoice action/library tests 30 passed, quote/invoice form tests 37 passed, PDF route + pricing scope tests 5 passed.
+
+- [x] **Step 11: Run full safety verification**
+>>>>>>> phrase0
 
   Before Task 1 is considered complete:
 
@@ -220,5 +353,10 @@
   - No code path writes `subtotal_cents`, `gst_cents`, or `total_cents` without going through `calculateQuoteTotals()` or an explicitly documented invoice-only calculator.
   - No Supabase schema migration is introduced unless the duplicate-scope guard cannot be made deterministic with existing data.
   - AI still has no access to write quote prices.
+<<<<<<< HEAD
   - Room anchors can represent partial surface selections without hidden required surfaces.
   - Future Average Property Price presets can enter the canonical total path as one base subtotal without being double counted with room anchors.
+=======
+
+  **Verification run (2026-05-17):** `npm run test:run` passed 59 files / 366 tests, `npm run build` passed, and `npm run lint` passed.
+>>>>>>> phrase0

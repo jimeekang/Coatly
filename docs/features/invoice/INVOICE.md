@@ -52,9 +52,14 @@ draft → sent → paid
 ## 견적서 → 청구서 변환
 
 견적서 accept 후 "Create Invoice" 버튼으로 변환:
-- Quote의 room/surface 데이터를 line item으로 변환
+- Quote의 approved total을 설명할 수 있는 invoice line item으로 변환
+- base quote scope가 `quote_line_items`에 없으면 base scope invoice line을 생성
+- selected optional add-on만 invoice에 포함하고, unselected optional add-on은 제외
+- quote discount/manual adjustment가 있으면 approved quote total과 invoice preset total이 달라지지 않도록 단일 parity-safe line 또는 명확한 block message를 사용
 - `quote_id` 필드로 연결 관계 유지
 - 변환 후에도 line item 수정 가능
+
+관련 계산 규칙은 [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)의 quote-to-invoice parity 기준을 따른다.
 
 ## 부분 납부
 
@@ -73,9 +78,15 @@ draft → sent → paid
 - [x] GST 10% 자동 계산
 - [x] 고객 이메일 발송 + public PDF token
 - [x] due soon/overdue reminder cron 멱등성
+- [x] quote base scope invoice line 생성
+- [x] selected optional add-on만 invoice preset에 포함
+- [x] quote discount는 parity-safe single line으로 처리
+- [x] manual adjustment quote는 preset 생성 차단 메시지 표시
 
 ## Remaining Work
 
+- [ ] PDF/public quote까지 포함한 end-to-end total parity 회귀 테스트
+- [ ] manual adjustment를 invoice에서 과세/비과세 조정 row로 지원할지 별도 decision
 - [ ] Invoice reminder 실패/재시도 운영 UI
 - [ ] 저장 원자성 RPC 검토
 

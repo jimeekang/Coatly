@@ -298,6 +298,7 @@ export function QuoteActions({
           <Link
             href={publicQuoteUrl}
             target="_blank"
+            rel="noreferrer"
             className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors"
           >
             <svg

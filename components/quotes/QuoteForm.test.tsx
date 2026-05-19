@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { calculateQuickQuotePreview } from '@/components/quotes/QuickQuoteBuilder';
 import { QuoteForm } from '@/components/quotes/QuoteForm';
+import { calculateQuoteTotals } from '@/lib/quotes';
 import { buildDefaultRateSettings } from '@/lib/rate-settings';
 
 const backMock = vi.fn();
@@ -100,6 +101,10 @@ function getEstimateTotalsCents() {
   );
 }
 
+function getEstimateTotalsKey() {
+  return getEstimateTotalsCents().sort((a, b) => a - b).join(',');
+}
+
 async function addLibraryItemToQuote(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Add Item' }));
   await user.click(
@@ -108,12 +113,17 @@ async function addLibraryItemToQuote(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Add to Quote' }));
 }
 
+async function addDetailedSpecificRoom(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+  await user.click(screen.getByRole('button', { name: 'Add Room' }));
+}
+
 describe('QuoteForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('submits a quick-mode payload when a room preset is added and form submitted', async () => {
+  it('submits a detailed interior payload when form submitted', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
 
@@ -124,9 +134,7 @@ describe('QuoteForm', () => {
     await user.type(screen.getByLabelText('Title'), 'Harbor Cafe repaint');
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
-
-    // Add a Living Room via the room preset grid
-    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    await addDetailedSpecificRoom(user);
 
     // Submit
     await user.click(screen.getByRole('button', { name: 'Save Quote' }));
@@ -158,7 +166,7 @@ describe('QuoteForm', () => {
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
     await user.clear(screen.getByLabelText('Booking Duration'));
     await user.type(screen.getByLabelText('Booking Duration'), '4');
-    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    await addDetailedSpecificRoom(user);
     await user.click(screen.getByRole('button', { name: 'Save Quote' }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
@@ -185,7 +193,7 @@ describe('QuoteForm', () => {
     await user.type(screen.getByLabelText('Title'), 'Email-ready quote');
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
-    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    await addDetailedSpecificRoom(user);
     await user.click(
       screen.getByRole('button', { name: 'Send Quote to Client' })
     );
@@ -251,7 +259,7 @@ describe('QuoteForm', () => {
     await user.type(screen.getByLabelText('Title'), 'Warehouse repaint');
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
-    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    await addDetailedSpecificRoom(user);
     await user.click(screen.getByRole('button', { name: 'Save Quote' }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
@@ -262,29 +270,173 @@ describe('QuoteForm', () => {
     );
   });
 
-  it('switches to advanced mode and shows InteriorEstimateBuilder', async () => {
+  it('shows detailed estimate directly without the nested quick advanced switcher', async () => {
     const user = userEvent.setup();
 
     render(<QuoteForm customers={[CUSTOMER]} />);
 
-    await user.click(screen.getByRole('button', { name: /Advanced/i }));
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
 
-    // Advanced mode renders property-type toggle buttons from InteriorEstimateBuilder
     expect(
       screen.getByRole('button', { name: 'Apartment' })
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Quick$/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Advanced$/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('submits a quick whole-property preset snapshot', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const rateSettings = buildDefaultRateSettings();
+    rateSettings.pricing.preferred_pricing_method = 'detailed_quick';
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        onSubmit={onSubmit}
+        rateSettings={rateSettings}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Two bed apartment repaint');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(
+      screen.getByRole('button', { name: /2 Bed 2 Bath Apartment/i })
+    );
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0][0];
+
+    expect(payload.pricing_method).toBe('detailed_quick');
+    expect(payload.pricing_method_inputs.inputs.property_preset).toEqual(
+      expect.objectContaining({
+        estimate_category: 'interior',
+        label: '2 Bed 2 Bath Apartment',
+        property_type: 'apartment',
+        apartment_type: '2_bedroom_standard',
+        bedrooms: 2,
+        bathrooms: 2,
+        sqm: 89,
+        trim_paint_system: 'oil_2coat',
+        subtotal_cents: 495650,
+        total_cents: 545215,
+      })
+    );
+  });
+
+  it('applies the selected Quick Estimate trim base to room snapshots', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const rateSettings = buildDefaultRateSettings();
+    rateSettings.pricing.preferred_pricing_method = 'detailed_quick';
+    rateSettings.quick_estimate.property_presets = [];
+    rateSettings.quick_estimate.rooms = [
+      {
+        id: 'quick-bedroom',
+        version: 2,
+        label: 'Bedroom',
+        enabled_surfaces: ['trim'],
+        sizes: {
+          small: {
+            walls_cents: 0,
+            ceiling_cents: 0,
+            trim_cents: 18000,
+            trim_oil_cents: 18000,
+            trim_water_cents: 36000,
+          },
+          medium: {
+            walls_cents: 0,
+            ceiling_cents: 0,
+            trim_cents: 20000,
+            trim_oil_cents: 20000,
+            trim_water_cents: 42000,
+          },
+          large: {
+            walls_cents: 0,
+            ceiling_cents: 0,
+            trim_cents: 24000,
+            trim_oil_cents: 24000,
+            trim_water_cents: 50000,
+          },
+        },
+        sort_order: 0,
+      },
+    ];
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        onSubmit={onSubmit}
+        rateSettings={rateSettings}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Water base trim quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('button', { name: 'Water Base' }));
+    await user.click(screen.getByRole('button', { name: '+ Bedroom' }));
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0][0];
+
+    expect(payload.pricing_method_inputs.inputs.global_trim_paint_system).toBe(
+      'water_3coat_white_finish'
+    );
+    expect(payload.pricing_method_inputs.inputs.rooms[0]).toEqual(
+      expect.objectContaining({
+        label: 'Bedroom',
+        selected_surfaces: ['trim'],
+        trim_paint_system: 'water_3coat_white_finish',
+        trim_cents: 42000,
+        total_cents: 42000,
+      })
+    );
   });
 
   it('copies advanced room library items into the quote snapshot', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const rateSettings = buildDefaultRateSettings();
+    rateSettings.quick_estimate.rooms = [
+      {
+        id: 'quick-bedroom',
+        version: 2,
+        label: 'Bedroom',
+        enabled_surfaces: ['walls', 'ceiling', 'trim'],
+	        sizes: {
+	          small: { walls_cents: 90000, ceiling_cents: 30000, trim_cents: 10000 },
+	          medium: {
+	            walls_cents: 120000,
+	            ceiling_cents: 45000,
+	            trim_cents: 15000,
+	            wall_area_m2: 40,
+	            ceiling_area_m2: 12,
+	            trim_linear_m: 18,
+	          },
+	          large: { walls_cents: 150000, ceiling_cents: 60000, trim_cents: 20000 },
+	        },
+        sort_order: 0,
+      },
+    ];
     rateSettings.detailed_estimate_items.advanced_rooms = [
       {
         id: 'adv-bedroom-repaint',
         version: 2,
         label: 'Bedroom repaint',
-        anchor_room_type: 'Bedroom 1',
+        anchor_room_type: 'Bedroom',
+        source_room_template_id: 'quick-bedroom',
+        source_room_template_version: 2,
+        default_size: 'medium',
         include_walls: true,
         include_ceiling: true,
         include_trim: false,
@@ -305,7 +457,7 @@ describe('QuoteForm', () => {
     await user.type(screen.getByLabelText('Title'), 'Bedroom repaint quote');
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
-    await user.click(screen.getByRole('button', { name: /Advanced/i }));
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
     await user.click(screen.getByRole('button', { name: 'Bedroom repaint' }));
 
     expect(screen.getByLabelText('Room Name')).toHaveValue('Bedroom repaint');
@@ -317,18 +469,343 @@ describe('QuoteForm', () => {
     const payload = onSubmit.mock.calls[0][0];
     expect(payload.interior_estimate.rooms).toEqual([
       expect.objectContaining({
-        name: 'Bedroom repaint',
-        anchor_room_type: 'Bedroom 1',
-        height_m: 2.7,
-        include_walls: true,
-        include_ceiling: true,
-        include_trim: false,
+	        name: 'Bedroom repaint',
+	        anchor_room_type: 'Bedroom',
+	        height_m: null,
+	        pricing_model: 'measured',
+	        wall_area_m2: 40,
+	        ceiling_area_m2: 12,
+	        include_walls: true,
+	        include_ceiling: true,
+	        include_trim: false,
         source_rate_item_id: 'adv-bedroom-repaint',
         source_rate_item_version: 2,
         source_rate_item_label: 'Bedroom repaint',
-        rate_snapshot_version: 1,
-      }),
-    ]);
+        source_room_template_id: 'quick-bedroom',
+	        source_room_template_version: 2,
+	        source_room_template_label: 'Bedroom',
+	        source_room_template_size: 'medium',
+	        rate_snapshot_version: 1,
+	        source_condition: 'fair',
+	        source_wall_paint_system: 'repaint_2coat',
+	        source_wall_rate_cents_per_m2: 1800,
+	        source_ceiling_rate_cents_per_m2: 2000,
+	        source_condition_multiplier_pct: 100,
+	      }),
+	    ]);
+  });
+
+  it('removes room-level door and window toggles from advanced room surfaces', async () => {
+    const user = userEvent.setup();
+
+    render(<QuoteForm customers={[CUSTOMER]} />);
+
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+
+    expect(
+      screen.getAllByRole('button', { name: 'Walls' }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button', { name: 'Ceiling' }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button', { name: 'Trim' }).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole('button', { name: /^Doors$/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Windows$/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it('starts detailed specific areas empty at zero dollars', async () => {
+    const user = userEvent.setup();
+
+    render(<QuoteForm customers={[CUSTOMER]} />);
+
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+
+    expect(getEstimateTotalsKey()).toBe('0');
+    expect(screen.queryByLabelText('Room Name')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Walls' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Refresh (1 coat)' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Water Base' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('applies detailed specific-area pricing controls per room', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const rateSettings = buildDefaultRateSettings();
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        onSubmit={onSubmit}
+        rateSettings={rateSettings}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Per-room detailed quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+    await user.selectOptions(screen.getByLabelText('Condition for Room 1'), 'poor');
+    await user.click(screen.getByRole('button', { name: 'Trim' }));
+    await user.click(screen.getByRole('button', { name: 'New Plaster (3 coats)' }));
+    await user.click(screen.getByRole('button', { name: 'Water Base' }));
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const room = onSubmit.mock.calls[0][0].interior_estimate.rooms[0];
+
+    expect(room).toEqual(
+      expect.objectContaining({
+        include_trim: true,
+	        source_condition: 'poor',
+	        source_wall_paint_system: 'new_plaster_3coat',
+	        source_trim_paint_system: 'water_3coat_white_finish',
+	        source_condition_multiplier_pct: 130,
+	        source_wall_rate_cents_per_m2: 2800,
+	        source_ceiling_rate_cents_per_m2: 3000,
+	        source_trim_rate_cents_per_m: expect.any(Number),
+	      })
+	    );
+  });
+
+  it('keeps specific-area room trim base and dimensions out of the way until needed', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(<QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} />);
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Room repaint quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+
+    expect(screen.queryByLabelText('Length (m)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Width (m)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Height (m)')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Oil Base' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Water Base' })
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Trim' }));
+
+    expect(screen.getByRole('button', { name: 'Oil Base' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Water Base' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const room = onSubmit.mock.calls[0][0].interior_estimate.rooms[0];
+
+    expect(room).toEqual(
+      expect.objectContaining({
+        length_m: null,
+        width_m: null,
+        height_m: null,
+      })
+    );
+  });
+
+  it('submits detailed specific rooms with measured wall ceiling and trim quantities', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(<QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} />);
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Measured room quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+
+    await user.clear(screen.getByLabelText('Wall area (sqm)'));
+    await user.type(screen.getByLabelText('Wall area (sqm)'), '40');
+    await user.clear(screen.getByLabelText('Ceiling area (sqm)'));
+    await user.type(screen.getByLabelText('Ceiling area (sqm)'), '12');
+    await user.click(screen.getByRole('button', { name: 'Trim' }));
+    await user.clear(screen.getByLabelText('Trim length (m)'));
+    await user.type(screen.getByLabelText('Trim length (m)'), '18');
+
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const room = onSubmit.mock.calls[0][0].interior_estimate.rooms[0];
+
+    expect(room).toEqual(
+      expect.objectContaining({
+        pricing_model: 'measured',
+        wall_area_m2: 40,
+        ceiling_area_m2: 12,
+        trim_linear_m: 18,
+        include_trim: true,
+      })
+    );
+  });
+
+  it('hides whole-property fields in detailed specific areas', async () => {
+    const user = userEvent.setup();
+
+    render(<QuoteForm customers={[CUSTOMER]} />);
+
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+
+    expect(screen.queryByLabelText('Apartment Type')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Apartment Size (sqm)')
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'House' }));
+
+    expect(screen.queryByLabelText('Bedrooms')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Bathrooms')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Storeys')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('House Size (sqm)')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Entire Property' }));
+
+    expect(screen.getByLabelText('Bedrooms')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bathrooms')).toBeInTheDocument();
+    expect(screen.getByLabelText('Storeys')).toBeInTheDocument();
+    expect(screen.getByLabelText('House Size (sqm)')).toBeInTheDocument();
+  });
+
+  it('submits detailed specific areas without whole-property details', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(<QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} />);
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Partial house repaint');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+    await user.click(screen.getByRole('button', { name: 'House' }));
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+
+    expect(onSubmit.mock.calls[0][0].interior_estimate.property_details).toEqual(
+      {
+        apartment_type: null,
+        sqm: null,
+        bedrooms: null,
+        bathrooms: null,
+        storeys: null,
+      }
+    );
+  });
+
+  it('updates detailed estimate total when switching estimate modes', async () => {
+    const user = userEvent.setup();
+    const rateSettings = buildDefaultRateSettings();
+
+    render(<QuoteForm customers={[CUSTOMER]} rateSettings={rateSettings} />);
+
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+
+    const specificAreasTotal = getEstimateTotalsKey();
+    expect(specificAreasTotal).toBe('0');
+
+    await user.click(screen.getByRole('button', { name: 'Entire Property' }));
+
+    await waitFor(() => {
+      expect(getEstimateTotalsKey()).not.toBe(specificAreasTotal);
+    });
+
+    const entirePropertyTotal = getEstimateTotalsKey();
+
+    await user.click(screen.getByRole('button', { name: 'Specific Areas' }));
+
+    await waitFor(() => {
+      expect(getEstimateTotalsKey()).toBe(specificAreasTotal);
+    });
+    expect(entirePropertyTotal).not.toBe(specificAreasTotal);
+  });
+
+  it('blocks quote submit when a selected quick source resolves to zero dollars', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const rateSettings = buildDefaultRateSettings();
+    rateSettings.pricing.preferred_pricing_method = 'detailed_quick';
+    rateSettings.quick_estimate.rooms = [
+      {
+        id: 'quick-bedroom',
+        version: 1,
+        label: 'Bedroom',
+        enabled_surfaces: ['walls'],
+        sizes: {
+          small: { walls_cents: 0, ceiling_cents: 0, trim_cents: 0 },
+          medium: { walls_cents: 0, ceiling_cents: 0, trim_cents: 0 },
+          large: { walls_cents: 0, ceiling_cents: 0, trim_cents: 0 },
+        },
+        sort_order: 0,
+      },
+    ];
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        onSubmit={onSubmit}
+        rateSettings={rateSettings}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Zero quick quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('button', { name: '+ Bedroom' }));
+
+    expect(screen.getByText(/Bedroom walls is A\$0/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('blocks advanced submit when all room surfaces are deselected', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(<QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} />);
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Invalid advanced quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+    await user.click(screen.getByRole('button', { name: 'Walls' }));
+    await user.click(screen.getByRole('button', { name: 'Ceiling' }));
+
+    expect(
+      screen.getByText(/Select at least one surface for Room 1/i)
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it('pre-fills advanced mode when defaultValues has rooms', () => {
@@ -359,9 +836,7 @@ describe('QuoteForm', () => {
     expect(screen.getByLabelText('Room Name')).toHaveValue('Living Room');
   });
 
-  it('pre-fills advanced estimate coating from interior estimate defaults', async () => {
-    const user = userEvent.setup();
-
+  it('pre-fills advanced estimate coating from interior estimate defaults', () => {
     render(
       <QuoteForm
         customers={[CUSTOMER]}
@@ -406,12 +881,48 @@ describe('QuoteForm', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: /Advanced/i }));
-
     expect(
       screen.getByRole('button', { name: 'New Plaster (3 coats)' })
     ).toHaveAttribute('aria-pressed', 'true');
   });
+
+  it('applies the selected detailed trim base to specific-area room trim', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const rateSettings = buildDefaultRateSettings();
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        onSubmit={onSubmit}
+        rateSettings={rateSettings}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Water base detailed trim');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
+    await user.click(screen.getByRole('tab', { name: /Detailed/i }));
+    await user.click(screen.getByRole('button', { name: 'Add Room' }));
+    await user.click(screen.getByRole('button', { name: 'Trim' }));
+    await user.click(screen.getByRole('button', { name: 'Water Base' }));
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0][0];
+
+    expect(payload.interior_estimate.rooms[0]).toEqual(
+      expect.objectContaining({
+	        include_trim: true,
+	        source_trim_paint_system: 'water_3coat_white_finish',
+	        source_trim_rate_cents_per_m: expect.any(Number),
+	      })
+	    );
+	    expect(
+	      payload.interior_estimate.rooms[0].source_trim_rate_cents_per_m
+	    ).toBeGreaterThan(3500);
+	  });
 
   it('ignores invalid saved interior estimate defaults instead of crashing edit mode', () => {
     render(
@@ -431,10 +942,7 @@ describe('QuoteForm', () => {
     );
 
     expect(
-      screen.queryByRole('button', { name: 'Apartment' })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Living Room/i })
+      screen.getByRole('button', { name: 'Apartment' })
     ).toBeInTheDocument();
   });
 
@@ -456,8 +964,11 @@ describe('QuoteForm', () => {
 
     render(<QuoteForm customers={[CUSTOMER]} rateSettings={rateSettings} />);
 
-    // "Quick" estimateMode toggle button (inside hybrid/detailed-estimate mode)
-    expect(screen.getAllByRole('button', { name: /Quick/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('tab', { name: /Detailed/i })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: 'Apartment' })).toBeInTheDocument();
     expect(screen.getByLabelText('Labour Markup')).toBeInTheDocument();
   });
 
@@ -543,12 +1054,83 @@ describe('QuoteForm', () => {
     );
   });
 
+  it('matches canonical server totals for a known day-rate fixture', () => {
+    const expected = calculateQuoteTotals({
+      base_subtotal_cents: 250000,
+      discount_cents: 10000,
+      line_items: [
+        {
+          quantity: 1,
+          unit_price_cents: 30000,
+          is_optional: false,
+          is_selected: true,
+        },
+        {
+          quantity: 1,
+          unit_price_cents: 40000,
+          is_optional: true,
+          is_selected: false,
+        },
+      ],
+    });
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        defaultValues={{
+          customer_id: CUSTOMER.id,
+          title: 'Canonical fixture quote',
+          status: 'draft',
+          valid_until: '2026-04-10',
+          notes: '',
+          internal_notes: '',
+          rooms: [],
+          pricing_method: 'day_rate',
+          pricing_method_inputs: {
+            method: 'day_rate',
+            inputs: {
+              days: 2,
+              daily_rate_cents: 100000,
+              material_method: 'percentage',
+              material_percent: 25,
+            },
+          },
+          discount_cents: 10000,
+          line_items: [
+            {
+              name: 'Feature wall upgrade',
+              category: 'service',
+              unit: 'item',
+              quantity: 1,
+              unit_price_cents: 30000,
+              is_optional: false,
+              is_selected: true,
+            },
+            {
+              name: 'Optional garage door',
+              category: 'service',
+              unit: 'item',
+              quantity: 1,
+              unit_price_cents: 40000,
+              is_optional: true,
+              is_selected: false,
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(getEstimateTotalsCents()).toEqual([expected.total_cents]);
+    expect(screen.getAllByText('$2,800.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('-$100.00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('+$270.00').length).toBeGreaterThan(0);
+  });
+
   it('includes line items in hybrid preview totals', async () => {
     const user = userEvent.setup();
 
     render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
 
-    await user.click(screen.getByRole('button', { name: /Living Room/i }));
     const before = getEstimateTotalsCents()[0];
 
     await addLibraryItemToQuote(user);
@@ -564,7 +1146,6 @@ describe('QuoteForm', () => {
 
     render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
 
-    await user.click(screen.getByRole('button', { name: /Living Room/i }));
     await user.click(screen.getByRole('button', { name: 'Add Item' }));
     await user.click(
       screen.getByRole('button', { name: /Premium wash & wear/i })
@@ -594,8 +1175,7 @@ describe('QuoteForm', () => {
 
     render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
 
-    // Establish a base total with a room
-    await user.click(screen.getByRole('button', { name: /Living Room/i }));
+    // Establish a base total with the default detailed estimate room.
     const before = getEstimateTotalsCents()[0];
 
     // Add a new line item via "Add Line Item"
@@ -621,6 +1201,20 @@ describe('QuoteForm', () => {
     expect(getEstimateTotalsCents()).toEqual([withItemTotal]);
   });
 
+  it('warns when a custom line item looks like a priced scope already in the estimate', async () => {
+    const user = userEvent.setup();
+
+    render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
+
+    await addDetailedSpecificRoom(user);
+    await user.click(screen.getByRole('button', { name: 'Add Line Item' }));
+    await user.type(screen.getByLabelText('Line item name'), 'Living room walls');
+
+    expect(
+      screen.getByText(/already includes Living Room walls/i)
+    ).toBeInTheDocument();
+  });
+
   it('suggests saved service items for custom line items and autofills them', async () => {
     const user = userEvent.setup();
     render(
@@ -639,8 +1233,7 @@ describe('QuoteForm', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: /Living Room/i }));
-
+    const before = getEstimateTotalsCents()[0];
     await user.click(screen.getByRole('button', { name: 'Add Line Item' }));
     await user.type(screen.getByLabelText('Line item name'), 'ceiling');
 
@@ -653,7 +1246,7 @@ describe('QuoteForm', () => {
       'Two-coat ceiling repaint service'
     );
     expect(screen.getByLabelText('Line item price')).toHaveValue('225.00');
-    expect(getEstimateTotalsCents()).toEqual([376090]);
+    expect(getEstimateTotalsCents()).toEqual([before + 24750]);
   });
 
   it('applies custom rate settings to the quick quote preview engine', () => {

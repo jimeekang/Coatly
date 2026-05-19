@@ -15,7 +15,7 @@ Coatly는 호주 소규모 페인터를 위한 모바일 우선 SaaS입니다. �
 | Data | Supabase Postgres, Auth, RLS, Storage |
 | Payments | Stripe Checkout, Portal, Webhook |
 | PDF/Email | `@react-pdf/renderer`, Resend |
-| AI | Gemini Flash via Genkit (v1 wedge core) |
+| AI | Alibaba Cloud / Qwen `qwen3-vl-flash` for v1 AI Quote Writer, photo analysis, Today Assistant, and Follow-up Writer |
 | Calendar | Google Calendar OAuth + Calendar API |
 | Deploy | Vercel serverless |
 

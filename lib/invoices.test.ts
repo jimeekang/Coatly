@@ -8,8 +8,105 @@ import {
   parseInvoiceCreateInput,
   resolveInvoiceStatus,
 } from '@/lib/invoices';
+import { buildQuoteInvoicePresetLines } from '@/lib/invoice-quote-presets';
 
 describe('lib/invoices', () => {
+  it('builds full invoice lines from quote base scope and selected add-ons', () => {
+    const result = buildQuoteInvoicePresetLines({
+      id: 'quote-1',
+      quote_number: 'QUO-0004',
+      title: 'Cafe repaint',
+      subtotal_cents: 120000,
+      total_cents: 132000,
+      discount_cents: 0,
+      manual_adjustment_cents: 0,
+      deposit_percent: 0,
+      billed_subtotal_cents: 0,
+      line_items: [
+        {
+          description: 'Selected trim upgrade',
+          quantity: 2,
+          unit_price_cents: 9999,
+          total_cents: 25000,
+          is_optional: true,
+          is_selected: true,
+        },
+        {
+          description: 'Unselected garage door',
+          quantity: 1,
+          unit_price_cents: 30000,
+          total_cents: 30000,
+          is_optional: true,
+          is_selected: false,
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      error: null,
+      line_items: [
+        {
+          description: 'Approved quote scope - QUO-0004 - Cafe repaint',
+          quantity: 1,
+          unit_price_cents: 95000,
+        },
+        {
+          description: 'Selected trim upgrade',
+          quantity: 1,
+          unit_price_cents: 25000,
+        },
+      ],
+    });
+  });
+
+  it('uses a parity-safe discounted quote line for full invoices', () => {
+    const result = buildQuoteInvoicePresetLines({
+      id: 'quote-1',
+      quote_number: 'QUO-0005',
+      title: 'Discounted repaint',
+      subtotal_cents: 120000,
+      total_cents: 121000,
+      discount_cents: 10000,
+      manual_adjustment_cents: 0,
+      deposit_percent: 0,
+      billed_subtotal_cents: 0,
+      line_items: [],
+    });
+
+    expect(result).toEqual({
+      error: null,
+      line_items: [
+        {
+          description:
+            'Approved quote scope - QUO-0005 - Discounted repaint (discount applied)',
+          quantity: 1,
+          unit_price_cents: 110000,
+        },
+      ],
+    });
+  });
+
+  it('blocks quote invoice presets when manual adjustment would break total parity', () => {
+    const result = buildQuoteInvoicePresetLines({
+      id: 'quote-1',
+      quote_number: 'QUO-0006',
+      title: 'Adjusted repaint',
+      subtotal_cents: 120000,
+      total_cents: 128500,
+      discount_cents: 0,
+      manual_adjustment_cents: -3500,
+      deposit_percent: 0,
+      billed_subtotal_cents: 0,
+      line_items: [],
+    });
+
+    expect(result).toEqual({
+      error:
+        'This quote has a manual adjustment. Create the invoice manually or remove the adjustment before using a quote preset.',
+      line_items: [],
+    });
+  });
+
   it('calculates subtotal, gst, and total from line items', () => {
     const totals = calculateInvoiceTotals([
       {

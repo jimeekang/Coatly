@@ -58,6 +58,36 @@ describe('interiorEstimateSchema', () => {
     ]);
   });
 
+  it('accepts house specific-area estimates without whole-property details', () => {
+    const parsed = interiorEstimateSchema.safeParse({
+      property_type: 'house',
+      estimate_mode: 'specific_areas',
+      condition: 'fair',
+      scope: ['walls'],
+      property_details: {
+        apartment_type: null,
+        sqm: null,
+        bedrooms: null,
+        bathrooms: null,
+        storeys: null,
+      },
+      rooms: [
+        {
+          name: 'Living Room',
+          anchor_room_type: 'Living Room',
+          room_type: 'interior',
+          include_walls: true,
+          include_ceiling: false,
+          include_trim: false,
+        },
+      ],
+      opening_items: [],
+      trim_items: [],
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
   it('normalizes legacy wall paint system values', () => {
     const parsed = interiorEstimateSchema.safeParse({
       property_type: 'apartment',

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  calculateQuoteTotals,
   calculateQuoteLineItemsSubtotal,
   calculateQuotePreview,
   getSuggestedRatePerSqmCents,
@@ -14,6 +15,74 @@ import {
 } from '@/lib/quotes';
 
 describe('lib/quotes', () => {
+  it('calculates canonical quote totals with selected add-ons, discount, and adjustment', () => {
+    expect(
+      calculateQuoteTotals({
+        base_subtotal_cents: 100000,
+        discount_cents: 10000,
+        manual_adjustment_cents: 5000,
+        line_items: [
+          {
+            quantity: 1,
+            unit_price_cents: 20000,
+            is_optional: true,
+            is_selected: true,
+          },
+          {
+            quantity: 1,
+            unit_price_cents: 30000,
+            is_optional: true,
+            is_selected: false,
+          },
+        ],
+      })
+    ).toEqual({
+      line_items_subtotal_cents: 20000,
+      subtotal_cents: 120000,
+      discounted_subtotal_cents: 110000,
+      gst_cents: 11000,
+      total_cents: 126000,
+    });
+  });
+
+  it('clamps quote discounts and final totals to non-negative values', () => {
+    expect(
+      calculateQuoteTotals({
+        base_subtotal_cents: 5000,
+        discount_cents: 999999,
+        manual_adjustment_cents: -10000,
+      })
+    ).toEqual({
+      line_items_subtotal_cents: 0,
+      subtotal_cents: 5000,
+      discounted_subtotal_cents: 0,
+      gst_cents: 0,
+      total_cents: 0,
+    });
+  });
+
+  it('uses stored quote line item totals as the saved price snapshot', () => {
+    expect(
+      calculateQuoteTotals({
+        base_subtotal_cents: 10000,
+        line_items: [
+          {
+            quantity: 3,
+            unit_price_cents: 9999,
+            total_cents: 25000,
+            is_optional: false,
+            is_selected: true,
+          },
+        ],
+      })
+    ).toMatchObject({
+      line_items_subtotal_cents: 25000,
+      subtotal_cents: 35000,
+      gst_cents: 3500,
+      total_cents: 38500,
+    });
+  });
+
   it('detects Supabase schema-cache errors for missing quote customer snapshot columns', () => {
     expect(
       isMissingQuoteCustomerSnapshotColumnError(

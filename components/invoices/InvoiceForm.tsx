@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { InvoicePaymentMethod } from '@/types/invoice';
 import { getGSTFromExAmount } from '@/utils/gst';
 import { formatAUD, formatDate } from '@/utils/format';
+import { buildQuoteInvoicePresetLines } from '@/lib/invoice-quote-presets';
 import {
   FormField,
   formControlClassName,
@@ -86,7 +87,10 @@ export type InvoiceFormQuoteOption = {
   quote_number: string;
   title: string | null;
   subtotal_cents: number;
+  gst_cents: number;
   total_cents: number;
+  discount_cents: number;
+  manual_adjustment_cents: number;
   deposit_percent: number;
   status: string;
   valid_until: string | null;
@@ -184,35 +188,8 @@ function createInitialLineItems(defaultValues?: InvoiceFormDefaultValues): Invoi
   return [{ description: '', quantity: '1', unitPrice: '' }];
 }
 
-function buildLineItemsFromQuote(quote: InvoiceFormQuoteOption): InvoiceLineDraft[] {
-  const includedItems = quote.line_items.filter((item) => !item.is_optional || item.is_selected);
-
-  if (!includedItems.length) {
-    return [{ description: '', quantity: '1', unitPrice: '' }];
-  }
-
-  return includedItems.map((item) => ({
-    description: item.description,
-    quantity: String(item.quantity),
-    unitPrice: (item.unit_price_cents / 100).toFixed(2),
-  }));
-}
-
 function buildMoneyInput(amountCents: number) {
   return (Math.max(amountCents, 0) / 100).toFixed(2);
-}
-
-function buildSingleAmountLine(description: string, amountCents: number): InvoiceLineDraft[] {
-  return [{ description, quantity: '1', unitPrice: buildMoneyInput(amountCents) }];
-}
-
-function buildQuoteScopeLabel(quote: InvoiceFormQuoteOption) {
-  return quote.title?.trim() ? `${quote.quote_number} - ${quote.title.trim()}` : quote.quote_number;
-}
-
-function normalizeProgressPercent(value: number) {
-  if (!Number.isFinite(value)) return 100;
-  return Math.min(100, Math.max(1, Math.round(value)));
 }
 
 function buildInvoicePreset(
@@ -220,40 +197,24 @@ function buildInvoicePreset(
   invoiceType: InvoiceFormDefaultValues['invoice_type'],
   existingLinkedQuoteSubtotal = 0,
   progressPercent = 100
-): InvoiceLineDraft[] {
-  const quoteLabel = buildQuoteScopeLabel(quote);
-  const depositSubtotalCents =
-    quote.deposit_percent > 0
-      ? Math.round((quote.subtotal_cents * quote.deposit_percent) / 100)
-      : 0;
-  const billedBeforeThisInvoice = Math.max(
-    quote.billed_subtotal_cents - existingLinkedQuoteSubtotal,
-    0
-  );
-  const remainingSubtotalCents = Math.max(quote.subtotal_cents - billedBeforeThisInvoice, 0);
-  const progressSuggestedSubtotalCents = Math.max(
-    quote.subtotal_cents -
-      Math.max(billedBeforeThisInvoice, depositSubtotalCents > 0 ? depositSubtotalCents : 0),
-    0
-  );
-  const normalizedProgressPercent = normalizeProgressPercent(progressPercent);
-  const progressClaimSubtotalCents = Math.round(
-    (progressSuggestedSubtotalCents * normalizedProgressPercent) / 100
-  );
+): { error: string | null; lineItems: InvoiceLineDraft[] } {
+  const result = buildQuoteInvoicePresetLines(quote, {
+    invoice_type: invoiceType,
+    existing_linked_quote_subtotal_cents: existingLinkedQuoteSubtotal,
+    progress_percent: progressPercent,
+  });
 
-  if (invoiceType === 'full') return buildLineItemsFromQuote(quote);
-  if (invoiceType === 'deposit') {
-    return depositSubtotalCents > 0
-      ? buildSingleAmountLine(`Deposit (${quote.deposit_percent}%) for ${quoteLabel}`, depositSubtotalCents)
-      : buildLineItemsFromQuote(quote);
-  }
-  if (invoiceType === 'progress') {
-    return buildSingleAmountLine(
-      `Progress claim (${normalizedProgressPercent}%) for ${quoteLabel}`,
-      progressClaimSubtotalCents
-    );
-  }
-  return buildSingleAmountLine(`Final balance for ${quoteLabel}`, remainingSubtotalCents);
+  return {
+    error: result.error,
+    lineItems:
+      result.line_items.length > 0
+        ? result.line_items.map((item) => ({
+            description: item.description,
+            quantity: String(item.quantity),
+            unitPrice: buildMoneyInput(item.unit_price_cents),
+          }))
+        : [{ description: '', quantity: '1', unitPrice: '' }],
+  };
 }
 
 export function InvoiceForm({
@@ -405,14 +366,15 @@ export function InvoiceForm({
     invoiceType: InvoiceFormDefaultValues['invoice_type'],
     progressPercentValue = 100
   ) {
-    setLineItems(
-      buildInvoicePreset(
-        quote,
-        invoiceType,
-        existingLinkedQuoteSubtotal,
-        progressPercentValue
-      )
+    const preset = buildInvoicePreset(
+      quote,
+      invoiceType,
+      existingLinkedQuoteSubtotal,
+      progressPercentValue
     );
+    setLineItems(preset.lineItems);
+    setError(preset.error);
+    return preset.error;
   }
 
   function handleFormChange(
@@ -447,15 +409,23 @@ export function InvoiceForm({
 
     if (name === 'quote_id' && value) {
       const matchedQuote = quotes.find((quote) => quote.id === value);
-      if (matchedQuote) applyQuotePreset(matchedQuote, form.invoice_type, Number(progressPercent));
+      if (matchedQuote) {
+        const presetError = applyQuotePreset(
+          matchedQuote,
+          form.invoice_type,
+          Number(progressPercent)
+        );
+        if (presetError) return;
+      }
     }
 
     if (name === 'invoice_type' && selectedQuote) {
-      applyQuotePreset(
+      const presetError = applyQuotePreset(
         selectedQuote,
         value as InvoiceFormDefaultValues['invoice_type'],
         Number(progressPercent)
       );
+      if (presetError) return;
     }
 
     setError(null);
@@ -809,9 +779,9 @@ export function InvoiceForm({
                     </p>
                   </div>
                 </div>
-                {quoteContext.overBilled && (
+                  {quoteContext.overBilled && (
                   <p className="mt-3 text-xs text-amber-700">
-                    This invoice would exceed the quoted subtotal. Check staged billing.
+                    This invoice would exceed the quoted total. Check staged billing.
                   </p>
                 )}
               </div>

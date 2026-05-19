@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
+import { resolveSafeInternalPath } from '@/lib/security/paths';
 import { getStripeClient } from '@/lib/stripe/client';
 import { ensureManagedPortalConfiguration } from '@/lib/stripe/portal';
 import { getStripePriceId } from '@/lib/stripe/plans';
@@ -138,10 +139,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid portal flow' }, { status: 400 });
   }
 
-  const returnPath =
-    typeof body.returnPath === 'string' && body.returnPath.startsWith('/')
-      ? body.returnPath
-      : '/settings';
+  const returnPath = resolveSafeInternalPath(body.returnPath, '/settings', [
+    '/settings',
+  ]);
   const targetPlanId = isPlanId(body.planId) ? body.planId : null;
   const targetInterval = isBillingInterval(body.interval) ? body.interval : 'monthly';
 

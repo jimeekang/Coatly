@@ -3,7 +3,15 @@ import {
   INTERIOR_SCOPE_SHARE,
 } from '@/config/interior-estimate-anchors';
 import { PAINT_RATES } from '@/config/paint-rates';
-import type { UserRateSettings } from '@/lib/rate-settings';
+import {
+  getRoomTemplateSurfaceSnapshotTotalCents,
+  resolveAdvancedRoomPriceSource,
+} from '@/lib/room-price-library';
+import type {
+  QuickRoomSize,
+  QuickRoomSurfacePriceSnapshot,
+  UserRateSettings,
+} from '@/lib/rate-settings';
 
 export const INTERIOR_APARTMENT_TYPES = [
   'studio',
@@ -172,13 +180,34 @@ export type InteriorEstimateInput = {
     length_m: number | null;
     width_m: number | null;
     height_m: number | null;
+    pricing_model?: 'anchor' | 'measured';
+    wall_area_m2?: number | null;
+    ceiling_area_m2?: number | null;
+    trim_linear_m?: number | null;
     include_walls: boolean;
     include_ceiling: boolean;
     include_trim: boolean;
     source_rate_item_id?: string;
     source_rate_item_version?: number;
     source_rate_item_label?: string;
+    source_room_template_id?: string;
+    source_room_template_version?: number;
+    source_room_template_label?: string;
+    source_room_template_size?: QuickRoomSize;
+    source_room_template_surface_prices_cents?: QuickRoomSurfacePriceSnapshot;
+    source_room_template_coating_multiplier_pct?: number;
+    source_room_template_condition_multiplier_pct?: number;
     rate_snapshot_version?: 1;
+    source_anchor_range_cents?: RangeCents;
+    source_wall_rate_cents_per_m2?: number;
+    source_ceiling_rate_cents_per_m2?: number;
+    source_trim_rate_cents_per_m?: number;
+    source_condition_multiplier_pct?: number;
+    source_surface_rate_multiplier?: number;
+    source_scope_multiplier?: number;
+    source_condition?: InteriorCondition;
+    source_wall_paint_system?: InteriorWallPaintSystem;
+    source_trim_paint_system?: InteriorPaintSystem;
   }>;
   opening_items: Array<{
     opening_type: 'door' | 'window';
@@ -189,12 +218,17 @@ export type InteriorEstimateInput = {
     door_scope?: InteriorDoorScope;
     window_type?: InteriorWindowType;
     window_scope?: InteriorWindowScope;
+    rate_snapshot_version?: 1;
+    source_unit_price_cents?: number;
+    source_quantity_scale_factor?: number;
   }>;
   trim_items: Array<{
     trim_type: 'skirting';
     paint_system: InteriorPaintSystem;
     quantity: number;
     room_index: number | null;
+    rate_snapshot_version?: 1;
+    source_unit_price_cents?: number;
   }>;
 };
 
@@ -387,6 +421,21 @@ function inferHouseConfig(details: InteriorEstimateInput['property_details']) {
   return '5_bed_3_bath';
 }
 
+const HOUSE_CONFIG_BASE_SQM = {
+  '2_bed_1_bath': 105,
+  '3_bed_2_bath': 140,
+  '4_bed_2_bath': 190,
+  '5_bed_3_bath': 240,
+} as const;
+
+function getHouseSqmScale(
+  config: keyof typeof HOUSE_CONFIG_BASE_SQM,
+  sqm: number | null | undefined
+) {
+  if (sqm == null || sqm <= 0) return 1;
+  return Math.min(1.35, Math.max(0.78, sqm / HOUSE_CONFIG_BASE_SQM[config]));
+}
+
 function getStoreyMultiplier(storeys: InteriorStoreys | null | undefined) {
   return INTERIOR_ESTIMATE_ANCHORS.modifiers.storeys[storeys ?? '1_storey'];
 }
@@ -490,7 +539,14 @@ function getTrimPaintSystemMultiplier(
       ),
       getWindowPrice('oil_2coat', 'normal', 'window_and_frame', userRates),
     ],
+<<<<<<< HEAD
     [getSkirtingPrice(trimPaintSystem), getSkirtingPrice('oil_2coat')],
+=======
+    [
+      getSkirtingPrice(trimPaintSystem),
+      getSkirtingPrice('oil_2coat'),
+    ],
+>>>>>>> phrase0
   ];
   const ratios = pairs
     .map(([selected, oil]) => (oil > 0 ? selected / oil : 1))
@@ -541,6 +597,82 @@ function getSurfaceRateMultiplier(
     normalized.reduce((sum, item) => sum + weights[item] * ratios[item], 0) /
     totalWeight
   );
+}
+
+function positiveQuantity(value: number | null | undefined) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : 0;
+}
+
+function usesMeasuredRoomPricing(room: InteriorEstimateInput['rooms'][number]) {
+  return (
+    room.pricing_model === 'measured' ||
+    positiveQuantity(room.wall_area_m2) > 0 ||
+    positiveQuantity(room.ceiling_area_m2) > 0 ||
+    positiveQuantity(room.trim_linear_m) > 0
+  );
+}
+
+function getMeasuredConditionMultiplierPct(
+  room: InteriorEstimateInput['rooms'][number],
+  condition: InteriorCondition,
+  userRates?: UserRateSettings | null
+) {
+  if (
+    room.rate_snapshot_version === 1 &&
+    typeof room.source_condition_multiplier_pct === 'number'
+  ) {
+    return room.source_condition_multiplier_pct;
+  }
+  return getRoomTemplateConditionMultiplierPct(userRates, condition);
+}
+
+function getMeasuredWallRate(
+  room: InteriorEstimateInput['rooms'][number],
+  paintSystem: InteriorWallPaintSystem,
+  userRates?: UserRateSettings | null
+) {
+  if (
+    room.rate_snapshot_version === 1 &&
+    typeof room.source_wall_rate_cents_per_m2 === 'number'
+  ) {
+    return room.source_wall_rate_cents_per_m2;
+  }
+  return userRates?.walls?.[paintSystem] ?? PAINT_RATES.walls[paintSystem].ratePerSqm;
+}
+
+function getMeasuredCeilingRate(
+  room: InteriorEstimateInput['rooms'][number],
+  paintSystem: InteriorWallPaintSystem,
+  userRates?: UserRateSettings | null
+) {
+  if (
+    room.rate_snapshot_version === 1 &&
+    typeof room.source_ceiling_rate_cents_per_m2 === 'number'
+  ) {
+    return room.source_ceiling_rate_cents_per_m2;
+  }
+  return (
+    userRates?.ceiling?.[paintSystem] ??
+    PAINT_RATES.ceiling[paintSystem].ratePerSqm
+  );
+}
+
+function getMeasuredTrimRate(
+  room: InteriorEstimateInput['rooms'][number],
+  paintSystem: InteriorPaintSystem,
+  userRates?: UserRateSettings | null
+) {
+  if (
+    room.rate_snapshot_version === 1 &&
+    typeof room.source_trim_rate_cents_per_m === 'number'
+  ) {
+    return room.source_trim_rate_cents_per_m;
+  }
+  const baseRate =
+    userRates?.trim?.repaint_2coat ?? PAINT_RATES.trim.repaint_2coat.ratePerSqm;
+  return cap(baseRate * getTrimPaintSystemMultiplier(paintSystem, userRates));
 }
 
 /**
@@ -737,6 +869,7 @@ function calculateEntireHouseEstimate(
   const config = inferHouseConfig(input.property_details);
   const baseRange =
     INTERIOR_ESTIMATE_ANCHORS.house.entire_property.by_config[config];
+  const sqmScale = getHouseSqmScale(config, input.property_details.sqm);
   const condition = getCondition('house', input.condition);
   const scope_multiplier = getScopeMultiplier(input.scope);
   const storey_multiplier = getStoreyMultiplier(input.property_details.storeys);
@@ -748,25 +881,28 @@ function calculateEntireHouseEstimate(
   );
   const range = clampRangeGap(
     {
-      min:
-        baseRange.min *
-        100 *
-        scope_multiplier *
-        storey_multiplier *
+	      min:
+	        baseRange.min *
+	        100 *
+	        sqmScale *
+	        scope_multiplier *
+	        storey_multiplier *
         condition.min_mult *
         surface_rate_multiplier,
-      median:
-        baseRange.median *
-        100 *
-        scope_multiplier *
-        storey_multiplier *
+	      median:
+	        baseRange.median *
+	        100 *
+	        sqmScale *
+	        scope_multiplier *
+	        storey_multiplier *
         ((condition.min_mult + condition.max_mult) / 2) *
         surface_rate_multiplier,
-      max:
-        baseRange.max *
-        100 *
-        scope_multiplier *
-        storey_multiplier *
+	      max:
+	        baseRange.max *
+	        100 *
+	        sqmScale *
+	        scope_multiplier *
+	        storey_multiplier *
         condition.max_mult *
         surface_rate_multiplier,
     },
@@ -794,9 +930,10 @@ function calculateEntireHouseEstimate(
         metadata: {
           config,
           bedrooms: input.property_details.bedrooms ?? null,
-          bathrooms: input.property_details.bathrooms ?? null,
-          sqm: input.property_details.sqm ?? null,
-          storeys: input.property_details.storeys ?? null,
+	          bathrooms: input.property_details.bathrooms ?? null,
+	          sqm: input.property_details.sqm ?? null,
+	          sqm_scale: Number(sqmScale.toFixed(3)),
+	          storeys: input.property_details.storeys ?? null,
         },
       },
     ],
@@ -833,16 +970,278 @@ function getSpecificAreaRoomAnchor(
   };
 }
 
+function getRoomScope(room: InteriorEstimateInput['rooms'][number]) {
+  const roomScope: InteriorScope[] = [];
+  if (room.include_walls) roomScope.push('walls');
+  if (room.include_ceiling) roomScope.push('ceiling');
+  if (room.include_trim) roomScope.push('trim');
+  return roomScope;
+}
+
+function assertSpecificAreaRoomHasSurface(
+  room: InteriorEstimateInput['rooms'][number],
+  roomIndex: number
+) {
+  if (room.include_walls || room.include_ceiling || room.include_trim) return;
+
+  throw new Error(
+    `Select at least one surface for ${room.name || `Room ${roomIndex + 1}`}.`
+  );
+}
+
+function getRoomAnchorForCalculation(
+  room: InteriorEstimateInput['rooms'][number],
+  propertyType: InteriorPropertyType,
+  userRates?: UserRateSettings | null
+) {
+  if (
+    room.rate_snapshot_version === 1 &&
+    room.source_anchor_range_cents != null
+  ) {
+    return room.source_anchor_range_cents;
+  }
+
+  return getSpecificAreaRoomAnchor(
+    propertyType,
+    room.anchor_room_type,
+    userRates
+  );
+}
+
+function getRoomTemplateCoatingMultiplierPct(
+  userRates: UserRateSettings | null | undefined,
+  wallPaintSystem: InteriorWallPaintSystem
+) {
+  const multipliers = userRates?.quick_estimate.coating_multipliers;
+  if (!multipliers) return 100;
+
+  if (wallPaintSystem === 'refresh_1coat') {
+    return multipliers.one_coat_refresh_pct;
+  }
+  if (wallPaintSystem === 'new_plaster_3coat') {
+    return multipliers.three_coats_new_plaster_pct;
+  }
+  return multipliers.two_coats_repaint_pct;
+}
+
+function getRoomTemplateConditionMultiplierPct(
+  userRates: UserRateSettings | null | undefined,
+  condition: InteriorCondition
+) {
+  const multipliers = userRates?.quick_estimate.condition_multipliers;
+  if (!multipliers) return 100;
+
+  if (condition === 'excellent') return multipliers.good_pct;
+  if (condition === 'poor') return multipliers.poor_pct;
+  return multipliers.average_pct;
+}
+
+function hasSavedRoomTemplateSnapshot(
+  room: InteriorEstimateInput['rooms'][number]
+) {
+  return (
+    room.rate_snapshot_version === 1 &&
+    room.source_room_template_surface_prices_cents != null
+  );
+}
+
+function getRoomTemplateSnapshotTotalCents(
+  room: InteriorEstimateInput['rooms'][number]
+) {
+  return room.source_room_template_surface_prices_cents
+    ? getRoomTemplateSurfaceSnapshotTotalCents(
+        room.source_room_template_surface_prices_cents
+      )
+    : null;
+}
+
+export function snapshotInteriorEstimateInput(
+  input: InteriorEstimateInput,
+  userRates?: UserRateSettings | null
+): InteriorEstimateInput {
+  if (input.estimate_mode !== 'specific_areas') return input;
+
+  const wallPaintSystem = input.wall_paint_system ?? 'repaint_2coat';
+  const quantityScaleFactor = getQuantityScaleFactor(
+    input.opening_items.reduce((sum, item) => sum + item.quantity, 0)
+  );
+
+  return {
+    ...input,
+    rooms: input.rooms.map((room, roomIndex) => {
+      assertSpecificAreaRoomHasSurface(room, roomIndex);
+      const roomScope = getRoomScope(room);
+      const savedTemplateSnapshot = hasSavedRoomTemplateSnapshot(room);
+      const resolvedRoomPriceSource = !savedTemplateSnapshot && userRates
+        ? resolveAdvancedRoomPriceSource(userRates, room)
+        : null;
+      const templateSource =
+        resolvedRoomPriceSource?.ok && resolvedRoomPriceSource.kind === 'room_template'
+          ? resolvedRoomPriceSource
+          : null;
+      const roomCondition = room.source_condition ?? input.condition;
+      const roomWallPaintSystem =
+        normalizeInteriorWallPaintSystem(room.source_wall_paint_system) ??
+        wallPaintSystem;
+	      const roomTrimPaintSystem =
+	        room.source_trim_paint_system ?? input.trim_paint_system ?? 'oil_2coat';
+      if (usesMeasuredRoomPricing(room)) {
+        return {
+          ...room,
+          pricing_model: 'measured',
+          rate_snapshot_version: 1,
+          source_condition: roomCondition,
+          source_wall_paint_system: roomWallPaintSystem,
+          source_trim_paint_system: roomTrimPaintSystem,
+          source_condition_multiplier_pct: getMeasuredConditionMultiplierPct(
+            room,
+            roomCondition,
+            userRates
+          ),
+          source_wall_rate_cents_per_m2: getMeasuredWallRate(
+            room,
+            roomWallPaintSystem,
+            userRates
+          ),
+          source_ceiling_rate_cents_per_m2: getMeasuredCeilingRate(
+            room,
+            roomWallPaintSystem,
+            userRates
+          ),
+          source_trim_rate_cents_per_m: getMeasuredTrimRate(
+            room,
+            roomTrimPaintSystem,
+            userRates
+          ),
+        };
+      }
+	      const coatingMultiplierPct =
+	        room.rate_snapshot_version === 1 &&
+        typeof room.source_room_template_coating_multiplier_pct === 'number'
+          ? room.source_room_template_coating_multiplier_pct
+          : getRoomTemplateCoatingMultiplierPct(userRates, roomWallPaintSystem);
+      const conditionMultiplierPct =
+        room.rate_snapshot_version === 1 &&
+        typeof room.source_room_template_condition_multiplier_pct === 'number'
+          ? room.source_room_template_condition_multiplier_pct
+          : getRoomTemplateConditionMultiplierPct(userRates, roomCondition);
+      const anchor =
+        templateSource
+          ? templateSource.range_cents
+          : savedTemplateSnapshot && room.source_anchor_range_cents
+          ? room.source_anchor_range_cents
+          : room.rate_snapshot_version === 1 && room.source_anchor_range_cents
+          ? room.source_anchor_range_cents
+          : getSpecificAreaRoomAnchor(
+              input.property_type,
+              room.anchor_room_type,
+              userRates
+            );
+      const surfaceRateMultiplier =
+        templateSource || savedTemplateSnapshot
+          ? coatingMultiplierPct / 100
+          : room.rate_snapshot_version === 1 &&
+        typeof room.source_surface_rate_multiplier === 'number'
+          ? room.source_surface_rate_multiplier
+          : getSurfaceRateMultiplier(
+              roomScope,
+              roomWallPaintSystem,
+              roomTrimPaintSystem,
+              userRates
+            );
+      const scopeMultiplier =
+        templateSource || savedTemplateSnapshot
+          ? 1
+          : room.rate_snapshot_version === 1 &&
+        typeof room.source_scope_multiplier === 'number'
+          ? room.source_scope_multiplier
+          : getScopeMultiplier(roomScope);
+
+      return {
+        ...room,
+        rate_snapshot_version: 1,
+        ...(templateSource
+          ? {
+              source_room_template_id: templateSource.room_template_id,
+              source_room_template_version:
+                templateSource.room_template_version,
+              source_room_template_label: templateSource.room_template_label,
+              source_room_template_size: templateSource.size,
+              source_room_template_surface_prices_cents:
+                templateSource.surface_prices_cents,
+              source_room_template_coating_multiplier_pct:
+                coatingMultiplierPct,
+              source_room_template_condition_multiplier_pct:
+                conditionMultiplierPct,
+            }
+          : {}),
+        source_anchor_range_cents: anchor,
+        source_surface_rate_multiplier: surfaceRateMultiplier,
+        source_scope_multiplier: scopeMultiplier,
+        source_condition: roomCondition,
+        source_wall_paint_system: roomWallPaintSystem,
+        source_trim_paint_system: roomTrimPaintSystem,
+      };
+    }),
+    opening_items: input.opening_items.map((item) => {
+      if (item.opening_type === 'door') {
+        const doorType = item.door_type ?? 'standard';
+        const doorScope = item.door_scope ?? 'door_and_frame';
+        return {
+          ...item,
+          rate_snapshot_version: 1,
+          source_unit_price_cents:
+            item.rate_snapshot_version === 1 &&
+            typeof item.source_unit_price_cents === 'number'
+              ? item.source_unit_price_cents
+              : getDoorPrice(item.paint_system, doorScope, doorType, userRates),
+          source_quantity_scale_factor:
+            item.rate_snapshot_version === 1 &&
+            typeof item.source_quantity_scale_factor === 'number'
+              ? item.source_quantity_scale_factor
+              : quantityScaleFactor,
+        };
+      }
+
+      const windowType = item.window_type ?? 'normal';
+      const windowScope = item.window_scope ?? 'window_and_frame';
+      return {
+        ...item,
+        rate_snapshot_version: 1,
+        source_unit_price_cents:
+          item.rate_snapshot_version === 1 &&
+          typeof item.source_unit_price_cents === 'number'
+            ? item.source_unit_price_cents
+            : getWindowPrice(
+                item.paint_system,
+                windowType,
+                windowScope,
+                userRates
+              ),
+        source_quantity_scale_factor:
+          item.rate_snapshot_version === 1 &&
+          typeof item.source_quantity_scale_factor === 'number'
+            ? item.source_quantity_scale_factor
+            : quantityScaleFactor,
+      };
+    }),
+    trim_items: input.trim_items.map((item) => ({
+      ...item,
+      rate_snapshot_version: 1,
+      source_unit_price_cents:
+        item.rate_snapshot_version === 1 &&
+        typeof item.source_unit_price_cents === 'number'
+          ? item.source_unit_price_cents
+          : getSkirtingPrice(item.paint_system),
+    })),
+  };
+}
+
 function calculateSpecificAreasEstimate(
   input: InteriorEstimateInput,
   userRates?: UserRateSettings | null
 ): InteriorPricingSnapshot {
-  const condition = getCondition(input.property_type, input.condition);
-  const storey_multiplier =
-    input.property_type === 'house'
-      ? getStoreyMultiplier(input.property_details.storeys)
-      : 1;
-  const conditionMedian = (condition.min_mult + condition.max_mult) / 2;
+  const storey_multiplier = 1;
   const quantityScaleFactor = getQuantityScaleFactor(
     input.opening_items.reduce((sum, item) => sum + item.quantity, 0)
   );
@@ -857,8 +1256,10 @@ function calculateSpecificAreasEstimate(
   let min = 0;
   let median = 0;
   let max = 0;
+  let usedMeasuredRoomRates = false;
 
   input.rooms.forEach((room, roomIndex) => {
+<<<<<<< HEAD
     const roomScope: InteriorScope[] = [];
     if (room.include_walls) roomScope.push('walls');
     if (room.include_ceiling) roomScope.push('ceiling');
@@ -876,18 +1277,181 @@ function calculateSpecificAreasEstimate(
       room.anchor_room_type,
       userRates
     );
+=======
+    assertSpecificAreaRoomHasSurface(room, roomIndex);
+    const activeScope = getRoomScope(room);
+    const roomCondition = room.source_condition ?? input.condition;
+    const condition = getCondition(input.property_type, roomCondition);
+    const conditionMedian = (condition.min_mult + condition.max_mult) / 2;
+    const roomWallPaintSystem =
+      normalizeInteriorWallPaintSystem(room.source_wall_paint_system) ??
+      wallPaintSystem;
+    const roomTrimPaintSystem =
+      room.source_trim_paint_system ?? input.trim_paint_system ?? 'oil_2coat';
+
+    if (usesMeasuredRoomPricing(room)) {
+      usedMeasuredRoomRates = true;
+      const conditionMultiplier =
+        getMeasuredConditionMultiplierPct(room, roomCondition, userRates) / 100;
+      const roomLabel = room.name || room.anchor_room_type || `Room ${roomIndex + 1}`;
+      const measuredItems: InteriorPricingItem[] = [];
+
+      if (room.include_walls) {
+        const quantity = positiveQuantity(room.wall_area_m2);
+        if (quantity > 0) {
+          const unit = getMeasuredWallRate(room, roomWallPaintSystem, userRates);
+          const total = cap(quantity * unit * conditionMultiplier);
+          measuredItems.push({
+            category: 'room_anchor',
+            label: `${roomLabel} walls`,
+            quantity,
+            unit: 'sqm',
+            unit_price_cents: unit,
+            total_cents: total,
+            room_index: roomIndex,
+            metadata: {
+              pricing_model: 'measured',
+              surface: 'walls',
+              condition: roomCondition,
+              condition_multiplier_pct: Math.round(conditionMultiplier * 100),
+              wall_paint_system: roomWallPaintSystem,
+            },
+          });
+        }
+      }
+
+      if (room.include_ceiling) {
+        const quantity = positiveQuantity(room.ceiling_area_m2);
+        if (quantity > 0) {
+          const unit = getMeasuredCeilingRate(
+            room,
+            roomWallPaintSystem,
+            userRates
+          );
+          const total = cap(quantity * unit * conditionMultiplier);
+          measuredItems.push({
+            category: 'room_anchor',
+            label: `${roomLabel} ceiling`,
+            quantity,
+            unit: 'sqm',
+            unit_price_cents: unit,
+            total_cents: total,
+            room_index: roomIndex,
+            metadata: {
+              pricing_model: 'measured',
+              surface: 'ceiling',
+              condition: roomCondition,
+              condition_multiplier_pct: Math.round(conditionMultiplier * 100),
+              wall_paint_system: roomWallPaintSystem,
+            },
+          });
+        }
+      }
+
+      if (room.include_trim) {
+        const quantity = positiveQuantity(room.trim_linear_m);
+        if (quantity > 0) {
+          const unit = getMeasuredTrimRate(room, roomTrimPaintSystem, userRates);
+          const total = cap(quantity * unit * conditionMultiplier);
+          measuredItems.push({
+            category: 'room_anchor',
+            label: `${roomLabel} trim`,
+            quantity,
+            unit: 'linear_metre',
+            unit_price_cents: unit,
+            total_cents: total,
+            room_index: roomIndex,
+            metadata: {
+              pricing_model: 'measured',
+              surface: 'trim',
+              condition: roomCondition,
+              condition_multiplier_pct: Math.round(conditionMultiplier * 100),
+              trim_paint_system: roomTrimPaintSystem,
+            },
+          });
+        }
+      }
+
+      const roomTotal = measuredItems.reduce(
+        (sum, item) => sum + item.total_cents,
+        0
+      );
+      min += roomTotal;
+      median += roomTotal;
+      max += roomTotal;
+      pricing_items.push(...measuredItems);
+      return;
+    }
+
+    const roomTemplateSnapshotTotal = getRoomTemplateSnapshotTotalCents(room);
+    const usesRoomTemplateSource =
+      roomTemplateSnapshotTotal != null || room.source_room_template_id != null;
+    const resolvedRoomTemplateSource =
+      usesRoomTemplateSource && userRates
+        ? resolveAdvancedRoomPriceSource(userRates, room)
+        : null;
+    const roomTemplateSource =
+      resolvedRoomTemplateSource?.ok &&
+      resolvedRoomTemplateSource.kind === 'room_template'
+        ? resolvedRoomTemplateSource
+        : null;
+    const scopeMultiplier = usesRoomTemplateSource
+      ? 1
+      : room.rate_snapshot_version === 1 &&
+          typeof room.source_scope_multiplier === 'number'
+        ? room.source_scope_multiplier
+        : getScopeMultiplier(activeScope);
+    const surfaceRateMultiplier = usesRoomTemplateSource
+      ? (room.rate_snapshot_version === 1 &&
+          typeof room.source_room_template_coating_multiplier_pct === 'number'
+          ? room.source_room_template_coating_multiplier_pct
+          : getRoomTemplateCoatingMultiplierPct(userRates, roomWallPaintSystem)) /
+        100
+      : room.rate_snapshot_version === 1 &&
+          typeof room.source_surface_rate_multiplier === 'number'
+        ? room.source_surface_rate_multiplier
+        : getSurfaceRateMultiplier(
+            activeScope,
+            roomWallPaintSystem,
+            roomTrimPaintSystem,
+            userRates
+          );
+    const conditionMultiplier = usesRoomTemplateSource
+      ? (room.rate_snapshot_version === 1 &&
+          typeof room.source_room_template_condition_multiplier_pct === 'number'
+          ? room.source_room_template_condition_multiplier_pct
+          : getRoomTemplateConditionMultiplierPct(userRates, roomCondition)) /
+        100
+      : conditionMedian;
+    const anchor =
+      roomTemplateSnapshotTotal != null
+        ? (room.source_anchor_range_cents ?? {
+            min: roomTemplateSnapshotTotal,
+            median: roomTemplateSnapshotTotal,
+            max: roomTemplateSnapshotTotal,
+          })
+        : roomTemplateSource
+          ? roomTemplateSource.range_cents
+          : getRoomAnchorForCalculation(
+              room,
+              input.property_type,
+              userRates
+            );
+    const medianSourceCents =
+      roomTemplateSnapshotTotal ?? roomTemplateSource?.total_cents ?? anchor.median;
+>>>>>>> phrase0
     const itemMedian = cap(
-      anchor.median *
+      medianSourceCents *
         scopeMultiplier *
         storey_multiplier *
-        conditionMedian *
+        conditionMultiplier *
         surfaceRateMultiplier
     );
     min += cap(
       anchor.min *
         scopeMultiplier *
         storey_multiplier *
-        condition.min_mult *
+        (usesRoomTemplateSource ? conditionMultiplier : condition.min_mult) *
         surfaceRateMultiplier
     );
     median += itemMedian;
@@ -895,7 +1459,7 @@ function calculateSpecificAreasEstimate(
       anchor.max *
         scopeMultiplier *
         storey_multiplier *
-        condition.max_mult *
+        (usesRoomTemplateSource ? conditionMultiplier : condition.max_mult) *
         surfaceRateMultiplier
     );
     pricing_items.push({
@@ -911,7 +1475,36 @@ function calculateSpecificAreasEstimate(
         include_walls: room.include_walls,
         include_ceiling: room.include_ceiling,
         include_trim: room.include_trim,
+        source_rate_item_id: room.source_rate_item_id ?? null,
+        source_rate_item_version: room.source_rate_item_version ?? null,
+        source_rate_item_label: room.source_rate_item_label ?? null,
+        source_room_template_id: room.source_room_template_id ?? null,
+        source_room_template_version:
+          room.source_room_template_version ?? null,
+        source_room_template_label: room.source_room_template_label ?? null,
+        source_room_template_size: room.source_room_template_size ?? null,
+        source_room_template_surface_walls_cents:
+          room.source_room_template_surface_prices_cents?.walls_cents ?? null,
+        source_room_template_surface_ceiling_cents:
+          room.source_room_template_surface_prices_cents?.ceiling_cents ?? null,
+        source_room_template_surface_trim_cents:
+          room.source_room_template_surface_prices_cents?.trim_cents ?? null,
+        source_room_template_coating_multiplier_pct:
+          room.source_room_template_coating_multiplier_pct ?? null,
+        source_room_template_condition_multiplier_pct:
+          room.source_room_template_condition_multiplier_pct ?? null,
+        rate_snapshot_version: room.rate_snapshot_version ?? null,
+        source_anchor_range_min_cents: anchor.min,
+        source_anchor_range_median_cents: anchor.median,
+        source_anchor_range_max_cents: anchor.max,
         surface_rate_multiplier: Number(surfaceRateMultiplier.toFixed(3)),
+        source_surface_rate_multiplier: Number(
+          surfaceRateMultiplier.toFixed(3)
+        ),
+        source_scope_multiplier: Number(scopeMultiplier.toFixed(3)),
+        source_condition: roomCondition,
+        source_wall_paint_system: roomWallPaintSystem,
+        source_trim_paint_system: roomTrimPaintSystem,
       },
     });
   });
@@ -928,13 +1521,28 @@ function calculateSpecificAreasEstimate(
         doorType,
         userRates
       );
-      const unit = cap(rawPrice * quantityScaleFactor);
+      const snapshotRawPrice =
+        item.rate_snapshot_version === 1 &&
+        typeof item.source_unit_price_cents === 'number'
+          ? item.source_unit_price_cents
+          : rawPrice;
+      const snapshotQuantityScaleFactor =
+        item.rate_snapshot_version === 1 &&
+        typeof item.source_quantity_scale_factor === 'number'
+          ? item.source_quantity_scale_factor
+          : quantityScaleFactor;
+      const unit = cap(snapshotRawPrice * snapshotQuantityScaleFactor);
       const total = cap(unit * item.quantity);
       min += total;
       median += total;
       max += total;
       if (
-        isDoorPriceCustomized(rawPrice, item.paint_system, doorScope, doorType)
+        isDoorPriceCustomized(
+          snapshotRawPrice,
+          item.paint_system,
+          doorScope,
+          doorType
+        )
       ) {
         usedCustomUnitRates = true;
       }
@@ -948,7 +1556,9 @@ function calculateSpecificAreasEstimate(
         room_index: item.room_index ?? null,
         metadata: {
           paint_system: item.paint_system,
-          quantity_scale_factor: quantityScaleFactor,
+          rate_snapshot_version: item.rate_snapshot_version ?? null,
+          source_unit_price_cents: snapshotRawPrice,
+          quantity_scale_factor: snapshotQuantityScaleFactor,
         },
       });
       return;
@@ -962,14 +1572,24 @@ function calculateSpecificAreasEstimate(
       windowScope,
       userRates
     );
-    const unit = cap(rawPrice * quantityScaleFactor);
+    const snapshotRawPrice =
+      item.rate_snapshot_version === 1 &&
+      typeof item.source_unit_price_cents === 'number'
+        ? item.source_unit_price_cents
+        : rawPrice;
+    const snapshotQuantityScaleFactor =
+      item.rate_snapshot_version === 1 &&
+      typeof item.source_quantity_scale_factor === 'number'
+        ? item.source_quantity_scale_factor
+        : quantityScaleFactor;
+    const unit = cap(snapshotRawPrice * snapshotQuantityScaleFactor);
     const total = cap(unit * item.quantity);
     min += total;
     median += total;
     max += total;
     if (
       isWindowPriceCustomized(
-        rawPrice,
+        snapshotRawPrice,
         item.paint_system,
         windowType,
         windowScope
@@ -985,15 +1605,21 @@ function calculateSpecificAreasEstimate(
       unit_price_cents: unit,
       total_cents: total,
       room_index: item.room_index ?? null,
-      metadata: {
-        paint_system: item.paint_system,
-        quantity_scale_factor: quantityScaleFactor,
-      },
-    });
+        metadata: {
+          paint_system: item.paint_system,
+          rate_snapshot_version: item.rate_snapshot_version ?? null,
+          source_unit_price_cents: snapshotRawPrice,
+          quantity_scale_factor: snapshotQuantityScaleFactor,
+        },
+      });
   });
 
   input.trim_items.forEach((item) => {
-    const unit = getSkirtingPrice(item.paint_system);
+    const unit =
+      item.rate_snapshot_version === 1 &&
+      typeof item.source_unit_price_cents === 'number'
+        ? item.source_unit_price_cents
+        : getSkirtingPrice(item.paint_system);
     const total = cap(unit * item.quantity);
     min += total;
     median += total;
@@ -1006,7 +1632,11 @@ function calculateSpecificAreasEstimate(
       unit_price_cents: unit,
       total_cents: total,
       room_index: item.room_index ?? null,
-      metadata: { paint_system: item.paint_system },
+      metadata: {
+        paint_system: item.paint_system,
+        rate_snapshot_version: item.rate_snapshot_version ?? null,
+        source_unit_price_cents: unit,
+      },
     });
   });
 
@@ -1019,10 +1649,10 @@ function calculateSpecificAreasEstimate(
       quantity_scale_factor: quantityScaleFactor,
       surface_rate_multiplier: defaultSurfaceRateMultiplier,
     },
-    pricing_items,
-    usedCustomUnitRates ? 'mixed' : 'anchor'
-  );
-}
+	    pricing_items,
+	    usedCustomUnitRates || usedMeasuredRoomRates ? 'mixed' : 'anchor'
+	  );
+	}
 
 export function calculateInteriorEstimate(
   input: InteriorEstimateInput,

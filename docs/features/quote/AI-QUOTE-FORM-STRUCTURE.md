@@ -155,6 +155,7 @@ AI draft를 만들 때 사용한 입력값을 audit용으로 저장한다. 고�
 | `quote_scope_sections` → `quote_clause_items` | section-specific risk disclosure를 연결할 수 있다 |
 | `quote_ai_intake_snapshots` → generated draft | 같은 prompt/model/input으로 만든 결과를 audit하고 재생성 비용을 줄인다 |
 
+<<<<<<< HEAD
 ## Price Rate Library Target
 
 세션 `019e32de-aaa3-7940-aaa6-9c773d3ec251` 기준으로 quote form의 pricing layer는 **Rate Library + Modifiers**를 따른다. 고객에게 보이는 scope section과 실제 가격을 만드는 rate item은 분리하지만, AI가 제안한 `pricing_candidates`는 이 라이브러리의 key로 매핑될 수 있어야 한다. key 매핑은 price amount가 아니라 lookup 후보일 뿐이다.
@@ -177,6 +178,8 @@ Required quote behavior:
 - `quote_line_items` remain add-ons/material/service/custom items. They should not become a second place to reprice an already included wall/ceiling/trim scope.
 - Existing quotes keep the saved rate snapshot after future Price Rates changes.
 
+=======
+>>>>>>> phrase0
 ## Item Taxonomy
 
 ### Interior Scope Items
@@ -252,6 +255,7 @@ type AIQuoteFormDraft = {
   pricing_candidates: Array<{
     scope_section_index: number;
     surface_category: string;
+<<<<<<< HEAD
     unit: 'sqm' | 'lm' | 'each' | 'fixed' | 'room_anchor' | 'property_anchor';
     quantity?: number;
     quantity_status: 'confirmed' | 'rough' | 'missing';
@@ -259,6 +263,12 @@ type AIQuoteFormDraft = {
     rate_library_group?: 'average_property' | 'room_price' | 'surface_rate' | 'prep_repair' | 'access_modifier' | 'paint_system_upgrade' | 'business_rule';
     rate_item_key?: string;
     included_surface_keys?: string[];
+=======
+    unit: 'sqm' | 'lm' | 'each' | 'fixed' | 'room_anchor';
+    quantity?: number;
+    quantity_status: 'confirmed' | 'rough' | 'missing';
+    suggested_pricing_method: 'quick' | 'advanced' | 'exterior' | 'manual';
+>>>>>>> phrase0
   }>;
   clauses: Array<{
     clause_key: string;
@@ -285,7 +295,11 @@ Forbidden AI fields:
 ## Deterministic Pricing Pass
 
 1. User reviews AI scope sections.
+<<<<<<< HEAD
 2. App maps each `pricing_candidate` to a pricing mode, including Average Property Price presets when the candidate is property-level.
+=======
+2. App maps each `pricing_candidate` to a pricing mode.
+>>>>>>> phrase0
 3. App loads painter `price_rates` snapshot.
 4. App creates `quote_estimate_items` for priced base scope.
 5. App creates `quote_line_items` only for selected custom/material/service/optional add-ons.

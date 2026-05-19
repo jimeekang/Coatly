@@ -11,6 +11,7 @@ import {
   QUOTE_COATING_LABELS,
   QUOTE_STATUS_LABELS,
   QUOTE_SURFACE_LABELS,
+  calculateQuoteTotals,
   groupQuoteLineItemsByCategory,
 } from '@/lib/quotes';
 
@@ -46,6 +47,8 @@ function PriceSummary({
   displaySubtotal,
   displayGst,
   displayTotal,
+  displayDiscount,
+  displayAdjustment,
   optionalSelectedCents,
   optionalAvailableCents,
   validUntil,
@@ -55,6 +58,8 @@ function PriceSummary({
   displaySubtotal: number;
   displayGst: number;
   displayTotal: number;
+  displayDiscount: number;
+  displayAdjustment: number;
   optionalSelectedCents: number;
   optionalAvailableCents: number;
   validUntil: string | null;
@@ -63,20 +68,8 @@ function PriceSummary({
 }) {
   return (
     <div className="space-y-0">
-      <div className="flex items-center justify-between py-2.5 text-sm">
-        <span className="text-pm-secondary">Subtotal</span>
-        <span className="text-pm-body font-medium">
-          {formatAUD(displaySubtotal)}
-        </span>
-      </div>
-      <div className="border-pm-border/60 flex items-center justify-between border-t py-2.5 text-sm">
-        <span className="text-pm-secondary">GST (10%)</span>
-        <span className="text-pm-body font-medium">
-          {formatAUD(displayGst)}
-        </span>
-      </div>
       {optionalSelectedCents > 0 && (
-        <div className="border-pm-border/60 flex items-center justify-between border-t py-2.5 text-sm">
+        <div className="flex items-center justify-between py-2.5 text-sm">
           <span className="text-pm-secondary">Add-ons selected</span>
           <span className="font-medium text-green-700">
             +{formatAUD(optionalSelectedCents)}
@@ -88,6 +81,41 @@ function PriceSummary({
           <span className="text-pm-secondary">Add-ons available</span>
           <span className="text-pm-secondary">
             {formatAUD(optionalAvailableCents)}
+          </span>
+        </div>
+      )}
+      <div className="border-pm-border/60 flex items-center justify-between border-t py-2.5 text-sm">
+        <span className="text-pm-secondary">Subtotal</span>
+        <span className="text-pm-body font-medium">
+          {formatAUD(displaySubtotal)}
+        </span>
+      </div>
+      {displayDiscount > 0 && (
+        <div className="border-pm-border/60 flex items-center justify-between border-t py-2.5 text-sm">
+          <span className="text-pm-secondary">Discount</span>
+          <span className="font-medium text-pm-coral-dark">
+            -{formatAUD(displayDiscount)}
+          </span>
+        </div>
+      )}
+      <div className="border-pm-border/60 flex items-center justify-between border-t py-2.5 text-sm">
+        <span className="text-pm-secondary">GST (10%)</span>
+        <span className="text-pm-body font-medium">
+          {formatAUD(displayGst)}
+        </span>
+      </div>
+      {displayAdjustment !== 0 && (
+        <div className="border-pm-border/60 flex items-center justify-between border-t py-2.5 text-sm">
+          <span className="text-pm-secondary">Adjustment</span>
+          <span
+            className={
+              displayAdjustment < 0
+                ? 'font-medium text-pm-coral-dark'
+                : 'text-pm-body font-medium'
+            }
+          >
+            {displayAdjustment > 0 ? '+' : '-'}
+            {formatAUD(Math.abs(displayAdjustment))}
           </span>
         </div>
       )}
@@ -200,9 +228,22 @@ export function PublicQuoteClient({
     .filter((i) => !selectedOptionalIds.has(i.id))
     .reduce((s, i) => s + i.total_cents, 0);
 
-  const displaySubtotal = baseSubtotal + optionalSelectedCents;
-  const displayGst = Math.round(displaySubtotal * 0.1);
-  const displayTotal = displaySubtotal + displayGst;
+  const displayTotals = calculateQuoteTotals({
+    base_subtotal_cents: baseSubtotal,
+    discount_cents: quote.discount_cents,
+    manual_adjustment_cents: quote.manual_adjustment_cents,
+    line_items: optionalLineItems.map((item) => ({
+      quantity: item.quantity,
+      unit_price_cents: item.unit_price_cents,
+      total_cents: item.total_cents,
+      is_optional: true,
+      is_selected: selectedOptionalIds.has(item.id),
+    })),
+  });
+  const displaySubtotal = displayTotals.subtotal_cents;
+  const displayDiscount = displaySubtotal - displayTotals.discounted_subtotal_cents;
+  const displayGst = displayTotals.gst_cents;
+  const displayTotal = displayTotals.total_cents;
 
   const canApprove = quote.status === 'sent';
   const canEditOptional = quote.status === 'sent';
@@ -295,6 +336,8 @@ export function PublicQuoteClient({
                   displaySubtotal={displaySubtotal}
                   displayGst={displayGst}
                   displayTotal={displayTotal}
+                  displayDiscount={displayDiscount}
+                  displayAdjustment={quote.manual_adjustment_cents}
                   optionalSelectedCents={optionalSelectedCents}
                   optionalAvailableCents={optionalAvailableCents}
                   validUntil={quote.valid_until}
@@ -569,6 +612,8 @@ export function PublicQuoteClient({
                   displaySubtotal={displaySubtotal}
                   displayGst={displayGst}
                   displayTotal={displayTotal}
+                  displayDiscount={displayDiscount}
+                  displayAdjustment={quote.manual_adjustment_cents}
                   optionalSelectedCents={optionalSelectedCents}
                   optionalAvailableCents={optionalAvailableCents}
                   validUntil={quote.valid_until}

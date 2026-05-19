@@ -26,6 +26,72 @@ function getEmailConfig(): { resend: Resend; from: string } | { error: string } 
   }
 }
 
+type EmailDeliveryTarget =
+  | {
+      to: string;
+      originalTo: string | null;
+      subjectPrefix: string;
+    }
+  | { error: string };
+
+function extractEmailAddress(value: string): string {
+  const bracketMatch = value.match(/<([^>]+)>/);
+  return (bracketMatch?.[1] ?? value).trim().toLowerCase();
+}
+
+function isResendSandboxSender(from: string): boolean {
+  return extractEmailAddress(from).endsWith('@resend.dev');
+}
+
+function shouldRouteToTestRecipient(from: string): boolean {
+  return (
+    process.env.RESEND_FORCE_TEST_RECIPIENT === 'true' ||
+    isResendSandboxSender(from)
+  );
+}
+
+function getTestRecipient(): string | null {
+  return (
+    process.env.RESEND_TEST_RECIPIENT?.trim() ||
+    process.env.RESEND_TEST_EMAIL?.trim() ||
+    null
+  );
+}
+
+function resolveEmailDeliveryTarget(from: string, to: string): EmailDeliveryTarget {
+  if (!shouldRouteToTestRecipient(from)) {
+    return { to, originalTo: null, subjectPrefix: '' };
+  }
+
+  const testRecipient = getTestRecipient();
+  if (!testRecipient) {
+    return {
+      error:
+        'RESEND_TEST_RECIPIENT is required when using the Resend sandbox sender. Set it to your verified Resend account email before sending test documents.',
+    };
+  }
+
+  return {
+    to: testRecipient,
+    originalTo: to,
+    subjectPrefix: `[Test delivery for ${to}] `,
+  };
+}
+
+function addTestDeliveryNotice(html: string, originalTo: string | null): string {
+  if (!originalTo) return html;
+
+  const notice = `
+  <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;padding:12px 16px;margin:0 0 20px 0;color:#92400e;font-size:14px">
+    <strong>Test delivery</strong><br>
+    Original recipient: ${escapeHtml(originalTo)}
+  </div>`;
+
+  return html.includes('<body')
+    ? html.replace(/(<body[^>]*>)/, `$1${notice}`)
+    : `${notice}${html}`;
+}
+
 export type InvoiceReminderType = 'due_soon' | 'overdue';
 
 const INVOICE_TYPE_LABEL: Record<string, string> = {
@@ -232,11 +298,17 @@ export async function sendInvoiceEmail(
   const config = getEmailConfig();
   if ('error' in config) return { error: config.error };
 
+  const delivery = resolveEmailDeliveryTarget(config.from, params.to);
+  if ('error' in delivery) return { error: delivery.error };
+
   const { error } = await config.resend.emails.send({
     from: config.from,
-    to: params.to,
-    subject: `${invoiceTypeLabel(params.invoiceType)} ${params.invoiceNumber} from ${params.businessName} — ${params.totalFormatted}${params.dueDate ? ` due ${params.dueDate}` : ''}`,
-    html: buildInvoiceEmailHtml(params),
+    to: delivery.to,
+    subject: `${delivery.subjectPrefix}${invoiceTypeLabel(params.invoiceType)} ${params.invoiceNumber} from ${params.businessName} — ${params.totalFormatted}${params.dueDate ? ` due ${params.dueDate}` : ''}`,
+    html: addTestDeliveryNotice(
+      buildInvoiceEmailHtml(params),
+      delivery.originalTo
+    ),
     attachments: params.pdfAttachment
       ? [
           {
@@ -258,11 +330,14 @@ export async function sendQuoteEmail(
   const config = getEmailConfig();
   if ('error' in config) return { error: config.error };
 
+  const delivery = resolveEmailDeliveryTarget(config.from, params.to);
+  if ('error' in delivery) return { error: delivery.error };
+
   const { error } = await config.resend.emails.send({
     from: config.from,
-    to: params.to,
-    subject: `Quote ${params.quoteNumber} from ${params.businessName} — ${params.totalFormatted}`,
-    html: buildQuoteEmailHtml(params),
+    to: delivery.to,
+    subject: `${delivery.subjectPrefix}Quote ${params.quoteNumber} from ${params.businessName} — ${params.totalFormatted}`,
+    html: addTestDeliveryNotice(buildQuoteEmailHtml(params), delivery.originalTo),
     attachments: params.pdfAttachment
       ? [
           {
@@ -284,6 +359,9 @@ export async function sendInvoiceReminder(
   const config = getEmailConfig();
   if ('error' in config) return { error: config.error };
 
+  const delivery = resolveEmailDeliveryTarget(config.from, params.to);
+  if ('error' in delivery) return { error: delivery.error };
+
   const subject =
     params.reminderType === 'due_soon'
       ? `Payment reminder: ${params.invoiceNumber} due ${params.dueDate}`
@@ -296,9 +374,9 @@ export async function sendInvoiceReminder(
 
   const { error } = await config.resend.emails.send({
     from: config.from,
-    to: params.to,
-    subject,
-    html,
+    to: delivery.to,
+    subject: `${delivery.subjectPrefix}${subject}`,
+    html: addTestDeliveryNotice(html, delivery.originalTo),
   });
 
   if (error) return { error: error.message };
@@ -312,11 +390,17 @@ export async function sendQuoteApprovalNotification(
     const config = getEmailConfig();
     if ('error' in config) return { error: config.error };
 
+    const delivery = resolveEmailDeliveryTarget(config.from, params.to);
+    if ('error' in delivery) return { error: delivery.error };
+
     const { error } = await config.resend.emails.send({
       from: config.from,
-      to: params.to,
-      subject: `Quote approved: ${params.quoteNumber}`,
-      html: buildQuoteApprovalHtml(params),
+      to: delivery.to,
+      subject: `${delivery.subjectPrefix}Quote approved: ${params.quoteNumber}`,
+      html: addTestDeliveryNotice(
+        buildQuoteApprovalHtml(params),
+        delivery.originalTo
+      ),
     });
 
     if (error) return { error: error.message };

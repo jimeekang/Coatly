@@ -34,6 +34,86 @@ function makeSettings(overrides?: Partial<ReturnType<typeof buildDefaultRateSett
 }
 
 describe('calculateQuickEstimate', () => {
+  it('prices a selected 2 bed 2 bath apartment whole-property preset from anchors', () => {
+    const rates = makeSettings();
+    const inputs: QuickInputs = {
+      property_preset: {
+        preset_id: 'preset-2-bed-2-bath',
+        label: '2 Bed 2 Bath Apartment',
+        property_type: 'apartment',
+        apartment_type: '2_bedroom_standard',
+        bedrooms: 2,
+        bathrooms: 2,
+        sqm: 89,
+        storeys: null,
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        subtotal_cents: 0,
+        gst_cents: 0,
+        total_cents: 0,
+      },
+      rooms: [],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+
+    const result = calculateQuickEstimate(inputs, rates);
+
+    expect(result.property_preset?.subtotal_cents).toBe(495650);
+    expect(result.subtotal_cents).toBe(495650);
+    expect(result.gst_cents).toBe(49565);
+    expect(result.total_cents).toBe(545215);
+  });
+
+  it('prices whole-property trim higher when Water Base is selected', () => {
+    const rates = makeSettings();
+    const oilInputs: QuickInputs = {
+      property_preset: {
+        preset_id: 'preset-trim-oil',
+        label: '2 Bed 2 Bath Apartment',
+        property_type: 'apartment',
+        apartment_type: '2_bedroom_standard',
+        bedrooms: 2,
+        bathrooms: 2,
+        sqm: 89,
+        storeys: null,
+        condition: 'fair',
+        scope: ['trim'],
+        wall_paint_system: 'repaint_2coat',
+        trim_paint_system: 'oil_2coat',
+        subtotal_cents: 0,
+        gst_cents: 0,
+        total_cents: 0,
+      },
+      rooms: [],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+      global_trim_paint_system: 'oil_2coat',
+    };
+    const waterInputs: QuickInputs = {
+      ...oilInputs,
+      property_preset: oilInputs.property_preset
+        ? {
+            ...oilInputs.property_preset,
+            preset_id: 'preset-trim-water',
+            trim_paint_system: 'water_3coat_white_finish',
+            subtotal_cents: 0,
+            gst_cents: 0,
+            total_cents: 0,
+          }
+        : null,
+      global_trim_paint_system: 'water_3coat_white_finish',
+    };
+
+    const oilResult = calculateQuickEstimate(oilInputs, rates);
+    const waterResult = calculateQuickEstimate(waterInputs, rates);
+
+    expect(waterResult.subtotal_cents).toBeGreaterThan(
+      oilResult.subtotal_cents
+    );
+  });
+
   it('single room, walls only, 2coats/average = 100%×100% baseline', () => {
     const rates = makeSettings();
     const inputs: QuickInputs = {
@@ -286,6 +366,72 @@ describe('calculateQuickEstimate', () => {
     expect(result.rooms[0].walls_cents).toBe(30000);
     expect(result.rooms[0].total_cents).toBe(30000);
     expect(result.subtotal_cents).toBe(30000);
+  });
+
+  it('keeps quote A on version 1 snapshot while quote B uses version 2 prices', () => {
+    const rates = makeSettings();
+
+    const quoteA: QuickInputs = {
+      rooms: [
+        {
+          room_id: 'room-1',
+          source_rate_item_id: 'room-1',
+          source_rate_item_version: 1,
+          source_rate_item_label: 'Bedroom',
+          rate_snapshot_version: 1,
+          label: 'Bedroom',
+          size: 'medium',
+          selected_surfaces: ['walls', 'ceiling'],
+          walls_cents: 30000,
+          ceiling_cents: 15000,
+          trim_cents: 15000,
+          coating_multiplier_pct: 100,
+          condition_multiplier_pct: 100,
+          total_cents: 45000,
+        },
+      ],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+
+    rates.quick_estimate.rooms[0] = {
+      ...rates.quick_estimate.rooms[0],
+      version: 2,
+      sizes: {
+        ...rates.quick_estimate.rooms[0].sizes,
+        medium: {
+          walls_cents: 80000,
+          ceiling_cents: 20000,
+          trim_cents: 15000,
+        },
+      },
+    };
+
+    const quoteB: QuickInputs = {
+      rooms: [
+        {
+          room_id: 'room-1',
+          source_rate_item_id: 'room-1',
+          source_rate_item_version: 2,
+          source_rate_item_label: 'Bedroom',
+          rate_snapshot_version: 1,
+          label: 'Bedroom',
+          size: 'medium',
+          selected_surfaces: ['walls', 'ceiling'],
+          walls_cents: 80000,
+          ceiling_cents: 20000,
+          trim_cents: 15000,
+          coating_multiplier_pct: 100,
+          condition_multiplier_pct: 100,
+          total_cents: 100000,
+        },
+      ],
+      global_coating: 'two_coats_repaint',
+      global_condition: 'average',
+    };
+
+    expect(calculateQuickEstimate(quoteA, rates).subtotal_cents).toBe(45000);
+    expect(calculateQuickEstimate(quoteB, rates).subtotal_cents).toBe(100000);
   });
 
   it('uses stored snapshot multipliers when Price Rates multipliers change later', () => {

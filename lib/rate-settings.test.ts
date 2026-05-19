@@ -4,6 +4,10 @@ import {
   DEFAULT_DOOR_UNIT_RATES,
   DEFAULT_WINDOW_UNIT_RATES,
   buildDefaultRateSettings,
+  buildDefaultQuickEstimateSettings,
+  splitToSurfaces,
+  hydrateQuickEstimate,
+  DEFAULT_QUICK_ROOM_LABELS,
   parseUserRateSettings,
   ratePresetSchema,
   RATE_DOOR_TYPES,
@@ -201,6 +205,7 @@ describe('parseUserRateSettings', () => {
         version: 3,
         label: 'Bedroom repaint',
         anchor_room_type: 'Bedroom 1',
+        default_size: 'medium',
         include_walls: true,
         include_ceiling: true,
         include_trim: false,
@@ -208,6 +213,83 @@ describe('parseUserRateSettings', () => {
         sort_order: 0,
       },
     ]);
+  });
+
+  it('parses legacy advanced room items that only use anchor_room_type', () => {
+    const parsed = parseUserRateSettings({
+      detailed_estimate_items: {
+        advanced_rooms: [
+          {
+            id: 'legacy-bedroom',
+            label: 'Legacy bedroom',
+            anchor_room_type: 'Bedroom 1',
+            include_walls: true,
+            include_ceiling: false,
+            include_trim: true,
+            default_height_m: 2.7,
+            sort_order: 0,
+          },
+        ],
+      },
+    });
+
+    expect(parsed.detailed_estimate_items.advanced_rooms[0]).toEqual(
+      expect.objectContaining({
+        id: 'legacy-bedroom',
+        version: 1,
+        anchor_room_type: 'Bedroom 1',
+        default_size: 'medium',
+      })
+    );
+  });
+
+  it('parses advanced room items that reference a Room Price Library template', () => {
+    const parsed = parseUserRateSettings({
+      quick_estimate: {
+        ...buildDefaultQuickEstimateSettings(),
+        rooms: [
+          {
+            id: 'quick-bedroom',
+            version: 4,
+            label: 'Bedroom',
+            enabled_surfaces: ['walls', 'ceiling', 'trim'],
+            sizes: {
+              small: { walls_cents: 90000, ceiling_cents: 30000, trim_cents: 10000 },
+              medium: { walls_cents: 120000, ceiling_cents: 45000, trim_cents: 15000 },
+              large: { walls_cents: 150000, ceiling_cents: 60000, trim_cents: 20000 },
+            },
+            sort_order: 0,
+          },
+        ],
+      },
+      detailed_estimate_items: {
+        advanced_rooms: [
+          {
+            id: 'adv-bedroom',
+            label: 'Bedroom repaint',
+            source_room_template_id: 'quick-bedroom',
+            source_room_template_version: 4,
+            default_size: 'large',
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: false,
+            default_height_m: 2.7,
+            sort_order: 0,
+          },
+        ],
+      },
+    });
+
+    expect(parsed.detailed_estimate_items.advanced_rooms[0]).toEqual(
+      expect.objectContaining({
+        id: 'adv-bedroom',
+        version: 1,
+        anchor_room_type: 'Bedroom',
+        source_room_template_id: 'quick-bedroom',
+        source_room_template_version: 4,
+        default_size: 'large',
+      })
+    );
   });
 
   it('falls back to defaults when given invalid JSON', () => {
@@ -353,13 +435,6 @@ describe('parseUserRateSettings', () => {
   });
 });
 // ─── hydrateQuickEstimate / splitToSurfaces ───────────────────────────────────
-
-import {
-  splitToSurfaces,
-  hydrateQuickEstimate,
-  buildDefaultQuickEstimateSettings,
-  DEFAULT_QUICK_ROOM_LABELS,
-} from '@/lib/rate-settings';
 
 describe('splitToSurfaces', () => {
   it('splits 100000 into 50/25/25', () => {

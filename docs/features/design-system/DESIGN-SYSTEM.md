@@ -24,7 +24,14 @@ total_cents: 165000     // = $1,650.00
 total: 1500.00  // 부동소수점 오류 가능
 ```
 
-GST 계산: `Math.round(subtotal_cents * 0.1)`
+기본 quote 계산은 [V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md)의 canonical money contract를 따른다. GST는 quote-level discount 적용 후 taxable subtotal 기준으로 계산한다.
+
+```ts
+subtotal_cents = base_subtotal_cents + line_items_subtotal_cents
+discounted_subtotal_cents = Math.max(0, subtotal_cents - discount_cents)
+gst_cents = Math.round(discounted_subtotal_cents * 0.1)
+total_cents = Math.max(0, discounted_subtotal_cents + gst_cents + manual_adjustment_cents)
+```
 
 ### 1.2 RLS Is Law
 

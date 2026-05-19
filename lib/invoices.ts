@@ -30,7 +30,10 @@ type QuoteRecord = {
   title: string | null;
   customer_id: string;
   subtotal_cents: number;
+  gst_cents: number;
   total_cents: number;
+  discount_cents: number | null;
+  manual_adjustment_cents: number | null;
   deposit_percent: number | null;
   status: string;
   valid_until: string | null;
@@ -500,7 +503,7 @@ export async function getInvoiceQuoteOptions(supabase: AppSupabaseClient, userId
     supabase
     .from('quotes')
     .select(
-      'id, quote_number, title, customer_id, subtotal_cents, total_cents, deposit_percent, status, valid_until, line_items:quote_line_items(name, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected)'
+      'id, quote_number, title, customer_id, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, deposit_percent, status, valid_until, line_items:quote_line_items(name, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected)'
     )
     .eq('user_id', userId)
     .eq('status', 'approved')
@@ -535,7 +538,10 @@ export async function getInvoiceQuoteOptions(supabase: AppSupabaseClient, userId
           title: quote.title,
           customer_id: quote.customer_id,
           subtotal_cents: quote.subtotal_cents,
+          gst_cents: quote.gst_cents,
           total_cents: quote.total_cents,
+          discount_cents: quote.discount_cents ?? 0,
+          manual_adjustment_cents: quote.manual_adjustment_cents ?? 0,
           deposit_percent: quote.deposit_percent ?? 0,
           status: quote.status,
           valid_until: quote.valid_until,

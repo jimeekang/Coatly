@@ -149,6 +149,72 @@ describe('createQuote', () => {
     expect(result).toEqual({ error: 'Select a customer' });
   });
 
+  it('rejects deterministic line items that duplicate quick estimate priced scope', async () => {
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const result = await createQuote({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Duplicate quick wall quote',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [
+        {
+          name: 'Bedroom 1 walls',
+          category: 'service',
+          unit: 'item',
+          quantity: 1,
+          unit_price_cents: 20000,
+          is_optional: false,
+          is_selected: true,
+          pricing_scope_key: 'quick:bedroom-1:walls',
+          pricing_role: 'priced_scope',
+        },
+      ],
+      pricing_method: 'detailed_quick',
+      pricing_method_inputs: {
+        method: 'detailed_quick',
+        inputs: {
+          global_coating: 'two_coats_repaint',
+          global_condition: 'average',
+          rooms: [
+            {
+              room_id: 'bedroom-1',
+              label: 'Bedroom 1',
+              size: 'medium',
+              selected_surfaces: ['walls', 'ceiling'],
+              walls_cents: 120000,
+              ceiling_cents: 35000,
+              trim_cents: 20000,
+              coating_multiplier_pct: 100,
+              condition_multiplier_pct: 100,
+              total_cents: 155000,
+            },
+          ],
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      error: expect.stringContaining('Bedroom 1 walls'),
+    });
+    expect(getSubscriptionSnapshotForUserMock).not.toHaveBeenCalled();
+  });
+
   it('creates a quote and redirects to the detail page', async () => {
     const captured: {
       quoteInsert?: Record<string, unknown>;
@@ -366,6 +432,256 @@ describe('createQuote', () => {
       },
     ]);
     expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-1');
+  });
+
+  it('saves identical canonical totals for create and update with the same fixture', async () => {
+    const input = {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Canonical parity quote',
+      status: 'draft' as const,
+      valid_until: '2026-04-10',
+      working_days: 2,
+      complexity: 'standard' as const,
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      manual_adjustment_cents: 5000,
+      discount_cents: 10000,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [
+        {
+          name: 'Feature wall upgrade',
+          category: 'service' as const,
+          unit: 'item',
+          quantity: 1,
+          unit_price_cents: 30000,
+          is_optional: false,
+          is_selected: true,
+        },
+        {
+          name: 'Optional garage door',
+          category: 'service' as const,
+          unit: 'item',
+          quantity: 1,
+          unit_price_cents: 40000,
+          is_optional: true,
+          is_selected: false,
+        },
+      ],
+      pricing_method: 'day_rate' as const,
+      pricing_method_inputs: {
+        method: 'day_rate' as const,
+        inputs: {
+          days: 2,
+          daily_rate_cents: 100000,
+          material_method: 'percentage' as const,
+          material_percent: 25,
+        },
+      },
+    };
+    const customerResult = {
+      data: {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        email: 'client@example.com',
+        emails: ['client@example.com'],
+        address_line1: '128 Beach Street',
+        address_line2: null,
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+        properties: [],
+      },
+      error: null,
+    };
+    const businessResult = {
+      data: { default_rates: {} },
+      error: null,
+    };
+    const capturedCreate: {
+      quoteInsert?: Record<string, unknown>;
+      lineItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    createServerClientMock.mockResolvedValueOnce({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(createFilterQuery(customerResult)),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue(businessResult),
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            insert: vi.fn((payload) => {
+              capturedCreate.quoteInsert = payload;
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'created-quote' },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            insert: vi.fn(async (payload) => {
+              capturedCreate.lineItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected create table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'generate_quote_number') {
+          return { data: 'QUO-0020', error: null };
+        }
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    await createQuote(input);
+
+    const capturedUpdate: {
+      quoteUpdate?: Record<string, unknown>;
+      lineItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    createServerClientMock.mockResolvedValueOnce({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'updated-quote',
+                  quote_number: 'QUO-0020',
+                  customer_id: '550e8400-e29b-41d4-a716-446655440000',
+                },
+                error: null,
+              }),
+            })),
+            update: vi.fn((payload) => {
+              capturedUpdate.quoteUpdate = payload;
+              return { error: null, eq: vi.fn().mockReturnThis() };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => ({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            })),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(createFilterQuery(customerResult)),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue(businessResult),
+            }),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+            insert: vi.fn(async (payload) => {
+              capturedUpdate.lineItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected update table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    await updateQuote('updated-quote', input);
+
+    expect(capturedCreate.quoteInsert).toMatchObject({
+      subtotal_cents: 280000,
+      gst_cents: 27000,
+      total_cents: 302000,
+      pricing_method_inputs: input.pricing_method_inputs,
+    });
+    expect(capturedUpdate.quoteUpdate).toMatchObject({
+      subtotal_cents: 280000,
+      gst_cents: 27000,
+      total_cents: 302000,
+      pricing_method_inputs: input.pricing_method_inputs,
+    });
+    const withoutQuoteId = (items?: Array<Record<string, unknown>>) =>
+      items?.map((item) => {
+        const next = { ...item };
+        delete next.quote_id;
+        return next;
+      });
+
+    expect(withoutQuoteId(capturedCreate.lineItemsInsert)).toEqual(
+      withoutQuoteId(capturedUpdate.lineItemsInsert)
+    );
   });
 
   it('marks the quote as sent and redirects with a demo email flag when send_email is used', async () => {
@@ -1345,6 +1661,143 @@ describe('updateQuote', () => {
     vi.clearAllMocks();
   });
 
+  it('rejects deterministic line items that duplicate advanced room priced scope before editing relations', async () => {
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Duplicate advanced wall quote',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [
+        {
+          name: 'Bedroom 1 walls',
+          category: 'service',
+          unit: 'item',
+          quantity: 1,
+          unit_price_cents: 20000,
+          is_optional: false,
+          is_selected: true,
+          pricing_scope_key: 'interior:room:advanced-room-bedroom-1:walls',
+          pricing_role: 'priced_scope',
+        },
+      ],
+      pricing_method: 'hybrid',
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'excellent',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom 1',
+            anchor_room_type: 'Bedroom 1',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: false,
+            include_trim: false,
+            source_rate_item_id: 'advanced-room-bedroom-1',
+            source_rate_item_version: 1,
+            source_rate_item_label: 'Bedroom 1',
+            rate_snapshot_version: 1,
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+    });
+
+    expect(result).toEqual({
+      error: expect.stringContaining('Bedroom 1 walls'),
+    });
+  });
+
+  it('rejects advanced room trim when explicit skirting is attached to the same room', async () => {
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Duplicate advanced trim quote',
+      status: 'draft',
+      valid_until: '2026-06-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [],
+      pricing_method: 'hybrid',
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling', 'trim'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom 1',
+            anchor_room_type: 'Bedroom 1',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: false,
+            include_ceiling: false,
+            include_trim: true,
+            source_rate_item_id: 'advanced-room-bedroom-1',
+            source_rate_item_version: 1,
+            source_rate_item_label: 'Bedroom 1',
+            rate_snapshot_version: 1,
+          },
+        ],
+        opening_items: [],
+        trim_items: [
+          {
+            trim_type: 'skirting',
+            paint_system: 'oil_2coat',
+            quantity: 12,
+            room_index: 0,
+          },
+        ],
+      },
+    });
+
+    expect(result).toEqual({
+      error: expect.stringContaining('skirting'),
+    });
+  });
+
   it('uses custom detailed estimate anchors when updating a hybrid interior quote', async () => {
     const captured: {
       quoteUpdate?: Record<string, unknown>;
@@ -1514,12 +1967,281 @@ describe('updateQuote', () => {
     expect(result).toBeUndefined();
     expect(captured.quoteUpdate?.subtotal_cents).toBeGreaterThan(150000);
     expect(captured.quoteUpdate?.subtotal_cents).toBe(200000);
+    expect(captured.quoteUpdate?.estimate_context).toEqual(
+      expect.objectContaining({
+        rooms: [
+          expect.objectContaining({
+            rate_snapshot_version: 1,
+            source_anchor_range_cents: {
+              min: 200000,
+              median: 200000,
+              max: 200000,
+            },
+            source_surface_rate_multiplier: 1,
+            source_scope_multiplier: 1,
+            source_condition: 'excellent',
+            source_wall_paint_system: 'repaint_2coat',
+          }),
+        ],
+      })
+    );
     expect(captured.estimateItemsInsert?.[0]).toEqual(
       expect.objectContaining({
         category: 'room_anchor',
         label: 'Bedroom',
         unit_price_cents: 200000,
         total_cents: 200000,
+        metadata: expect.objectContaining({
+          source_anchor_range_min_cents: 200000,
+          source_anchor_range_median_cents: 200000,
+          source_anchor_range_max_cents: 200000,
+          source_surface_rate_multiplier: 1,
+          source_scope_multiplier: 1,
+          source_condition: 'excellent',
+          source_wall_paint_system: 'repaint_2coat',
+        }),
+      })
+    );
+  });
+
+  it('stores Room Price Library source metadata when updating a hybrid interior quote', async () => {
+    const captured: {
+      quoteUpdate?: Record<string, unknown>;
+      estimateItemsInsert?: Array<Record<string, unknown>>;
+    } = {};
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-1',
+                  quote_number: 'QUO-0010',
+                  customer_id: 'customer-1',
+                },
+                error: null,
+              }),
+            })),
+            update: vi.fn((payload) => {
+              captured.quoteUpdate = payload;
+              return {
+                error: null,
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        if (table === 'invoices') {
+          const invoiceQuery = {
+            count: 0,
+            error: null,
+            eq: vi.fn().mockReturnThis(),
+          };
+          return {
+            select: vi.fn(() => invoiceQuery),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(
+              createFilterQuery({
+                data: {
+                  id: 'customer-1',
+                  email: 'client@example.com',
+                  emails: ['client@example.com'],
+                  address_line1: '128 Beach Street',
+                  address_line2: null,
+                  city: 'Manly',
+                  state: 'NSW',
+                  postcode: '2095',
+                  properties: [],
+                },
+                error: null,
+              })
+            ),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: {
+                  default_rates: {
+                    quick_estimate: {
+                      rooms: [
+                        {
+                          id: 'quick-bedroom',
+                          version: 2,
+                          label: 'Bedroom',
+                          enabled_surfaces: ['walls', 'ceiling', 'trim'],
+                          sizes: {
+                            small: {
+                              walls_cents: 90000,
+                              ceiling_cents: 30000,
+                              trim_cents: 10000,
+                            },
+                            medium: {
+                              walls_cents: 120000,
+                              ceiling_cents: 45000,
+                              trim_cents: 15000,
+                            },
+                            large: {
+                              walls_cents: 150000,
+                              ceiling_cents: 60000,
+                              trim_cents: 20000,
+                            },
+                          },
+                          sort_order: 0,
+                        },
+                      ],
+                      coating_multipliers: {
+                        one_coat_refresh_pct: 70,
+                        two_coats_repaint_pct: 100,
+                        three_coats_new_plaster_pct: 140,
+                      },
+                      condition_multipliers: {
+                        good_pct: 90,
+                        average_pct: 100,
+                        poor_pct: 130,
+                      },
+                    },
+                  },
+                },
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quote_rooms') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        if (table === 'quote_estimate_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+            insert: vi.fn(async (payload) => {
+              captured.estimateItemsInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            delete: vi.fn(() => ({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(),
+    });
+
+    const result = await updateQuote('quote-1', {
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Updated room template bedroom',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      line_items: [],
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'ceiling'],
+        wall_paint_system: 'repaint_2coat',
+        property_details: {},
+        rooms: [
+          {
+            name: 'Bedroom repaint',
+            anchor_room_type: 'Bedroom',
+            room_type: 'interior',
+            length_m: null,
+            width_m: null,
+            height_m: null,
+            include_walls: true,
+            include_ceiling: true,
+            include_trim: false,
+            source_room_template_id: 'quick-bedroom',
+            source_room_template_size: 'medium',
+          },
+        ],
+        opening_items: [],
+        trim_items: [],
+      },
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteUpdate?.subtotal_cents).toBe(165000);
+    expect(captured.quoteUpdate?.estimate_context).toEqual(
+      expect.objectContaining({
+        rooms: [
+          expect.objectContaining({
+            rate_snapshot_version: 1,
+            source_room_template_id: 'quick-bedroom',
+            source_room_template_version: 2,
+            source_room_template_label: 'Bedroom',
+            source_room_template_size: 'medium',
+            source_room_template_surface_prices_cents: {
+              walls_cents: 120000,
+              ceiling_cents: 45000,
+              trim_cents: 0,
+            },
+            source_anchor_range_cents: {
+              min: 120000,
+              median: 165000,
+              max: 210000,
+            },
+          }),
+        ],
+      })
+    );
+    expect(captured.estimateItemsInsert?.[0]).toEqual(
+      expect.objectContaining({
+        category: 'room_anchor',
+        label: 'Bedroom repaint',
+        unit_price_cents: 165000,
+        total_cents: 165000,
+        metadata: expect.objectContaining({
+          source_room_template_id: 'quick-bedroom',
+          source_room_template_version: 2,
+          source_room_template_label: 'Bedroom',
+          source_room_template_size: 'medium',
+          source_room_template_surface_walls_cents: 120000,
+          source_room_template_surface_ceiling_cents: 45000,
+          source_room_template_surface_trim_cents: 0,
+          source_anchor_range_median_cents: 165000,
+        }),
       })
     );
   });
@@ -1662,6 +2384,10 @@ describe('updateQuote', () => {
           rooms: [
             {
               room_id: 'bedroom',
+              source_rate_item_id: 'quick-bedroom-v1',
+              source_rate_item_version: 3,
+              source_rate_item_label: 'Bedroom template',
+              rate_snapshot_version: 1,
               label: 'Bedroom',
               size: 'medium',
               selected_surfaces: ['walls', 'ceiling'],
@@ -1687,6 +2413,7 @@ describe('updateQuote', () => {
         quote_id: 'quote-1',
         category: 'quick_estimate',
         label: 'Bedroom',
+        quantity: 1,
         unit: 'room',
         unit_price_cents: 155000,
         total_cents: 155000,
@@ -1696,9 +2423,22 @@ describe('updateQuote', () => {
         condition_multiplier_pct: 100,
         item_notes: null,
         metadata: {
+          kind: 'room',
           room_id: 'bedroom',
+          source_rate_item_id: 'quick-bedroom-v1',
+          source_rate_item_version: 3,
+          source_rate_item_label: 'Bedroom template',
+          rate_snapshot_version: 1,
+          walls_cents: 120000,
+          ceiling_cents: 35000,
+          trim_cents: 20000,
+          trim_paint_system: 'oil_2coat',
+          selected_surfaces: ['walls', 'ceiling'],
+          coating_multiplier_pct: 100,
+          condition_multiplier_pct: 100,
           global_coating: 'two_coats_repaint',
           global_condition: 'average',
+          global_trim_paint_system: 'oil_2coat',
         },
         sort_order: 0,
       }),
@@ -2136,7 +2876,8 @@ describe('setQuoteOptionalLineItemSelection', () => {
                 data: {
                   id: 'quote-1',
                   subtotal_cents: 68000,
-                  manual_adjustment_cents: 0,
+                  discount_cents: 3000,
+                  manual_adjustment_cents: 2000,
                 },
                 error: null,
               }),
@@ -2226,9 +2967,66 @@ describe('setQuoteOptionalLineItemSelection', () => {
     expect(captured.lineItemUpdate).toEqual({ is_selected: true });
     expect(captured.quoteUpdate).toEqual({
       subtotal_cents: 83000,
-      gst_cents: 8300,
-      total_cents: 91300,
+      gst_cents: 8000,
+      total_cents: 90000,
     });
+  });
+
+  it('does not change optional selections when an admin quote has linked invoices', async () => {
+    const lineItemsSelectMock = vi.fn();
+    const quoteUpdateMock = vi.fn();
+
+    createServerClientMock.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-1',
+                  subtotal_cents: 68000,
+                  discount_cents: 0,
+                  manual_adjustment_cents: 0,
+                },
+                error: null,
+              }),
+            }),
+            update: quoteUpdateMock,
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 1,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            select: lineItemsSelectMock,
+            update: vi.fn(),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('quoteId', 'quote-1');
+    formData.set('lineItemId', 'line-1');
+    formData.set('isSelected', 'true');
+
+    const result = await setQuoteOptionalLineItemSelection(formData);
+
+    expect(result).toBeUndefined();
+    expect(lineItemsSelectMock).not.toHaveBeenCalled();
+    expect(quoteUpdateMock).not.toHaveBeenCalled();
   });
 });
 
@@ -2440,7 +3238,8 @@ describe('public quote access', () => {
                   id: 'quote-public-1',
                   status: 'sent',
                   subtotal_cents: 68000,
-                  manual_adjustment_cents: 0,
+                  discount_cents: 3000,
+                  manual_adjustment_cents: 2000,
                 },
                 error: null,
               }),
@@ -2510,9 +3309,161 @@ describe('public quote access', () => {
     expect(captured.lineItemUpdate).toEqual({ is_selected: true });
     expect(captured.quoteUpdate).toEqual({
       subtotal_cents: 83000,
-      gst_cents: 8300,
-      total_cents: 91300,
+      gst_cents: 8000,
+      total_cents: 90000,
     });
+  });
+
+  it('does not change public optional selections when the quote has linked invoices', async () => {
+    const lineItemsSelectMock = vi.fn();
+    const quoteUpdateMock = vi.fn();
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-public-1',
+                  status: 'sent',
+                  valid_until: '2026-06-10',
+                  subtotal_cents: 68000,
+                  discount_cents: 0,
+                  manual_adjustment_cents: 0,
+                },
+                error: null,
+              }),
+            }),
+            update: quoteUpdateMock,
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 1,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            select: lineItemsSelectMock,
+            update: vi.fn(),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('quoteToken', '11111111-1111-1111-1111-111111111111');
+    formData.set('lineItemId', 'line-1');
+    formData.set('isSelected', 'true');
+
+    const result = await setPublicQuoteOptionalLineItemSelection(formData);
+
+    expect(result).toEqual({
+      error: 'This quote already has a linked invoice.',
+      selectedIds: [],
+    });
+    expect(lineItemsSelectMock).not.toHaveBeenCalled();
+    expect(quoteUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('rolls back a public optional selection when quote total update fails', async () => {
+    const lineItemUpdates: Array<Record<string, unknown>> = [];
+
+    createAdminClientMock.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  id: 'quote-public-1',
+                  status: 'sent',
+                  valid_until: '2026-06-10',
+                  subtotal_cents: 68000,
+                  discount_cents: 0,
+                  manual_adjustment_cents: 0,
+                },
+                error: null,
+              }),
+            }),
+            update: vi.fn(() => ({
+              error: { message: 'Quote total update failed' },
+              eq: vi.fn().mockReturnThis(),
+            })),
+          };
+        }
+
+        if (table === 'invoices') {
+          return {
+            select: vi.fn().mockReturnValue({
+              count: 0,
+              error: null,
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'quote_line_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'line-1',
+                    total_cents: 15000,
+                    is_optional: true,
+                    is_selected: false,
+                  },
+                  {
+                    id: 'line-2',
+                    total_cents: 5000,
+                    is_optional: false,
+                    is_selected: true,
+                  },
+                ],
+                error: null,
+              }),
+            }),
+            update: vi.fn((payload) => {
+              lineItemUpdates.push(payload);
+              return {
+                eq: vi.fn().mockReturnThis(),
+              };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set('quoteToken', '11111111-1111-1111-1111-111111111111');
+    formData.set('lineItemId', 'line-1');
+    formData.set('isSelected', 'true');
+
+    const result = await setPublicQuoteOptionalLineItemSelection(formData);
+
+    expect(result).toEqual({
+      error: 'Quote total update failed',
+      selectedIds: [],
+    });
+    expect(lineItemUpdates).toEqual([
+      { is_selected: true },
+      { is_selected: false },
+    ]);
   });
 
   it('approves a public quote, stores signer details, and notifies the business owner', async () => {

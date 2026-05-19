@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
+import { resolveSafeInternalPath } from '@/lib/security/paths';
 import { getStripeClient } from '@/lib/stripe/client';
 import { getStripePriceId } from '@/lib/stripe/plans';
 import type { PlanId, BillingInterval } from '@/config/plans';
@@ -24,10 +25,10 @@ export async function POST(request: NextRequest) {
 
   const planId = body.planId as PlanId;
   const interval = (body.interval ?? 'monthly') as BillingInterval;
-  const returnPath =
-    typeof body.returnPath === 'string' && body.returnPath.startsWith('/')
-      ? body.returnPath
-      : '/subscribe';
+  const returnPath = resolveSafeInternalPath(body.returnPath, '/subscribe', [
+    '/subscribe',
+    '/settings',
+  ]);
 
   if (!planId || !['starter', 'pro'].includes(planId)) {
     return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });

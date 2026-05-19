@@ -8,7 +8,7 @@
 |----|--------|------|------|-----------|
 | A1 | P0 | Quote/Invoice 저장 원자성 | 열림 | 다중 insert/update 흐름을 RPC transaction으로 묶을 범위 산정 |
 | A2 | P1 | Public booking + Google Calendar | 열림 | Google event 생성 실패 시 booking 정책을 fail-closed로 정리 |
-| A3 | P0 | AI 거버넌스 + v1 wedge | 진행 중 | v1 build T4 (`ai_usage_logs` + limit) + T8 validator. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md) |
+| A3 | P0 | AI 거버넌스 + v1 wedge | 진행 중 | Task 1 canonical totals 후 v1 build T4 (`ai_usage_logs` + Basic/Pro/Pro trial limit) + T8 validator. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md), [../ai/V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md) |
 | A4 | P1 | Invoice reminder cron | 부분 해결 | `invoice_reminder_events` 기반 멱등성 운영 로그 점검 |
 | A5 | P1 | Public quote security/audit | 부분 | token expiry/revoke/error audit 조회와 운영 화면 검토 |
 | A6 | P1 | Exterior estimate | 열림 | edit/PDF/detail/AI draft 회귀 테스트 강화 |
@@ -19,7 +19,7 @@
 
 ### A1 — Quote/Invoice 저장 원자성
 
-현재 quote/invoice는 header와 line items를 여러 쿼리로 저장합니다. 중간 실패 시 불완전 데이터가 남을 수 있으므로 고위험 경로부터 RPC transaction으로 줄이는 것이 좋습니다.
+현재 quote/invoice는 header와 line items를 여러 쿼리로 저장합니다. 중간 실패 시 불완전 데이터가 남을 수 있으므로 고위험 경로부터 RPC transaction으로 줄이는 것이 좋습니다. v1 Task 1에서는 transaction 전 단계로 quote total authority와 invoice preset parity를 먼저 고정합니다.
 
 수용 기준:
 - 실패 시 header만 남거나 line item만 남는 상태가 없어야 함
@@ -35,7 +35,7 @@
 
 ### A3 — AI Governance
 
-AI draft와 workspace assistant가 구현되어 있습니다. v1 wedge 재정의(2026-05-15)로 governance가 build 핵심 — T4 `ai_usage_logs` migration + `lib/ai/usage.ts` rate limit + validator/repair layer + deterministic pricing pass. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md).
+AI draft와 workspace assistant가 구현되어 있습니다. v1 wedge 재정의(2026-05-15)로 governance가 build 핵심 — Task 1 canonical quote totals, T4 `ai_usage_logs` migration + `lib/ai/usage.ts` Basic/Pro/Pro trial rate limit + validator/repair layer + deterministic pricing pass. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md).
 
 수용 기준:
 - user/action/model/status/token/latency/request id가 `ai_usage_logs`에 기록됨 (attempt accounting — success/failed/cancelled/partial/retried)

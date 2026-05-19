@@ -1,12 +1,12 @@
 # Coatly
 
-호주 1–3인 painter를 위한 모바일 우선 SaaS. v1 wedge = **AI Quote Writer** (notes + rough measurements + 보조 사진 + price_rates → polished quote artifact). 견적·청구·고객·구독·일정을 한 앱에서 처리.
+호주 1–3인 painter를 위한 모바일 우선 SaaS. v1 wedge = **AI Quote Writer** (notes + rough measurements + 보조 사진 + price_rates → polished quote artifact), 보조 AI = Today Assistant + Follow-up Writer. 견적·청구·고객·구독·일정을 한 앱에서 처리.
 
 > 📘 Navigation: [`ARCHITECTURE.md`](ARCHITECTURE.md) (스택·DB·flow) · [`CLAUDE.md`](CLAUDE.md) (planning context) · [`AGENTS.md`](AGENTS.md) (agent routing) · [`docs/PLANS.md`](docs/PLANS.md) (roadmap) · [`docs/features/ai/V1-PLAN.md`](docs/features/ai/V1-PLAN.md) (v1 wedge) · [`TODOS.md`](TODOS.md) (deferred)
 
 ## Tech Stack
 
-기술 스택 전체는 [`ARCHITECTURE.md`](ARCHITECTURE.md#stack) 참조. 핵심: Next.js 16 App Router + React 19 + Supabase(Postgres/Auth/RLS/Storage) + Stripe + React-PDF + Resend + Gemini Flash via Genkit + Vercel.
+기술 스택 전체는 [`ARCHITECTURE.md`](ARCHITECTURE.md#stack) 참조. 핵심: Next.js 16 App Router + React 19 + Supabase(Postgres/Auth/RLS/Storage) + Stripe + React-PDF + Resend + Alibaba Cloud / Qwen `qwen3-vl-flash` + Vercel.
 
 ## Local Development
 
@@ -47,7 +47,8 @@ STRIPE_PRICE_PRO_ANNUAL=price_...
 ABR_GUID=<abr-web-services-guid>
 
 # AI (v1 wedge core)
-GEMINI_API_KEY=<gemini-api-key>
+QWEN_API_KEY=<qwen-api-key>
+QWEN_MODEL=qwen3-vl-flash
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -55,7 +56,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 > Supabase keys: Dashboard → Project Settings → API
 > ABR GUID: register at [abr.business.gov.au](https://abr.business.gov.au/Tools/WebServices)
-> Gemini API key: [aistudio.google.com](https://aistudio.google.com/)
+> Qwen API key: Alibaba Cloud Model Studio / Qwen Cloud
 
 ### 3. Start dev server
 
@@ -96,7 +97,7 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 | Plan | Price | Limits |
 |------|-------|--------|
 | Starter | A$39/mo (A$450/yr) | 월 10 active quotes, AI 없음 |
-| Pro | A$59/mo (A$680/yr) | 무제한 quotes + AI Quote Writer + 브랜딩 |
+| Pro | A$59/mo (A$680/yr) | 무제한 quotes + AI Quote Writer + Today Assistant + Follow-up Writer + 브랜딩 |
 
 ## Deployment
 
