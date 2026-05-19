@@ -559,7 +559,7 @@ function getSurfaceRateMultiplier(
   userRates?: UserRateSettings | null
 ) {
   const normalized = [...new Set(scope)];
-  if (!userRates || normalized.length === 0) return 1;
+  if (normalized.length === 0) return 1;
 
   const weights: Record<InteriorScope, number> = {
     walls: INTERIOR_SCOPE_SHARE.walls_only,
@@ -569,14 +569,20 @@ function getSurfaceRateMultiplier(
 
   const ratios: Record<InteriorScope, number> = {
     walls:
-      userRates.walls[wallPaintSystem] /
-      PAINT_RATES.walls[wallPaintSystem].ratePerSqm,
+      userRates == null
+        ? 1
+        : userRates.walls[wallPaintSystem] /
+          PAINT_RATES.walls[wallPaintSystem].ratePerSqm,
     ceiling:
-      userRates.ceiling[wallPaintSystem] /
-      PAINT_RATES.ceiling[wallPaintSystem].ratePerSqm,
+      userRates == null
+        ? 1
+        : userRates.ceiling[wallPaintSystem] /
+          PAINT_RATES.ceiling[wallPaintSystem].ratePerSqm,
     trim:
-      (userRates.trim.repaint_2coat /
-        PAINT_RATES.trim.repaint_2coat.ratePerSqm) *
+      (userRates == null
+        ? 1
+        : userRates.trim.repaint_2coat /
+          PAINT_RATES.trim.repaint_2coat.ratePerSqm) *
       getTrimPaintSystemMultiplier(trimPaintSystem, userRates),
   };
 

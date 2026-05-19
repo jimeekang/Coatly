@@ -434,6 +434,7 @@ export function InteriorEstimateBuilder({
             </div>
           </div>
 
+          {value.scope.includes('trim') && (
           <div>
             <label className={LABEL}>Trim Base</label>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -454,6 +455,7 @@ export function InteriorEstimateBuilder({
               ))}
             </div>
           </div>
+          )}
         </>
       )}
 
