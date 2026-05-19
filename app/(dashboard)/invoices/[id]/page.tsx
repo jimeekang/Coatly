@@ -6,7 +6,7 @@ import {
   getLinkedInvoicesForQuote,
 } from '@/app/actions/invoices';
 import { InvoiceDetail } from '@/components/invoices/InvoiceDetail';
-import { BackButton } from '@/components/layout/BackButton';
+import { BackLink } from '@/components/layout/BackLink';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -51,7 +51,7 @@ export default async function InvoiceDetailPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
       <div className="mb-4">
-        <BackButton href="/invoices" label="All invoices" />
+        <BackLink href="/invoices" label="All invoices" />
       </div>
 
       <InvoiceDetail invoice={invoice} linkedQuote={linkedQuote} quoteBilling={quoteBilling} />

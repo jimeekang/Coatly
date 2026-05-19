@@ -520,8 +520,19 @@ export function InvoiceDetail({
               className={`${SECONDARY_BTN} flex-1 sm:flex-none`}
             >
               <Icon name="download" size={16} />
-              {invoice.status === 'paid' ? 'Receipt' : 'PDF'}
+              PDF
             </a>
+            {invoice.status === 'paid' && (
+              <a
+                href={`/api/pdf/invoice?id=${invoice.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className={`${SECONDARY_BTN} flex-1 sm:flex-none`}
+              >
+                <Icon name="download" size={16} />
+                Download receipt
+              </a>
+            )}
             {invoice.status === 'draft' && (
               <Link
                 href={`/invoices/${invoice.id}/edit`}

@@ -78,10 +78,19 @@ Design System UI kit(`coatly-design-system`) 기준으로 invoice list/detail �
 - **카드 행** — 상대적 due 라벨(`getInvoiceDueLabel()`): `7 days overdue` · `Due in 3 days` · `Due today` · `Paid · {date}`, tone 색상(overdue=error, due-soon=warning). 부분 결제 시 `{paid} of {total} received` 라인. 우측 금액 라벨은 paid면 `Paid`/총액, 그 외 `Balance`/잔액.
 
 ### Invoice detail (`/invoices/[id]`)
-- **헤더** — invoice number(mono eyebrow) + 고객명 제목 + 상태 배지 + PDF/Send/Record payment CTA.
+- **백 링크** — `<BackLink href="/invoices" label="All invoices" />` 텍스트 링크 (`components/layout/BackLink.tsx`).
+- **헤더** — invoice number(mono eyebrow) + 고객명 제목 + 상태 배지 + PDF CTA. paid 상태는 `PDF` + `Download receipt` 2버튼, draft는 Send/Edit, sent·overdue는 Record payment.
 - **결제 진행 밴드** (`PaymentProgressBand`) — Amount due 큰 숫자 + Invoiced/Received/Due meta + 진행 바 + 상태별 안내 문구. 상태별 tone(paid/overdue/sent/draft).
 - **Activity 타임라인** (`ActivityTimeline`) — 생성/발송/연체/입금 이벤트. status·실데이터에서만 파생(추정값 생성 안 함).
 - 모든 색·폰트는 Material Design 3 토큰 사용. 레거시 `pm-*` 토큰 제거 완료.
+
+### New / Edit invoice (`/invoices/new`, `InvoiceForm`)
+디자인 번들에 별도 new-invoice 화면이 없어, list/detail 재설계와 **일관성 패스**만 적용:
+- 헤더는 detail과 동일 패턴 — `<BackLink>` 텍스트 백 링크 + `text-[22px]/sm:text-[26px]` 제목.
+- 카드 스타일을 redesign과 통일 (`rounded-2xl border-outline-variant/60 bg-surface-container-lowest p-5`), 섹션 타이틀 `font-bold`.
+- 헤더 eyebrow를 mono 처리, Total 박스 색 토큰 정리(`text-primary-container` 오용 → `text-success`).
+- non-MD3 raw 색상(`amber-*`) → `warning` 토큰으로 교체, 에러 박스는 `<ErrorAlert>` 재사용.
+- 소형 버튼 radius를 `rounded-lg`로 통일.
 
 ## Acceptance Criteria
 

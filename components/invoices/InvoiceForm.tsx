@@ -15,6 +15,7 @@ import {
 } from '@/components/forms/FormField';
 import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
 import { FormSection } from '@/components/forms/FormSection';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 const INVOICE_TYPE_COPY: Record<
   InvoiceFormDefaultValues['invoice_type'],
@@ -507,18 +508,18 @@ export function InvoiceForm({
           <FormSection>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-on-surface-variant">
+                <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em] text-outline">
                   Invoice
                 </p>
-                <p className="mt-1 text-[28px] font-semibold leading-none text-on-surface">
+                <p className="mt-1 text-2xl font-extrabold leading-none tracking-[-0.02em] text-on-surface">
                   {invoiceNumberPreview}
                 </p>
               </div>
-              <div className="rounded-2xl bg-success-container px-4 py-3 text-right">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary-container">
+              <div className="rounded-xl bg-success-container px-4 py-3 text-right">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
                   Total
                 </p>
-                <p className="mt-1 text-2xl font-semibold text-primary">
+                <p className="mt-1 text-2xl font-extrabold tabular-nums text-success">
                   {formatAUD(summary.total)}
                 </p>
               </div>
@@ -526,8 +527,8 @@ export function InvoiceForm({
           </FormSection>
 
           {/* Setup: customer + quote + type + due date */}
-          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
-            <h3 className="mb-4 text-base font-semibold text-on-surface">Invoice Setup</h3>
+          <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-sm">
+            <h3 className="mb-4 text-base font-bold text-on-surface">Invoice Setup</h3>
 
             <div className="space-y-4">
               {/* Customer */}
@@ -618,7 +619,7 @@ export function InvoiceForm({
                             key={percent}
                             type="button"
                             onClick={() => handleProgressPercentChange(String(percent))}
-                            className="inline-flex min-h-11 items-center rounded-xl border border-outline-variant px-3 text-xs font-medium text-on-surface transition-colors hover:bg-white"
+                            className="inline-flex min-h-11 items-center rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-low"
                           >
                             {percent}%
                           </button>
@@ -651,7 +652,7 @@ export function InvoiceForm({
                         setForm((prev) => ({ ...prev, due_date: buildDefaultDueDate() }));
                         setError(null);
                       }}
-                      className="inline-flex min-h-11 items-center rounded-xl border border-outline-variant px-3 text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-low"
                     >
                       Set +14 days
                     </button>
@@ -661,7 +662,7 @@ export function InvoiceForm({
                         setForm((prev) => ({ ...prev, due_date: '' }));
                         setError(null);
                       }}
-                      className="inline-flex min-h-11 items-center rounded-xl border border-outline-variant px-3 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low"
                     >
                       Clear
                     </button>
@@ -752,7 +753,7 @@ export function InvoiceForm({
             {selectedQuote && quoteContext && (
               <div
                 className={`mt-5 rounded-xl border px-4 py-4 ${
-                  quoteContext.overBilled ? 'border-amber-200 bg-amber-50' : 'border-outline-variant bg-surface-container-low/60'
+                  quoteContext.overBilled ? 'border-warning/30 bg-warning-container' : 'border-outline-variant/60 bg-surface-container-low'
                 }`}
               >
                 <p className="mb-3 text-sm font-semibold text-on-surface">
@@ -760,27 +761,27 @@ export function InvoiceForm({
                   {selectedQuote.title ? ` — ${selectedQuote.title}` : ''}
                 </p>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-xl bg-white px-3 py-2">
+                  <div className="rounded-lg bg-surface-container-lowest px-3 py-2">
                     <p className="text-xs text-on-surface-variant">Quote total</p>
                     <p className="mt-0.5 text-sm font-semibold text-on-surface">
                       {formatAUD(selectedQuote.total_cents)}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-white px-3 py-2">
+                  <div className="rounded-lg bg-surface-container-lowest px-3 py-2">
                     <p className="text-xs text-on-surface-variant">Already invoiced</p>
                     <p className="mt-0.5 text-sm font-semibold text-on-surface">
                       {formatAUD(quoteContext.billedBeforeThisInvoiceTotal)}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-white px-3 py-2">
+                  <div className="rounded-lg bg-surface-container-lowest px-3 py-2">
                     <p className="text-xs text-on-surface-variant">Remaining</p>
-                    <p className={`mt-0.5 text-sm font-semibold ${quoteContext.overBilled ? 'text-amber-700' : 'text-primary'}`}>
+                    <p className={`mt-0.5 text-sm font-semibold ${quoteContext.overBilled ? 'text-warning' : 'text-primary'}`}>
                       {formatAUD(quoteContext.remainingTotal)}
                     </p>
                   </div>
                 </div>
                   {quoteContext.overBilled && (
-                  <p className="mt-3 text-xs text-amber-700">
+                  <p className="mt-3 text-xs text-warning">
                     This invoice would exceed the quoted total. Check staged billing.
                   </p>
                 )}
@@ -789,13 +790,13 @@ export function InvoiceForm({
           </section>
 
           {/* Line Items */}
-          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-base font-semibold text-on-surface">Line Items</h3>
+              <h3 className="text-base font-bold text-on-surface">Line Items</h3>
               <button
                 type="button"
                 onClick={addLineItem}
-                className="inline-flex min-h-11 items-center rounded-xl border border-outline-variant px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                className="inline-flex min-h-11 items-center rounded-lg border border-outline-variant px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
               >
                 + Add Item
               </button>
@@ -823,7 +824,7 @@ export function InvoiceForm({
                         <button
                           type="button"
                           onClick={() => removeLineItem(index)}
-                          className="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-on-surface-variant transition-colors hover:bg-white hover:text-on-surface"
+                          className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
                         >
                           Remove
                         </button>
@@ -879,7 +880,7 @@ export function InvoiceForm({
                       </div>
                     </div>
 
-                    <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm">
+                    <div className="mt-3 rounded-lg bg-surface-container-lowest px-4 py-3 text-sm">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-on-surface-variant">Line total</span>
                         <span className="font-semibold text-on-surface">{formatAUD(lineTotal)}</span>
@@ -902,8 +903,8 @@ export function InvoiceForm({
           </section>
 
           {/* Notes & Terms */}
-          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
-            <h3 className="mb-4 text-base font-semibold text-on-surface">Notes & Terms</h3>
+          <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-sm">
+            <h3 className="mb-4 text-base font-bold text-on-surface">Notes & Terms</h3>
             <div className="space-y-4">
               <div>
                 <label htmlFor="notes" className={formLabelClassName}>
@@ -934,18 +935,18 @@ export function InvoiceForm({
           </section>
 
           {/* Business & Payment Details — collapsed by default */}
-          <section className="rounded-2xl border border-outline-variant bg-white shadow-sm">
+          <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest shadow-sm">
             <button
               type="button"
               onClick={() => setShowBusinessDetails((v) => !v)}
-              className="flex w-full items-center justify-between p-4 text-left sm:p-6"
+              className="flex w-full items-center justify-between p-5 text-left"
             >
-              <h3 className="text-base font-semibold text-on-surface">Business & Payment Details</h3>
+              <h3 className="text-base font-bold text-on-surface">Business & Payment Details</h3>
               <span className="text-on-surface-variant">{showBusinessDetails ? '▲' : '▼'}</span>
             </button>
 
             {showBusinessDetails && (
-              <div className="space-y-4 border-t border-outline-variant px-4 pb-4 pt-4 sm:px-6 sm:pb-6">
+              <div className="space-y-4 border-t border-outline-variant/60 px-5 pb-5 pt-4">
                 <div>
                   <label htmlFor="business_abn" className={formLabelClassName}>
                     ABN
@@ -982,8 +983,8 @@ export function InvoiceForm({
         {/* ── Right sidebar ── */}
         <aside className="space-y-5 xl:sticky xl:top-4 xl:self-start">
           {/* Totals */}
-          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-on-surface-variant">
+          <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-sm">
+            <h3 className="mb-4 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
               Totals
             </h3>
             <dl className="space-y-3 text-sm">
@@ -1004,8 +1005,8 @@ export function InvoiceForm({
 
           {/* Quote items snapshot */}
           {selectedQuote && selectedQuoteIncludedItems.length > 0 && (
-            <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-on-surface-variant">
+            <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-sm">
+              <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
                 Quote items
               </h3>
               <div className="space-y-2">
@@ -1038,8 +1039,8 @@ export function InvoiceForm({
 
           {/* Customer snapshot */}
           {selectedCustomer && (
-            <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-on-surface-variant">
+            <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-sm">
+              <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
                 Customer Snapshot
               </h3>
               <div className="space-y-1 text-sm">
@@ -1061,11 +1062,7 @@ export function InvoiceForm({
         </aside>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-error bg-error-container px-4 py-3">
-          <p className="text-sm text-on-error-container">{error}</p>
-        </div>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
 
       {/* Fixed bottom CTA */}
       <FormFooter contentClassName="max-w-6xl flex-col">
