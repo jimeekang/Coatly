@@ -569,19 +569,11 @@ function TrimRatesSection({
             ? [{ key: 'trim', label: SQM_SURFACE_TYPE_LABELS.trim }]
             : []
         }
-<<<<<<< HEAD
         cols={TRIM_COATING_TYPES.map((c) => ({
           key: c,
           label: COATING_LABELS[c],
         }))}
-        suffix="/sqm"
-=======
-	        cols={TRIM_COATING_TYPES.map((c) => ({
-	          key: c,
-	          label: COATING_LABELS[c],
-	        }))}
-	        suffix="/m"
->>>>>>> phrase0
+        suffix="/m"
         getValue={(_r, c) => (rates.trim as Record<string, number>)[c]}
         onChange={(_r, c, v) => onSurfaceChange('trim', c, v)}
         rowActions={() => (
@@ -2032,8 +2024,6 @@ export function PriceRatesForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-<<<<<<< HEAD
-=======
       <div className="grid gap-3 lg:grid-cols-2">
         <RateSetupSummary
           title="Room Price Library setup"
@@ -2074,7 +2064,6 @@ export function PriceRatesForm({
           issues={advancedSetupIssues}
         />
       </div>
->>>>>>> phrase0
       {/* ── Method bar ──────────────────────────────────────────────────────── */}
       <div>
         <div

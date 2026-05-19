@@ -216,11 +216,7 @@ export function createEmptyInteriorEstimateState(): InteriorEstimateFormState {
     scope: ['walls', 'ceiling', 'trim'],
     wall_paint_system: 'repaint_2coat',
     trim_paint_system: 'oil_2coat',
-<<<<<<< HEAD
-    rooms: [createEmptyInteriorRoom()],
-=======
     rooms: [],
->>>>>>> phrase0
     doors: [],
     windows: [],
     trim_items: [],
@@ -244,8 +240,6 @@ export function InteriorEstimateBuilder({
     setValue('rooms', value.rooms.map((room, roomIndex) => (roomIndex === index ? { ...room, ...patch } : room)));
   }
 
-<<<<<<< HEAD
-=======
   function setRoomPricing(
     index: number,
     patch: Partial<
@@ -267,7 +261,6 @@ export function InteriorEstimateBuilder({
     });
   }
 
->>>>>>> phrase0
   function setTrimPaintSystem(nextPaintSystem: InteriorPaintSystem) {
     onChange({
       ...value,
@@ -441,51 +434,27 @@ export function InteriorEstimateBuilder({
             </div>
           </div>
 
-<<<<<<< HEAD
-      {value.estimate_mode === 'entire_property' &&
-        value.scope.includes('trim') && (
-=======
           {value.scope.includes('trim') && (
->>>>>>> phrase0
-          <div>
-            <label className={LABEL}>Trim Base</label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {INTERIOR_PAINT_SYSTEMS.map((paintSystem) => (
-                <button
-                  key={paintSystem}
-                  type="button"
-                  onClick={() => setTrimPaintSystem(paintSystem)}
-                  aria-pressed={value.trim_paint_system === paintSystem}
-                  className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
-                    value.trim_paint_system === paintSystem
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-outline-variant bg-white text-on-surface'
-                  }`}
-                >
-                  {INTERIOR_PAINT_SYSTEM_LABELS[paintSystem]}
-                </button>
-              ))}
+            <div>
+              <label className={LABEL}>Trim Base</label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {INTERIOR_PAINT_SYSTEMS.map((paintSystem) => (
+                  <button
+                    key={paintSystem}
+                    type="button"
+                    onClick={() => setTrimPaintSystem(paintSystem)}
+                    aria-pressed={value.trim_paint_system === paintSystem}
+                    className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
+                      value.trim_paint_system === paintSystem
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-outline-variant bg-white text-on-surface'
+                    }`}
+                  >
+                    {INTERIOR_PAINT_SYSTEM_LABELS[paintSystem]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-<<<<<<< HEAD
-        )}
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {value.property_type === 'apartment' ? (
-          <>
-            <div><label htmlFor="apartment-type" className={LABEL}>Apartment Type</label><select id="apartment-type" value={value.apartment_type} onChange={(event) => setValue('apartment_type', event.target.value as InteriorApartmentType)} className={FIELD}>{INTERIOR_APARTMENT_TYPES.map((apartmentType) => <option key={apartmentType} value={apartmentType}>{INTERIOR_APARTMENT_TYPE_LABELS[apartmentType]}</option>)}</select></div>
-            <div><label htmlFor="apartment-sqm" className={LABEL}>Apartment Size (sqm)</label><NumericInput id="apartment-sqm" inputMode="decimal" value={value.apartment_sqm} sanitize={sanitizeDecimalInput} onValueChange={(nextValue) => setValue('apartment_sqm', nextValue)} className={FIELD} /></div>
-          </>
-        ) : (
-          <>
-            <div><label htmlFor="house-bedrooms" className={LABEL}>Bedrooms</label><NumericInput id="house-bedrooms" inputMode="numeric" value={value.house_bedrooms} sanitize={sanitizeIntegerInput} onValueChange={(nextValue) => setValue('house_bedrooms', nextValue)} className={FIELD} /></div>
-            <div><label htmlFor="house-bathrooms" className={LABEL}>Bathrooms</label><NumericInput id="house-bathrooms" inputMode="numeric" value={value.house_bathrooms} sanitize={sanitizeIntegerInput} onValueChange={(nextValue) => setValue('house_bathrooms', nextValue)} className={FIELD} /></div>
-            <div><label htmlFor="house-storeys" className={LABEL}>Storeys</label><select id="house-storeys" value={value.house_storeys} onChange={(event) => setValue('house_storeys', event.target.value as InteriorStoreys)} className={FIELD}>{INTERIOR_STOREYS.map((storeys) => <option key={storeys} value={storeys}>{INTERIOR_STOREY_LABELS[storeys]}</option>)}</select></div>
-            <div><label htmlFor="house-sqm" className={LABEL}>House Size (sqm)</label><NumericInput id="house-sqm" inputMode="decimal" value={value.house_sqm} sanitize={sanitizeDecimalInput} onValueChange={(nextValue) => setValue('house_sqm', nextValue)} className={FIELD} /></div>
-          </>
-        )}
-      </div>
-=======
           )}
         </>
       )}
@@ -507,7 +476,6 @@ export function InteriorEstimateBuilder({
           )}
         </div>
       )}
->>>>>>> phrase0
 
       {value.estimate_mode === 'specific_areas' ? (
         <>

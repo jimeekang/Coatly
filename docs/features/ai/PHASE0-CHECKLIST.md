@@ -28,26 +28,12 @@
 
 ## v1 Build Plan Before Usage Tracking
 
-<<<<<<< HEAD
-실제 사용량을 보려면 앱 구현이 먼저 끝나야 한다. 기능 구현 순서, 파일별 작업 범위, AI 연동, 사진 분석, usage/cost logging 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)를 기준 문서로 둔다.
-=======
 실제 사용량을 보려면 앱 구현이 먼저 끝나야 한다. 기능 구현 순서, 파일별 작업 범위, AI 연동, 사진 분석, usage/cost logging 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)를 기준 문서로 둔다. Task 1 세부 구현은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md), Task 2 Quick/Advanced rate boundary 세부 구현은 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 참조한다.
->>>>>>> phrase0
 
 이 체크리스트에는 validation 결과와 trial tracking 기록만 남긴다. 세부 구현 설명은 build plan과 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md)에 분리한다.
 
 | Week | 날짜 | 목표 | 상세 방법 | 결과 기록 |
 |------|------|------|-----------|-----------|
-<<<<<<< HEAD
-| Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 + [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | 미기록 |
-| Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + quote form schema | Task 2-3 | 미기록 |
-| Build W3 | 2026-06-15 ~ 2026-06-19 | Quick/Advanced hardening + Scope/Clause builder UI | Task 4 | 미기록 |
-| Build W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Task 4 + Test matrix | 미기록 |
-| Build W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + usage logging | Task 5-6 | 미기록 |
-| Build W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | Task 7 | 미기록 |
-| Build W7 | 2026-07-13 ~ 2026-07-17 | Photo helper + Today Assistant + Follow-up Writer | Task 8-11 | 미기록 |
-| Build W8 | 2026-07-20 ~ 2026-07-24 | Pilot readiness + production hardening | Task 12-13 | 미기록 |
-=======
 | Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 + [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | 완료. 2026-05-17 기준 canonical totals/optional add-on/public quote/invoice preset parity, duplicate priced scope guard, PDF regression, full suite/build/lint 통과 |
 | Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + Room Price Library boundary | Task 2-3. Task 2 세부 계획: [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md), Task 3 세부 계획: [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md) | 완료. Task 2 Quick/Advanced metadata/snapshot/setup diagnostics와 Task 3 Room Price Library source redesign/focused tests 통과 |
 | Build W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | Task 4-5 | 다음은 Task 4 quote form schema. customer-visible scope/clause UI 구현으로 진행 |
@@ -56,7 +42,6 @@
 | Build W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | Task 8 | 미기록 |
 | Build W7 | 2026-07-13 ~ 2026-07-17 | Photo helper + Today Assistant + Follow-up Writer | Task 9-12 | 미기록 |
 | Build W8 | 2026-07-20 ~ 2026-07-24 | Pilot readiness + production hardening | Task 13-14 | 미기록 |
->>>>>>> phrase0
 
 ## Phase 0 Day-by-Day Plan
 
@@ -68,11 +53,7 @@
 | D3 | 2026-05-18 Mon | 인터뷰 1–2 진행 | Zoom/전화 30분. 현재 quote 작성 flow, quick/advanced rate 구조, AI 반응, price_rates 동의 확인 | Interview Log P1/P2, Pricing Notes | 완료/앞당김. P1/P2 log 반영. P1은 문장 정리와 follow-up pain, P2는 measurement/line item/photo expectation 강함 |
 | D4 | 2026-05-19 Tue | 인터뷰 3–4 진행 | 같은 script로 진행. 사진 사용 의향, follow-up pain, room/surface/add-on 이중 계산 위험을 깊게 확인 | Interview Log P3/P4, Pricing Notes | 완료/앞당김. P3/P4 log 반영. P3은 A$59 강한 긍정, P4는 현재 quote volume 0으로 pilot fit 낮음 |
 | D5 | 2026-05-20 Wed | 인터뷰 5 진행 + 누락 quote 회수 | 마지막 인터뷰 후 미제출 quote 재요청 | Interview Log P5, quote 5개 목표 | 진행 중. P5 log 반영 완료. legacy PDF 3개 확보. painter별 과거 quote 5개 목표는 아직 미달 |
-<<<<<<< HEAD
-| D6 | 2026-05-21 Thu | pricing model + AI cost economics 1차 계산 | painter 답변을 기준으로 quick/advanced rate 구조 초안 작성. Qwen3-VL-Flash 공식 pricing 확인 후 text draft, photo draft, today summary, follow-up draft 비용을 월 사용량으로 계산 | Pricing Model Draft, Cost Log v1 | 진행 중. quote volume range 0-10/month 확인, active 응답자 평균 약 4-6 quotes/month. 세션 `019e32de-aaa3-7940-aaa6-9c773d3ec251`에서 Rate Library + Modifiers, Average Property Prices, room surface 자유 토글 방향 확정. Qwen3-VL-Flash 2026-05-16 1차 가격 기록 완료, 공식 재확인과 spreadsheet 필요 |
-=======
 | D6 | 2026-05-21 Thu | pricing model + AI cost economics 1차 계산 | painter 답변을 기준으로 quick/advanced rate 구조 초안 작성. Qwen3-VL-Flash 공식 pricing 확인 후 text draft, photo draft, today summary, follow-up draft 비용을 월 사용량으로 계산 | Pricing Model Draft, Cost Log v1 | 진행 중. quote volume range 0-10/month 확인, active 응답자 평균 약 4-6 quotes/month. Qwen3-VL-Flash 2026-05-16 1차 가격 기록 완료, 공식 재확인과 spreadsheet 필요 |
->>>>>>> phrase0
 | D7 | 2026-05-22 Fri | Validation 중간 점검 | 5명 반응을 GREEN/YELLOW/RED 신호로 분류. script에서 약한 질문 보완. 실제 사용량 판정은 build 후 Free Pro Trial + Paid Conversion Tracking에서만 진행 | Midpoint Decision Notes | 완료/앞당김. 정성 사용 의향 5/5, Today/Follow-up 5/5 긍정. A$59 선결제 검증 대신 Pro 1개월 무료 trial 후 paid conversion 측정으로 gate 기준 변경 |
 | D8 | 2026-05-23 Sat | follow-up 보강 | 애매한 painter에게 짧은 follow-up. 선결제 의향과 quote 공유 재확인 | Follow-up Notes | 필요. P1/P2에게 eval seed 의미 재설명, P3에게 AI pricing boundary 설명, P4/P5에게 current usage fit 확인, 추가 quote 공유 재요청 |
 | D9 | 2026-05-24 Sun | golden set + quote form structure 정리 | 받은 quote 익명화, 품질 체크, AI eval과 price calculation scenario에 쓸 입력/정답 형태로 분류. 과거 견적서 form을 scope/pricing/clause 구조로 분해 | Golden Set Tracker, Price Scenario Tracker, Legacy Quote Form Tracker | 진행 중. legacy PDF 3개는 scope/pricing/clause 분석 완료. painter별 anonymized quote golden set은 추가 회수 필요 |
@@ -166,34 +147,6 @@
 | P4 | 현재 quote 없음. measurement pain 중심 | measurements + photo condition check | condition, site measurement, accuracy confidence | 미기록 | 중간. 낮은 사용량 때문에 실제 검증 약함 | 낮음 | Pilot보다는 insight용. current quote volume follow-up 필요 |
 | P5 | line item 계산 pain. 비전문가/maintenance 성격 | photo + notes + guided line item choices | scope, line items, condition, trade-specific template | 미기록 | 높음. 비전문가에게 자동 가격처럼 보이면 위험 | 높음 | Guided presets와 deterministic calculator가 핵심. handyman/maintenance 확장 신호 |
 
-<<<<<<< HEAD
-## Price Rate Structure Decision
-
-결정일: 2026-05-17. 근거 세션: `019e32de-aaa3-7940-aaa6-9c773d3ec251`.
-
-현재 상세 견적의 문제는 단가 항목이 부족한 것보다, painter가 실제로 쓰는 평균가/방별 가격/표면별 가격/prep/access가 같은 화면에서 명확하게 구분되지 않는 점이다. 따라서 v1 Price Rates는 **Rate Library + Modifiers** 구조로 확장한다.
-
-| Rate group | Price Rates 항목 | 목적 | 결과 |
-|------------|------------------|------|------|
-| Average Property Prices | Apartment 1 bed 1 bath, Apartment 2 bed 1 bath, Apartment 2 bed 2 bath, Apartment 3 bed 2 bath, House 3 bed 2 bath, House 4 bed 2 bath | "대부분 interior는 2 bed 2 bath 평균가가 있다"는 실제 painter pricing 방식을 반영 | v1 Task 2에 추가 |
-| Room Prices | Bedroom, bathroom, living, hallway, stairwell 등의 average full repaint price + walls-only/ceiling-only/trim-only % | 방 anchor를 쓰되 고객 요청에 따라 일부 surface만 선택 가능하게 함 | v1 Task 2에 추가 |
-| Base Surface Rates | walls `/sqm`, ceiling `/sqm`, trim/skirting `/lm`, doors/windows `/each`, exterior surfaces | Advanced estimate와 explicit surface pricing 기준 | v1 Task 2에 추가 |
-| Prep & Repairs | patching, crack repair, sanding, caulking, mould, stain/tannin blocking, oil-to-water conversion | 실제 견적 차이를 만드는 prep을 별도 rate item으로 분리 | v1 Task 2에 추가 |
-| Access & Complexity | high ceiling, stairwell, furnished, poor access, second-storey/ladder, scaffold | 현장 난이도와 외부 접근 비용 반영 | v1 Task 2에 추가 |
-| Paint System / Finish Upgrades | 1 coat refresh, 2 coat repaint, new plaster 3 coat, wet-area paint, premium washable, enamel, exterior full system | coating/finish 차이를 multiplier 또는 upgrade row로 반영 | v1 Task 2에 추가 |
-| Business Rules | minimum job charge, minimum room charge, callout/travel, material markup, target daily earning | hidden margin 대신 preview 가능한 사업 규칙으로 관리 | v1 Task 2에 추가 |
-
-Quote behavior decision:
-
-- `Bedroom 1`을 선택해도 walls, ceiling, trim, doors, windows 중 일부를 제거할 수 있어야 한다.
-- `Bedroom 1 + walls only`, `Bedroom 1 + ceiling only`, `Bedroom 1 + trim + doors only`는 정상 시나리오다.
-- 저장 조건은 "벽/천장/트림 전체"가 아니라 가격이 붙는 작업이 하나 이상 있는지다.
-- Average property preset과 room anchor는 같은 base subtotal에 중복으로 들어가면 안 된다.
-- Prep/access/paint upgrade는 이미 anchor에 포함됐는지 UI가 보여주고, 중복일 때는 block 또는 warning을 낸다.
-- AI는 rate item key를 제안할 수 있지만 price, rate, GST, total은 만들지 않는다.
-
-=======
->>>>>>> phrase0
 ## Golden Set Tracker
 
 | Quote ID | Painter | 받는 날짜 | 익명화 상태 | 포함 데이터 | 품질 | eval 사용 가능 | 결과/메모 |
@@ -215,11 +168,6 @@ Quote behavior decision:
 | PS-3 | Legacy PDF | Paint Buddy exterior quote | Exterior estimate | Eaves, rendered walls, cladding, retaining walls, front door, timber | Fence optional | PDF 기준 입력 필요 | PDF 기준 입력 필요 | PDF 기준 입력 필요 | optional fence가 base total에 섞이지 않게 확인 | exterior regression seed로 사용 가능 |
 | PS-4 | P2 interview | 답변 기반 scenario | Advanced surface | ceiling/walls M2, woodwork LM | 미기록 | 미기록 | 미기록 | 미기록 | photo estimate와 manual M2/LM 중복 방지 | 실제 quote 파일 회수 필요 |
 | PS-5 | P5 interview | 답변 기반 scenario | Guided manual/service | line item 계산 보조, photo/notes scope | 미기록 | 미기록 | 미기록 | 미기록 | 비전문가에게 자동 가격처럼 보이지 않게 guard 필요 | maintenance/handyman 확장 검토용 |
-<<<<<<< HEAD
-| PS-6 | Session 019e32de | Bedroom partial scope | Room price / Advanced | Bedroom 1 walls only 또는 ceiling only | doors/trim optional | rate setup 후 fixture 작성 | rate setup 후 fixture 작성 | rate setup 후 fixture 작성 | room anchor가 full repaint로 강제되지 않아야 함 | v1 Task 2 regression seed |
-| PS-7 | Session 019e32de | Average property preset | Average Property Price | Apartment 2 bed 2 bath interior repaint | non-overlapping add-on만 허용 | rate setup 후 fixture 작성 | rate setup 후 fixture 작성 | rate setup 후 fixture 작성 | property anchor + same room anchor 중복 금지 | v1 Task 2 regression seed |
-=======
->>>>>>> phrase0
 
 ## Legacy Quote Form Tracker
 

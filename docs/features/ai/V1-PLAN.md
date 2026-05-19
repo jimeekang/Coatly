@@ -55,32 +55,19 @@
 
 Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote Form Builder가 v1 wedge의 중심이지만, 첫 구현은 AI provider가 아니라 `price_rates`, quote calculation engine, 고객용 quote form data structure 정리다. Quick/Advanced 견적에서 anchor가 중복되거나 subtotal/GST/total이 화면마다 다르게 계산되면, AI를 붙여도 신뢰할 수 없는 견적이 된다. 또한 AI가 만든 문장이 가격 row와 섞이면 PDF/public quote/invoice 전환이 지저분해진다.
 
-<<<<<<< HEAD
-구현자가 따라갈 파일별 순서와 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)에 분리한다. 이 문서는 wedge와 scope boundary를 요약하고, build plan은 usage tracking 전에 완성해야 할 실제 앱 작업 순서를 담당한다.
-
-| ID | 영역 | 핵심 |
-|----|------|------|
-| T0 | Price rate + quote calculation foundation | `quick_estimate`, `detailed_estimate_anchors`, `detailed_estimate_items`, `room_rate_presets`, `quote_estimate_items`, `quote_line_items`의 역할을 분리. Rate Library + Modifiers, Average Property Prices, "one priced scope, one anchor" 규칙, canonical subtotal/GST/total calculator, snapshot/version 기준 확정 |
-| T0A | Quick + Advanced hardening | Quick은 room size + selected surfaces + coating/condition multiplier. Advanced는 room anchor + explicit opening/trim. Bedroom 1 같은 room anchor 선택 후에도 walls/ceiling/trim/doors/windows는 quote 안에서 개별 토글 가능해야 한다. duplicate room anchor, stale rate, preview/save/PDF/invoice mismatch 테스트 작성 |
-=======
 구현자가 따라갈 파일별 순서와 방법은 [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md)에 분리한다. Task 1 가격 계산 foundation은 [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md), Task 2 Quick/Advanced rate boundary는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)를 기준으로 구현한다.
 
 | ID | 영역 | 핵심 |
 |----|------|------|
 | T0 | Price rate + quote calculation foundation | `quick_estimate`, `detailed_estimate_anchors`, `detailed_estimate_items`, `room_rate_presets`, `quote_estimate_items`, `quote_line_items`의 역할을 분리. "one priced scope, one anchor" 규칙, canonical subtotal/GST/total calculator, snapshot/version 기준 확정 |
 | T0A | Quick + Advanced hardening | 완료. Quick은 room size + selected surfaces + coating/condition multiplier snapshot. Advanced는 room anchor + explicit opening/trim numeric snapshot. duplicate room anchor, stale rate, preview/save/PDF/invoice mismatch 테스트 작성 |
->>>>>>> phrase0
 | T0B | Quote form data model | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` 구조 확정. 기존 `quote_estimate_items`/`quote_line_items`와 연결. interior/exterior taxonomy와 clause library seed 작성 |
 | T1 | AI input schema + provider adapter | `photos`, `price_rates_snapshot`, `job_type`, `scope_notes`, `rough_measurements` 추가 / `customers`, `quotes` context 제거 (P1 cost 보호). `lib/ai/providers/qwen.ts` 같은 얇은 adapter로 `qwen3-vl-flash` 호출을 숨김. **AI 역할 boundary: `scope_sections`, `pricing_candidates`, `clauses`만 생성하고 pricing은 T0 calculator가 deterministic 처리** |
 | T2 | Photo upload + multimodal | Qwen3-VL-Flash vision input 사용. Supabase Storage RLS, Basic quote당 3장/월 15장, Pro quote당 5장/월 100장, 1920px JPEG 85%, photo-only auto takeoff 금지 |
 | T3 | Streaming response | **Server Action + ReadableStream** (Day 0 spike mandatory). Qwen streaming response 호환성 확인. RSC streamUI / API SSE 아님. Phase 0 painter check 조건부 |
 | T4 | Per-painter usage limit + cost log | `ai_usage_logs` 테이블 (generated `billing_month` column, attempt accounting). Basic/Pro plan limit과 Pro trial usage를 함께 기록 |
 | T5 | Error handling + graceful degradation | Qwen/Alibaba provider down → 1 retry → manual builder fallback CTA |
-<<<<<<< HEAD
-| T6 | AIDraftPanel wire-up + plan-aware gating + manual correction UX | `QuoteCreateScreen`에 노출. Basic은 limited AI draft, Pro/Pro trial은 full Scope/Pricing/Terms review flow. `scope_sections`와 `clauses`는 inline 편집, 가격은 deterministic preview로만 표시. edit ratio metadata 저장 |
-=======
 | T6 | AIDraftPanel wire-up + Pro gating + manual correction UX | `QuoteCreateScreen`에 노출. AI draft를 Scope/Pricing/Terms review flow로 넣고, `scope_sections`와 `clauses`는 inline 편집, 가격은 deterministic preview로만 표시. edit ratio metadata 저장 |
->>>>>>> phrase0
 | T7 | Generic Workspace Assistant off | 범용 채팅 UI는 feature flag + nav 제거. 코드는 v2 검토용 유지하고, v1은 T13/T14의 scoped assistants만 노출 |
 | T8 | AU prompt tuning + eval harness + validator | AU domain depth (prep, access, substrate, climate, occupied). 10 golden quotes + legacy PDF 3개 form reconstruction. `lib/ai/validator.ts` repair layer (price field 제거, clause/scope schema repair) |
 | T9 | Settings/ai-usage page | 단순 SQL aggregate. 사용수 / Pro limit / 예상 비용 |
@@ -89,14 +76,6 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 | T12 | Regression test (IRON RULE) | T0/T0A price boundary + T1 schema 영향 — quote total parity, duplicate anchor guard, `lib/ai/drafts.test.ts`, `app/actions/ai-drafts.test.ts`, `components/ai/AIDraftPanel.test.tsx` |
 | T13 | Today Assistant | Dashboard에 deterministic task list + AI summary. Follow-up 필요한 quote, overdue invoice, 오늘/이번 주 job만 표시. Basic은 deterministic list, Pro는 AI summary |
 | T14 | Follow-up Writer | Quote/customer/invoice 화면에서 고객 메시지 초안 생성. 견적 확인 요청, 승인 후 일정 잡기, invoice reminder. **자동 발송 없음** — user review 후 기존 email flow 또는 manual copy |
-<<<<<<< HEAD
-
-## AI 역할 boundary (D6 / Codex Hybrid)
-
-- Precondition: T0/T0A에서 price rate 구조와 canonical quote calculator가 먼저 안정돼야 한다.
-- AI **does**: free-text notes → `quote_scope_sections`, `quote_scope_steps`, assumptions, exclusions, risk disclosure, `quote_clause_items` 초안
-- AI **does**: surface/area/property preset 후보를 `pricing_candidates`로 제안. 예: `room_price:bedroom:walls`, `average_property:apartment_2b2b`, `prep_repair:stain_blocking`
-=======
 
 ### Build Progress Snapshot (2026-05-17)
 
@@ -112,7 +91,6 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 - Precondition: T0/T0A/T0B price rate 구조, canonical quote calculator, Room Price Library source redesign은 완료됐다. Task 4 schema 이후 AI candidate 적용을 시작한다.
 - AI **does**: free-text notes → `quote_scope_sections`, `quote_scope_steps`, assumptions, exclusions, risk disclosure, `quote_clause_items` 초안
 - AI **does**: surface/area 후보를 `pricing_candidates`로 제안
->>>>>>> phrase0
 - AI **does NOT**: rate 결정, `quote_estimate_items.total_cents` 생성, GST 계산 — 출력 schema에서 price/rate field 제거
 - Server-side pass: painter `price_rates` snapshot에서 surface × coating type lookup → canonical quote calculator로 금액 생성 (`lib/ai/apply-deterministic-pricing.ts`)
 - GST: app server-side, AI는 net (ex-GST) 출력만
@@ -123,37 +101,9 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 
 v1 quote 계산은 "어떤 항목이 돈을 만드는가"를 먼저 고정한다.
 
-<<<<<<< HEAD
-### Price Rate Library Direction (2026-05-17)
-
-세션 `019e32de-aaa3-7940-aaa6-9c773d3ec251`에서 확정한 방향은 **Rate Library + Modifiers**다. Price Rates는 단순 sqm 단가표가 아니라 painter가 자기 방식으로 평균가, 방별 가격, 표면 단가, prep, access, coating upgrade, minimum/margin을 세팅하는 라이브러리가 되어야 한다.
-
-| 그룹 | Price Rates에서 설정할 데이터 | Quote에서 쓰는 방식 |
-|------|-------------------------------|---------------------|
-| Average Property Prices | Apartment 1 bed 1 bath, Apartment 2 bed 1 bath, Apartment 2 bed 2 bath, Apartment 3 bed 2 bath, House 3 bed 2 bath, House 4 bed 2 bath. 각 항목은 min/average/high price, default surfaces, default condition, default ceiling height, notes 저장 | 빠른 interior anchor. 선택 시 하나의 property-level base subtotal이 되며, 같은 범위를 room anchor로 다시 더하지 않는다 |
-| Room Prices | Bedroom, master bedroom, bathroom, living, hallway, stairwell 등 room anchor의 average full repaint price, walls-only %, ceiling-only %, trim-only %, default surfaces, default opening/skirting assumptions | 방 선택 후 surfaces를 자유롭게 켜고 끈다. `Bedroom 1 + walls only`, `Bedroom 1 + ceiling only`, `Bedroom 1 + trim + doors only`가 가능해야 한다 |
-| Base Surface Rates | interior walls/ceiling `/sqm`, skirting/trim `/lm`, doors/windows `/each`, exterior walls/eaves/fascia/gutters/downpipes `/sqm` 또는 `/lm` | Advanced estimate와 explicit scope pricing에 사용 |
-| Prep & Repairs | minor patching, crack repair `/lm`, sanding `/sqm`, caulking `/lm`, mould treatment, stain/tannin blocking, oil-to-water conversion prep | scope candidate와 별도 priced add-on 또는 modifier로 사용. 이미 room anchor에 포함된 prep은 중복 청구 금지 |
-| Access & Complexity | high ceiling, stairwell, occupied/furnished home, poor access, second-storey/ladder, scaffold allowance | multiplier 또는 fixed allowance로 적용. customer-visible clause와 연결 가능 |
-| Paint System / Finish Upgrades | refresh 1 coat, standard repaint 2 coats, new plaster 3 coats, bathroom/kitchen mould-resistant paint, premium washable paint, enamel trim, exterior full system | coating/finish multiplier 또는 explicit upgrade row로 사용 |
-| Business Rules | minimum job charge, minimum room charge, callout/travel fee, material markup %, target daily earning warning, optional client upgrades | quote total guardrail과 profitability warning에 사용 |
-
-Quote UI rule:
-
-- Room anchor를 선택해도 walls/ceiling/trim/doors/windows 중 어떤 surface도 강제로 잠그지 않는다.
-- 저장 조건은 "벽/천장/트림 중 하나"가 아니라 **가격이 붙는 작업이 하나 이상 선택됨**이다.
-- Average property anchor와 room anchor는 같은 base subtotal 안에서 섞지 않는다. 필요한 경우 property anchor는 base, 추가 작업은 별도 non-overlapping add-on으로만 붙인다.
-- Rate 변경 후 기존 quote는 saved snapshot을 유지하고, 새 quote만 새 rates를 사용한다.
-
 | 영역 | authoritative source | 저장 위치 | 금지 사항 |
 |------|----------------------|-----------|-----------|
 | Scope section | user-reviewed AI/manual/template section | `quote_scope_sections`, `quote_scope_steps` | customer-visible text를 price row처럼 사용하지 않음 |
-| Average property price | selected property preset snapshot | `pricing_method_inputs`, `quote_estimate_items` | property anchor에 포함된 room/surface를 다시 room anchor나 line item으로 더하지 않음 |
-=======
-| 영역 | authoritative source | 저장 위치 | 금지 사항 |
-|------|----------------------|-----------|-----------|
-| Scope section | user-reviewed AI/manual/template section | `quote_scope_sections`, `quote_scope_steps` | customer-visible text를 price row처럼 사용하지 않음 |
->>>>>>> phrase0
 | Quick estimate | Quick room snapshot: room size, selected surfaces, coating/condition multiplier | `pricing_method_inputs`, `quote_estimate_items` | 같은 room/surface를 `quote_line_items`로 다시 더하지 않음 |
 | Advanced detailed estimate | room anchor + explicit door/window/skirting/trim items | `pricing_method_inputs`, `quote_estimate_items` | room anchor와 전체 property anchor를 같은 base subtotal에 섞지 않음 |
 | Manual/custom add-on | user-entered material/service/custom item | `quote_line_items` | already-included scope를 add-on처럼 중복 청구하지 않음 |
@@ -169,8 +119,6 @@ Quote UI rule:
 - rate 변경 후 기존 quote는 snapshot 기준으로 유지하고, 새 quote만 새 rates를 사용한다.
 - AI가 만든 scope는 저장 전 user review를 거치고, 금액은 deterministic pricing pass가 생성한다.
 
-<<<<<<< HEAD
-=======
 2026-05-17 implementation note:
 
 - Task 2 is complete. Quick estimate saves complete source metadata in `pricing_method_inputs` and `quote_estimate_items.metadata`.
@@ -178,7 +126,6 @@ Quote UI rule:
 - room-level `include_doors` / `include_windows` toggles were removed from the priced room surface row. Doors/windows are explicit opening items only.
 - 세부 구현 결과는 [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md)에 기록한다.
 
->>>>>>> phrase0
 ## AI-assisted Quote Form Builder Structure
 
 과거 견적서 3개 분석 결과, 실제 painter quote는 line item 계산서가 아니라 **작업 설명서 + 조건/예외 문서 + 가격 요약**에 가깝다. 따라서 v1 quote form은 다음 구조를 따른다.
@@ -358,11 +305,7 @@ Build start는 승인됐지만 사용량 tracking은 build/deploy/onboarding 이
 
 ## Critical Gaps & Deferrals
 
-<<<<<<< HEAD
-- **Quick/Advanced duplicate anchor risk** — v1에서 deferred 불가. T0/T0A에서 quote calculation boundary, snapshot, regression tests를 먼저 정리한다.
-=======
 - **Quick/Advanced duplicate anchor risk** — 완료. T0/T0A에서 quote calculation boundary, snapshot, selected-source diagnostics, and regression tests를 정리했다.
->>>>>>> phrase0
 - **Quote form structure gap** — v1에서 deferred 불가. T0B에서 customer-visible `scope_sections`와 pricing rows, clause library를 분리하지 않으면 AI output이 PDF/public quote/invoice 흐름을 오염시킨다.
 - **Stale `price_rates` race** (painter mid-AI-call price_rates 수정) — v1.1 deferred. v1 mitigation: T6 UI에 "AI가 사용한 rates" snapshot 표시 ("이 quote는 2026-05-15 16:30 기준 rate로 생성됨"). 자세한 건 [/TODOS.md](../../../TODOS.md).
 - **Billing trial/conversion productization** — Phase 0 gate는 선결제가 아니라 Pro 1개월 무료 trial 후 A$59 conversion으로 검증한다. public launch 전에는 Stripe trial/cancel 상태와 app plan state mismatch를 막는 webhook/idempotency 검증이 필요하다.

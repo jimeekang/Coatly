@@ -539,14 +539,10 @@ function getTrimPaintSystemMultiplier(
       ),
       getWindowPrice('oil_2coat', 'normal', 'window_and_frame', userRates),
     ],
-<<<<<<< HEAD
-    [getSkirtingPrice(trimPaintSystem), getSkirtingPrice('oil_2coat')],
-=======
     [
       getSkirtingPrice(trimPaintSystem),
       getSkirtingPrice('oil_2coat'),
     ],
->>>>>>> phrase0
   ];
   const ratios = pairs
     .map(([selected, oil]) => (oil > 0 ? selected / oil : 1))
@@ -1259,25 +1255,6 @@ function calculateSpecificAreasEstimate(
   let usedMeasuredRoomRates = false;
 
   input.rooms.forEach((room, roomIndex) => {
-<<<<<<< HEAD
-    const roomScope: InteriorScope[] = [];
-    if (room.include_walls) roomScope.push('walls');
-    if (room.include_ceiling) roomScope.push('ceiling');
-    if (room.include_trim) roomScope.push('trim');
-    const activeScope = roomScope.length > 0 ? roomScope : input.scope;
-    const scopeMultiplier = getScopeMultiplier(activeScope);
-    const surfaceRateMultiplier = getSurfaceRateMultiplier(
-      activeScope,
-      wallPaintSystem,
-      input.trim_paint_system ?? 'oil_2coat',
-      userRates
-    );
-    const anchor = getSpecificAreaRoomAnchor(
-      input.property_type,
-      room.anchor_room_type,
-      userRates
-    );
-=======
     assertSpecificAreaRoomHasSurface(room, roomIndex);
     const activeScope = getRoomScope(room);
     const roomCondition = room.source_condition ?? input.condition;
@@ -1439,7 +1416,6 @@ function calculateSpecificAreasEstimate(
             );
     const medianSourceCents =
       roomTemplateSnapshotTotal ?? roomTemplateSource?.total_cents ?? anchor.median;
->>>>>>> phrase0
     const itemMedian = cap(
       medianSourceCents *
         scopeMultiplier *

@@ -105,13 +105,6 @@ draft -> sent -> approved -> booked/job/invoice
 - Canonical total contract: `base_subtotal_cents + selected quote_line_items - discount_cents → discounted_subtotal_cents → gst_cents → total_cents`.
 - 기존 manual adjustment는 현재 quote 동작처럼 GST 밖에서 더합니다. 과세 처리 변경은 별도 decision이 필요합니다.
 - Labour/material margin은 별도 percent로 저장합니다.
-<<<<<<< HEAD
-- Quick estimate는 저장 시 authoritative snapshot을 남겨 이후 단가 변경에 흔들리지 않게 합니다.
-- Basic은 제한된 AI/usage limit을 적용하고 Pro는 full AI Quote Form Builder와 높은 usage limit을 제공합니다.
-- Room anchor를 선택해도 walls/ceiling/trim/doors/windows는 quote 안에서 개별 선택 가능해야 합니다.
-- Average property preset과 room anchor는 같은 base subtotal 안에서 중복으로 더하지 않습니다.
-- Prep, access, paint upgrade, travel, scaffold 같은 add-on은 이미 포함된 scope와 겹칠 때 block 또는 warning이 필요합니다.
-=======
 - Quick estimate는 저장 시 authoritative snapshot을 `pricing_method_inputs`와 `quote_estimate_items.metadata`에 남겨 이후 단가 변경에 흔들리지 않게 합니다.
 - Basic은 제한된 AI quote/photo/follow-up 사용량을 제공하고, Pro는 full AI Quote Form Builder와 더 높은 AI limit을 제공합니다.
 - v1 AI-assisted Quote Form Builder 이전에 quote calculation boundary를 먼저 정리합니다.
@@ -131,16 +124,11 @@ draft -> sent -> approved -> booked/job/invoice
 | Advanced detailed estimate | room anchor + explicit door/window/skirting/trim items | `pricing_method_inputs`, `quote_estimate_items` | room anchor와 전체 property anchor를 같은 base subtotal에 섞지 않음 |
 | Custom/material/service | user-entered add-on rows | `quote_line_items` | already-included scope를 add-on처럼 중복 청구하지 않음 |
 | AI draft | scope sections + pricing candidates + clauses | draft metadata / `quote_ai_intake_snapshots` before review | AI가 price/rate/GST를 만들지 않음 |
->>>>>>> phrase0
 
 ## UX Rules
 
 - Quote 생성 첫 화면에서 AI draft, template, manual form을 사용할 수 있습니다.
-<<<<<<< HEAD
-- AI draft는 plan-aware입니다. Basic은 제한된 notes-based AI, Pro/Pro trial은 full AI Quote Form Builder를 사용하며, 사용자는 저장 전 반드시 폼을 검토합니다.
-=======
 - Basic AI는 제한된 notes-based quote wording helper이고, Pro AI는 full Scope/Clause builder + photo AI를 제공합니다. 사용자는 저장 전 반드시 폼을 검토합니다.
->>>>>>> phrase0
 - Quote CTA는 `+ New Quote` 패턴을 사용합니다.
 - Public quote는 고객이 optional item, PDF, 승인/거절, 예약 날짜를 볼 수 있어야 합니다.
 
@@ -165,11 +153,7 @@ v1 pricing foundation은 세션 `019e32de-aaa3-7940-aaa6-9c773d3ec251`의 Rate L
 - [x] GST 10% 계산
 - [x] AUD 포맷 표시
 - [x] PDF 비즈니스 브랜딩
-<<<<<<< HEAD
-- [x] Basic/legacy Starter 월간 active quote 제한
-=======
 - [x] subscription gating scaffold
->>>>>>> phrase0
 - [x] 유효기간 필드
 - [x] quick/detailed estimate snapshot
 - [x] material/service line items

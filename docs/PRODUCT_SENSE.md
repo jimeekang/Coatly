@@ -43,35 +43,12 @@
 
 | Plan | 가격 | 대상 | 핵심 기능 |
 |------|------|------|-----------|
-<<<<<<< HEAD
-| Basic | A$29/mo | 파트타임, 소규모 | 견적/청구/고객, Price Rates, PDF/public quote, 제한된 AI quote draft, quote당 사진 3장 |
-| Pro | A$59/mo | 전업, 성장 중 | full AI Quote Form Builder, quote당 사진 5장, Today AI summary, Follow-up Writer, 브랜딩, Xero |
-
-**업셀 전략:** Basic에도 AI 가치를 제공하되, photo AI limit, advanced scope/clause builder, Today AI summary, Follow-up Writer 사용량으로 Pro 업그레이드 이유를 만든다. 첫 cohort는 Pro 1개월 무료 trial 후 A$59/month 전환을 측정한다.
-
-## Price Rate Product Direction
-
-Coatly의 가격 계산은 painter의 `price_rates`가 source of truth다. v1 Price Rates는 세션 `019e32de-aaa3-7940-aaa6-9c773d3ec251` 기준으로 **Rate Library + Modifiers**로 확장한다.
-
-| 그룹 | 제품 의미 |
-|------|-----------|
-| Average Property Prices | `Apartment 2 bed 2 bath` 같은 평균 interior 가격으로 빠르게 시작 |
-| Room Prices | Bedroom/Bathroom/Living 등 room anchor와 walls-only/ceiling-only/trim-only split |
-| Base Surface Rates | sqm/lm/each 기준 세부 표면 가격 |
-| Prep & Repairs | patching, sanding, stain block, mould 등 실제 견적 차이 반영 |
-| Access & Complexity | high ceiling, stairwell, furnished, scaffold 등 난이도 반영 |
-| Paint System Upgrades | new plaster 3 coats, wet-area paint, enamel, exterior full system |
-| Business Rules | minimum charge, travel, material markup, target daily earning warning |
-
-AI는 이 rate library의 후보 key를 제안할 수 있지만 금액을 만들지 않는다. 금액은 saved rate snapshot과 deterministic calculator가 만든다.
-=======
 | Basic | A$29/mo | 파트타임, 소규모 | Quote/Invoice/Customer, PDF/public quote, price rates, AI quote draft 5/month, photo AI 15 photos/month |
 | Pro | A$59/mo | 전업, 성장 중 | AI quote draft 25/month, photo AI 100 photos/month, full Scope/Clause builder, Today Assistant AI summary, Follow-up Writer 50/month |
 
 **첫 cohort 전략:** Pro 1개월 무료 trial을 제공하고, trial 종료 후 A$59/month 전환과 cancel reason을 측정한다. 언제든지 취소 가능해야 한다.
 
 **업셀 전략:** Basic에서 AI draft/photo/follow-up 한도 도달 또는 Pro-only Scope/Clause builder 접근 시 Pro 업그레이드 프롬프트 표시.
->>>>>>> phrase0
 
 ## Competitive Landscape
 
@@ -94,11 +71,7 @@ AI는 이 rate library의 후보 key를 제안할 수 있지만 금액을 만들
 | Quote-to-Invoice | 견적 → 청구 전환율 | > 40% |
 | Monthly Active | 월간 활성 사용자 | Growth |
 | Churn Rate | 월간 이탈률 | < 5% |
-<<<<<<< HEAD
-| ARPU | 사용자당 평균 매출 | A$35+ blended, Pro A$59 |
-=======
 | ARPU | 사용자당 평균 매출 | Basic A$29 / Pro A$59 mix 기준 A$45+ |
->>>>>>> phrase0
 
 ## Australian Compliance
 

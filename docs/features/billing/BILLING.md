@@ -2,14 +2,6 @@
 
 ## Plans
 
-<<<<<<< HEAD
-| | Basic | Pro |
-|---|-------|-----|
-| 가격 (월) | A$29 | A$59 |
-| 가격 (연) | 추후 확정 | 추후 확정 |
-| 첫 사용자 offer | 없음. 필요 시 launch discount 별도 검토 | 첫 cohort Pro 1개월 무료 trial |
-| 취소 | 언제든지 가능 | 언제든지 가능 |
-=======
 2026-05-17 v1 pricing decision 기준. 고객에게 보이는 플랜명은 **Basic**과 **Pro**다. 기존 코드나 DB enum이 아직 `starter`를 내부 id로 쓰는 경우에도 v1 AI 화면과 결제 문구에서는 `Basic`으로 표시한다.
 
 | | Basic | Pro |
@@ -17,26 +9,12 @@
 | 가격 (월) | A$29 | A$59 |
 | 첫 사용자 offer | 없음. 필요 시 launch discount 별도 검토 | 첫 cohort Pro 1개월 무료 trial |
 | 취소 정책 | 언제든지 취소 가능 | 언제든지 취소 가능 |
->>>>>>> phrase0
 | Quote / Invoice / Customer | 포함 | 포함 |
 | PDF quote / public quote link | 포함 | 포함 |
 | Price rates setup | 포함 | 포함 |
 | Quick quote / manual quote | 포함 | 포함 |
 | AI quote draft | 5/month | 25/month |
 | Photos per quote | 3 | 5 |
-<<<<<<< HEAD
-| Monthly photo AI | 15 photos/month | 100 photos/month |
-| Follow-up Writer | 10/month | 50/month |
-| Today Assistant | deterministic task list only | deterministic list + AI summary |
-| Advanced AI scope/clause builder | 제한된 scope draft | full AI Quote Form Builder |
-| Clause library | 기본 clause | 전체 clause library + custom clause 저장 |
-| AI usage/cost view | 기본 사용량 표시 | 사용량, photo count, estimated cost 표시 |
-| 사용자 | 1명 | 3명 |
-| Xero 연동 | ❌ | ✅ |
-| Job Costing | ❌ | ✅ |
-| 우선 지원 | 기본 support | priority support |
-| 브랜딩 (PDF) | 기본 | 커스텀 |
-=======
 | Monthly photo AI limit | 15 photos/month | 100 photos/month |
 | Follow-up Writer | 10/month | 50/month |
 | Today Assistant | deterministic task list only | deterministic task list + AI summary |
@@ -44,7 +22,6 @@
 | Clause library | 기본 clause | 전체 clause library + custom clause 저장 |
 | AI usage/cost view | 기본 사용량 표시 | 사용량, photo count, estimated cost 표시 |
 | Support | 기본 support | priority support |
->>>>>>> phrase0
 
 정의 파일: `config/plans.ts` (단일 소스)
 
@@ -56,42 +33,6 @@ Note: 코드에 기존 `starter` plan id가 남아 있으면 customer-facing lab
 // lib/subscription/access.ts
 const FEATURES = {
   basic: {
-<<<<<<< HEAD
-    activeQuoteLimit: 10,
-    aiQuoteDraftsMonthly: 5,
-    photoAiImagesMonthly: 15,
-    photosPerQuote: 3,
-    followUpDraftsMonthly: 10,
-    todayAssistantAiSummary: false,
-    advancedScopeClauseBuilder: false,
-    xeroSync: false,
-    jobCosting: false,
-  },
-  pro: {
-    activeQuoteLimit: Infinity,
-    aiQuoteDraftsMonthly: 25,
-    photoAiImagesMonthly: 100,
-    photosPerQuote: 5,
-    followUpDraftsMonthly: 50,
-    todayAssistantAiSummary: true,
-    advancedScopeClauseBuilder: true,
-    xeroSync: true,
-    jobCosting: true,
-  },
-}
-
-canCreateQuote()   → activeQuoteCount < plan.activeQuoteLimit
-canUseAIQuoteDraft() → monthlyDraftCount < plan.aiQuoteDraftsMonthly
-canUsePhotoAI()      → monthlyPhotoCount < plan.photoAiImagesMonthly
-canSyncXero()      → plan === 'pro'
-canUseJobCosting() → plan === 'pro'
-```
-
-- 견적 생성 시 `activeQuoteLimit` 확인
-- AI 기능 사용 시 plan별 monthly limit과 photos-per-quote limit 확인
-- Pro-only 기능 접근 시 `subscription.plan === 'pro'` 또는 Pro trial 확인
-- 한도 도달 시 `UpgradePrompt` 컴포넌트 표시
-=======
     aiQuoteDraftLimit: 5,
     photoAiMonthlyLimit: 15,
     photosPerQuote: 3,
@@ -121,7 +62,6 @@ canUseAdvancedBuilder() → plan === 'pro' or active Pro trial
 - AI는 price/rate/GST/total을 만들지 않는다. 모든 금액은 quote canonical calculator가 만든다.
 - 한도 도달 또는 Pro-only 기능 접근 시 `UpgradePrompt` 컴포넌트 표시
 - `ai_usage_logs`에 feature, provider/model, token/cost, photo count, cache hit, plan/trial state를 기록한다.
->>>>>>> phrase0
 
 ## Stripe Integration Flow
 

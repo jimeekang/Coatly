@@ -155,31 +155,6 @@ AI draft를 만들 때 사용한 입력값을 audit용으로 저장한다. 고�
 | `quote_scope_sections` → `quote_clause_items` | section-specific risk disclosure를 연결할 수 있다 |
 | `quote_ai_intake_snapshots` → generated draft | 같은 prompt/model/input으로 만든 결과를 audit하고 재생성 비용을 줄인다 |
 
-<<<<<<< HEAD
-## Price Rate Library Target
-
-세션 `019e32de-aaa3-7940-aaa6-9c773d3ec251` 기준으로 quote form의 pricing layer는 **Rate Library + Modifiers**를 따른다. 고객에게 보이는 scope section과 실제 가격을 만드는 rate item은 분리하지만, AI가 제안한 `pricing_candidates`는 이 라이브러리의 key로 매핑될 수 있어야 한다. key 매핑은 price amount가 아니라 lookup 후보일 뿐이다.
-
-| Rate group | 설정 데이터 | AI/Quote form에서 쓰는 방식 |
-|------------|-------------|-----------------------------|
-| Average Property Prices | `apartment_1b1b`, `apartment_2b1b`, `apartment_2b2b`, `apartment_3b2b`, `house_3b2b`, `house_4b2b`의 min/average/high price, default surfaces, condition, ceiling height, notes | "2 bed 2 bath apartment repaint"처럼 빠르게 시작하는 property anchor. 고객용 scope section은 여러 개일 수 있지만 가격 source는 하나 |
-| Room Prices | bedroom, bathroom, living, hallway 등 room anchor의 average full repaint price, walls-only %, ceiling-only %, trim-only %, default surfaces | `Bedroom 1`을 선택해도 walls/ceiling/trim/doors/windows는 quote 안에서 개별 토글 가능 |
-| Base Surface Rates | walls/ceiling `/sqm`, trim/skirting `/lm`, doors/windows `/each`, exterior surfaces `/sqm`/`lm`/`each` | Advanced estimate와 explicit surface pricing에 사용 |
-| Prep & Repairs | patch holes, crack repair, sanding, caulking, mould treatment, stain/tannin block, oil-to-water conversion | scope step 또는 optional/add-on candidate. 이미 anchor에 포함된 prep은 중복 청구 금지 |
-| Access & Complexity | high ceiling, stairwell, occupied/furnished, poor access, second-storey/ladder, scaffold | multiplier/fixed allowance 또는 clause-only risk disclosure |
-| Paint System / Finish Upgrades | refresh 1 coat, standard repaint 2 coats, new plaster 3 coats, wet-area paint, premium washable, enamel, exterior full system | coating multiplier 또는 explicit upgrade row |
-| Business Rules | minimum job/room charge, callout/travel, material markup, target daily earning warning | quote total guardrail, profitability warning, optional client upgrades |
-
-Required quote behavior:
-
-- Room anchor selection never locks all surfaces. `Bedroom 1 + walls only` and `Bathroom + ceiling only` are valid.
-- Validation requires at least one priced work item, not a fixed wall/ceiling/trim bundle.
-- Average property anchor and room anchor cannot both create base subtotal for the same included area.
-- `quote_line_items` remain add-ons/material/service/custom items. They should not become a second place to reprice an already included wall/ceiling/trim scope.
-- Existing quotes keep the saved rate snapshot after future Price Rates changes.
-
-=======
->>>>>>> phrase0
 ## Item Taxonomy
 
 ### Interior Scope Items
@@ -255,20 +230,10 @@ type AIQuoteFormDraft = {
   pricing_candidates: Array<{
     scope_section_index: number;
     surface_category: string;
-<<<<<<< HEAD
-    unit: 'sqm' | 'lm' | 'each' | 'fixed' | 'room_anchor' | 'property_anchor';
-    quantity?: number;
-    quantity_status: 'confirmed' | 'rough' | 'missing';
-    suggested_pricing_method: 'quick' | 'advanced' | 'average_property' | 'exterior' | 'manual';
-    rate_library_group?: 'average_property' | 'room_price' | 'surface_rate' | 'prep_repair' | 'access_modifier' | 'paint_system_upgrade' | 'business_rule';
-    rate_item_key?: string;
-    included_surface_keys?: string[];
-=======
     unit: 'sqm' | 'lm' | 'each' | 'fixed' | 'room_anchor';
     quantity?: number;
     quantity_status: 'confirmed' | 'rough' | 'missing';
     suggested_pricing_method: 'quick' | 'advanced' | 'exterior' | 'manual';
->>>>>>> phrase0
   }>;
   clauses: Array<{
     clause_key: string;
@@ -295,11 +260,7 @@ Forbidden AI fields:
 ## Deterministic Pricing Pass
 
 1. User reviews AI scope sections.
-<<<<<<< HEAD
-2. App maps each `pricing_candidate` to a pricing mode, including Average Property Price presets when the candidate is property-level.
-=======
 2. App maps each `pricing_candidate` to a pricing mode.
->>>>>>> phrase0
 3. App loads painter `price_rates` snapshot.
 4. App creates `quote_estimate_items` for priced base scope.
 5. App creates `quote_line_items` only for selected custom/material/service/optional add-ons.

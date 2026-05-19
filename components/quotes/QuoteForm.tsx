@@ -240,12 +240,7 @@ function buildInitialAdvancedEstimate(
       wall_paint_system:
         normalizeInteriorWallPaintSystem(estimateContext.wall_paint_system) ??
         base.wall_paint_system,
-<<<<<<< HEAD
-      trim_paint_system:
-        estimateContext.trim_paint_system ?? base.trim_paint_system,
-=======
       trim_paint_system: trimPaintSystem,
->>>>>>> phrase0
       apartment_type:
         estimateContext.property_details.apartment_type ?? base.apartment_type,
       apartment_sqm: str(estimateContext.property_details.sqm),
