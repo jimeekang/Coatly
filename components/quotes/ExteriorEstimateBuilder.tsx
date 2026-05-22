@@ -146,7 +146,7 @@ export function ExteriorEstimateBuilder({
   const visibleRowCount = visibleSurfaces.length + visibleCustomSurfaces.length;
 
   return (
-    <section className="space-y-4 rounded-2xl border border-outline-variant bg-white p-4">
+    <section className="space-y-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
       {/* Coating type */}
       <div>
         <label className={LABEL}>Coating System</label>
@@ -159,8 +159,8 @@ export function ExteriorEstimateBuilder({
               aria-pressed={value.coating === coating}
               className={`min-h-11 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                 value.coating === coating
-                  ? 'border-primary bg-primary text-white'
-                  : 'border-outline-variant bg-white text-on-surface hover:border-primary'
+                  ? 'border-primary bg-primary text-on-primary'
+                  : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary'
               }`}
             >
               {EXTERIOR_COATING_LABELS[coating]}
@@ -210,7 +210,7 @@ export function ExteriorEstimateBuilder({
                   const isEditing = editingLabel === surface;
 
                   return (
-                    <tr key={surface} className={i % 2 === 0 ? 'bg-white' : 'bg-surface-container/40'}>
+                    <tr key={surface} className={i % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container/40'}>
                       <td className="px-4 py-2.5 font-medium text-on-surface">
                         {isEditing ? (
                           <input
@@ -222,7 +222,7 @@ export function ExteriorEstimateBuilder({
                               if (e.key === 'Enter') commitEdit(surface);
                               if (e.key === 'Escape') setEditingLabel(null);
                             }}
-                            className="w-full rounded-lg border border-primary bg-white px-2 py-1 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="w-full rounded-lg border border-primary bg-surface-container-lowest px-2 py-1 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         ) : (
                           <span>{displayLabel}</span>
@@ -241,7 +241,7 @@ export function ExteriorEstimateBuilder({
                               })
                             }
                             placeholder="0"
-                            className="w-24 rounded-lg border border-outline-variant bg-white py-2 px-3 text-right text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest py-2 px-3 text-right text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                           <span className="text-xs text-on-surface-variant">{unit}</span>
                         </div>
@@ -257,7 +257,7 @@ export function ExteriorEstimateBuilder({
                           <button
                             type="button"
                             onClick={() => startEdit(surface)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-outline-variant bg-white text-on-surface-variant hover:border-primary hover:text-primary transition-colors"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
                             title="Edit name"
                           >
                             <Pencil size={13} />
@@ -265,7 +265,7 @@ export function ExteriorEstimateBuilder({
                           <button
                             type="button"
                             onClick={() => deleteSurface(surface)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-outline-variant bg-white text-on-surface-variant hover:border-error/50 hover:text-error transition-colors"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-colors hover:border-error/50 hover:text-error"
                             title="Remove surface"
                           >
                             <Trash2 size={13} />
@@ -283,7 +283,7 @@ export function ExteriorEstimateBuilder({
                   const lineTotal = Number.isFinite(qty) && qty > 0 ? Math.round(qty * rate) : 0;
 
                   return (
-                    <tr key={surface.id} className={(visibleSurfaces.length + index) % 2 === 0 ? 'bg-white' : 'bg-surface-container/40'}>
+                    <tr key={surface.id} className={(visibleSurfaces.length + index) % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container/40'}>
                       <td className="px-4 py-2.5 font-medium text-on-surface">
                         {surface.label}
                       </td>
@@ -300,7 +300,7 @@ export function ExteriorEstimateBuilder({
                               })
                             }
                             placeholder="0"
-                            className="w-24 rounded-lg border border-outline-variant bg-white py-2 px-3 text-right text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest py-2 px-3 text-right text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                           <span className="text-xs text-on-surface-variant">{unit}</span>
                         </div>
@@ -315,7 +315,7 @@ export function ExteriorEstimateBuilder({
                         <button
                           type="button"
                           onClick={() => deleteCustomSurface(surface.id)}
-                          className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg border border-outline-variant bg-white text-on-surface-variant hover:border-error/50 hover:text-error transition-colors"
+                          className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-colors hover:border-error/50 hover:text-error"
                           title="Remove surface"
                         >
                           <Trash2 size={13} />
@@ -341,7 +341,7 @@ export function ExteriorEstimateBuilder({
                 key={surface}
                 type="button"
                 onClick={() => restoreSurface(surface)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-white px-3 py-1.5 text-xs font-medium text-on-surface-variant hover:border-primary hover:text-primary transition-colors"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
               >
                 <RotateCcw size={11} />
                 {value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface]}
@@ -352,7 +352,7 @@ export function ExteriorEstimateBuilder({
                 key={surface.id}
                 type="button"
                 onClick={() => restoreCustomSurface(surface.id)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-white px-3 py-1.5 text-xs font-medium text-on-surface-variant hover:border-primary hover:text-primary transition-colors"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
               >
                 <RotateCcw size={11} />
                 {surface.label}

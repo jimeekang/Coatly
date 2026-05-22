@@ -15,6 +15,7 @@ import {
   formTextareaClassName,
 } from '@/components/forms/FormField';
 import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
+import { FormSection } from '@/components/forms/FormSection';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 /* ──────────────────────────────────────────────────────────
@@ -100,15 +101,14 @@ const PAYMENT_METHOD_OPTIONS: Array<{
 ];
 
 const STATUS_BADGE: Record<InvoiceFormDefaultValues['status'], { label: string; className: string }> = {
-  draft: { label: 'Draft', className: 'bg-surface-container-high text-on-surface-variant' },
+  draft: { label: 'Draft', className: 'bg-surface-container-highest text-on-surface-variant' },
   sent: { label: 'Sent', className: 'bg-primary/10 text-primary' },
   paid: { label: 'Paid', className: 'bg-success-container text-success' },
-  overdue: { label: 'Overdue', className: 'bg-error-container text-error' },
-  cancelled: { label: 'Cancelled', className: 'bg-surface-container-high text-on-surface-variant' },
+  overdue: { label: 'Overdue', className: 'bg-warning-container text-warning' },
+  cancelled: { label: 'Cancelled', className: 'bg-surface-container-highest text-on-surface-variant' },
 };
 
-const CARD_CLASS =
-  'rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-sm sm:p-6';
+const CARD_CLASS = 'border-outline-variant/60 p-5 sm:p-6';
 
 type InvoiceLineDraft = {
   description: string;
@@ -586,7 +586,12 @@ export function InvoiceForm({
     <form onSubmit={handleSubmit} className="space-y-5 pb-32 sm:space-y-6">
       {/* ── Invoice meta strip ── */}
       <div className="flex flex-wrap items-center gap-2.5">
-        <span className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-outline">
+        <span
+          className={cn(
+            'text-[11px] font-bold uppercase tracking-[0.16em] text-outline',
+            /\d/.test(invoiceNumberPreview) && 'font-mono tracking-[0.18em]',
+          )}
+        >
           {invoiceNumberPreview}
         </span>
         <span
@@ -603,7 +608,7 @@ export function InvoiceForm({
         {/* ── Left column ── */}
         <div className="space-y-5 sm:space-y-6">
           {/* Customer + linked quote */}
-          <section className={CARD_CLASS}>
+          <FormSection className={CARD_CLASS}>
             <h2 className="text-base font-bold text-on-surface">Customer</h2>
             <p className="mt-1 text-sm text-on-surface-variant">
               Who is this invoice for? Link an approved quote to pull in its line items.
@@ -702,10 +707,10 @@ export function InvoiceForm({
                 )}
               </div>
             )}
-          </section>
+          </FormSection>
 
           {/* Invoice type */}
-          <section className={CARD_CLASS}>
+          <FormSection className={CARD_CLASS}>
             <h2 className="text-base font-bold text-on-surface">Invoice type</h2>
             <p className="mt-1 text-sm text-on-surface-variant">
               {form.invoice_type === 'deposit' &&
@@ -804,10 +809,10 @@ export function InvoiceForm({
                 </p>
               </div>
             )}
-          </section>
+          </FormSection>
 
           {/* Details: due date + status */}
-          <section className={CARD_CLASS}>
+          <FormSection className={CARD_CLASS}>
             <h2 className="text-base font-bold text-on-surface">Details</h2>
             <p className="mt-1 text-sm text-on-surface-variant">
               Set the payment deadline and the current status of this invoice.
@@ -957,10 +962,10 @@ export function InvoiceForm({
                 </div>
               </div>
             )}
-          </section>
+          </FormSection>
 
           {/* Line Items */}
-          <section className={CARD_CLASS}>
+          <FormSection className={CARD_CLASS}>
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-base font-bold text-on-surface">Line items</h2>
@@ -1120,10 +1125,10 @@ export function InvoiceForm({
                 </dd>
               </div>
             </dl>
-          </section>
+          </FormSection>
 
           {/* Notes & Terms */}
-          <section className={CARD_CLASS}>
+          <FormSection className={CARD_CLASS}>
             <h2 className="text-base font-bold text-on-surface">Notes &amp; terms</h2>
             <p className="mt-1 text-sm text-on-surface-variant">
               Notes appear on the PDF. Payment terms set the expectation for the customer.
@@ -1155,7 +1160,7 @@ export function InvoiceForm({
                 placeholder="Payment due within 14 days from invoice date."
               />
             </div>
-          </section>
+          </FormSection>
 
           {/* Business & Payment Details — collapsed by default */}
           <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest shadow-sm">
@@ -1246,7 +1251,7 @@ export function InvoiceForm({
 
           {/* Quote items snapshot */}
           {selectedQuote && selectedQuoteIncludedItems.length > 0 && (
-            <section className={CARD_CLASS}>
+            <FormSection className={CARD_CLASS}>
               <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
                 Quote items
               </h3>
@@ -1275,12 +1280,12 @@ export function InvoiceForm({
                   Valid until {formatDate(selectedQuote.valid_until)}
                 </p>
               )}
-            </section>
+            </FormSection>
           )}
 
           {/* Customer snapshot */}
           {selectedCustomer && (
-            <section className={CARD_CLASS}>
+            <FormSection className={CARD_CLASS}>
               <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
                 Customer snapshot
               </h3>
@@ -1300,7 +1305,7 @@ export function InvoiceForm({
                   </p>
                 )}
               </div>
-            </section>
+            </FormSection>
           )}
         </aside>
       </div>

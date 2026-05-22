@@ -161,15 +161,15 @@ export function QuoteExtraLineItems({
     .reduce((sum, item) => sum + item.unit_price_cents, 0);
 
   return (
-    <section className="rounded-2xl border border-outline-variant bg-white p-4">
-      <div className="flex items-center justify-between">
+    <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+      <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
           Line Items
         </h3>
         <button
           type="button"
           onClick={addItem}
-          className="flex items-center gap-1.5 rounded-lg border border-outline-variant bg-white px-3 py-2 text-xs font-semibold text-on-surface hover:border-primary hover:text-primary"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-xs font-semibold text-on-surface hover:border-primary hover:text-primary"
         >
           <Plus className="h-3.5 w-3.5" />
           Add Line Item
@@ -188,7 +188,7 @@ export function QuoteExtraLineItems({
               className={[
                 'rounded-xl border p-3',
                 item.is_optional
-                  ? 'border-amber-200 bg-amber-50/40'
+                  ? 'border-warning bg-warning-container/40'
                   : 'border-outline-variant bg-surface-container/40',
               ].join(' ')}
             >
@@ -200,7 +200,7 @@ export function QuoteExtraLineItems({
                     value={item.name}
                     onChange={(e) => updateItem(item._key, { name: e.target.value })}
                     placeholder="Item name"
-                    className="h-9 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none"
+                    className="min-h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none"
                     aria-label="Line item name"
                   />
 
@@ -250,7 +250,7 @@ export function QuoteExtraLineItems({
                     value={item.notes}
                     onChange={(e) => updateItem(item._key, { notes: e.target.value })}
                     placeholder="Description (optional)"
-                    className="h-9 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none"
+                    className="min-h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none"
                     aria-label="Line item description"
                   />
 
@@ -273,7 +273,7 @@ export function QuoteExtraLineItems({
                             unit_price_cents: Math.round(parsed * 100),
                           });
                         }}
-                        className="h-9 w-full rounded-lg border border-outline-variant bg-white pl-7 pr-3 text-sm text-on-surface focus:border-primary focus:outline-none"
+                        className="min-h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest pl-7 pr-3 text-sm text-on-surface focus:border-primary focus:outline-none"
                         aria-label="Line item price"
                       />
                     </div>
@@ -283,7 +283,7 @@ export function QuoteExtraLineItems({
                         type="checkbox"
                         checked={item.is_optional}
                         onChange={(e) => updateItem(item._key, { is_optional: e.target.checked })}
-                        className="h-4 w-4 rounded border-outline-variant accent-amber-500"
+                        className="h-4 w-4 rounded border-outline-variant accent-primary"
                         aria-label={`${item.name || 'Line item'} optional`}
                       />
                       Optional
@@ -291,7 +291,7 @@ export function QuoteExtraLineItems({
                   </div>
 
                   {item.is_optional && item.unit_price_cents > 0 && (
-                    <p className="text-xs text-amber-600">
+                    <p className="text-xs text-warning">
                       Client can choose to add {formatAUD(item.unit_price_cents)} to the total
                     </p>
                   )}
@@ -301,7 +301,7 @@ export function QuoteExtraLineItems({
                 <button
                   type="button"
                   onClick={() => removeItem(item._key)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error"
                   aria-label={`Remove ${item.name || 'line item'}`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -321,8 +321,8 @@ export function QuoteExtraLineItems({
               )}
               {optionalSubtotal > 0 && (
                 <div className="flex justify-between text-xs">
-                  <span className="text-amber-600">Optional (not included in total)</span>
-                  <span className="text-amber-600">+{formatAUD(optionalSubtotal)}</span>
+                  <span className="text-warning">Optional (not included in total)</span>
+                  <span className="text-warning">+{formatAUD(optionalSubtotal)}</span>
                 </div>
               )}
             </div>

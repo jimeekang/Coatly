@@ -110,7 +110,7 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
     <PickerOverlay onClose={onClose}>
       <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
         <h2 className="text-base font-semibold text-on-surface">Add Item</h2>
-        <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+        <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -135,7 +135,7 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
             key={cat}
             type="button"
             onClick={() => setCategoryFilter(cat)}
-            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            className={`min-h-11 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors ${
               categoryFilter === cat
                 ? 'border-primary bg-primary text-white'
                 : 'border-outline-variant bg-white text-on-surface-variant hover:border-primary'
@@ -225,7 +225,7 @@ function ConfigureItem({
   return (
     <>
       <div className="flex items-center gap-2 pb-3 border-b border-outline-variant">
-        <button type="button" onClick={onBack} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+        <button type="button" onClick={onBack} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
           <X className="h-5 w-5" />
         </button>
         <h2 className="text-base font-semibold text-on-surface truncate">{item.name}</h2>
@@ -345,7 +345,7 @@ function CustomItemForm({
   return (
     <>
       <div className="flex items-center gap-2 pb-3 border-b border-outline-variant">
-        <button type="button" onClick={onBack} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+        <button type="button" onClick={onBack} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
           <X className="h-5 w-5" />
         </button>
         <h2 className="text-base font-semibold text-on-surface">Custom Item</h2>

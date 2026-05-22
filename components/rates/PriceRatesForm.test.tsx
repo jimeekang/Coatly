@@ -27,11 +27,11 @@ describe('PriceRatesForm pricing setup', () => {
     expect(screen.getByLabelText('Wall price share for 2 Bed 2 Bath Apartment')).toHaveValue(55);
     expect(screen.getByLabelText('Ceiling price share for 2 Bed 2 Bath Apartment')).toHaveValue(25);
     expect(screen.getByLabelText('Trim price share for 2 Bed 2 Bath Apartment')).toHaveValue(20);
-    expect(screen.getByText('Surface price split: 100% total')).toBeInTheDocument();
+    expect(screen.getByText('100% total')).toBeInTheDocument();
     expect(screen.getByText('How this price is calculated')).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Starts from the Detailed Estimate whole-property anchor/i
+        /Starts from your Detailed Estimate whole-property base price/i
       )
     ).toBeInTheDocument();
     expect(

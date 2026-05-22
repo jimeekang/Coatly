@@ -64,7 +64,7 @@ function WalletIcon() {
 }
 
 const DUE_TONE_CLASS: Record<InvoiceDueTone, string> = {
-  overdue: 'text-error font-semibold',
+  overdue: 'text-warning font-semibold',
   'due-soon': 'text-warning font-semibold',
   due: 'text-outline font-medium',
   paid: 'text-outline font-medium',
@@ -250,7 +250,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               className={`min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors sm:px-4 ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
+                  : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
               }`}
             >
               {option.label}
@@ -271,7 +271,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               className={`min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors sm:px-4 ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
+                  : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
               }`}
             >
               {option.label}
@@ -315,7 +315,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               return (
                 <li
                   key={invoice.id}
-                  className={`relative min-w-0 rounded-lg border border-l-4 border-black/5 bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
+                  className={`relative min-w-0 rounded-lg border border-l-4 border-outline-variant/60 bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
                 >
                   <Link href={`/invoices/${invoice.id}`} className="block min-w-0 p-3 sm:p-5">
                     <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -393,7 +393,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                                 type="date"
                                 value={paidDate}
                                 onChange={(event) => setPaidDate(event.target.value)}
-                                className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                                className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
                               />
                             </label>
                             <label className="space-y-1.5">
@@ -413,7 +413,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                                       | ''
                                   )
                                 }
-                                className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                                className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
                               >
                                 <option value="">Select method</option>
                                 <option value="bank_transfer">Bank transfer</option>
@@ -446,7 +446,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                             <button
                               type="button"
                               onClick={closeMarkPaidForm}
-                              className="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant bg-white px-4 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                              className="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
                             >
                               Cancel
                             </button>

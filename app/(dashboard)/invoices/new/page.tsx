@@ -44,7 +44,7 @@ export default async function NewInvoicePage({
       </div>
       <div className="mb-5">
         <h1 className="text-[22px] font-extrabold tracking-[-0.02em] text-on-surface sm:text-[26px]">
-          New invoice
+          New Invoice
         </h1>
         <p className="mt-1 text-sm text-on-surface-variant">
           Create a draft, compare it against the linked quote, and keep payment details ready

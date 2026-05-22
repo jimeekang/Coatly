@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { WorkspaceAssistant } from '@/components/dashboard/WorkspaceAssistant';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import { getInvoiceQuoteOptions, resolveInvoiceStatus } from '@/lib/invoices';
@@ -93,6 +94,10 @@ export default async function DashboardPage() {
   const overdueInvoiceCount = invoiceSummaries.filter(
     (invoice) => invoice.effective_status === 'overdue'
   ).length;
+  const draftQuoteCount = quotes?.filter((quote) => quote.status === 'draft').length ?? 0;
+  const sentQuoteCount = quotes?.filter((quote) => quote.status === 'sent').length ?? 0;
+  const approvedQuoteCount =
+    quotes?.filter((quote) => quote.status === 'approved').length ?? 0;
 
   const customerCount = customers?.length ?? 0;
 
@@ -183,6 +188,42 @@ export default async function DashboardPage() {
     },
   ] as const;
 
+  const actionItems = [
+    {
+      label: 'Quote',
+      title: 'Create the next quote',
+      body: 'Start a clean quote and send it while the job details are fresh.',
+      href: '/quotes/new',
+      cta: '+ New Quote',
+      variant: 'primary',
+    },
+    {
+      label: 'Follow up',
+      title: `${sentQuoteCount} sent quote${sentQuoteCount === 1 ? '' : 's'}`,
+      body:
+        sentQuoteCount > 0
+          ? 'Check sent quotes and move accepted work forward.'
+          : `${draftQuoteCount} draft quote${draftQuoteCount === 1 ? '' : 's'} waiting in the pipeline.`,
+      href: '/quotes',
+      cta: 'Review Quotes',
+      variant: 'secondary',
+    },
+    {
+      label: 'Cash',
+      title:
+        overdueInvoiceCount > 0
+          ? `${overdueInvoiceCount} overdue invoice${overdueInvoiceCount === 1 ? '' : 's'}`
+          : `${pendingInvoiceCount} invoice${pendingInvoiceCount === 1 ? '' : 's'} to watch`,
+      body:
+        approvedQuoteCount > 0
+          ? `${approvedQuoteCount} approved quote${approvedQuoteCount === 1 ? '' : 's'} can become invoices.`
+          : 'Keep sent and overdue invoices visible before they slip.',
+      href: pendingInvoiceCount > 0 ? '/invoices' : '/invoices/new',
+      cta: pendingInvoiceCount > 0 ? 'Open Invoices' : 'New Invoice',
+      variant: overdueInvoiceCount > 0 ? 'warning' : 'secondary',
+    },
+  ] as const;
+
   return (
     <div className="min-w-0 space-y-5 sm:space-y-8">
       {/* Welcome header */}
@@ -196,6 +237,67 @@ export default async function DashboardPage() {
             : 'Run your workspace from one place and keep track of quotes, invoices, and customers.'}
         </p>
       </div>
+
+      <section aria-labelledby="next-actions-heading" className="space-y-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+            Today
+          </p>
+          <h2 id="next-actions-heading" className="mt-1 text-lg font-bold text-on-surface">
+            Next actions
+          </h2>
+        </div>
+        <div className="grid min-w-0 gap-3 md:grid-cols-3">
+          {actionItems.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={[
+                'group flex min-h-36 min-w-0 flex-col justify-between rounded-2xl border p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
+                item.variant === 'primary'
+                  ? 'border-primary/25 bg-primary text-on-primary hover:bg-primary/90'
+                  : item.variant === 'warning'
+                    ? 'border-warning/25 bg-warning-container text-on-surface hover:border-warning/40'
+                    : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary/30 hover:bg-surface-container-low',
+              ].join(' ')}
+            >
+              <div>
+                <p
+                  className={[
+                    'text-[10px] font-bold uppercase tracking-widest',
+                    item.variant === 'primary'
+                      ? 'text-on-primary/75'
+                      : 'text-on-surface-variant',
+                  ].join(' ')}
+                >
+                  {item.label}
+                </p>
+                <p className="mt-2 text-base font-bold leading-snug">{item.title}</p>
+                <p
+                  className={[
+                    'mt-1 text-sm leading-relaxed',
+                    item.variant === 'primary'
+                      ? 'text-on-primary/80'
+                      : 'text-on-surface-variant',
+                  ].join(' ')}
+                >
+                  {item.body}
+                </p>
+              </div>
+              <span
+                className={[
+                  'mt-4 inline-flex min-h-11 w-fit items-center rounded-xl px-4 text-sm font-semibold transition-colors',
+                  item.variant === 'primary'
+                    ? 'bg-on-primary text-primary group-hover:bg-on-primary/90'
+                    : 'border border-outline-variant bg-surface-container-lowest text-on-surface group-hover:border-primary/40 group-hover:text-primary',
+                ].join(' ')}
+              >
+                {item.cta}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {quoteSlotsRemaining !== null && (
         <div className="rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3 sm:px-5 sm:py-4">
@@ -211,6 +313,44 @@ export default async function DashboardPage() {
           </p>
         </div>
       )}
+
+      {/* Workspace assistant — primary action surface */}
+      <div>
+        {subscription.features.ai ? (
+          <WorkspaceAssistant customers={customerOptions} quotes={quoteOptions} />
+        ) : (
+          <UpgradePrompt
+            badge="Pro Plan"
+            title="Dashboard AI is available on Pro"
+            description="Starter keeps the core quoting and invoicing tools. Upgrade to Pro to ask the dashboard AI to search records or prepare customer, quote, and invoice drafts from one prompt."
+          />
+        )}
+      </div>
+
+      {/* Quote pipeline — quotes that need action */}
+      <section aria-labelledby="pipeline-heading">
+        <h2
+          id="pipeline-heading"
+          className="mb-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant"
+        >
+          Quote Pipeline
+        </h2>
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2 sm:gap-3">
+          {quotePipelineStats.map((stat) => (
+            <div key={stat.label} className="min-w-0 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 sm:rounded-2xl sm:p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                {stat.label}
+              </p>
+              <p className="mt-2 text-xl font-extrabold tracking-tight text-on-surface sm:text-2xl">
+                {stat.count}
+              </p>
+              <p className="mt-1 truncate text-xs text-on-surface-variant">
+                {formatAUD(stat.totalCents)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* KPI cards */}
       <section aria-labelledby="kpi-heading">
@@ -252,31 +392,6 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Quote pipeline */}
-      <section aria-labelledby="pipeline-heading">
-        <h2
-          id="pipeline-heading"
-          className="mb-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant"
-        >
-          Quote Pipeline
-        </h2>
-        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2 sm:gap-3">
-          {quotePipelineStats.map((stat) => (
-            <div key={stat.label} className="min-w-0 rounded-xl border border-outline-variant bg-white p-3 sm:rounded-2xl sm:p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                {stat.label}
-              </p>
-              <p className="mt-2 text-xl font-extrabold tracking-tight text-on-surface sm:text-2xl">
-                {stat.count}
-              </p>
-              <p className="mt-1 truncate text-xs text-on-surface-variant">
-                {formatAUD(stat.totalCents)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Overview stats */}
       <section aria-labelledby="overview-heading">
         <h2
@@ -309,18 +424,6 @@ export default async function DashboardPage() {
           ))}
         </div>
       </section>
-
-      <div>
-        {subscription.features.ai ? (
-          <WorkspaceAssistant customers={customerOptions} quotes={quoteOptions} />
-        ) : (
-          <UpgradePrompt
-            badge="Pro Plan"
-            title="Dashboard AI is available on Pro"
-            description="Starter keeps the core quoting and invoicing tools. Upgrade to Pro to ask the dashboard AI to search records or prepare customer, quote, and invoice drafts from one prompt."
-          />
-        )}
-      </div>
     </div>
   );
 }

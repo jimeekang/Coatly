@@ -31,7 +31,7 @@ export function DuplicateQuoteButton({ quoteId, variant = 'full' }: Props) {
         disabled={isPending}
         title="Duplicate quote"
         aria-label="Duplicate quote"
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant bg-surface-container text-on-surface-variant transition-colors hover:bg-surface-container-high active:bg-surface-container-highest disabled:opacity-50"
+        className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container text-on-surface-variant transition-colors hover:bg-surface-container-high active:bg-surface-container-highest disabled:opacity-50"
       >
         {isPending ? (
           <svg

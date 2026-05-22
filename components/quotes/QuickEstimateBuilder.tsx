@@ -208,7 +208,7 @@ function RoomCard({
   const availableSurfaces = template?.enabled_surfaces ?? (['walls', 'ceiling', 'trim'] as const);
 
   return (
-    <div className={`rounded-xl border bg-white ${allUnchecked ? 'border-amber-300' : 'border-outline-variant'}`}>
+    <div className={`rounded-xl border bg-surface-container-lowest ${allUnchecked ? 'border-warning' : 'border-outline-variant'}`}>
       {/* Header row */}
       <div className="flex min-h-[52px] items-center gap-3 px-4 py-2">
         <button
@@ -231,9 +231,9 @@ function RoomCard({
               key={s}
               type="button"
               onClick={() => handleSizeChange(s)}
-              className={`min-h-[32px] min-w-[32px] rounded-lg border px-2 py-1 text-xs font-semibold transition-colors ${
+              className={`min-h-11 min-w-11 rounded-lg border px-2 py-1 text-xs font-semibold transition-colors ${
                 room.size === s
-                  ? 'border-primary bg-primary text-white'
+                  ? 'border-primary bg-primary text-on-primary'
                   : 'border-outline-variant text-on-surface-variant hover:border-primary'
               }`}
             >
@@ -243,7 +243,7 @@ function RoomCard({
         </div>
 
         {/* Price */}
-        <span className={`min-w-[64px] text-right text-sm font-bold ${allUnchecked ? 'text-amber-500' : 'text-on-surface'}`}>
+        <span className={`min-w-[64px] text-right text-sm font-bold ${allUnchecked ? 'text-warning' : 'text-on-surface'}`}>
           {formatAUD(total)}
         </span>
 
@@ -251,7 +251,7 @@ function RoomCard({
         <button
           type="button"
           onClick={onDelete}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-on-surface-variant hover:text-red-500"
+          className="flex min-h-11 min-w-11 items-center justify-center text-on-surface-variant hover:text-error"
           aria-label="Remove room"
         >
           <Trash2 className="h-4 w-4" />
@@ -273,7 +273,7 @@ function RoomCard({
                   key={s}
                   type="button"
                   onClick={() => handleSurfaceToggle(s)}
-                  className={`min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`min-h-11 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                     isSelected
                       ? 'border-primary bg-primary/15 text-primary'
                       : 'border-outline-variant text-on-surface-variant hover:border-primary'
@@ -284,7 +284,7 @@ function RoomCard({
               );
             })}
             {allUnchecked && (
-              <span className="text-xs text-amber-600">Select at least one surface</span>
+              <span className="text-xs text-warning">Select at least one surface</span>
             )}
           </div>
 
@@ -298,7 +298,7 @@ function RoomCard({
               value={room.notes ?? ''}
               onChange={(e) => onUpdate({ ...room, notes: e.target.value || undefined })}
               placeholder="e.g. skip wardrobe wall"
-              className="w-full rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="min-h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface focus:border-primary focus:outline-none"
             />
           </div>
         </div>
@@ -420,9 +420,9 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
     <div className="space-y-5">
       {/* Not configured banner */}
       {isNotConfigured && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <Settings className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <div className="flex-1 text-sm text-amber-800">
+        <div className="flex items-start gap-3 rounded-xl border border-warning bg-warning-container px-4 py-3">
+          <Settings className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+          <div className="flex-1 text-sm text-on-warning-container">
             <span className="font-semibold">Room prices not set up. </span>
             <Link href="/price-rates" className="underline font-medium">
               Go to Price Rates
@@ -433,7 +433,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
       )}
 
       {propertyPresets.length > 0 && (
-        <section className="border-outline-variant rounded-2xl border bg-white p-4">
+        <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4">
           <h4 className="mb-3 text-sm font-semibold text-on-surface">
             Whole Property
           </h4>
@@ -465,7 +465,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
                   className={`min-h-11 rounded-xl border px-4 py-3 text-left transition-colors ${
                     selected
                       ? 'border-primary bg-primary/15 text-primary'
-                      : 'border-outline-variant bg-white text-on-surface hover:border-primary'
+                      : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary'
                   }`}
                 >
                   <span className="block text-sm font-semibold">
@@ -509,7 +509,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
         </section>
       )}
 
-      <section className="border-outline-variant rounded-2xl border bg-white p-4">
+      <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4">
         <h4 className="mb-3 text-sm font-semibold text-on-surface">
           Trim Base
         </h4>
@@ -534,7 +534,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
       {!value.property_preset && (
         <>
           {/* Coating type */}
-          <section className="border-outline-variant rounded-2xl border bg-white p-4">
+          <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4">
             <h4 className="mb-3 text-sm font-semibold text-on-surface">Coating Type</h4>
             <div className="grid grid-cols-3 gap-2">
               {COATING_OPTIONS.map(({ key, label, sublabel }) => (
@@ -598,7 +598,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
 
           {/* Add room */}
           {!isNotConfigured && (
-            <section className="border-outline-variant rounded-2xl border bg-white p-4">
+            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4">
               <h4 className="mb-3 text-sm font-semibold text-on-surface">
                 <Plus className="inline h-4 w-4 mr-1" />
                 Add Room
@@ -609,7 +609,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
                     key={template.id}
                     type="button"
                     onClick={() => addRoom(template)}
-                    className="border-outline-variant text-on-surface hover:border-primary hover:bg-primary/10 min-h-[36px] rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors"
+                    className="min-h-11 rounded-full border border-outline-variant bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface transition-colors hover:border-primary hover:bg-primary/10"
                   >
                     + {template.label}
                   </button>
@@ -619,7 +619,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
           )}
 
           {/* Condition */}
-          <section className="border-outline-variant rounded-2xl border bg-white p-4">
+          <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4">
             <h4 className="mb-1 text-sm font-semibold text-on-surface">Surface Condition</h4>
             <p className="mb-3 text-xs text-on-surface-variant">
               How much prep work is needed?
@@ -656,7 +656,7 @@ export function QuickEstimateBuilder({ rateSettings, value, onChange }: QuickEst
 
       {/* Summary */}
       {(value.property_preset || value.rooms.length > 0) && (
-        <div className="border-outline-variant rounded-2xl border bg-white p-4 space-y-2">
+        <div className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 space-y-2">
           <div className="flex justify-between text-sm text-on-surface-variant">
             <span>Subtotal (ex-GST)</span>
             <span className="font-medium text-on-surface">{formatAUD(subtotal)}</span>

@@ -95,14 +95,14 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
                       type="button"
                       onClick={() => handleDeleteConfirm(template.id)}
                       disabled={isPending}
-                      className="h-8 rounded-lg bg-error px-3 text-xs font-medium text-on-primary transition-colors disabled:opacity-50"
+                      className="min-h-11 rounded-lg bg-error px-3 text-xs font-medium text-on-primary transition-colors disabled:opacity-50"
                     >
                       Delete
                     </button>
                     <button
                       type="button"
                       onClick={handleDeleteCancel}
-                      className="h-8 rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container"
+                      className="min-h-11 rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container"
                     >
                       Cancel
                     </button>

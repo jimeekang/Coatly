@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import {
   CalendarDays,
   Check,
+  ChevronDown,
+  ChevronUp,
   FilePenLine,
   Home,
   Info,
@@ -106,10 +108,13 @@ function RateSetupSummary({
   items: Array<{ label: string; value: string }>;
   issues: RateSetupIssue[];
 }) {
+  const [showWarnings, setShowWarnings] = useState(false);
+  const hasIssues = issues.length > 0;
+
   return (
-    <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm">
+    <section className="min-w-0 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h3 className="text-sm font-bold text-on-surface">{title}</h3>
           <div className="mt-2 flex flex-wrap gap-2">
             {items.map((item) => (
@@ -122,22 +127,36 @@ function RateSetupSummary({
             ))}
           </div>
         </div>
-        {issues.length > 0 && (
-          <span className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
-            {issues.length} setup warning{issues.length === 1 ? '' : 's'}
-          </span>
-        )}
       </div>
-      {issues.length > 0 && (
-        <div className="mt-3 space-y-1">
-          {issues.slice(0, 3).map((issue) => (
-            <p
-              key={`${issue.code}-${issue.source_id ?? issue.message}`}
-              className="text-xs text-amber-800"
-            >
-              {issue.message}
-            </p>
-          ))}
+      {hasIssues && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowWarnings((open) => !open)}
+            aria-expanded={showWarnings}
+            className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-outline-variant bg-warning-container px-3 py-2 text-left text-xs font-semibold text-warning transition-colors hover:opacity-90"
+          >
+            <span>
+              {issues.length} setup warning{issues.length === 1 ? '' : 's'}
+            </span>
+            {showWarnings ? (
+              <ChevronUp className="h-4 w-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+            )}
+          </button>
+          {showWarnings && (
+            <ul className="mt-2 space-y-1 rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2">
+              {issues.map((issue) => (
+                <li
+                  key={`${issue.code}-${issue.source_id ?? issue.message}`}
+                  className="text-xs text-on-surface-variant"
+                >
+                  {issue.message}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </section>
@@ -1029,14 +1048,14 @@ function RoomPresetForm({
         <button
           type="button"
           onClick={handleSave}
-          className="bg-primary hover:bg-primary/90 inline-flex h-9 items-center rounded-xl px-4 text-sm font-semibold text-white"
+          className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90"
         >
           {submitLabel}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="border-outline text-on-surface hover:bg-surface-container-low inline-flex h-9 items-center rounded-xl border bg-white px-4 text-sm font-medium"
+          className="border-outline inline-flex min-h-11 items-center rounded-xl border bg-white px-4 text-sm font-medium text-on-surface hover:bg-surface-container-low"
         >
           Cancel
         </button>
@@ -1146,14 +1165,14 @@ function RoomRateTab({
                             setEditingId(preset.id);
                             setIsAdding(false);
                           }}
-                          className="border-outline text-on-surface hover:bg-surface-container-low rounded-lg border bg-white px-3 py-1.5 text-xs font-medium"
+                          className="border-outline inline-flex min-h-11 items-center rounded-lg border bg-white px-3 text-xs font-medium text-on-surface hover:bg-surface-container-low"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           onClick={() => onDelete(preset.id)}
-                          className="border-error/30 text-error hover:bg-error-container inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-medium"
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-error/30 bg-white px-3 text-xs font-medium text-error hover:bg-error-container"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete
@@ -1281,7 +1300,7 @@ function ExteriorRatesSection({
             }
             placeholder="Surface name"
             aria-label="Custom surface name"
-            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-9 w-full min-w-[8rem] rounded-md border bg-white px-2.5 text-sm font-semibold outline-none focus:ring-2"
+            className="border-outline h-11 w-full min-w-[8rem] rounded-lg border bg-white px-2.5 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           <div className="border-outline bg-surface-container-low inline-flex w-fit rounded-lg border p-0.5">
             {EXTERIOR_RATE_UNITS.map((unit) => (
@@ -1289,7 +1308,7 @@ function ExteriorRatesSection({
                 key={unit}
                 type="button"
                 onClick={() => onCustomUpdate(custom.id, { unit })}
-                className={`h-7 rounded-md px-2.5 text-[11px] font-semibold transition-colors ${
+                className={`min-h-11 rounded-lg px-3 text-xs font-semibold transition-colors ${
                   custom.unit === unit
                     ? 'text-primary bg-white shadow-sm'
                     : 'text-on-surface-variant'
@@ -1798,7 +1817,7 @@ export function PriceRatesForm({
                 onClick={() => handleTabChange(m)}
                 className={`inline-flex h-11 min-w-fit flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold whitespace-nowrap transition-colors ${
                   isActive
-                    ? 'bg-tertiary text-white shadow-sm'
+                    ? 'bg-primary text-on-primary shadow-sm'
                     : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
                 }`}
               >
@@ -1806,8 +1825,10 @@ export function PriceRatesForm({
                 {PRICING_METHOD_LABELS[m]}
                 {isPreferred && (
                   <span
-                    className={`rounded-full px-1.5 py-px text-[9px] font-extrabold tracking-wider uppercase ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+                    className={`inline-flex min-h-5 items-center rounded-full px-2 text-[10px] font-extrabold tracking-wider uppercase ${
+                      isActive
+                        ? 'bg-on-primary/20 text-on-primary'
+                        : 'bg-primary/10 text-primary'
                     }`}
                   >
                     Preferred
@@ -1868,7 +1889,7 @@ export function PriceRatesForm({
                     aria-selected={isActive}
                     type="button"
                     onClick={() => setActiveScope(scope)}
-                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
+                    className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
                       isActive
                         ? 'bg-white text-on-surface shadow-sm'
                         : 'text-on-surface-variant hover:text-on-surface'
@@ -1927,7 +1948,7 @@ export function PriceRatesForm({
       )}
 
       {/* ── Sticky save bar ─────────────────────────────────────────────────── */}
-      <div className="border-outline-variant sticky bottom-4 z-10 flex items-center justify-between gap-4 rounded-2xl border bg-white/92 px-5 py-3.5 shadow-md backdrop-blur-sm">
+      <div className="border-outline-variant sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 flex items-center justify-between gap-4 rounded-2xl border bg-white/92 px-5 py-3.5 shadow-md backdrop-blur-sm md:bottom-4">
         <div className="flex items-center gap-2 text-xs">
           {error && (
             <span className="text-error flex items-center gap-1.5">
@@ -1950,7 +1971,7 @@ export function PriceRatesForm({
         <button
           type="submit"
           disabled={isPending}
-          className="bg-on-surface hover:bg-on-surface/90 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
+          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-outline disabled:hover:bg-surface-container-high"
         >
           <Save className="h-4 w-4" />
           {isPending ? 'Saving…' : 'Save Rates'}

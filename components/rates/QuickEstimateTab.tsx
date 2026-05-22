@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Lock, Pencil, Trash2 } from 'lucide-react';
 import type {
   QuickEstimateSettings,
   QuickEstimateRoom,
@@ -259,13 +259,13 @@ function RoomCard({
   }
 
   return (
-    <div className="border-outline rounded-2xl border bg-white">
-      <div className="flex min-h-[44px] items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3">
+    <div className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest">
+      <div className="flex min-h-11 items-center justify-between gap-2 px-4 py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="text-on-surface flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg"
+            className="text-on-surface flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
             aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${room.label} prices`}
           >
             {collapsed ? (
@@ -291,7 +291,7 @@ function RoomCard({
                 }
               }}
               autoFocus
-              className="border-outline h-11 min-w-0 rounded-xl border bg-white px-3 text-sm font-semibold text-on-surface"
+              className="border-outline-variant h-11 min-w-0 flex-1 rounded-xl border bg-surface-container-lowest px-3 text-sm font-semibold text-on-surface"
             />
           ) : (
             <button
@@ -300,17 +300,21 @@ function RoomCard({
                 setDraftLabel(room.label);
                 setIsEditingLabel(true);
               }}
-              className="text-on-surface min-h-[44px] text-left text-sm font-medium"
+              className="group/name text-on-surface flex min-h-11 min-w-0 items-center gap-1.5 rounded-lg px-2 text-left text-sm font-medium transition-colors hover:bg-surface-container-high focus-visible:bg-surface-container-high"
               aria-label={`Edit ${room.label} name`}
             >
-              {room.label}
+              <span className="min-w-0 truncate">{room.label}</span>
+              <Pencil
+                aria-hidden="true"
+                className="text-on-surface-variant h-3.5 w-3.5 shrink-0 opacity-60 transition-opacity group-hover/name:opacity-100"
+              />
             </button>
           )}
         </div>
         <button
           type="button"
           onClick={onDelete}
-          className="text-on-surface-variant hover:text-red-500 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="text-on-surface-variant hover:text-error flex h-11 w-11 shrink-0 items-center justify-center"
           aria-label="Delete room"
         >
           <Trash2 className="h-4 w-4" />
@@ -318,19 +322,19 @@ function RoomCard({
       </div>
 
       {!collapsed && (
-        <div className="border-outline border-t px-4 pb-4 pt-3">
+        <div className="border-outline-variant border-t px-4 pb-4 pt-3">
           {/* Surface toggles */}
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="text-on-surface-variant text-xs font-semibold">Surfaces:</span>
             {(['walls', 'ceiling', 'trim'] as const).map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => handleSurfaceToggle(s)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium min-h-[36px] transition-colors ${
+                className={`inline-flex min-h-11 items-center rounded-full border px-4 text-xs font-medium transition-colors ${
                   room.enabled_surfaces.includes(s)
-                    ? 'border-primary bg-primary/15 text-primary'
-                    : 'border-outline text-on-surface-variant'
+                    ? 'border-primary bg-primary text-on-primary'
+                    : 'border-outline-variant text-on-surface-variant'
                 }`}
               >
                 {SURFACE_LABELS[s]}
@@ -357,7 +361,7 @@ function RoomCard({
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-outline divide-y">
+              <tbody className="divide-outline-variant divide-y">
                 {(['small', 'medium', 'large'] as const).map((size) => (
                   <tr key={size}>
                     <td className="py-2 text-sm font-medium">{SIZE_LABELS[size]}</td>
@@ -372,7 +376,7 @@ function RoomCard({
                                   className="grid grid-cols-[52px_1fr] items-center gap-2 text-xs text-on-surface-variant"
                                 >
                                   <span>{field.label}</span>
-                                  <span className="border-outline inline-flex items-center gap-1 rounded-lg border bg-white px-2">
+                                  <span className="border-outline-variant inline-flex h-11 min-w-0 items-center gap-1 rounded-lg border bg-surface-container-lowest px-2">
                                     <span>$</span>
                                     <input
                                       aria-label={`${room.label} ${SIZE_LABELS[size]} Trim ${field.label} price`}
@@ -391,7 +395,7 @@ function RoomCard({
                                           field.key
                                         )
                                       }
-                                      className="w-20 bg-transparent py-1.5 text-right text-sm text-on-surface outline-none"
+                                      className="w-20 min-w-0 bg-transparent text-right text-sm text-on-surface outline-none"
                                     />
                                   </span>
                                 </label>
@@ -403,7 +407,7 @@ function RoomCard({
 
                       return (
                         <td key={s} className="py-2 pl-2 text-right">
-                          <div className="inline-flex items-center gap-1">
+                          <div className="border-outline-variant inline-flex h-11 min-w-0 items-center gap-1 rounded-lg border bg-surface-container-lowest px-2">
                             <span className="text-on-surface-variant text-xs">$</span>
                             <input
                               type="number"
@@ -411,7 +415,7 @@ function RoomCard({
                               step="0.01"
                               defaultValue={centsToDisplay(room.sizes[size][`${s}_cents`])}
                               onBlur={(e) => handleSurfaceCentsChange(size, s, e.target.value)}
-                              className="border-outline w-20 rounded-lg border bg-white px-2 py-1.5 text-right text-sm"
+                              className="w-20 min-w-0 bg-transparent text-right text-sm text-on-surface outline-none"
                             />
                           </div>
                         </td>
@@ -423,13 +427,16 @@ function RoomCard({
             </table>
           </div>
 
-          <div className="mt-4 space-y-3 rounded-xl border border-outline-variant bg-surface-container-low/40 p-3">
+          <div className="mt-4 space-y-3 rounded-xl border border-outline-variant bg-surface-container-low p-3">
             <p className="text-xs font-semibold text-on-surface-variant">
               Default measured quantities for Detailed Specific
             </p>
             <div className="grid gap-3 md:grid-cols-3">
               {(['small', 'medium', 'large'] as const).map((size) => (
-                <div key={size} className="space-y-2 rounded-lg bg-white p-3">
+                <div
+                  key={size}
+                  className="min-w-0 space-y-2 rounded-lg bg-surface-container-lowest p-3"
+                >
                   <p className="text-xs font-semibold text-on-surface">
                     {SIZE_LABELS[size]}
                   </p>
@@ -454,7 +461,7 @@ function RoomCard({
                             event.target.value
                           )
                         }
-                        className="border-outline h-10 rounded-lg border bg-white px-2 text-right text-sm text-on-surface"
+                        className="border-outline-variant h-11 w-full min-w-0 rounded-lg border bg-surface-container-lowest px-2 text-right text-sm text-on-surface"
                       />
                     </label>
                   ))}
@@ -604,9 +611,9 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-8">
       {/* Coating multipliers */}
-      <section className="border-outline rounded-2xl border bg-white p-4 sm:p-5">
+      <section className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest p-4 sm:p-5">
         <div className="mb-4 flex flex-col gap-1">
           <h3 className="text-on-surface text-base font-semibold">Coating Type Multipliers</h3>
           <p className="text-on-surface-variant mt-0.5 text-sm">
@@ -619,7 +626,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             { key: 'two_coats_repaint_pct', label: '2 Coats Repaint', locked: true },
             { key: 'three_coats_new_plaster_pct', label: '3 Coats New Plaster', locked: false },
           ].map(({ key, label, locked }) => (
-            <div key={key}>
+            <div key={key} className="min-w-0">
               <label className="text-on-surface-variant mb-1 block text-xs font-medium">{label}</label>
               <div className="flex items-center gap-1">
                 <input
@@ -629,13 +636,16 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                   disabled={locked}
                   value={settings.coating_multipliers[key as keyof typeof settings.coating_multipliers]}
                   onChange={(e) => !locked && handleMultiplierChange('coating_multipliers', key, e.target.value)}
-                  className={`border-outline w-20 rounded-lg border px-3 py-2 text-right text-sm ${
-                    locked ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : 'bg-white'
+                  className={`border-outline-variant h-11 w-20 min-w-0 rounded-lg border px-3 text-right text-sm ${
+                    locked ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : 'bg-surface-container-lowest'
                   }`}
                 />
                 <span className="text-on-surface-variant text-sm">%</span>
                 {locked && (
-                  <span className="text-on-surface-variant ml-1 text-xs">🔒</span>
+                  <Lock
+                    className="ml-1 h-3.5 w-3.5 text-on-surface-variant"
+                    aria-label={`${label} locked`}
+                  />
                 )}
               </div>
             </div>
@@ -644,7 +654,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
       </section>
 
       {/* Condition multipliers */}
-      <section className="border-outline rounded-2xl border bg-white p-4 sm:p-5">
+      <section className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest p-4 sm:p-5">
         <div className="mb-4 flex flex-col gap-1">
           <h3 className="text-on-surface text-base font-semibold">Condition Multipliers</h3>
           <p className="text-on-surface-variant mt-0.5 text-sm">
@@ -657,7 +667,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             { key: 'average_pct', label: 'Average', locked: true },
             { key: 'poor_pct', label: 'Poor', locked: false },
           ].map(({ key, label, locked }) => (
-            <div key={key}>
+            <div key={key} className="min-w-0">
               <label className="text-on-surface-variant mb-1 block text-xs font-medium">{label}</label>
               <div className="flex items-center gap-1">
                 <input
@@ -667,13 +677,16 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                   disabled={locked}
                   value={settings.condition_multipliers[key as keyof typeof settings.condition_multipliers]}
                   onChange={(e) => !locked && handleMultiplierChange('condition_multipliers', key, e.target.value)}
-                  className={`border-outline w-20 rounded-lg border px-3 py-2 text-right text-sm ${
-                    locked ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : 'bg-white'
+                  className={`border-outline-variant h-11 w-20 min-w-0 rounded-lg border px-3 text-right text-sm ${
+                    locked ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : 'bg-surface-container-lowest'
                   }`}
                 />
                 <span className="text-on-surface-variant text-sm">%</span>
                 {locked && (
-                  <span className="text-on-surface-variant ml-1 text-xs">🔒</span>
+                  <Lock
+                    className="ml-1 h-3.5 w-3.5 text-on-surface-variant"
+                    aria-label={`${label} locked`}
+                  />
                 )}
               </div>
             </div>
@@ -692,15 +705,15 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
           </p>
         </div>
 
-        <div className="border-outline-variant bg-surface-container-low rounded-xl border px-4 py-3">
+        <div className="border-outline-variant bg-surface-container-low min-w-0 rounded-xl border px-4 py-3">
           <p className="text-on-surface text-sm font-semibold">
             How this price is calculated
           </p>
           <p className="text-on-surface-variant mt-1 text-sm">
-            Starts from the Detailed Estimate whole-property anchor, then adjusts
-            by apartment type or house bed/bath setup, sqm, selected scope,
-            condition, wall coating, and trim base. GST is added in the quote
-            total.
+            Starts from your Detailed Estimate whole-property base price, then
+            adjusts by apartment type or house bed/bath setup, sqm, selected
+            scope, condition, wall coating, and trim base. GST is added in the
+            quote total.
           </p>
         </div>
 
@@ -708,7 +721,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
           {propertyPresets.map((preset) => (
             <div
               key={preset.id}
-              className="border-outline rounded-2xl border bg-white p-4"
+              className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest p-4"
             >
               {(() => {
                 const surfaceShare = getSurfacePriceShare(preset);
@@ -731,7 +744,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                         label: event.target.value,
                       })
                     }
-                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                   />
                 </div>
                 <div>
@@ -759,7 +772,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                             : null,
                       })
                     }
-                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                   >
                     {(['apartment', 'house'] as const).map((propertyType) => (
                       <option key={propertyType} value={propertyType}>
@@ -771,7 +784,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                 <button
                   type="button"
                   onClick={() => handlePropertyPresetDelete(preset.id)}
-                  className="text-on-surface-variant hover:text-red-500 flex min-h-[44px] min-w-[44px] items-center justify-center self-end"
+                  className="text-on-surface-variant hover:text-error flex h-11 w-11 shrink-0 items-center justify-center self-end"
                   aria-label={`Delete ${preset.label}`}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -796,7 +809,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                             .value as QuickPropertyPreset['apartment_type'],
                         })
                       }
-                      className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                      className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                     >
                       {Object.entries(APARTMENT_TYPE_LABELS).map(
                         ([value, label]) => (
@@ -827,7 +840,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                         bedrooms: numberOrNull(event.target.value),
                       })
                     }
-                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                   />
                 </div>
                 <div>
@@ -849,7 +862,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                         bathrooms: numberOrNull(event.target.value),
                       })
                     }
-                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                   />
                 </div>
                 <div>
@@ -871,7 +884,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                         sqm: numberOrNull(event.target.value),
                       })
                     }
-                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                   />
                 </div>
                 {preset.property_type === 'house' && (
@@ -892,7 +905,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                             .value as QuickPropertyPreset['storeys'],
                         })
                       }
-                      className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                      className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                     >
                       {Object.entries(STOREY_LABELS).map(([value, label]) => (
                         <option key={value} value={value}>
@@ -921,7 +934,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                           .value as QuickPropertyPreset['condition'],
                       })
                     }
-                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                   >
                     {Object.entries(CONDITION_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -946,7 +959,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                           .value as QuickPropertyPreset['wall_paint_system'],
                       })
                     }
-                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                   >
                     {Object.entries(WALL_PAINT_SYSTEM_LABELS).map(
                       ([value, label]) => (
@@ -973,7 +986,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                           .value as QuickPropertyPreset['trim_paint_system'],
                       })
                     }
-                    className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                   >
                     {Object.entries(TRIM_PAINT_SYSTEM_LABELS).map(
                       ([value, label]) => (
@@ -994,20 +1007,20 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                     onClick={() =>
                       handlePropertyPresetScopeToggle(preset, surface)
                     }
-                    className={`min-h-[44px] rounded-full border px-4 text-sm font-medium transition-colors ${
+                    className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
                       preset.scope.includes(surface)
-                        ? 'border-primary bg-primary/15 text-primary'
-                        : 'border-outline text-on-surface-variant'
+                        ? 'border-primary bg-primary text-on-primary'
+                        : 'border-outline-variant text-on-surface-variant'
                     }`}
                   >
                     {SURFACE_LABELS[surface]}
                   </button>
                 ))}
               </div>
-              <div className="border-outline-variant bg-surface-container-low mt-4 rounded-xl border p-3">
+              <div className="border-outline-variant bg-surface-container-low mt-4 min-w-0 rounded-xl border p-3">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-on-surface text-sm font-semibold">
-                    Surface price split
+                    How the total price is split
                   </p>
                   <p
                     className={`text-xs font-semibold ${
@@ -1016,21 +1029,21 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                         : 'text-error'
                     }`}
                   >
-                    Surface price split: {surfaceShareTotal}% total
+                    {surfaceShareTotal}% total
                   </p>
                 </div>
                 <p className="text-on-surface-variant mt-1 text-xs">
-                  Controls how the whole-property anchor is split when only
-                  walls, ceiling, or trim are selected.
+                  If a quote only includes walls, ceiling, or trim, these shares
+                  decide how much of the whole-property price is used.
                 </p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   {SURFACE_SHARE_FIELDS.map((field) => (
-                    <div key={field.key}>
+                    <div key={field.key} className="min-w-0">
                       <label
                         htmlFor={`surface-share-${field.key}-${preset.id}`}
                         className="text-on-surface-variant mb-1 block text-xs font-medium"
                       >
-                        {field.label} %
+                        {field.label} share %
                       </label>
                       <input
                         id={`surface-share-${field.key}-${preset.id}`}
@@ -1047,7 +1060,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                             event.target.value
                           )
                         }
-                        className="border-outline h-11 w-full rounded-xl border bg-white px-3 text-sm"
+                        className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                       />
                     </div>
                   ))}
@@ -1064,14 +1077,14 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
           <button
             type="button"
             onClick={() => addPropertyPreset('apartment')}
-            className="border-primary text-primary hover:bg-primary/15 min-h-[44px] rounded-full border px-4 text-sm font-medium transition-colors"
+            className="border-primary text-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors"
           >
             + Apartment preset
           </button>
           <button
             type="button"
             onClick={() => addPropertyPreset('house')}
-            className="border-primary text-primary hover:bg-primary/15 min-h-[44px] rounded-full border px-4 text-sm font-medium transition-colors"
+            className="border-primary text-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors"
           >
             + House preset
           </button>
@@ -1080,17 +1093,17 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
 
       {/* Room list */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1">
           <h3 className="text-on-surface text-base font-semibold">
             Room Price Library ({settings.rooms.length})
           </h3>
-          <p className="text-on-surface-variant mt-1 text-sm">
+          <p className="text-on-surface-variant text-sm">
             Used by Quick Estimate, Advanced room presets, and future AI draft pricing.
           </p>
         </div>
 
         {settings.rooms.length === 0 && (
-          <p className="text-on-surface-variant rounded-xl border border-dashed p-4 text-sm text-center">
+          <p className="text-on-surface-variant border-outline-variant rounded-xl border border-dashed p-4 text-center text-sm">
             No rooms yet. Add from templates below.
           </p>
         )}
@@ -1108,7 +1121,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
       </section>
 
       {/* Add room templates */}
-      <section className="border-outline rounded-2xl border bg-white p-4 sm:p-5">
+      <section className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest p-4 sm:p-5">
         <div className="mb-3 flex flex-col gap-1">
           <h3 className="text-on-surface text-base font-semibold">Add Room</h3>
         </div>
@@ -1118,7 +1131,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
               key={label}
               type="button"
               onClick={() => addRoomFromTemplate(label)}
-              className="border-outline text-on-surface hover:border-primary hover:bg-primary/5 min-h-[36px] rounded-full border bg-white px-3 py-1 text-xs font-medium transition-colors"
+              className="border-outline-variant text-on-surface hover:border-primary hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-full border bg-surface-container-lowest px-4 text-xs font-medium transition-colors"
             >
               + {label}
             </button>
@@ -1127,12 +1140,12 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             <button
               type="button"
               onClick={() => setShowCustomInput(true)}
-              className="border-primary text-primary hover:bg-primary/15 min-h-[36px] rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+              className="border-primary text-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border px-4 text-xs font-medium transition-colors"
             >
               + Custom…
             </button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
                 value={customLabel}
@@ -1140,19 +1153,19 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                 onKeyDown={(e) => e.key === 'Enter' && addCustomRoom()}
                 placeholder="Room name"
                 autoFocus
-                className="border-outline rounded-lg border bg-white px-3 py-1.5 text-sm"
+                className="border-outline-variant h-11 min-w-0 rounded-lg border bg-surface-container-lowest px-3 text-sm"
               />
               <button
                 type="button"
                 onClick={addCustomRoom}
-                className="bg-primary min-h-[36px] rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+                className="bg-primary inline-flex min-h-11 items-center rounded-lg px-4 text-xs font-semibold text-on-primary"
               >
                 Add
               </button>
               <button
                 type="button"
                 onClick={() => { setShowCustomInput(false); setCustomLabel(''); }}
-                className="text-on-surface-variant text-xs"
+                className="text-on-surface-variant inline-flex min-h-11 items-center px-2 text-xs"
               >
                 Cancel
               </button>

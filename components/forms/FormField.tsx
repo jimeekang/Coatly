@@ -12,10 +12,10 @@ export const formLabelClassName =
   'mb-1.5 block text-sm font-semibold text-on-surface';
 
 export const formControlClassName =
-  'h-12 w-full scroll-mb-40 rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface placeholder:text-on-surface-variant transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 md:scroll-mb-32';
+  'h-12 w-full scroll-mb-40 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-base text-on-surface placeholder:text-on-surface-variant transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 md:scroll-mb-32';
 
 export const formTextareaClassName =
-  'w-full scroll-mb-40 rounded-xl border border-outline-variant bg-white px-4 py-3 text-base text-on-surface placeholder:text-on-surface-variant transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 md:scroll-mb-32';
+  'w-full scroll-mb-40 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-base text-on-surface placeholder:text-on-surface-variant transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 md:scroll-mb-32';
 
 export const formDisabledControlClassName =
   'flex h-12 w-full items-center rounded-xl border border-outline-variant bg-surface-container-low px-4 text-base text-on-surface-variant';

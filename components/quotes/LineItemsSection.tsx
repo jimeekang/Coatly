@@ -65,7 +65,7 @@ function QuantityInput({
           onChange(nextQuantity);
         }
       }}
-      className="h-9 w-20 rounded-lg border border-outline-variant bg-white px-2 text-center text-sm text-on-surface focus:border-primary focus:outline-none"
+      className="min-h-11 w-20 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 text-center text-sm text-on-surface focus:border-primary focus:outline-none"
       aria-label={`${entry.name} quantity`}
     />
   );
@@ -107,15 +107,15 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
 
   return (
     <>
-      <section className="rounded-2xl border border-outline-variant bg-white p-4">
-        <div className="flex items-center justify-between">
+      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+        <div className="flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
             Materials &amp; Services
           </h3>
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-on-primary"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Item
@@ -151,7 +151,7 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
                   <button
                     type="button"
                     onClick={() => handleRemove(index)}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error"
                     aria-label={`Remove ${entry.name}`}
                   >
                     <Trash2 className="h-4 w-4" />

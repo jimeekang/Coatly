@@ -44,7 +44,9 @@
       "Bash(nohup npm run dev)",
       "Bash(echo \"dev server starting \\(pid $!\\)...\")",
       "Bash(curl -s -o /dev/null -w \"\" \"http://localhost:3000/login\")",
-      "mcp__Claude_in_Chrome__tabs_context_mcp"
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(perl -i -pe 's/text-red-700/text-error/' components/quotes/InteriorEstimateBuilder.tsx)",
+      "Bash(perl -i -pe 's/h-11 flex-1 rounded-lg border bg-white px-3/h-11 flex-1 rounded-lg border bg-surface-container-lowest px-3/; s/h-11 w-20 rounded-lg border bg-white px-3/h-11 w-20 rounded-lg border bg-surface-container-lowest px-3/' components/quotes/QuoteForm.tsx)"
     ]
   }
 }

@@ -634,7 +634,7 @@ function PricingSummaryPanel({
 
   return (
     <div className="space-y-4">
-      <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm">
+      <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
@@ -653,14 +653,14 @@ function PricingSummaryPanel({
                     setIsEditingNumber(false);
                   }
                 }}
-                className="border-primary text-on-surface focus:ring-primary/20 mt-1 w-full rounded-lg border bg-white px-2 py-1 text-lg font-semibold focus:ring-2 focus:outline-none"
+                className="border-primary text-on-surface focus:ring-primary/20 mt-1 min-h-11 w-full rounded-lg border bg-surface-container-lowest px-2 text-lg font-semibold focus:ring-2 focus:outline-none"
               />
             ) : (
               <button
                 type="button"
                 onClick={() => isEditable && setIsEditingNumber(true)}
                 className={[
-                  'text-on-surface mt-1 flex items-center gap-1.5 text-lg font-semibold',
+                  'text-on-surface mt-1 inline-flex min-h-11 items-center gap-1.5 text-lg font-semibold',
                   isEditable
                     ? 'hover:text-primary cursor-pointer rounded-lg px-0 transition-colors'
                     : 'cursor-default',
@@ -710,7 +710,7 @@ function PricingSummaryPanel({
         </div>
       </section>
 
-      <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm">
+      <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm">
         <div className="mb-3">
           <h3 className="text-on-surface text-base font-bold leading-snug">Price Summary</h3>
           <p className="text-on-surface-variant mt-0.5 text-xs">Live internal pricing while you build the quote.</p>
@@ -778,7 +778,7 @@ function PricingSummaryPanel({
                 <button
                   type="button"
                   onClick={onDiscountToggle}
-                  className="text-on-surface-variant hover:text-error text-xs transition-colors"
+                  className="text-on-surface-variant hover:text-error inline-flex min-h-11 items-center text-xs transition-colors"
                 >
                   Remove
                 </button>
@@ -792,7 +792,7 @@ function PricingSummaryPanel({
                   value={discountInput}
                   onChange={(e) => onDiscountInputChange(e.target.value)}
                   placeholder="0.00"
-                  className="border-outline-variant text-on-surface focus:border-error focus:ring-error/20 h-11 flex-1 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline-variant text-on-surface focus:border-error focus:ring-error/20 h-11 flex-1 rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
                 />
                 {discountCents > 0 && (
                   <span className="text-error text-sm font-medium">
@@ -805,7 +805,7 @@ function PricingSummaryPanel({
             <button
               type="button"
               onClick={onDiscountToggle}
-              className="border-outline-variant text-on-surface-variant hover:border-error/50 hover:text-error flex w-full items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm transition-colors"
+              className="border-outline-variant text-on-surface-variant hover:border-error/50 hover:text-error flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-3 text-sm transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -836,7 +836,7 @@ function PricingSummaryPanel({
                 <button
                   type="button"
                   onClick={onDepositToggle}
-                  className="text-on-surface-variant hover:text-error text-xs transition-colors"
+                  className="text-on-surface-variant hover:text-error inline-flex min-h-11 items-center text-xs transition-colors"
                 >
                   Remove
                 </button>
@@ -850,7 +850,7 @@ function PricingSummaryPanel({
                   value={depositInput}
                   onChange={(e) => onDepositInputChange(e.target.value)}
                   placeholder="50"
-                  className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-20 rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-20 rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
                 />
                 <span className="text-on-surface-variant text-sm">% of total</span>
                 {depositPercent > 0 && (
@@ -864,7 +864,7 @@ function PricingSummaryPanel({
             <button
               type="button"
               onClick={onDepositToggle}
-              className="border-outline-variant text-on-surface-variant hover:border-primary/50 hover:text-primary flex w-full items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm transition-colors"
+              className="border-outline-variant text-on-surface-variant hover:border-primary/50 hover:text-primary flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-3 text-sm transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1831,7 +1831,7 @@ export function QuoteForm({
                       }));
                     }}
                     aria-describedby="working_days_help"
-                    className="border-outline-variant text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
+                    className="border-outline-variant text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-surface-container-lowest pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
                   />
                   <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                     days
@@ -1849,7 +1849,7 @@ export function QuoteForm({
           </FormSection>
 
           {/* Pricing method selector */}
-          <section className="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm sm:p-6">
             <div className="mb-4">
               <h3 className="text-base font-bold leading-snug text-on-surface">Pricing Method</h3>
               <p className="mt-0.5 text-sm text-on-surface-variant">
@@ -1883,7 +1883,7 @@ export function QuoteForm({
                     className={`group relative flex h-full flex-col gap-2 rounded-xl border px-3 py-3 text-left transition-all duration-150 ${
                       isActive
                         ? 'border-primary bg-primary text-on-primary shadow-sm'
-                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-outline hover:bg-surface-container-low'
+                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-outline-variant hover:bg-surface-container-low'
                     }`}
                   >
                     <span
@@ -1917,7 +1917,7 @@ export function QuoteForm({
                   Pick rooms, sizes &amp; scope — ~30 sec.{' '}
                   <Link
                     href="/price-rates"
-                    className="font-medium text-primary underline underline-offset-2"
+                    className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-primary underline underline-offset-2 hover:bg-primary/10"
                   >
                     Edit room prices
                   </Link>
@@ -1927,7 +1927,7 @@ export function QuoteForm({
                   Using Detailed Estimate Anchors from Price Rates.{' '}
                   <Link
                     href="/price-rates"
-                    className="font-medium text-primary underline underline-offset-2"
+                    className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-primary underline underline-offset-2 hover:bg-primary/10"
                   >
                     Edit Price Rates
                   </Link>
@@ -1937,7 +1937,7 @@ export function QuoteForm({
                   Using default rates from Price Rates.{' '}
                   <Link
                     href="/price-rates"
-                    className="font-medium text-primary underline underline-offset-2"
+                    className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-primary underline underline-offset-2 hover:bg-primary/10"
                   >
                     Edit default rates
                   </Link>
@@ -1948,7 +1948,7 @@ export function QuoteForm({
 
           {/* Interior / Exterior scope toggle — only for detailed estimate */}
           {pricingStrategy === 'hybrid' && (
-            <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
               <div className="mb-3 flex flex-wrap items-center gap-3">
                 <h3 className="text-on-surface text-base font-bold leading-snug">Job Scope</h3>
               </div>
@@ -1960,7 +1960,7 @@ export function QuoteForm({
                     onClick={() => setQuoteScope(scope)}
                     className={`inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all ${
                       quoteScope === scope
-                        ? 'bg-white text-on-surface shadow-sm'
+                        ? 'bg-surface-container-lowest text-on-surface shadow-sm'
                         : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
@@ -1984,7 +1984,7 @@ export function QuoteForm({
 
           {/* Day rate inputs */}
           {pricingStrategy === 'day_rate' && (
-            <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
               <div className="mb-4">
                 <h3 className="text-on-surface text-base font-bold leading-snug">Labour × Days</h3>
               </div>
@@ -2063,7 +2063,7 @@ export function QuoteForm({
                           material_percent: parseInt(e.target.value, 10) || 0,
                         }))
                       }
-                      className="border-outline-variant w-20 rounded-xl border bg-white px-3 py-2.5 text-center text-base"
+                      className="border-outline-variant w-20 rounded-xl border bg-surface-container-lowest px-3 py-2.5 text-center text-base"
                     />
                     <span className="text-on-surface-variant text-sm">
                       % of labour
@@ -2090,7 +2090,7 @@ export function QuoteForm({
                           material_flat_cents: Math.round(nextValue * 100),
                         }));
                       }}
-                      className="border-outline-variant w-32 rounded-xl border bg-white px-3 py-2.5 text-base"
+                      className="border-outline-variant w-32 rounded-xl border bg-surface-container-lowest px-3 py-2.5 text-base"
                     />
                   </div>
                 )}
@@ -2137,7 +2137,7 @@ export function QuoteForm({
                             preset.rate_cents
                           )
                         }
-                        className="border-primary/30 text-on-surface hover:border-primary hover:bg-primary/15 rounded-full border bg-white px-3 py-1.5 text-xs font-medium"
+                        className="inline-flex min-h-11 items-center rounded-full border border-primary/30 bg-white px-3 text-xs font-medium text-on-surface hover:border-primary hover:bg-primary/15"
                       >
                         {preset.title} · {preset.sqm} sqm ·{' '}
                         {formatAUD(preset.rate_cents)}
@@ -2181,7 +2181,7 @@ export function QuoteForm({
                             )
                           )
                         }
-                        className="border-outline-variant rounded-lg border bg-white px-2 py-1.5 text-sm"
+                        className="min-h-11 rounded-lg border border-outline-variant bg-white px-2 text-sm"
                       >
                         {ROOM_TYPES.map((t) => (
                           <option key={t} value={t}>
@@ -2209,7 +2209,7 @@ export function QuoteForm({
                             )
                           );
                         }}
-                        className="border-outline-variant rounded-lg border bg-white px-2 py-1.5 text-sm"
+                        className="min-h-11 rounded-lg border border-outline-variant bg-white px-2 text-sm"
                       >
                         {ROOM_SIZES.map((s) => (
                           <option key={s} value={s}>
@@ -2241,7 +2241,7 @@ export function QuoteForm({
                               )
                             );
                           }}
-                          className="border-outline-variant w-24 rounded-lg border bg-white px-2 py-1.5 text-sm"
+                          className="min-h-11 w-24 rounded-lg border border-outline-variant bg-white px-2 text-sm"
                         />
                       </div>
                     </div>
@@ -2666,25 +2666,25 @@ export function QuoteForm({
         contentClassName="justify-center xl:max-w-6xl"
       >
         {showSendQuoteButton ? (
-          <div className="w-full space-y-2 xl:flex xl:items-center xl:gap-3 xl:space-y-0">
+          <div className="w-full space-y-2 md:flex md:items-center md:gap-3 md:space-y-0">
             <FormFooterButton
               type="button"
               onClick={handleOpenSendDialog}
               disabled={isPending || !canSubmit || !canSendQuote}
-              className="w-full gap-2 xl:flex-[1.6]"
+              className="w-full gap-2 md:flex-[1.6]"
             >
               {isPending && activeSubmitIntent === 'send_email'
                 ? 'Sending...'
                 : 'Send Quote to Client'}
             </FormFooterButton>
-            <div className="grid grid-cols-2 gap-2 xl:flex xl:flex-1">
+            <div className="grid grid-cols-2 gap-2 md:flex md:flex-1">
               <FormFooterButton
                 type="submit"
                 variant="secondary"
                 data-submit-intent="save"
                 onClick={() => setActiveSubmitIntent('save')}
                 disabled={isPending || !canSubmit}
-                className="h-11 text-sm xl:flex-1"
+                className="text-sm md:flex-1"
               >
                 {isPending && activeSubmitIntent === 'save'
                   ? 'Saving...'
@@ -2695,7 +2695,7 @@ export function QuoteForm({
                 variant="secondary"
                 onClick={() => (onCancel ? onCancel() : router.back())}
                 disabled={isPending}
-                className="h-11 text-sm font-medium text-on-surface-variant hover:text-on-surface xl:flex-1"
+                className="text-sm font-medium text-on-surface-variant hover:text-on-surface md:flex-1"
               >
                 {cancelLabel}
               </FormFooterButton>

@@ -104,7 +104,7 @@ function ToggleGroup<T extends string>({
           onClick={() => onChange(opt)}
           className={[
             'flex-1 rounded-xl border font-medium transition-colors',
-            size === 'sm' ? 'h-9 text-xs' : 'h-11 text-sm',
+            size === 'sm' ? 'min-h-11 text-xs' : 'h-11 text-sm',
             value === opt
               ? 'border-primary bg-primary text-white'
               : 'border-outline-variant bg-white text-on-surface hover:border-primary hover:bg-primary/15',
@@ -134,7 +134,7 @@ function Counter({
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
         aria-label="Decrease"
       >
         −
@@ -144,7 +144,7 @@ function Counter({
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
         aria-label="Increase"
       >
         +
@@ -258,7 +258,7 @@ function RoomCard({
           <button
             type="button"
             onClick={onRemove}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-red-50 hover:text-red-500"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant hover:bg-red-50 hover:text-red-500"
             aria-label="Remove room"
           >
             ×
@@ -595,7 +595,7 @@ export function QuickQuoteBuilder({
                 <button
                   type="button"
                   onClick={() => adjustBy(-STEP)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-error hover:bg-red-50 hover:text-error"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-error hover:bg-red-50 hover:text-error"
                   aria-label="Decrease by $50"
                 >
                   −
@@ -613,7 +613,7 @@ export function QuickQuoteBuilder({
                 <button
                   type="button"
                   onClick={() => adjustBy(STEP)}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-primary hover:bg-primary/15 hover:text-primary"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-primary hover:bg-primary/15 hover:text-primary"
                   aria-label="Increase by $50"
                 >
                   +
