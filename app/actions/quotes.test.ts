@@ -434,6 +434,257 @@ describe('createQuote', () => {
     expect(redirectMock).toHaveBeenCalledWith('/quotes/quote-1');
   });
 
+  it('creates a maintenance quote form structure without adding maintenance prices', async () => {
+    const captured: {
+      quoteInsert?: Record<string, unknown>;
+      sectionInserts: Array<Record<string, unknown>>;
+      stepInserts?: Array<Record<string, unknown>>;
+      clauseInserts?: Array<Record<string, unknown>>;
+      aiIntakeInsert?: Record<string, unknown>;
+    } = {
+      sectionInserts: [],
+    };
+
+    const customerQuery = createFilterQuery({
+      data: {
+        id: 'customer-1',
+        email: 'maintenance@example.com',
+        emails: ['maintenance@example.com'],
+        address_line1: '42 Ocean Road',
+        address_line2: null,
+        city: 'Manly',
+        state: 'NSW',
+        postcode: '2095',
+        properties: [],
+      },
+      error: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue(customerQuery),
+          };
+        }
+
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { default_rates: {} },
+                error: null,
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            insert: vi.fn((payload) => {
+              captured.quoteInsert = payload;
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: 'maintenance-quote-1' },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+            }),
+          };
+        }
+
+        if (table === 'quote_scope_sections') {
+          return {
+            insert: vi.fn((payload) => {
+              captured.sectionInserts.push(payload);
+              return {
+                select: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({
+                    data: { id: `scope-${captured.sectionInserts.length}` },
+                    error: null,
+                  }),
+                }),
+              };
+            }),
+          };
+        }
+
+        if (table === 'quote_scope_steps') {
+          return {
+            insert: vi.fn(async (payload) => {
+              captured.stepInserts = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'quote_clause_items') {
+          return {
+            insert: vi.fn(async (payload) => {
+              captured.clauseInserts = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'quote_ai_intake_snapshots') {
+          return {
+            insert: vi.fn(async (payload) => {
+              captured.aiIntakeInsert = payload;
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      rpc: vi.fn(async (fn: string) => {
+        if (fn === 'generate_quote_number') {
+          return { data: 'QUO-0042', error: null };
+        }
+
+        throw new Error(`Unexpected rpc ${fn}`);
+      }),
+    });
+
+    const result = await createQuote({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      job_type: 'maintenance',
+      title: 'Water damage repaint',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      working_days: 1,
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      pricing_method: 'day_rate',
+      pricing_method_inputs: {
+        method: 'day_rate',
+        inputs: {
+          days: 1,
+          daily_rate_cents: 85000,
+          material_method: 'flat',
+          material_flat_cents: 12000,
+        },
+      },
+      scope_sections: [
+        {
+          client_id: 'water-section',
+          section_kind: 'maintenance',
+          title: 'Water damage repaint',
+          description: 'Stain block and repaint affected wall area.',
+          area_label: 'Bedroom wall',
+          surface_category: 'walls',
+          pricing_status: 'to_confirm',
+          measurement_status: 'photo_hint',
+          source: 'ai',
+          maintenance_job_pack: 'water_damage_repaint',
+          visible_defects: ['staining'],
+          priority: 'soon',
+          report_context: true,
+          steps: [
+            {
+              step_type: 'prep',
+              label: 'Prepare affected area',
+              description: 'Scrape loose paint and sand affected area.',
+              requires_confirmation: false,
+            },
+          ],
+        },
+      ],
+      clause_items: [
+        {
+          clause_key: 'source_repair_excluded',
+          category: 'exclusion',
+          title: 'Source repair excluded',
+          body: 'This quote excludes plumbing or waterproofing repairs.',
+          severity: 'warning',
+          source: 'default_library',
+          applies_to_section_client_id: 'water-section',
+        },
+      ],
+      ai_intake_snapshot: {
+        job_type: 'maintenance',
+        maintenance_job_pack: 'water_damage_repaint',
+        provider: 'alibaba-qwen',
+        model: 'qwen3-vl-flash',
+        prompt_version: 'quote-form-v1',
+        input_json: {
+          site_notes: 'Water staining visible after leak was repaired.',
+        },
+        output_json: {
+          scope_sections: [],
+          clauses: [],
+          questions_for_user: ['Confirm the leak has been repaired.'],
+        },
+        photo_refs: [],
+        price_rates_snapshot_id: 'rates-2026-05-23',
+      },
+    });
+
+    expect(result).toBeUndefined();
+    expect(captured.quoteInsert).toMatchObject({
+      job_type: 'maintenance',
+      pricing_method: 'day_rate',
+      subtotal_cents: 97000,
+      gst_cents: 9700,
+      total_cents: 106700,
+    });
+    expect(captured.sectionInserts).toEqual([
+      expect.objectContaining({
+        quote_id: 'maintenance-quote-1',
+        section_kind: 'maintenance',
+        title: 'Water damage repaint',
+        pricing_status: 'to_confirm',
+        measurement_status: 'photo_hint',
+        metadata: expect.objectContaining({
+          maintenance_job_pack: 'water_damage_repaint',
+          priority: 'soon',
+          report_context: true,
+          visible_defects: ['staining'],
+        }),
+      }),
+    ]);
+    expect(captured.stepInserts).toEqual([
+      expect.objectContaining({
+        section_id: 'scope-1',
+        step_type: 'prep',
+        label: 'Prepare affected area',
+      }),
+    ]);
+    expect(captured.clauseInserts).toEqual([
+      expect.objectContaining({
+        quote_id: 'maintenance-quote-1',
+        section_id: 'scope-1',
+        clause_key: 'source_repair_excluded',
+        category: 'exclusion',
+      }),
+    ]);
+    expect(captured.aiIntakeInsert).toMatchObject({
+      quote_id: 'maintenance-quote-1',
+      painter_user_id: 'user-1',
+      job_type: 'maintenance',
+      maintenance_job_pack: 'water_damage_repaint',
+      provider: 'alibaba-qwen',
+      model: 'qwen3-vl-flash',
+      price_rates_snapshot_id: 'rates-2026-05-23',
+    });
+  });
+
   it('saves identical canonical totals for create and update with the same fixture', async () => {
     const input = {
       customer_id: '550e8400-e29b-41d4-a716-446655440000',

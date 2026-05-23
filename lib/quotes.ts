@@ -19,7 +19,14 @@ import {
   type QuoteLineItemFormInput,
   type QuoteSurface,
 } from '@/lib/supabase/validators';
-import type { PricingMethod, PricingMethodInputs } from '@/types/quote';
+import type {
+  PricingMethod,
+  PricingMethodInputs,
+  QuoteAiIntakeSnapshotInput,
+  QuoteClauseItemInput,
+  QuoteJobType,
+  QuoteScopeSectionInput,
+} from '@/types/quote';
 
 export type QuoteStatus =
   | 'draft'
@@ -35,7 +42,7 @@ export type QuoteSurfaceType =
   | 'trim'
   | 'doors'
   | 'windows';
-export type QuoteEstimateCategory = 'manual' | 'interior';
+export type QuoteEstimateCategory = 'manual' | 'interior' | 'exterior' | 'maintenance';
 export type QuoteEstimateItemCategory =
   | 'entire_property'
   | 'room'
@@ -325,6 +332,7 @@ export type QuoteDetail = {
   id: string;
   user_id: string;
   customer_id: string;
+  job_type: QuoteJobType;
   public_share_token: string;
   approved_at: string | null;
   approved_by_name: string | null;
@@ -930,10 +938,29 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
     };
   }
 
+  const resolveJobType = (): QuoteJobType => {
+    if (parsed.data.job_type) return parsed.data.job_type;
+    if (
+      parsed.data.scope_sections.some(
+        (section) =>
+          section.section_kind === 'maintenance' ||
+          section.maintenance_job_pack != null
+      )
+    ) {
+      return 'maintenance';
+    }
+    if (parsed.data.exterior_estimate && parsed.data.interior_estimate) {
+      return 'both';
+    }
+    if (parsed.data.exterior_estimate) return 'exterior';
+    return 'interior';
+  };
+
   return {
     success: true as const,
     data: {
       customer_id: parsed.data.customer_id,
+      job_type: resolveJobType(),
       customer_email: parsed.data.customer_email?.trim() || null,
       customer_address: parsed.data.customer_address?.trim() || null,
       quote_number: parsed.data.quote_number?.trim() || null,
@@ -955,6 +982,11 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
         parsed.data.interior_estimate
       ),
       exterior_estimate: parsed.data.exterior_estimate ?? null,
+      scope_sections: parsed.data.scope_sections as QuoteScopeSectionInput[],
+      clause_items: parsed.data.clause_items as QuoteClauseItemInput[],
+      ai_intake_snapshot:
+        (parsed.data.ai_intake_snapshot as QuoteAiIntakeSnapshotInput | undefined) ??
+        null,
       line_items: (parsed.data.line_items ?? []).map((item) => {
         const is_optional = item.is_optional ?? false;
 
@@ -1047,6 +1079,7 @@ export function mapQuoteDetail(row: {
   id: string;
   user_id: string;
   customer_id: string;
+  job_type?: string | null;
   public_share_token?: string | null;
   approved_at?: string | null;
   approved_by_name?: string | null;
@@ -1105,10 +1138,18 @@ export function mapQuoteDetail(row: {
   estimate_items?: QuoteEstimateItemDraft[];
   line_items?: QuoteLineItemRecord[];
 }): QuoteDetail {
+  const fallbackJobType: QuoteJobType =
+    row.estimate_category === 'exterior'
+      ? 'exterior'
+      : row.estimate_category === 'maintenance'
+        ? 'maintenance'
+        : 'interior';
+
   return {
     id: row.id,
     user_id: row.user_id,
     customer_id: row.customer_id,
+    job_type: (row.job_type as QuoteJobType | null) ?? fallbackJobType,
     public_share_token: row.public_share_token ?? '',
     approved_at: row.approved_at ?? null,
     approved_by_name: row.approved_by_name ?? null,

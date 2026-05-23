@@ -157,6 +157,7 @@ describe('lib/quotes', () => {
       success: true,
       data: {
         customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        job_type: 'interior',
         customer_email: null,
         customer_address: null,
         quote_number: null,
@@ -176,6 +177,9 @@ describe('lib/quotes', () => {
         pricing_method_inputs: null,
         interior_estimate: null,
         exterior_estimate: null,
+        scope_sections: [],
+        clause_items: [],
+        ai_intake_snapshot: null,
         line_items: [],
         rooms: [
           {
@@ -394,6 +398,7 @@ describe('lib/quotes', () => {
       success: true,
       data: {
         customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        job_type: 'interior',
         customer_email: null,
         customer_address: null,
         quote_number: null,
@@ -460,6 +465,9 @@ describe('lib/quotes', () => {
           ],
         },
         exterior_estimate: null,
+        scope_sections: [],
+        clause_items: [],
+        ai_intake_snapshot: null,
         line_items: [],
         rooms: [],
       },

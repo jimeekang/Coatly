@@ -14,6 +14,19 @@ import {
 } from '@/lib/interior-estimates';
 import { ratePresetSchema, EXTERIOR_COATING_TYPES } from '@/lib/rate-settings';
 import { isValidStorageReference } from '@/lib/supabase/storage';
+import {
+  FORBIDDEN_QUOTE_FORM_PRICE_FIELDS,
+  QUOTE_CLAUSE_CATEGORIES,
+  QUOTE_CLAUSE_SEVERITIES,
+  QUOTE_JOB_TYPES,
+  QUOTE_SCOPE_MEASUREMENT_STATUSES,
+  QUOTE_SCOPE_PRICING_STATUSES,
+  QUOTE_SCOPE_PRIORITIES,
+  QUOTE_SCOPE_SECTION_KINDS,
+  QUOTE_SCOPE_SOURCES,
+  QUOTE_SCOPE_STEP_TYPES,
+} from '@/config/quote-form-taxonomy';
+import { PAINTING_ADJACENT_MAINTENANCE_PACK_IDS } from '@/config/maintenance-job-packs';
 
 const optionalTrimmedString = z
   .string()
@@ -225,6 +238,173 @@ const quoteLineItemCategorySchema = z.enum([
   'quick_estimate',
   'modifier',
 ]);
+
+function containsForbiddenQuoteFormPriceField(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+
+  if (Array.isArray(value)) {
+    return value.some((item) => containsForbiddenQuoteFormPriceField(item));
+  }
+
+  return Object.entries(value).some(
+    ([key, nested]) =>
+      FORBIDDEN_QUOTE_FORM_PRICE_FIELDS.includes(
+        key as (typeof FORBIDDEN_QUOTE_FORM_PRICE_FIELDS)[number]
+      ) || containsForbiddenQuoteFormPriceField(nested)
+  );
+}
+
+const jsonRecordSchema = z.record(z.string(), z.unknown());
+
+const quoteJobTypeSchema = z.enum(QUOTE_JOB_TYPES);
+const maintenanceJobPackSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      PAINTING_ADJACENT_MAINTENANCE_PACK_IDS.includes(
+        value as (typeof PAINTING_ADJACENT_MAINTENANCE_PACK_IDS)[number]
+      ),
+    {
+      message: 'Select a supported painting-adjacent maintenance pack',
+    }
+  );
+const quoteFormMetadataSchema = jsonRecordSchema
+  .default({})
+  .superRefine((value, ctx) => {
+    if (containsForbiddenQuoteFormPriceField(value)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Quote form metadata cannot contain price, rate, GST, or total fields',
+      });
+    }
+  });
+
+export const quoteScopeStepSchema = z
+  .object({
+    client_id: z.string().trim().min(1).max(120).optional(),
+    step_type: z.enum(QUOTE_SCOPE_STEP_TYPES).default('special_note'),
+    label: z.string().trim().max(160).optional(),
+    description: z.string().trim().min(1, 'Step description is required').max(1000),
+    prep_type: z.string().trim().max(120).optional(),
+    paint_system: z.string().trim().max(160).optional(),
+    coats_min: z.number().int().min(0).max(10).optional(),
+    coats_max: z.number().int().min(0).max(10).optional(),
+    product_name: z.string().trim().max(160).optional(),
+    colour_status: z
+      .enum(['confirmed', 'partial', 'to_confirm', 'not_applicable'] as const)
+      .optional(),
+    colour: z.string().trim().max(160).optional(),
+    sheen: z.string().trim().max(80).optional(),
+    requires_confirmation: z.boolean().default(false),
+    is_customer_visible: z.boolean().default(true),
+    sort_order: z.number().int().min(0).optional(),
+    metadata: quoteFormMetadataSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.coats_min != null &&
+      value.coats_max != null &&
+      value.coats_max < value.coats_min
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['coats_max'],
+        message: 'Maximum coats must be greater than or equal to minimum coats',
+      });
+    }
+  });
+
+export const quoteScopeSectionSchema = z
+  .object({
+    client_id: z.string().trim().min(1).max(120).optional(),
+    section_kind: z.enum(QUOTE_SCOPE_SECTION_KINDS).default('general'),
+    title: z.string().trim().min(1, 'Scope title is required').max(200),
+    description: z.string().trim().max(1500).optional(),
+    area_label: z.string().trim().max(200).optional(),
+    surface_category: z.string().trim().max(120).optional(),
+    is_optional: z.boolean().default(false),
+    is_selected: z.boolean().default(true),
+    pricing_status: z.enum(QUOTE_SCOPE_PRICING_STATUSES).default('unpriced'),
+    measurement_status: z
+      .enum(QUOTE_SCOPE_MEASUREMENT_STATUSES)
+      .default('to_confirm'),
+    source: z.enum(QUOTE_SCOPE_SOURCES).default('manual'),
+    sort_order: z.number().int().min(0).optional(),
+    metadata: quoteFormMetadataSchema.optional(),
+    maintenance_job_pack: maintenanceJobPackSchema.optional(),
+    visible_defects: z.array(z.string().trim().min(1).max(80)).default([]),
+    priority: z.enum(QUOTE_SCOPE_PRIORITIES).optional(),
+    report_context: z.boolean().default(false),
+    unsupported_scope: z.string().trim().max(300).optional(),
+    steps: z.array(quoteScopeStepSchema).default([]),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.section_kind === 'maintenance' &&
+      value.maintenance_job_pack == null
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maintenance_job_pack'],
+        message: 'Select a supported painting-adjacent maintenance pack',
+      });
+    }
+  });
+
+export const quoteClauseItemSchema = z.object({
+  client_id: z.string().trim().min(1).max(120).optional(),
+  applies_to_section_client_id: z.string().trim().min(1).max(120).optional(),
+  clause_key: z.string().trim().min(1, 'Clause key is required').max(120),
+  category: z.enum(QUOTE_CLAUSE_CATEGORIES),
+  title: z.string().trim().min(1, 'Clause title is required').max(200),
+  body: z.string().trim().min(1, 'Clause body is required').max(2000),
+  severity: z.enum(QUOTE_CLAUSE_SEVERITIES).default('info'),
+  source: z
+    .enum(['manual', 'ai', 'template', 'default_library', 'legacy_quote'] as const)
+    .default('manual'),
+  is_customer_visible: z.boolean().default(true),
+  sort_order: z.number().int().min(0).optional(),
+  metadata: quoteFormMetadataSchema.optional(),
+});
+
+export const quoteAiIntakeSnapshotSchema = z
+  .object({
+    job_type: quoteJobTypeSchema,
+    maintenance_job_pack: maintenanceJobPackSchema.optional(),
+    provider: z.string().trim().min(1, 'AI provider is required').max(120),
+    model: z.string().trim().min(1, 'AI model is required').max(120),
+    prompt_version: z
+      .string()
+      .trim()
+      .min(1, 'Prompt version is required')
+      .max(120),
+    input_json: jsonRecordSchema.default({}),
+    output_json: jsonRecordSchema.default({}),
+    photo_refs: z.array(z.unknown()).default([]),
+    price_rates_snapshot_id: z.string().trim().max(160).optional(),
+    metadata: quoteFormMetadataSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.job_type === 'maintenance' &&
+      value.maintenance_job_pack == null
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maintenance_job_pack'],
+        message: 'Select a supported painting-adjacent maintenance pack',
+      });
+    }
+
+    if (containsForbiddenQuoteFormPriceField(value.output_json)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['output_json'],
+        message: 'AI intake output cannot contain price, rate, GST, or total fields',
+      });
+    }
+  });
 const quoteJsonSchema: z.ZodType<
   string | number | boolean | null | { [key: string]: unknown } | unknown[]
 > = z.lazy(() =>
@@ -614,6 +794,7 @@ export const quoteCreateSchema = z.object({
   customer_email: z.string().trim().email('Select a valid customer email').optional(),
   customer_address: z.string().trim().max(500, 'Customer address must be 500 characters or less').optional(),
   quote_number: z.string().trim().min(1).optional(),
+  job_type: quoteJobTypeSchema.optional(),
   title: z.string().trim().min(1, 'Quote title is required'),
   status: z.enum(['draft', 'sent', 'approved', 'rejected', 'expired']).default('draft'),
   valid_until: optionalIsoDateString,
@@ -661,6 +842,9 @@ export const quoteCreateSchema = z.object({
     .max(100, 'Deposit cannot exceed 100%')
     .default(0),
   rooms: z.array(quoteRoomSchema).default([]),
+  scope_sections: z.array(quoteScopeSectionSchema).default([]),
+  clause_items: z.array(quoteClauseItemSchema).default([]),
+  ai_intake_snapshot: quoteAiIntakeSnapshotSchema.optional(),
   interior_estimate: interiorEstimateSchema.optional(),
   exterior_estimate: z.object({
     coating: z.enum(EXTERIOR_COATING_TYPES),

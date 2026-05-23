@@ -20,6 +20,7 @@
 | [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | Task 1 detailed implementation plan for rate source audit, canonical quote totals, optional add-ons, public quote, and invoice parity |
 | [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md) | Task 2 detailed implementation plan for Quick/Advanced rate separation, snapshot immutability, setup warnings, and duplicate scope protection |
 | [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md) | Task 3 detailed design for making Quick Estimate room prices the canonical Room Price Library and removing Detailed Estimate Anchors from the user-facing Price Rates UI |
+| [V1-TASK4-QUOTE-FORM-STRUCTURE-SCHEMA.md](./V1-TASK4-QUOTE-FORM-STRUCTURE-SCHEMA.md) | Task 4 detailed implementation plan for quote form structure schema, maintenance job packs, price-free taxonomy, and server persistence |
 | [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md) | quote form data model, AI output contract, legacy quote form 분석 |
 | [QUOTE.md](../quote/QUOTE.md) | 현재 quote builder 구조, pricing modes, active risks |
 | [BILLING.md](../billing/BILLING.md) | 기존 Stripe checkout, portal, webhook, subscription cache 구조 |
@@ -83,7 +84,7 @@
 |------|------|------|-----------|
 | W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | 완료. canonical calculator, optional add-on/public quote, invoice preset parity, duplicate priced scope guard, full safety verification 통과 |
 | W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + Room Price Library boundary | 완료. Task 2 Quick/Advanced rate boundary와 Task 3 Room Price Library redesign 모두 구현 |
-| W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | 다음은 Task 4 quote form structure schema. customer-visible scope와 priced row를 UI와 저장 구조에서 분리하고 `maintenance` job type/taxonomy를 함께 넣는다 |
+| W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | Task 4 quote form structure schema 완료. 다음은 Task 5 Scope Builder, Clause Library, PDF/Public rendering |
 | W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy/maintenance quote reconstruction | Winchester, Edgar, Paint Buddy quote form + 3 maintenance scenarios를 scope/pricing/clause 구조로 재현하고 가격 회귀 테스트가 통과한다 |
 | W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + Basic/Pro usage logging | Qwen call이 adapter 뒤에 있고, AI output이 price-free schema를 통과하며, plan/trial별 cost log가 남는다. Maintenance unsupported trade rejection도 validator에 포함한다 |
 | W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | quote create flow에서 AI draft를 만들고, user review 후 deterministic pricing pass로만 금액을 만든다. Maintenance / touch-up start path를 포함한다 |
@@ -311,6 +312,10 @@
 
 ## Task 4: Quote Form Structure Schema
 
+**Detailed plan:** [V1-TASK4-QUOTE-FORM-STRUCTURE-SCHEMA.md](./V1-TASK4-QUOTE-FORM-STRUCTURE-SCHEMA.md)
+
+**Status:** COMPLETE. 2026-05-23 기준 `quotes.job_type`, scope section/step/clause/AI intake snapshot schema, RLS/grants, price-free taxonomy, painting-adjacent maintenance job packs, quote create/update persistence, focused tests, Task 2/3 regression, full tests, lint, and build passed.
+
 **Files:**
 - Create: `supabase/migrations/050_quote_form_structure.sql`
 - Modify: `types/quote.ts`
@@ -321,7 +326,7 @@
 
 **Method:**
 
-- [ ] **Step 1: Add scope section tables**
+- [x] **Step 1: Add scope section tables**
 
   Add `quote_scope_sections` with `id`, `quote_id`, `section_kind`, `title`, `description`, `area_type`, `surface_type`, `is_optional`, `pricing_status`, `source`, `sort_order`, `metadata`, `created_at`, and `updated_at`. `section_kind` must allow `interior`, `exterior`, `maintenance`, `general`, and `optional`.
 
@@ -332,27 +337,27 @@
   - `report_context`: optional flag for report-style PDF/public rendering
   - `unsupported_scope`: optional string when AI/user notes mention work outside v1 scope
 
-- [ ] **Step 2: Add scope step table**
+- [x] **Step 2: Add scope step table**
 
   Add `quote_scope_steps` with `id`, `section_id`, `label`, `description`, `prep_type`, `paint_system`, `coats`, `product_name`, `colour_status`, `sheen`, `is_customer_visible`, `sort_order`, and `metadata`.
 
-- [ ] **Step 3: Add clause table**
+- [x] **Step 3: Add clause table**
 
   Add `quote_clause_items` with `id`, `quote_id`, `section_id`, `clause_key`, `title`, `body`, `category`, `source`, `is_customer_visible`, `sort_order`, and `metadata`.
 
-- [ ] **Step 4: Add AI intake snapshot table**
+- [x] **Step 4: Add AI intake snapshot table**
 
   Add `quote_ai_intake_snapshots` with `id`, `quote_id`, `painter_user_id`, `job_type`, `maintenance_job_pack`, `provider`, `model`, `prompt_version`, `input_json`, `output_json`, `photo_refs`, `price_rates_snapshot_id`, `created_at`, and `metadata`. `job_type` must allow `interior`, `exterior`, `both`, and `maintenance`.
 
-- [ ] **Step 5: Add RLS**
+- [x] **Step 5: Add RLS**
 
   Each table must be readable and writable only by the owner of the parent quote. Service role access stays available for server-side operations.
 
-- [ ] **Step 6: Seed taxonomy in code, not as hidden prices**
+- [x] **Step 6: Seed taxonomy in code, not as hidden prices**
 
   `config/quote-form-taxonomy.ts` should define interior areas, interior surfaces, exterior surfaces, prep/coating options, condition/risk tags, and clause keys. It must not contain price values.
 
-- [ ] **Step 7: Add maintenance job packs without creating a generic trade schema**
+- [x] **Step 7: Add maintenance job packs without creating a generic trade schema**
 
   `config/maintenance-job-packs.ts` should define only painting-adjacent packs:
   - `wall_patch_repaint`
@@ -366,7 +371,15 @@
 
   Each pack may define allowed surfaces, common prep steps, risk clauses, likely pricing methods, and required confirmation questions. It must not define prices.
 
-- [ ] **Step 8: Explicitly reject all-trade maintenance scope**
+- [x] **Step 8: Explicitly reject all-trade maintenance scope**
+
+**Implementation snapshot (2026-05-23):**
+
+- Done: `supabase/migrations/050_quote_form_structure.sql` adds quote form structure tables, `quotes.job_type`, nullable priced-row section links, RLS policies, and grants.
+- Done: `config/quote-form-taxonomy.ts` and `config/maintenance-job-packs.ts` keep maintenance as painting-adjacent scope templates with no hidden price values.
+- Done: quote create validation rejects unsupported maintenance packs and AI output price fields.
+- Done: quote create/update can persist scope sections, nested steps, selected clauses, and AI intake snapshots when supplied.
+- Verified: focused Task 4 tests passed 3 files / 47 tests, Task 2/3 regression passed 9 files / 149 tests, full `npm run test:run` passed 63 files / 422 tests, `npm run lint` passed, and `npm run build` passed.
 
   Do not add property manager request tables, tenant/owner permission tables, plumbing/electrical/carpentry item libraries, or generic maintenance rates in Task 4. Those belong to v1.1+ after a separate validation gate.
 

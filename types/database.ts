@@ -707,6 +707,7 @@ export type Database = {
           metadata: Json
           quantity: number
           quote_id: string
+          scope_section_id: string | null
           selected_surfaces: Json | null
           size: string | null
           sort_order: number
@@ -726,6 +727,7 @@ export type Database = {
           metadata?: Json
           quantity?: number
           quote_id: string
+          scope_section_id?: string | null
           selected_surfaces?: Json | null
           size?: string | null
           sort_order?: number
@@ -745,6 +747,7 @@ export type Database = {
           metadata?: Json
           quantity?: number
           quote_id?: string
+          scope_section_id?: string | null
           selected_surfaces?: Json | null
           size?: string | null
           sort_order?: number
@@ -761,6 +764,13 @@ export type Database = {
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "quote_estimate_items_scope_section_id_fkey"
+            columns: ["scope_section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_scope_sections"
+            referencedColumns: ["id"]
+          },
         ]
       }
       quote_line_items: {
@@ -775,6 +785,7 @@ export type Database = {
           notes: string | null
           quantity: number
           quote_id: string
+          scope_section_id: string | null
           sort_order: number
           total_cents: number
           unit: string
@@ -792,6 +803,7 @@ export type Database = {
           notes?: string | null
           quantity?: number
           quote_id: string
+          scope_section_id?: string | null
           sort_order?: number
           total_cents?: number
           unit?: string
@@ -809,6 +821,7 @@ export type Database = {
           notes?: string | null
           quantity?: number
           quote_id?: string
+          scope_section_id?: string | null
           sort_order?: number
           total_cents?: number
           unit?: string
@@ -825,6 +838,284 @@ export type Database = {
           },
           {
             foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_scope_section_id_fkey"
+            columns: ["scope_section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_scope_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_scope_sections: {
+        Row: {
+          area_label: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_optional: boolean
+          is_selected: boolean
+          measurement_status: string
+          metadata: Json
+          pricing_status: string
+          quote_id: string
+          section_kind: string
+          sort_order: number
+          source: string
+          surface_category: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          area_label?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_optional?: boolean
+          is_selected?: boolean
+          measurement_status?: string
+          metadata?: Json
+          pricing_status?: string
+          quote_id: string
+          section_kind: string
+          sort_order?: number
+          source?: string
+          surface_category?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          area_label?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_optional?: boolean
+          is_selected?: boolean
+          measurement_status?: string
+          metadata?: Json
+          pricing_status?: string
+          quote_id?: string
+          section_kind?: string
+          sort_order?: number
+          source?: string
+          surface_category?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_scope_sections_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_scope_steps: {
+        Row: {
+          coats_max: number | null
+          coats_min: number | null
+          colour: string | null
+          colour_status: string | null
+          created_at: string
+          description: string
+          id: string
+          is_customer_visible: boolean
+          label: string | null
+          metadata: Json
+          paint_system: string | null
+          prep_type: string | null
+          product_name: string | null
+          requires_confirmation: boolean
+          section_id: string
+          sheen: string | null
+          sort_order: number
+          step_type: string
+          updated_at: string
+        }
+        Insert: {
+          coats_max?: number | null
+          coats_min?: number | null
+          colour?: string | null
+          colour_status?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          is_customer_visible?: boolean
+          label?: string | null
+          metadata?: Json
+          paint_system?: string | null
+          prep_type?: string | null
+          product_name?: string | null
+          requires_confirmation?: boolean
+          section_id: string
+          sheen?: string | null
+          sort_order?: number
+          step_type?: string
+          updated_at?: string
+        }
+        Update: {
+          coats_max?: number | null
+          coats_min?: number | null
+          colour?: string | null
+          colour_status?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_customer_visible?: boolean
+          label?: string | null
+          metadata?: Json
+          paint_system?: string | null
+          prep_type?: string | null
+          product_name?: string | null
+          requires_confirmation?: boolean
+          section_id?: string
+          sheen?: string | null
+          sort_order?: number
+          step_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_scope_steps_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_scope_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_clause_items: {
+        Row: {
+          body: string
+          category: string
+          clause_key: string
+          created_at: string
+          id: string
+          is_customer_visible: boolean
+          metadata: Json
+          quote_id: string
+          section_id: string | null
+          severity: string
+          sort_order: number
+          source: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          category: string
+          clause_key: string
+          created_at?: string
+          id?: string
+          is_customer_visible?: boolean
+          metadata?: Json
+          quote_id: string
+          section_id?: string | null
+          severity?: string
+          sort_order?: number
+          source?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          clause_key?: string
+          created_at?: string
+          id?: string
+          is_customer_visible?: boolean
+          metadata?: Json
+          quote_id?: string
+          section_id?: string | null
+          severity?: string
+          sort_order?: number
+          source?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_clause_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_clause_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_scope_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_ai_intake_snapshots: {
+        Row: {
+          created_at: string
+          id: string
+          input_json: Json
+          job_type: string
+          maintenance_job_pack: string | null
+          metadata: Json
+          model: string
+          output_json: Json
+          photo_refs: Json
+          painter_user_id: string
+          price_rates_snapshot_id: string | null
+          prompt_version: string
+          provider: string
+          quote_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input_json?: Json
+          job_type: string
+          maintenance_job_pack?: string | null
+          metadata?: Json
+          model: string
+          output_json?: Json
+          photo_refs?: Json
+          painter_user_id: string
+          price_rates_snapshot_id?: string | null
+          prompt_version: string
+          provider: string
+          quote_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input_json?: Json
+          job_type?: string
+          maintenance_job_pack?: string | null
+          metadata?: Json
+          model?: string
+          output_json?: Json
+          photo_refs?: Json
+          painter_user_id?: string
+          price_rates_snapshot_id?: string | null
+          prompt_version?: string
+          provider?: string
+          quote_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_ai_intake_snapshots_painter_user_id_fkey"
+            columns: ["painter_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_ai_intake_snapshots_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
@@ -1031,6 +1322,7 @@ export type Database = {
           gst_cents: number
           id: string
           internal_notes: string | null
+          job_type: string
           labour_margin_percent: number
           manual_adjustment_cents: number
           material_margin_percent: number
@@ -1069,6 +1361,7 @@ export type Database = {
           gst_cents?: number
           id?: string
           internal_notes?: string | null
+          job_type?: string
           labour_margin_percent?: number
           manual_adjustment_cents?: number
           material_margin_percent?: number
@@ -1107,6 +1400,7 @@ export type Database = {
           gst_cents?: number
           id?: string
           internal_notes?: string | null
+          job_type?: string
           labour_margin_percent?: number
           manual_adjustment_cents?: number
           material_margin_percent?: number

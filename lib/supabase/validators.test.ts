@@ -219,6 +219,148 @@ describe('quoteCreateSchema', () => {
     expect(parsed.success).toBe(true);
   });
 
+  it('accepts price-free maintenance scope sections and AI intake snapshots', () => {
+    const parsed = quoteCreateSchema.safeParse({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      job_type: 'maintenance',
+      title: 'Water damage repaint',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      pricing_method: 'day_rate',
+      pricing_method_inputs: {
+        method: 'day_rate',
+        inputs: {
+          days: 1,
+          daily_rate_cents: 85000,
+          material_method: 'flat',
+          material_flat_cents: 12000,
+        },
+      },
+      scope_sections: [
+        {
+          client_id: 'section-water-damage',
+          section_kind: 'maintenance',
+          title: 'Water damage repaint',
+          description: 'Stain block and repaint affected wall area.',
+          area_label: 'Bedroom wall',
+          surface_category: 'walls',
+          pricing_status: 'to_confirm',
+          measurement_status: 'photo_hint',
+          source: 'ai',
+          maintenance_job_pack: 'water_damage_repaint',
+          visible_defects: ['staining', 'flaking_paint'],
+          priority: 'soon',
+          report_context: true,
+          steps: [
+            {
+              step_type: 'prep',
+              label: 'Prepare affected area',
+              description: 'Scrape loose paint and sand affected area.',
+              requires_confirmation: false,
+            },
+          ],
+        },
+      ],
+      clause_items: [
+        {
+          clause_key: 'source_repair_excluded',
+          category: 'exclusion',
+          title: 'Source repair excluded',
+          body: 'This quote excludes plumbing or waterproofing repairs.',
+          severity: 'warning',
+          applies_to_section_client_id: 'section-water-damage',
+          source: 'default_library',
+        },
+      ],
+      ai_intake_snapshot: {
+        job_type: 'maintenance',
+        maintenance_job_pack: 'water_damage_repaint',
+        provider: 'alibaba-qwen',
+        model: 'qwen3-vl-flash',
+        prompt_version: 'quote-form-v1',
+        input_json: {
+          site_notes: 'Water staining visible after leak was repaired.',
+        },
+        output_json: {
+          scope_sections: [],
+          clauses: [],
+          questions_for_user: ['Confirm the leak has been repaired.'],
+        },
+        photo_refs: [],
+        price_rates_snapshot_id: 'rates-2026-05-23',
+      },
+    });
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.job_type).toBe('maintenance');
+    expect(parsed.data?.scope_sections?.[0]).toMatchObject({
+      section_kind: 'maintenance',
+      maintenance_job_pack: 'water_damage_repaint',
+      priority: 'soon',
+    });
+    expect(parsed.data?.clause_items?.[0]).toMatchObject({
+      clause_key: 'source_repair_excluded',
+      applies_to_section_client_id: 'section-water-damage',
+    });
+  });
+
+  it('rejects unsupported maintenance packs and price fields in AI output', () => {
+    const parsed = quoteCreateSchema.safeParse({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      job_type: 'maintenance',
+      title: 'Unsupported maintenance quote',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+      pricing_method: 'manual',
+      pricing_method_inputs: {
+        method: 'manual',
+        inputs: {
+          labor_cents: 0,
+          material_cents: 0,
+        },
+      },
+      scope_sections: [
+        {
+          section_kind: 'maintenance',
+          title: 'Plumbing repair',
+          pricing_status: 'to_confirm',
+          measurement_status: 'to_confirm',
+          maintenance_job_pack: 'plumbing_repair',
+        },
+      ],
+      ai_intake_snapshot: {
+        job_type: 'maintenance',
+        maintenance_job_pack: 'plumbing_repair',
+        provider: 'alibaba-qwen',
+        model: 'qwen3-vl-flash',
+        prompt_version: 'quote-form-v1',
+        input_json: {},
+        output_json: {
+          total_cents: 99000,
+        },
+        photo_refs: [],
+      },
+    });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((issue) => issue.message)).toEqual(
+      expect.arrayContaining([
+        'Select a supported painting-adjacent maintenance pack',
+        'AI intake output cannot contain price, rate, GST, or total fields',
+      ])
+    );
+  });
+
   it('rejects decimal quantities for paint line items', () => {
     const parsed = quoteCreateSchema.safeParse({
       customer_id: '550e8400-e29b-41d4-a716-446655440000',

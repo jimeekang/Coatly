@@ -2,6 +2,124 @@ import type { SurfaceType, CoatingType } from '@/config/paint-rates';
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
 export type ComplexityLevel = 'standard' | 'moderate' | 'complex';
+export type QuoteJobType = 'interior' | 'exterior' | 'both' | 'maintenance';
+export type QuoteScopeSectionKind =
+  | 'interior'
+  | 'exterior'
+  | 'maintenance'
+  | 'general'
+  | 'optional';
+export type QuoteScopePricingStatus =
+  | 'unpriced'
+  | 'priced'
+  | 'included'
+  | 'excluded'
+  | 'allowance'
+  | 'to_confirm';
+export type QuoteScopeMeasurementStatus =
+  | 'confirmed'
+  | 'rough'
+  | 'photo_hint'
+  | 'to_confirm';
+export type QuoteScopeSource = 'manual' | 'ai' | 'template' | 'legacy_quote';
+export type QuoteScopePriority =
+  | 'urgent'
+  | 'soon'
+  | 'cosmetic'
+  | 'to_confirm';
+export type MaintenanceJobPackId =
+  | 'wall_patch_repaint'
+  | 'water_damage_repaint'
+  | 'end_of_lease_touch_up'
+  | 'pre_sale_refresh'
+  | 'exterior_maintenance_repaint'
+  | 'deck_stain_maintenance'
+  | 'mould_treatment_repaint'
+  | 'strata_common_area_touch_up';
+
+export interface QuoteScopeStepInput {
+  client_id?: string;
+  step_type:
+    | 'prep'
+    | 'primer'
+    | 'topcoat'
+    | 'repair'
+    | 'paint_system'
+    | 'colour_note'
+    | 'special_note'
+    | 'exclusion_note';
+  label?: string;
+  description: string;
+  prep_type?: string;
+  paint_system?: string;
+  coats_min?: number;
+  coats_max?: number;
+  product_name?: string;
+  colour_status?: 'confirmed' | 'partial' | 'to_confirm' | 'not_applicable';
+  colour?: string;
+  sheen?: string;
+  requires_confirmation?: boolean;
+  is_customer_visible?: boolean;
+  sort_order?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface QuoteScopeSectionInput {
+  client_id?: string;
+  section_kind: QuoteScopeSectionKind;
+  title: string;
+  description?: string;
+  area_label?: string;
+  surface_category?: string;
+  is_optional?: boolean;
+  is_selected?: boolean;
+  pricing_status?: QuoteScopePricingStatus;
+  measurement_status?: QuoteScopeMeasurementStatus;
+  source?: QuoteScopeSource;
+  sort_order?: number;
+  metadata?: Record<string, unknown>;
+  maintenance_job_pack?: MaintenanceJobPackId;
+  visible_defects?: string[];
+  priority?: QuoteScopePriority;
+  report_context?: boolean;
+  unsupported_scope?: string;
+  steps?: QuoteScopeStepInput[];
+}
+
+export interface QuoteClauseItemInput {
+  client_id?: string;
+  applies_to_section_client_id?: string;
+  clause_key: string;
+  category:
+    | 'inclusion'
+    | 'exclusion'
+    | 'risk_disclosure'
+    | 'warranty'
+    | 'payment'
+    | 'validity'
+    | 'insurance'
+    | 'brand_proof';
+  title: string;
+  body: string;
+  severity?: 'info' | 'warning' | 'critical';
+  source?: 'manual' | 'ai' | 'template' | 'default_library' | 'legacy_quote';
+  is_customer_visible?: boolean;
+  sort_order?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface QuoteAiIntakeSnapshotInput {
+  job_type: QuoteJobType;
+  maintenance_job_pack?: MaintenanceJobPackId;
+  provider: string;
+  model: string;
+  prompt_version: string;
+  input_json: Record<string, unknown>;
+  output_json: Record<string, unknown>;
+  photo_refs: unknown[];
+  price_rates_snapshot_id?: string;
+  metadata?: Record<string, unknown>;
+}
 
 // ─── Pricing Method ───────────────────────────────────────────────────────────
 
@@ -165,6 +283,7 @@ export interface Quote {
   id: string;
   user_id: string;
   customer_id: string;
+  job_type: QuoteJobType;
   /** Sequential quote number e.g. Q-0042 */
   quote_number: string;
   status: QuoteStatus;

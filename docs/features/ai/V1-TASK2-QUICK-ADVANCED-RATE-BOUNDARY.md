@@ -357,6 +357,14 @@ git diff --check
 - Final `npm run build` passed.
 - Final `git diff --check` passed.
 
+2026-05-23 verification refresh:
+
+- Task 2 checklist audit found no unchecked implementation items.
+- `npm run test:run -- utils/calculations.test.ts lib/rate-settings.test.ts lib/room-price-library.test.ts lib/rate-setup-diagnostics.test.ts lib/interior-estimates.test.ts lib/quote-pricing-scopes.test.ts app/actions/quotes.test.ts components/rates/PriceRatesForm.test.tsx components/quotes/QuoteForm.test.tsx` passed: 9 files / 148 tests.
+- `npm run test:run` passed: 62 files / 416 tests.
+- `npm run lint` passed.
+- `npm run build` passed.
+
 Browser testing is optional for Task 2 unless UI behavior changes are visually complex. If browser testing is run, test `/price-rates` and quote create/edit in both Quick and Advanced modes.
 
 ## Implementation Completion Checklist

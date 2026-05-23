@@ -64,6 +64,9 @@ import type {
   ManualInputs,
   QuickInputs,
   PricingMethodInputs,
+  QuoteAiIntakeSnapshotInput,
+  QuoteClauseItemInput,
+  QuoteScopeSectionInput,
 } from '@/types/quote';
 import {
   getActiveSubscriptionRequiredMessage,
@@ -140,6 +143,7 @@ type QuoteDetailRow = {
   id: string;
   user_id: string;
   customer_id: string;
+  job_type?: string | null;
   public_share_token?: string | null;
   approved_at?: string | null;
   approved_by_name?: string | null;
@@ -298,6 +302,156 @@ function buildQuickEstimateItemRows(
   });
 
   return rows;
+}
+
+function hasQuoteFormStructurePayload(data: {
+  scope_sections?: QuoteScopeSectionInput[];
+  clause_items?: QuoteClauseItemInput[];
+  ai_intake_snapshot?: QuoteAiIntakeSnapshotInput | null;
+}) {
+  return Boolean(
+    data.scope_sections?.length ||
+      data.clause_items?.length ||
+      data.ai_intake_snapshot
+  );
+}
+
+function buildScopeSectionMetadata(section: QuoteScopeSectionInput): Json {
+  return jsonColumnValue({
+    ...(section.metadata ?? {}),
+    maintenance_job_pack: section.maintenance_job_pack ?? null,
+    visible_defects: section.visible_defects ?? [],
+    priority: section.priority ?? null,
+    report_context: section.report_context ?? false,
+    unsupported_scope: section.unsupported_scope ?? null,
+  });
+}
+
+async function insertQuoteFormStructure(
+  supabase: QuoteDataClient,
+  quoteId: string,
+  userId: string,
+  data: {
+    job_type: string;
+    scope_sections: QuoteScopeSectionInput[];
+    clause_items: QuoteClauseItemInput[];
+    ai_intake_snapshot: QuoteAiIntakeSnapshotInput | null;
+  }
+): Promise<string | null> {
+  const sectionIdByClientId = new Map<string, string>();
+
+  for (const [sectionIndex, section] of data.scope_sections.entries()) {
+    const { data: insertedSection, error: sectionError } = await supabase
+      .from('quote_scope_sections')
+      .insert({
+        quote_id: quoteId,
+        section_kind: section.section_kind,
+        title: section.title,
+        description: section.description ?? null,
+        area_label: section.area_label ?? null,
+        surface_category: section.surface_category ?? null,
+        is_optional: section.is_optional ?? false,
+        is_selected: section.is_optional ? (section.is_selected ?? false) : true,
+        pricing_status: section.pricing_status ?? 'unpriced',
+        measurement_status: section.measurement_status ?? 'to_confirm',
+        source: section.source ?? 'manual',
+        metadata: buildScopeSectionMetadata(section),
+        sort_order: section.sort_order ?? sectionIndex,
+      })
+      .select('id')
+      .single();
+
+    if (sectionError || !insertedSection) {
+      return sectionError?.message ?? 'Quote scope section could not be saved.';
+    }
+
+    const sectionId = insertedSection.id;
+    if (section.client_id) {
+      sectionIdByClientId.set(section.client_id, sectionId);
+    }
+
+    if (section.steps?.length) {
+      const { error: stepsError } = await supabase
+        .from('quote_scope_steps')
+        .insert(
+          section.steps.map((step, stepIndex) => ({
+            section_id: sectionId,
+            label: step.label ?? null,
+            step_type: step.step_type,
+            description: step.description,
+            prep_type: step.prep_type ?? null,
+            paint_system: step.paint_system ?? null,
+            coats_min: step.coats_min ?? null,
+            coats_max: step.coats_max ?? null,
+            product_name: step.product_name ?? null,
+            colour_status: step.colour_status ?? null,
+            colour: step.colour ?? null,
+            sheen: step.sheen ?? null,
+            requires_confirmation: step.requires_confirmation ?? false,
+            is_customer_visible: step.is_customer_visible ?? true,
+            metadata: jsonColumnValue(step.metadata ?? {}),
+            sort_order: step.sort_order ?? stepIndex,
+          }))
+        );
+
+      if (stepsError) {
+        return stepsError.message;
+      }
+    }
+  }
+
+  if (data.clause_items.length > 0) {
+    const { error: clausesError } = await supabase
+      .from('quote_clause_items')
+      .insert(
+        data.clause_items.map((clause, index) => ({
+          quote_id: quoteId,
+          section_id: clause.applies_to_section_client_id
+            ? (sectionIdByClientId.get(clause.applies_to_section_client_id) ??
+              null)
+            : null,
+          clause_key: clause.clause_key,
+          title: clause.title,
+          body: clause.body,
+          category: clause.category,
+          severity: clause.severity ?? 'info',
+          source: clause.source ?? 'manual',
+          is_customer_visible: clause.is_customer_visible ?? true,
+          metadata: jsonColumnValue(clause.metadata ?? {}),
+          sort_order: clause.sort_order ?? index,
+        }))
+      );
+
+    if (clausesError) {
+      return clausesError.message;
+    }
+  }
+
+  if (data.ai_intake_snapshot) {
+    const snapshot = data.ai_intake_snapshot;
+    const { error: intakeError } = await supabase
+      .from('quote_ai_intake_snapshots')
+      .insert({
+        quote_id: quoteId,
+        painter_user_id: userId,
+        job_type: snapshot.job_type,
+        maintenance_job_pack: snapshot.maintenance_job_pack ?? null,
+        provider: snapshot.provider,
+        model: snapshot.model,
+        prompt_version: snapshot.prompt_version,
+        input_json: jsonColumnValue(snapshot.input_json),
+        output_json: jsonColumnValue(snapshot.output_json),
+        photo_refs: jsonColumnValue(snapshot.photo_refs),
+        price_rates_snapshot_id: snapshot.price_rates_snapshot_id ?? null,
+        metadata: jsonColumnValue(snapshot.metadata ?? {}),
+      });
+
+    if (intakeError) {
+      return intakeError.message;
+    }
+  }
+
+  return null;
 }
 
 const QUOTE_CUSTOMER_SELECT =
@@ -1606,6 +1760,7 @@ export async function createQuote(
   const quoteInsertPayload = {
     user_id: user.id,
     customer_id: parsed.data.customer_id,
+    job_type: parsed.data.job_type,
     customer_email: selectedCustomerEmail,
     customer_address: selectedCustomerAddress,
     quote_number: quoteNumber,
@@ -1796,6 +1951,29 @@ export async function createQuote(
         .eq('id', quote.id)
         .eq('user_id', user.id);
       return { error: lineItemsError.message };
+    }
+  }
+
+  if (hasQuoteFormStructurePayload(parsed.data)) {
+    const quoteFormError = await insertQuoteFormStructure(
+      supabase,
+      quote.id,
+      user.id,
+      {
+        job_type: parsed.data.job_type,
+        scope_sections: parsed.data.scope_sections,
+        clause_items: parsed.data.clause_items,
+        ai_intake_snapshot: parsed.data.ai_intake_snapshot,
+      }
+    );
+
+    if (quoteFormError) {
+      await supabase
+        .from('quotes')
+        .delete()
+        .eq('id', quote.id)
+        .eq('user_id', user.id);
+      return { error: quoteFormError };
     }
   }
 
@@ -2286,6 +2464,7 @@ export async function duplicateQuote(
   const quoteInsert = {
     user_id: user.id,
     customer_id: sourceQuote.customer_id,
+    job_type: sourceQuote.job_type ?? 'interior',
     customer_email: sourceQuote.customer_email ?? null,
     customer_address: sourceQuote.customer_address ?? null,
     quote_number: newQuoteNumber,
@@ -2604,6 +2783,7 @@ export async function updateQuote(
   // Update the quote record
   const quoteUpdatePayload = {
     customer_id: parsed.data.customer_id,
+    job_type: parsed.data.job_type,
     customer_email: selectedCustomerEmail,
     customer_address: selectedCustomerAddress,
     quote_number: resolvedQuoteNumber,
@@ -2752,6 +2932,42 @@ export async function updateQuote(
         }))
       );
     if (lineItemsError) return { error: lineItemsError.message };
+  }
+
+  if (hasQuoteFormStructurePayload(parsed.data)) {
+    const { error: clausesDeleteError } = await supabase
+      .from('quote_clause_items')
+      .delete()
+      .eq('quote_id', quoteId);
+    if (clausesDeleteError) return { error: clausesDeleteError.message };
+
+    const { error: intakeDeleteError } = await supabase
+      .from('quote_ai_intake_snapshots')
+      .delete()
+      .eq('quote_id', quoteId);
+    if (intakeDeleteError) return { error: intakeDeleteError.message };
+
+    const { error: sectionsDeleteError } = await supabase
+      .from('quote_scope_sections')
+      .delete()
+      .eq('quote_id', quoteId);
+    if (sectionsDeleteError) return { error: sectionsDeleteError.message };
+
+    const quoteFormError = await insertQuoteFormStructure(
+      supabase,
+      quoteId,
+      user.id,
+      {
+        job_type: parsed.data.job_type,
+        scope_sections: parsed.data.scope_sections,
+        clause_items: parsed.data.clause_items,
+        ai_intake_snapshot: parsed.data.ai_intake_snapshot,
+      }
+    );
+
+    if (quoteFormError) {
+      return { error: quoteFormError };
+    }
   }
 
   if (shouldSendEmail) {

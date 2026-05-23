@@ -33,6 +33,7 @@ Task 1 and Task 2 made quote totals canonical and snapshot-safe. Task 3 now remo
 - Updated diagnostics and duplicate scope guard so new Advanced room sources use the same stable room/surface keys as Quick Estimate.
 - No Supabase migration was required; Task 3 extends existing JSONB rate settings and saved quote metadata only.
 - Verified focused Task 3 tests: `npm run test:run -- lib/rate-settings.test.ts lib/room-price-library.test.ts lib/interior-estimates.test.ts lib/quote-pricing-scopes.test.ts app/actions/quotes.test.ts components/rates/PriceRatesForm.test.tsx components/quotes/QuoteForm.test.tsx` passed 109 tests.
+- 2026-05-23 verification refresh found no unchecked Task 3 implementation items. The combined Task 2/3 focused suite passed 9 files / 148 tests, full `npm run test:run` passed 62 files / 416 tests, and `npm run lint` / `npm run build` passed.
 
 ## Current Problem
 

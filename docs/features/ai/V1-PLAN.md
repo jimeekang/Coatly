@@ -132,6 +132,7 @@ Maintenance 확장은 새 제품 라인이 아니라 v1 AI Quote Form Builder �
 | T0 / Task 1 canonical totals + duplicate scope guard | 완료. `calculateQuoteTotals()`가 quote total authority가 되었고 optional add-on, public quote preview, quote-to-invoice preset parity, deterministic duplicate priced scope guard, PDF route regression, full suite/build/lint가 통과했다 | 완료 |
 | T0A Quick/Advanced hardening | 완료. Quick metadata completeness, Advanced numeric snapshot, setup diagnostics, A$0 selected-source blocking, invalid surface blocking, stale-rate tests, quote/PDF/invoice regression이 통과했다 | 완료 |
 | T0B Room Price Library source redesign | 완료. Quick room matrix가 canonical Room Price Library가 됐고 Advanced preset/quote/server metadata가 template id/version/label/size/per-surface snapshot을 저장한다 | Task 4 quote form structure schema로 이동 |
+| Task 4 quote form structure schema | 완료. `quotes.job_type`, scope section/step/clause/AI intake snapshot schema, RLS/grants, price-free quote taxonomy, painting-adjacent maintenance job packs, quote create/update persistence가 구현됐다 | Task 5 Scope Builder, Clause Library, PDF/Public rendering |
 | AI provider / Qwen work | 시작 전 | AI pricing candidates는 Task 4 quote form structure schema와 deterministic candidate review path가 준비된 뒤 연결 |
 
 ## AI 역할 boundary (D6 / Codex Hybrid)

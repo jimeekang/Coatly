@@ -70,6 +70,7 @@ type QuoteLineItemRow = {
   notes: string | null;
   is_optional: boolean;
   is_selected: boolean;
+  scope_section_id: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -88,6 +89,7 @@ type QuoteLineItemInsert = {
   notes?: string | null;
   is_optional?: boolean;
   is_selected?: boolean;
+  scope_section_id?: string | null;
   sort_order?: number;
   created_at?: string;
   updated_at?: string;

@@ -24,7 +24,7 @@ v1 AI 방향은 [AI-QUOTE-FORM-STRUCTURE.md](./AI-QUOTE-FORM-STRUCTURE.md)를 �
 | Public booking | 구현됨 | approved quote → job booking |
 | Quote → invoice | 구현됨 | invoice quote option/line item 흐름 |
 | Canonical quote totals | 구현됨 | `calculateQuoteTotals()`, optional add-on/public quote/invoice preset parity, deterministic duplicate priced scope guard, full suite/build/lint 통과 |
-| AI Quote Form Builder | 설계 필요 | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` |
+| AI Quote Form Builder | Task 4 schema foundation 구현됨, Task 5 UI/rendering 필요 | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` |
 
 ## Quote Modes
 
@@ -172,12 +172,13 @@ v1 pricing foundation은 세션 `019e32de-aaa3-7940-aaa6-9c773d3ec251`의 Rate L
 - [x] Quick estimate row metadata completeness and stale-rate A/B coverage
 - [x] Advanced numeric snapshot immutability for room anchors, openings, and trim
 - [x] Price Rates setup diagnostics and Quote Builder selected-source A$0 blocking
+- [x] Quote form structure schema, maintenance job type, price-free taxonomy, and painting-adjacent maintenance job packs
 
 ## Active Risks / Next Work
 
 | 우선순위 | 항목 | 내용 |
 |----------|------|------|
-| P0 | AI Quote Form Builder structure | 고객용 scope section, 가격 row, clause library를 분리하고 legacy interior/exterior quote form을 재현 가능한 데이터 구조로 정리 |
+| P0 | Scope/Clause Builder UI and rendering | Task 4 schema는 완료. 다음은 Scope Builder, Clause Library, PDF/public quote rendering, legacy/maintenance reconstruction fixture |
 | P0 | Quote total parity hardening | Task 1 parity scope, Task 2 Quick/Advanced snapshot/setup diagnostics, Task 3 Room Price Library redesign은 통과. 다음 quote-related hardening은 Task 4 quote form schema와 Task 5 legacy fixture reconstruction |
 | P0 | 저장 원자성 | quote + rooms + surfaces + line items 저장을 transaction/RPC로 묶는 방향 검토 |
 | P1 | Exterior edit safety | 편집 시 exterior snapshot 손실 여부 회귀 테스트 강화 |

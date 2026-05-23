@@ -604,7 +604,7 @@ export function InvoiceForm({
         </span>
       </div>
 
-      <div className="grid gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1.4fr)_320px]">
+      <div className="grid gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1.4fr)_300px]">
         {/* ── Left column ── */}
         <div className="space-y-5 sm:space-y-6">
           {/* Customer + linked quote */}
