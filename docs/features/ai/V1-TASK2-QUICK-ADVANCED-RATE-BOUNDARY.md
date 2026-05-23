@@ -404,6 +404,7 @@ Task 2 is complete only when:
 
 - A local Supabase migration was added to keep `quote_estimate_items.category` aligned with Task 2 generated categories: `room_anchor`, `trim`, and `quick_estimate`. Apply it to remote Supabase before relying on those categories in deployed environments.
 - Task 3 Room Price Library redesign is complete. Task 4 should add customer-visible scope/clause tables without moving price fields into AI output. AI pricing candidates must map to existing deterministic scope keys and remain review-only until the server calculator produces estimate rows.
+- 2026-05-23 positioning update: Task 4 should also make `maintenance` a first-class quote form job type, but only for painting-adjacent maintenance packs. Do not introduce generic maintenance rates or unsupported trade pricing into the quote calculation boundary.
 - Task 5 legacy reconstruction should use the new stale-rate fixtures as a pattern: every golden quote should assert preview/save/detail/PDF/invoice totals from the same stored snapshots.
 - The remaining v1.1 stale-rate race is narrower now: saved quotes are immutable, but an AI draft should still display the rate snapshot timestamp used during draft generation if the painter edits Price Rates mid-draft.
 

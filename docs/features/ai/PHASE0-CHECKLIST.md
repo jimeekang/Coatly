@@ -16,6 +16,7 @@
 - 과거 견적서 form은 AI eval seed일 뿐 아니라 quote form data model seed로 사용한다. v1 quote form은 `scope section` + `pricing row` + `clause library`를 분리한다.
 - 2026-05-17 pricing decision: Basic은 A$29/month, Pro는 A$59/month로 둔다. 첫 사용자 cohort는 Pro 1개월 무료 trial을 제공하고, 이후 Pro 결제로 전환을 유도한다. 사용자는 언제든지 취소할 수 있다.
 - Gate decision은 선결제 1건이 아니라 **Pro 무료 trial cohort 확보 + 가격/limit 정책 확정 + trial 이후 paid conversion 측정 가능성**을 기준으로 GREEN으로 전환한다.
+- 2026-05-23 positioning decision: Coatly는 paint-only SaaS가 아니라 **painting-first maintenance quote intelligence**로 간다. v1 maintenance는 wall patch/repaint, water damage repaint, end-of-lease touch-up, pre-sale refresh, exterior maintenance repaint, deck/stain, mould treatment/repaint, strata/common area touch-up으로 제한한다. Plumbing/electrical/structural/roofing/pest/asbestos/waterproofing은 v1 AI quote automation 밖이다.
 
 ## Full Timeline
 
@@ -36,12 +37,12 @@
 |------|------|------|-----------|-----------|
 | Build W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | [V1-APP-BUILD-PLAN.md](./V1-APP-BUILD-PLAN.md) Task 1 + [V1-TASK1-RATE-SOURCE-AUDIT.md](./V1-TASK1-RATE-SOURCE-AUDIT.md) | 완료. 2026-05-17 기준 canonical totals/optional add-on/public quote/invoice preset parity, duplicate priced scope guard, PDF regression, full suite/build/lint 통과 |
 | Build W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + Room Price Library boundary | Task 2-3. Task 2 세부 계획: [V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md](./V1-TASK2-QUICK-ADVANCED-RATE-BOUNDARY.md), Task 3 세부 계획: [V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md](./V1-TASK3-QUICK-ROOM-PRICE-LIBRARY.md) | 완료. Task 2 Quick/Advanced metadata/snapshot/setup diagnostics와 Task 3 Room Price Library source redesign/focused tests 통과 |
-| Build W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | Task 4-5 | 다음은 Task 4 quote form schema. customer-visible scope/clause UI 구현으로 진행 |
-| Build W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Task 5 + Test matrix | 미기록 |
-| Build W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + usage logging | Task 6-7 | 미기록 |
-| Build W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | Task 8 | 미기록 |
-| Build W7 | 2026-07-13 ~ 2026-07-17 | Photo helper + Today Assistant + Follow-up Writer | Task 9-12 | 미기록 |
-| Build W8 | 2026-07-20 ~ 2026-07-24 | Pilot readiness + production hardening | Task 13-14 | 미기록 |
+| Build W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | Task 4-5 | 다음은 Task 4 quote form schema. `maintenance` job type과 painting-adjacent job packs를 schema/taxonomy에 함께 넣는다 |
+| Build W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy/maintenance quote reconstruction | Task 5 + Test matrix | Winchester/Edgar/Paint Buddy + water damage/end-of-lease/strata common area fixture 필요 |
+| Build W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + usage logging | Task 6-7 | AI schema에 `maintenance_job_pack`을 추가하고 unsupported trade rejection을 validator에 포함 |
+| Build W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | Task 8 | Quote create에 `Maintenance / touch-up` start path와 job pack picker 포함 |
+| Build W7 | 2026-07-13 ~ 2026-07-17 | Photo helper + Today Assistant + Follow-up Writer | Task 9-12 | maintenance photo hints, before/after follow-up, maintenance explanation draft 포함 |
+| Build W8 | 2026-07-20 ~ 2026-07-24 | Pilot readiness + production hardening | Task 13-14 | Paint Buddy/internal maintenance smoke tests 3건 이상 포함 |
 
 ## Phase 0 Day-by-Day Plan
 
@@ -134,6 +135,19 @@
 | Follow-up Writer | 5/5 긍정. 자동 발송 없이 초안 작성 범위로 유지 |
 | A$59/Pro trial 반응 | 강한 긍정 1/5(P3), 명확한 가격 반대 2/5(P1/P2), volume 조건부 2/5(P4/P5). Basic A$29 + Pro trial로 가격/패키징 risk를 낮춘다 |
 | Pilot fit | P1/P2/P3가 painter pilot 후보. P4/P5는 사용량이 낮아 interview insight는 유효하지만 Free Pro Trial cohort로는 약함 |
+
+### Positioning Interpretation (2026-05-23)
+
+인터뷰와 시장 검토를 합치면 paint-only CRM보다 painting-first maintenance quote intelligence가 더 현실적이다. 다만 v1에서 generic maintenance로 넓히면 정확도와 책임 문제가 커진다. 따라서 P5의 handyman/maintenance 신호는 v1 scope 확장이 아니라 **painting-adjacent maintenance job packs**로 해석한다.
+
+| 방향 | v1 판단 |
+|------|---------|
+| 페인터 전용 CRM | 하지 않음. 이미 general job-management SaaS와 정면충돌 |
+| 페인트 견적 계산기만 | 하지 않음. 사용 빈도와 paid conversion 약함 |
+| Paint Buddy 내부 AI quote/report system | 먼저 검증. Task 14 smoke tests에 포함 |
+| Painting + maintenance quote AI | 진행. Task 4/5/6/8/9/11/12/14에 나눠 구현 |
+| Property manager maintenance report AI | v1.1+ 후보. v1은 report-style quote artifact까지만 |
+| 전체 tradie SaaS | 하지 않음. unsupported trades는 validator가 차단 |
 
 ## Pricing Interview Notes
 

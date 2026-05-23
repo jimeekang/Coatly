@@ -4,13 +4,32 @@
 
 ## v1 Wedge (2026-05-15 APPROVED)
 
-호주 1–3인 painter가 현장 노트 + rough measurements + 보조 사진 + price_rates를 넣으면, AI가 polished quote form 초안(`scope_sections`, `scope_steps`, `pricing_candidates`, `clauses`)을 1–2분 안에 생성한다. v1 목표 모델은 **Alibaba Cloud / Qwen `qwen3-vl-flash`**다.
+호주 1–3인 painter 또는 painting-adjacent maintenance contractor가 현장 노트 + rough measurements + 보조 사진 + price_rates를 넣으면, AI가 polished quote form 초안(`scope_sections`, `scope_steps`, `pricing_candidates`, `clauses`)을 1–2분 안에 생성한다. v1 목표 모델은 **Alibaba Cloud / Qwen `qwen3-vl-flash`**다.
+
+2026-05-23 positioning update: Coatly는 paint-only CRM도, Jobber/ServiceM8 replacement도 아니다. v1 포지션은 **painting-first maintenance quote intelligence**다. 경쟁 앱들은 scheduling/CRM/quoting/invoicing과 일부 AI writing을 계속 붙이고 있으므로, Coatly의 차별점은 generic AI가 아니라 호주 painting 현장 기준의 scope/prep/access/substrate/risk clause + deterministic pricing boundary다.
 
 **핵심 boundary**: AI는 surface 매핑 + scope/exclusion/clause writing만 한다. **Pricing은 deterministic** — painter price_rates table에서 server-side lookup. AI 출력 schema에서 rate/price/GST/total field 제거 + `lib/ai/apply-deterministic-pricing.ts` post-pass로 채움.
 
 2026-05-17 기준 AI pricing candidate 적용 전 선행 조건: Task 1 duplicate priced scope guard, Task 2 Quick/Advanced snapshot/setup warning/stale-rate hardening, Task 3 Room Price Library redesign은 완료됐다. 다음 선행 조건은 Task 4 quote form structure schema와 AI candidate를 deterministic pricing review path로만 적용하는 서버 검증이다.
 
 **v1 보조 AI**: Today Assistant(오늘 처리할 quote follow-up / overdue invoice / job 요약) + Follow-up Writer(고객에게 보낼 SMS/email 초안). 범용 Workspace Assistant 채팅은 v1에서 끄고, 이 두 helper만 노출한다.
+
+## Maintenance Boundary (v1)
+
+Maintenance는 v1에서 별도 all-trade 제품이 아니라 quote form job type이다. AI가 다룰 수 있는 범위는 painting-adjacent job packs로 제한한다.
+
+| 포함 | AI가 할 일 |
+|------|-----------|
+| wall patch + repaint | repair/prep/topcoat scope와 patch limitation clause 초안 |
+| water damage repaint | stain block, source repair excluded, best-effort repaint wording |
+| end-of-lease touch-up | room/surface touch-up scope, colour-match limitation |
+| pre-sale refresh | cosmetic refresh scope와 client-ready explanation |
+| exterior maintenance repaint | eaves/fascia/gutter/render/timber repaint scope |
+| deck/stain maintenance | prep/coating/access assumptions |
+| mould treatment + repaint | recurrence risk, treatment scope, ventilation/source caveat |
+| strata/common area touch-up | access, common area scope, optional extra-area note |
+
+Excluded from v1 automation: plumbing, electrical, HVAC, structural repair, roofing repair, pest, asbestos, waterproofing diagnosis, and property-manager portal workflows. If notes/photos mention these, the AI should ask the painter to exclude, confirm, or refer to a specialist. It must not create a priced quote row for unsupported work.
 
 ## 현재 구현 vs v1 갭
 
@@ -19,11 +38,11 @@
 | Legacy AI draft provider | `lib/ai/drafts.ts` | non-streaming, AU prompt 없음, usage limit 없음 | Qwen3-VL-Flash adapter로 전환, streaming + AU prompt + validator + price_rates context |
 | AIDraftPanel | `components/ai/AIDraftPanel.tsx` | UI 존재, QuoteCreateScreen 미연결 | QuoteCreateScreen wire-up + inline 편집 + Pro gating |
 | ai-drafts server action | `app/actions/ai-drafts.ts` | 기본 draft 생성 | photos + price_rates + usage check + streaming |
-| Draft schema | `lib/ai/draft-types.ts` | rooms/surfaces/coating | + photos, price_rates, job_type, scope_notes, rough_measurements, `scope_sections`, `pricing_candidates`, `clauses`. 사진은 scope 보조, 자동 면적 산출 아님 |
+| Draft schema | `lib/ai/draft-types.ts` | rooms/surfaces/coating | + photos, price_rates, job_type, optional `maintenance_job_pack`, scope_notes, rough_measurements, `scope_sections`, `pricing_candidates`, `clauses`. 사진은 scope 보조, 자동 면적 산출 아님 |
 | Quote form data model | quote feature | 고객용 scope 문서와 가격 row가 섞여 있음 | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots`로 분리 |
 | Workspace Assistant | `components/dashboard/WorkspaceAssistant.tsx` | Pro 한정 채팅 UI | **generic chat v1 off**. Today Assistant + Follow-up Writer로 scoped replacement |
 | Today Assistant | dashboard | 미구현 | deterministic task list + Pro AI summary |
-| Follow-up Writer | quote/customer/invoice detail | 미구현 | quote check-in, booking request, invoice reminder 초안 |
+| Follow-up Writer | quote/customer/invoice detail | 미구현 | quote check-in, booking request, invoice reminder, maintenance explanation 초안 |
 | Basic/Pro plan gating | `lib/subscription/access.ts` | 구현됨/정책 업데이트 필요 | Basic limited AI + Pro full AI limits, Pro trial state |
 
 ## v1 신규 컴포넌트 (post-GREEN)
@@ -35,6 +54,7 @@
 | `lib/ai/providers/qwen.ts` | Alibaba Cloud / Qwen `qwen3-vl-flash` 호출 adapter |
 | `lib/ai/validator.ts` | output schema 검증 + repair fallback |
 | `lib/ai/apply-deterministic-pricing.ts` | painter price_rates server-side pass |
+| `config/maintenance-job-packs.ts` | painting-adjacent maintenance packs, allowed surfaces, common clauses, required confirmation questions; no prices |
 | `docs/features/quote/AI-QUOTE-FORM-STRUCTURE.md` | AI quote form output contract + item taxonomy |
 | `lib/ai/eval/golden-quotes.json` | AU eval harness (target 10, fallback 5) |
 | `lib/ai/eval/run-eval.ts` | CLI compare AI vs golden |
@@ -92,7 +112,7 @@ UX: skeleton + room-by-room reveal (rooms[0] → rooms[1] → ...). cancellation
 
 ## AU prompt depth (T8)
 
-Prep work, access difficulty (ladder/scaffold/2nd-storey), substrate(new plaster 3coats / repaint 2coats / raw timber), colour count, occupied vs unoccupied, patching, doors/windows/trims, minimum callout, climate(coastal humid 3coats Weathershield-style). Interior는 ceiling/walls/doors/bathroom/wardrobe/cornice, exterior는 rendered walls/eaves/cladding/retaining walls/timber/fence/efflorescence/difficult access를 structured section으로 만든다. Dulux/Wattyl 브랜드는 painter 설정 또는 user notes에서 derive — AI가 발명 금지.
+Prep work, access difficulty (ladder/scaffold/2nd-storey), substrate(new plaster 3coats / repaint 2coats / raw timber), colour count, occupied vs unoccupied, patching, doors/windows/trims, minimum callout, climate(coastal humid 3coats Weathershield-style). Interior는 ceiling/walls/doors/bathroom/wardrobe/cornice, exterior는 rendered walls/eaves/cladding/retaining walls/timber/fence/efflorescence/difficult access를 structured section으로 만든다. Maintenance는 wall patch + repaint, water damage repaint, end-of-lease touch-up, pre-sale refresh, exterior maintenance repaint, deck/stain maintenance, mould treatment + repaint, strata/common area touch-up으로 제한한다. Dulux/Wattyl 브랜드는 painter 설정 또는 user notes에서 derive — AI가 발명 금지.
 
 ## Photo analysis policy (T2)
 
@@ -101,12 +121,14 @@ Prep work, access difficulty (ladder/scaffold/2nd-storey), substrate(new plaster
 AI may:
 - identify visible surface candidates: walls, ceilings, doors, windows, trims, exterior areas
 - mention visible condition: peeling, cracks, stains, mould, patching, access difficulty
+- attach visible defect/photo hints to maintenance scope sections
 - improve scope, assumptions, exclusions
 - mark uncertain items as needing confirmation
 
 AI must not:
 - calculate exact sqm/lm from photos only
 - invent hidden prep work, damage, dimensions, due dates, rates, or GST
+- claim moisture/mould/source repairs are complete without explicit user notes
 - choose prices or override painter `price_rates`
 - send or save a quote without painter review
 
@@ -124,6 +146,7 @@ Implementation guardrails:
 Dashboard에 "오늘 처리할 일"을 보여준다. Task detection은 SQL/deterministic rules가 먼저이고, AI는 Pro 사용자에게만 짧은 summary와 우선순위를 붙인다.
 
 - Inputs: sent/open quotes without response, overdue/soon-due invoices, today/this-week jobs, approved quotes needing booking
+- Maintenance additions: approved maintenance quotes needing access confirmation, upcoming maintenance jobs missing before/after photo follow-up
 - Output: action cards + optional AI summary
 - Fallback: Qwen/Alibaba provider 실패 시 deterministic list만 표시
 - Boundary: AI가 quote/invoice/job 상태를 바꾸지 않음
@@ -132,10 +155,16 @@ Dashboard에 "오늘 처리할 일"을 보여준다. Task detection은 SQL/deter
 
 Quote/customer/invoice detail에서 고객 메시지 초안을 만든다.
 
-- Types: quote check-in, approved quote booking request, invoice reminder
+- Types: quote check-in, approved quote booking request, invoice reminder, maintenance explanation
 - Inputs: customer name, status, amount, public link, due date/job date if present
 - Output: short SMS/email draft with editable text
 - Boundary: v1 auto-send 금지. 사용자 검토 후 기존 email flow 또는 copy flow만 허용
+
+Maintenance explanation types are narrow:
+- water damage repaint limitation
+- touch-up colour match limitation
+- mould recurrence risk
+- strata/common area access request
 
 ## Gating + cost guardrails
 
@@ -153,6 +182,7 @@ Quote/customer/invoice detail에서 고객 메시지 초안을 만든다.
 - **AI legal liability**: T11 — DRAFT marker UI(영구 banner) + PDF marker + ToS disclaimer ("AI 출력은 painter 검토 책임").
 - **AI quality**: AU domain prompt + golden eval(10건) + legacy quote form reconstruction으로 측정. scope/clause wording edit 비율 ≤30%, scope "send-ready" 비율 ≥70%.
 - **Assistant overreach**: v1 보조 AI는 auto-send, status mutation, schedule mutation 금지. 모든 action은 user-confirmed.
+- **Maintenance scope creep**: validator rejects unsupported all-trade work, and UI separates unsupported/specialist items from included painting scope before send.
 
 ## Status checklist
 
@@ -161,8 +191,10 @@ Quote/customer/invoice detail에서 고객 메시지 초안을 만든다.
 - [x] Basic/Pro gating scaffold + UpgradePrompt
 - [x] Basic error handling
 - [ ] AU prompt depth (T8)
+- [ ] Painting-adjacent maintenance job packs (Task 4, Task 8)
 - [ ] Scope section + clause library output schema
 - [ ] Legacy quote form reconstruction eval
+- [ ] Maintenance reconstruction eval (water damage repaint, end-of-lease touch-up, strata/common area touch-up)
 - [ ] Streaming (T3, post Day 0 spike)
 - [ ] Photo multimodal (T2, conditional on painter check)
 - [ ] Per-painter monthly limit + ai_usage_logs (T4)

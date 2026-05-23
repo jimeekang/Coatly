@@ -328,7 +328,7 @@ Use a compatibility-first migration:
 
 ## Why This Must Happen Before AI
 
-AI quote drafting needs one deterministic way to turn a room candidate into price:
+AI quote drafting needs one deterministic way to turn a room or painting-adjacent maintenance candidate into price:
 
 ```text
 AI candidate:
@@ -360,3 +360,5 @@ After Task 3, AI candidate shape should prefer room-template language:
 ```
 
 The deterministic pricing pass maps that candidate to the painter's Room Price Library snapshot. The AI still does not output price, rate, GST, or total.
+
+For v1 maintenance job packs, the same rule applies. A water-damage repaint or end-of-lease touch-up candidate can create customer-visible scope, clauses, and questions, but the priced row must still map to Room Price Library, Advanced room/opening/trim, exterior estimate, day rate, manual/service add-on, or optional add-on. Task 3 deliberately does not add a generic maintenance price source.

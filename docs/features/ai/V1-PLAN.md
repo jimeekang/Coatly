@@ -4,15 +4,47 @@
 
 ## Wedge (Office Hours, 2026-05-15 APPROVED)
 
-**AI-assisted Quote Form Builder (notes + rough measurements + photos → scope sections + clauses + deterministic pricing rows) + lightweight AI operations helpers + 호주 native PDF + pricing validation.**
+**AI-assisted painting-first maintenance Quote Form Builder (notes + rough measurements + photos → scope sections + clauses + deterministic pricing rows) + lightweight AI operations helpers + 호주 native PDF + pricing validation.**
 
 - 호주 1–3인 painter (sole trader / small team) 대상. Pain: site measurement(20–60분) 자체는 OK, **노트→quote 서류화**가 진짜 문제.
-- 시장 갭: 미국 AI photo-takeoff SaaS(Bolster/Togal)는 호주 미진입, 호주 SaaS(Tradify/ServiceM8/Quotient)는 AI 없음. 1–2년 window 가설.
+- 시장 갭: Jobber/ServiceM8/Tradify/Fergus/Buildxact 같은 general job-management SaaS는 quoting, scheduling, invoicing, 일부 AI writing/assistant 기능까지 계속 붙이고 있다. Coatly의 gap은 "AI가 있음/없음"이 아니라 **호주 painting 현장 기준의 scope, prep, access, substrate, risk clause, deterministic pricing intelligence**다.
 - AI는 wedge 본질이다. 다만 v1 AI는 가격을 만드는 기능이 아니라 **고객용 quote form 초안**을 만드는 기능이다.
 - v1 보조 AI 범위: **Today Assistant**(오늘 처리할 follow-up / overdue invoice / job 요약) + **Follow-up Writer**(고객에게 보낼 SMS/email 초안). 둘 다 만능 챗봇이 아니라 기존 quote/customer/invoice/job 데이터 위의 좁은 helper.
 - v1 AI model default: **Alibaba Cloud / Qwen `qwen3-vl-flash`**. 사진 분석 + quote/follow-up 초안 생성의 기본 모델로 두되, provider adapter 뒤에 감싸서 향후 교체 가능하게 만든다.
 - v1.1+ stack: stronger photo takeoff model eval → learning-based pricing → customer portal (one-click accept + Stripe deposit). 각 phase 별도 wedge 검증.
 - 과거 견적서 분석 기준으로 quote form은 `scope section` + `pricing row` + `clause library`를 분리한다. 상세 구조는 [AI-QUOTE-FORM-STRUCTURE.md](../quote/AI-QUOTE-FORM-STRUCTURE.md)에 둔다.
+
+## Positioning Update (2026-05-23)
+
+Paint-only SaaS로 고정하면 시장과 사용 빈도가 좁다. 그러나 v1에서 바로 generic maintenance SaaS로 뛰면 plumbing/electrical/carpentry 정확도, liability, permission model, property manager workflow 때문에 범위가 터진다. 따라서 Coatly의 포지션은 다음처럼 잡는다.
+
+> **Painting-first quote intelligence for maintenance-style jobs.**
+
+제품 언어는 "페인터 CRM"이나 "Jobber/ServiceM8 대체"가 아니다. Coatly는 기존 운영 앱을 완전히 갈아타게 하는 도구가 아니라, **현장 노트/사진/rough measurement를 고객에게 보낼 수 있는 quote, scope, explanation, report-style summary로 바꾸는 intelligence layer**다. 기존 Coatly의 quote → public approval → booking/job → invoice 흐름은 유지하되, v1 마케팅과 AI workflow는 quote/scope intelligence에 집중한다.
+
+### v1 Maintenance Boundary
+
+v1에서 허용하는 maintenance는 painting 인접 작업만이다.
+
+| 포함 | 이유 |
+|------|------|
+| wall patch + repaint | painting quote 안에서 자주 발생하고 prep/risk clause로 설명 가능 |
+| water damage repaint | source repair excluded, stain block, best-effort disclosure가 중요 |
+| end-of-lease touch-up | 사진/노트 기반 scope 정리와 빠른 quote 가치가 큼 |
+| pre-sale refresh | 고객용 explanation/report-style summary 가치가 큼 |
+| exterior maintenance repaint | eaves/fascia/gutter/render/timber repaint와 겹침 |
+| deck/stain maintenance | coating/prep/access clause 중심으로 제한 가능 |
+| mould treatment + repaint | treatment scope와 recurrence/liability clause가 필요 |
+| strata/common area touch-up | repeated small jobs, before/after report seed로 적합 |
+
+v1에서 제외한다.
+
+- Plumbing, electrical, HVAC, structural repair, roofing repair, pest, asbestos, waterproofing diagnosis
+- Property manager portal, tenant/owner approval workflow, multi-property request queue
+- Full maintenance CRM/scheduling/payroll/GPS/supplier replacement
+- "AI가 모든 maintenance 견적을 자동 산출"하는 promise
+
+Property manager / strata 방향은 v1.1+에서 **report artifact**부터 검증한다. v1에서는 별도 portal이나 request table을 만들지 않고, 기존 customer properties와 quote/public/PDF 흐름 위에서 "maintenance report-style quote"를 만들 수 있는 구조만 준비한다.
 
 ## Phase 0 — Validation (14 days, GREEN 완료)
 
@@ -61,21 +93,37 @@ Build 순서는 **pricing-first + form-structure-first**다. AI-assisted Quote F
 |----|------|------|
 | T0 | Price rate + quote calculation foundation | `quick_estimate`, `detailed_estimate_anchors`, `detailed_estimate_items`, `room_rate_presets`, `quote_estimate_items`, `quote_line_items`의 역할을 분리. "one priced scope, one anchor" 규칙, canonical subtotal/GST/total calculator, snapshot/version 기준 확정 |
 | T0A | Quick + Advanced hardening | 완료. Quick은 room size + selected surfaces + coating/condition multiplier snapshot. Advanced는 room anchor + explicit opening/trim numeric snapshot. duplicate room anchor, stale rate, preview/save/PDF/invoice mismatch 테스트 작성 |
-| T0B | Quote form data model | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` 구조 확정. 기존 `quote_estimate_items`/`quote_line_items`와 연결. interior/exterior taxonomy와 clause library seed 작성 |
-| T1 | AI input schema + provider adapter | `photos`, `price_rates_snapshot`, `job_type`, `scope_notes`, `rough_measurements` 추가 / `customers`, `quotes` context 제거 (P1 cost 보호). `lib/ai/providers/qwen.ts` 같은 얇은 adapter로 `qwen3-vl-flash` 호출을 숨김. **AI 역할 boundary: `scope_sections`, `pricing_candidates`, `clauses`만 생성하고 pricing은 T0 calculator가 deterministic 처리** |
+| T0B | Quote form data model | `quote_scope_sections`, `quote_scope_steps`, `quote_clause_items`, `quote_ai_intake_snapshots` 구조 확정. 기존 `quote_estimate_items`/`quote_line_items`와 연결. interior/exterior/painting-adjacent maintenance taxonomy와 clause library seed 작성 |
+| T1 | AI input schema + provider adapter | `photos`, `price_rates_snapshot`, `job_type`, `maintenance_job_pack`, `scope_notes`, `rough_measurements` 추가 / `customers`, `quotes` context 제거 (P1 cost 보호). `lib/ai/providers/qwen.ts` 같은 얇은 adapter로 `qwen3-vl-flash` 호출을 숨김. **AI 역할 boundary: `scope_sections`, `pricing_candidates`, `clauses`만 생성하고 pricing은 T0 calculator가 deterministic 처리** |
 | T2 | Photo upload + multimodal | Qwen3-VL-Flash vision input 사용. Supabase Storage RLS, Basic quote당 3장/월 15장, Pro quote당 5장/월 100장, 1920px JPEG 85%, photo-only auto takeoff 금지 |
 | T3 | Streaming response | **Server Action + ReadableStream** (Day 0 spike mandatory). Qwen streaming response 호환성 확인. RSC streamUI / API SSE 아님. Phase 0 painter check 조건부 |
 | T4 | Per-painter usage limit + cost log | `ai_usage_logs` 테이블 (generated `billing_month` column, attempt accounting). Basic/Pro plan limit과 Pro trial usage를 함께 기록 |
 | T5 | Error handling + graceful degradation | Qwen/Alibaba provider down → 1 retry → manual builder fallback CTA |
 | T6 | AIDraftPanel wire-up + Pro gating + manual correction UX | `QuoteCreateScreen`에 노출. AI draft를 Scope/Pricing/Terms review flow로 넣고, `scope_sections`와 `clauses`는 inline 편집, 가격은 deterministic preview로만 표시. edit ratio metadata 저장 |
 | T7 | Generic Workspace Assistant off | 범용 채팅 UI는 feature flag + nav 제거. 코드는 v2 검토용 유지하고, v1은 T13/T14의 scoped assistants만 노출 |
-| T8 | AU prompt tuning + eval harness + validator | AU domain depth (prep, access, substrate, climate, occupied). 10 golden quotes + legacy PDF 3개 form reconstruction. `lib/ai/validator.ts` repair layer (price field 제거, clause/scope schema repair) |
+| T8 | AU prompt tuning + eval harness + validator | AU domain depth (prep, access, substrate, climate, occupied) + painting-adjacent maintenance job packs. 10 golden quotes + legacy PDF 3개 form reconstruction + 3 maintenance scenario fixtures. `lib/ai/validator.ts` repair layer (price field 제거, unsupported trade rejection, clause/scope schema repair) |
 | T9 | Settings/ai-usage page | 단순 SQL aggregate. 사용수 / Pro limit / 예상 비용 |
 | T10 | Pro free trial + paid conversion setup | 첫 cohort는 Pro 1개월 무료 trial. trial 종료 후 A$59/month 결제 전환을 측정하고 cancel reason을 기록. productized billing dashboard는 v1.1 deferred |
 | T11 | DRAFT marker + ToS disclaimer | "DRAFT — review before send" UI + PDF marker. AI 책임 conditional ToS |
 | T12 | Regression test (IRON RULE) | T0/T0A price boundary + T1 schema 영향 — quote total parity, duplicate anchor guard, `lib/ai/drafts.test.ts`, `app/actions/ai-drafts.test.ts`, `components/ai/AIDraftPanel.test.tsx` |
 | T13 | Today Assistant | Dashboard에 deterministic task list + AI summary. Follow-up 필요한 quote, overdue invoice, 오늘/이번 주 job만 표시. Basic은 deterministic list, Pro는 AI summary |
 | T14 | Follow-up Writer | Quote/customer/invoice 화면에서 고객 메시지 초안 생성. 견적 확인 요청, 승인 후 일정 잡기, invoice reminder. **자동 발송 없음** — user review 후 기존 email flow 또는 manual copy |
+
+### Maintenance Expansion Task Mapping
+
+Maintenance 확장은 새 제품 라인이 아니라 v1 AI Quote Form Builder 안의 job type/taxonomy 확장이다. 구현 순서는 아래 task 번호를 따른다.
+
+| 구현 task | 포함 작업 | 완료 기준 |
+|-----------|-----------|-----------|
+| **Task 4 — Quote Form Structure Schema** | `job_type = maintenance`를 first-class로 처리하고, `quote_scope_sections.section_kind`에 `maintenance`를 허용한다. `metadata`에는 `maintenance_job_pack`, visible defect tags, optional `priority`(`urgent`, `soon`, `cosmetic`, `to_confirm`)를 담는다. 별도 property manager request/portal table은 만들지 않는다. | schema/RLS/type이 interior/exterior/both/maintenance를 모두 저장하고, maintenance scope가 price row 없이도 customer-visible section으로 남을 수 있다 |
+| **Task 5 — Scope Builder, Clause Library, PDF/Public Rendering** | Scope Builder에 maintenance job pack 선택을 추가한다. Clause Library에 water damage, mould recurrence, tenant/owner access, source repair excluded, colour match/touch-up limits, strata/common area access, before/after photo note를 추가한다. PDF/public quote는 "quote"와 "maintenance report-style summary" 섹션을 같은 데이터로 렌더한다. | end-of-lease touch-up, water damage repaint, strata common area touch-up fixture가 section order, optional item, clause, total parity를 통과한다 |
+| **Task 6 — AI Input Schema + Qwen Adapter** | AI input에 `maintenance_job_pack`, `property_context`, `visible_defects`, `access_notes`를 추가한다. AI output은 `scope_sections`, `pricing_candidates`, `clauses`, `questions_for_user`만 허용한다. plumbing/electrical/structural/roofing 같은 unsupported trade는 validator가 `unsupported_scope`로 reject하거나 `refer_to_specialist` question으로 돌린다. | maintenance prompt가 price/rate/GST 없이 painting-adjacent scope만 생성하고 unsupported trade를 자동 quote하지 않는다 |
+| **Task 8 — AI Quote Form Builder UI** | Quote create 시작점에서 job type을 `Interior`, `Exterior`, `Both`, `Maintenance / touch-up`으로 제공한다. Maintenance 선택 시 job pack chips를 보여주되, price는 기존 quick/advanced/exterior/manual pricing pass로만 만든다. | painter가 maintenance draft를 생성한 뒤 Scope/Pricing/Terms review를 거치기 전에는 저장/발송할 수 없다 |
+| **Task 9 — Photo Helper** | 사진 분석은 visible condition/defect hint와 section 연결만 한다. 사진만으로 damage cause, exact area, hidden moisture, total price를 만들지 않는다. | photo-only maintenance draft는 `to_confirm` 질문을 남기고 priced row를 생성하지 않는다 |
+| **Task 11 — Today Assistant** | deterministic task list에 approved maintenance quote needing booking, overdue maintenance invoice, upcoming maintenance job, missing before/after photo follow-up을 추가한다. | AI summary가 task를 발명하지 않고 existing quote/invoice/job data만 요약한다 |
+| **Task 12 — Follow-up Writer** | 기존 quote check-in/booking/invoice reminder 외에 maintenance-specific explanation draft를 추가한다: water damage limitation, touch-up colour match limitation, strata/common area access request. | 자동 발송/상태 변경 없이 user-reviewed message draft만 생성한다 |
+| **Task 14 — Pilot Readiness** | Paint Buddy 내부에서 maintenance-style smoke tests를 추가한다: wall patch + repaint, water damage repaint, end-of-lease touch-up, strata/common area touch-up. | 첫 pilot 전에 maintenance draft 3건 이상이 PDF/public quote까지 깨지지 않고, critical unsupported trade error 0건이다 |
+| **v1.1+ only** | property manager/strata portal, owner/tenant approval workflow, recurring maintenance request queue, before/after report PDF productization | v1 paid conversion 이후 별도 validation gate |
 
 ### Build Progress Snapshot (2026-05-17)
 

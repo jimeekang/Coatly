@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 2026-08-03 Free Pro Trial + Paid Conversion Tracking 전에 AI-assisted Quote Form Builder, pricing safety, photo helper, auxiliary AI, and usage/cost logging을 pilot 가능한 상태로 완성한다.
+**Goal:** 2026-08-03 Free Pro Trial + Paid Conversion Tracking 전에 AI-assisted painting-first maintenance Quote Form Builder, pricing safety, photo helper, auxiliary AI, and usage/cost logging을 pilot 가능한 상태로 완성한다.
 
-**Architecture:** v1은 pricing-first architecture다. AI는 `scope_sections`, `pricing_candidates`, `clauses` 초안을 만들고, 금액은 painter `price_rates` snapshot과 canonical quote calculator가 만든다. 사진은 자동 면적/가격 산출이 아니라 scope, condition, assumptions, exclusions 작성 보조로만 사용한다.
+**Architecture:** v1은 pricing-first architecture다. AI는 `scope_sections`, `pricing_candidates`, `clauses` 초안을 만들고, 금액은 painter `price_rates` snapshot과 canonical quote calculator가 만든다. 사진은 자동 면적/가격 산출이 아니라 scope, condition, assumptions, exclusions 작성 보조로만 사용한다. Maintenance는 별도 all-trade product가 아니라 `job_type = maintenance` + painting-adjacent job packs로 제한한다.
 
 **Tech Stack:** Next.js App Router, React, Server Actions, Supabase Postgres/RLS/Storage, Vitest, Testing Library, PDF route, Alibaba Cloud / Qwen `qwen3-vl-flash` behind provider adapter.
 
@@ -33,6 +33,7 @@
 | 가격 정책 | Basic A$29/month, Pro A$59/month |
 | 첫 사용자 offer | Pro 1개월 무료 trial. trial 후 A$59/month conversion 측정 |
 | 취소 정책 | 언제든지 cancel 가능. cancel reason 기록 |
+| 2026-05-23 positioning | Paint-only SaaS가 아니라 painting-first maintenance quote intelligence. Jobber/ServiceM8/Buildxact류와 scheduling/CRM 정면승부를 피하고, scope/quote/report intelligence layer에 집중 |
 | Basic AI limit | AI quote draft 5/month, photo AI 15 photos/month, quote당 사진 3장 |
 | Pro AI limit | AI quote draft 25/month, photo AI 100 photos/month, quote당 사진 5장, follow-up 50/month |
 | Trial limit | 첫 cohort는 Pro trial 기간 동안 Pro limit 사용 |
@@ -54,6 +55,9 @@
 8. 모든 AI call은 provider, model, prompt version, token/cost, photo count, cache hit 여부를 `ai_usage_logs`에 남긴다.
 9. Free Pro Trial + Paid Conversion Tracking은 build, deploy, painter onboarding, price rate setup, 첫 draft smoke test가 끝난 뒤에만 시작한다.
 10. Basic에도 제한된 AI를 제공한다. Pro는 full AI Quote Form Builder, photo AI, Today AI summary, Follow-up Writer 확장을 제공한다.
+11. Maintenance는 v1에서 painting-adjacent job packs만 허용한다. Wall patch + repaint, water damage repaint, end-of-lease touch-up, pre-sale refresh, exterior maintenance repaint, deck/stain maintenance, mould treatment + repaint, strata/common area touch-up은 포함한다.
+12. Plumbing, electrical, HVAC, structural repair, roofing repair, pest, asbestos, waterproofing diagnosis는 v1 quote automation 범위 밖이다. AI는 이런 요청을 quote로 만들지 않고 `unsupported_scope` 또는 `refer_to_specialist` question으로 돌린다.
+13. v1은 property manager portal이 아니다. Customer properties, quote, PDF/public quote, job, invoice를 재사용해 report-style quote artifact까지만 만든다. Request queue, tenant/owner approval workflow, multi-property manager dashboard는 v1.1+ validation 뒤로 미룬다.
 
 ## File Ownership Map
 
@@ -79,12 +83,12 @@
 |------|------|------|-----------|
 | W1 | 2026-06-01 ~ 2026-06-05 | Pricing source audit + canonical total path | 완료. canonical calculator, optional add-on/public quote, invoice preset parity, duplicate priced scope guard, full safety verification 통과 |
 | W2 | 2026-06-08 ~ 2026-06-12 | Price Rates setup + Room Price Library boundary | 완료. Task 2 Quick/Advanced rate boundary와 Task 3 Room Price Library redesign 모두 구현 |
-| W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | 다음은 Task 4 quote form structure schema. customer-visible scope와 priced row를 UI와 저장 구조에서 분리 |
-| W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy quote reconstruction | Winchester, Edgar, Paint Buddy quote form을 scope/pricing/clause 구조로 재현하고 가격 회귀 테스트가 통과한다 |
-| W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + Basic/Pro usage logging | Qwen call이 adapter 뒤에 있고, AI output이 price-free schema를 통과하며, plan/trial별 cost log가 남는다 |
-| W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | quote create flow에서 AI draft를 만들고, user review 후 deterministic pricing pass로만 금액을 만든다 |
-| W7 | 2026-07-13 ~ 2026-07-17 | Photo helper + Today Assistant + Follow-up Writer | 사진 분석은 scope helper로 동작하고, 보조 AI는 자동 발송/상태 변경 없이 초안만 만든다 |
-| W8 | 2026-07-20 ~ 2026-07-24 | Pilot readiness + production hardening | 5명 pilot account, rate setup, first draft, PDF/public quote, Pro trial state, usage logging smoke test가 끝난다 |
+| W3 | 2026-06-15 ~ 2026-06-19 | Quote form schema + Scope/Clause builder UI | 다음은 Task 4 quote form structure schema. customer-visible scope와 priced row를 UI와 저장 구조에서 분리하고 `maintenance` job type/taxonomy를 함께 넣는다 |
+| W4 | 2026-06-22 ~ 2026-06-26 | Regression suite + legacy/maintenance quote reconstruction | Winchester, Edgar, Paint Buddy quote form + 3 maintenance scenarios를 scope/pricing/clause 구조로 재현하고 가격 회귀 테스트가 통과한다 |
+| W5 | 2026-06-29 ~ 2026-07-03 | AI input schema + Qwen adapter + Basic/Pro usage logging | Qwen call이 adapter 뒤에 있고, AI output이 price-free schema를 통과하며, plan/trial별 cost log가 남는다. Maintenance unsupported trade rejection도 validator에 포함한다 |
+| W6 | 2026-07-06 ~ 2026-07-10 | AI Quote Form Builder core | quote create flow에서 AI draft를 만들고, user review 후 deterministic pricing pass로만 금액을 만든다. Maintenance / touch-up start path를 포함한다 |
+| W7 | 2026-07-13 ~ 2026-07-17 | Photo helper + Today Assistant + Follow-up Writer | 사진 분석은 scope helper로 동작하고, 보조 AI는 자동 발송/상태 변경 없이 초안만 만든다. Maintenance photo hints and report-style follow-up wording을 포함한다 |
+| W8 | 2026-07-20 ~ 2026-07-24 | Pilot readiness + production hardening | 5명 pilot account, rate setup, first draft, PDF/public quote, Pro trial state, usage logging smoke test, maintenance smoke tests가 끝난다 |
 
 ## Task 0: Build Scope Gate
 
@@ -312,13 +316,21 @@
 - Modify: `types/quote.ts`
 - Regenerate: `lib/supabase/types.ts`
 - Create: `config/quote-form-taxonomy.ts`
+- Create: `config/maintenance-job-packs.ts`
 - Test: `app/actions/quotes.test.ts`
 
 **Method:**
 
 - [ ] **Step 1: Add scope section tables**
 
-  Add `quote_scope_sections` with `id`, `quote_id`, `title`, `description`, `area_type`, `surface_type`, `is_optional`, `pricing_status`, `source`, `sort_order`, `metadata`, `created_at`, and `updated_at`.
+  Add `quote_scope_sections` with `id`, `quote_id`, `section_kind`, `title`, `description`, `area_type`, `surface_type`, `is_optional`, `pricing_status`, `source`, `sort_order`, `metadata`, `created_at`, and `updated_at`. `section_kind` must allow `interior`, `exterior`, `maintenance`, `general`, and `optional`.
+
+  For maintenance sections, store these values in `metadata` rather than adding broad new tables:
+  - `maintenance_job_pack`
+  - `visible_defects`
+  - `priority`: `urgent`, `soon`, `cosmetic`, or `to_confirm`
+  - `report_context`: optional flag for report-style PDF/public rendering
+  - `unsupported_scope`: optional string when AI/user notes mention work outside v1 scope
 
 - [ ] **Step 2: Add scope step table**
 
@@ -330,7 +342,7 @@
 
 - [ ] **Step 4: Add AI intake snapshot table**
 
-  Add `quote_ai_intake_snapshots` with `id`, `quote_id`, `painter_user_id`, `provider`, `model`, `prompt_version`, `input_json`, `output_json`, `photo_refs`, `price_rates_snapshot_id`, `created_at`, and `metadata`.
+  Add `quote_ai_intake_snapshots` with `id`, `quote_id`, `painter_user_id`, `job_type`, `maintenance_job_pack`, `provider`, `model`, `prompt_version`, `input_json`, `output_json`, `photo_refs`, `price_rates_snapshot_id`, `created_at`, and `metadata`. `job_type` must allow `interior`, `exterior`, `both`, and `maintenance`.
 
 - [ ] **Step 5: Add RLS**
 
@@ -339,6 +351,24 @@
 - [ ] **Step 6: Seed taxonomy in code, not as hidden prices**
 
   `config/quote-form-taxonomy.ts` should define interior areas, interior surfaces, exterior surfaces, prep/coating options, condition/risk tags, and clause keys. It must not contain price values.
+
+- [ ] **Step 7: Add maintenance job packs without creating a generic trade schema**
+
+  `config/maintenance-job-packs.ts` should define only painting-adjacent packs:
+  - `wall_patch_repaint`
+  - `water_damage_repaint`
+  - `end_of_lease_touch_up`
+  - `pre_sale_refresh`
+  - `exterior_maintenance_repaint`
+  - `deck_stain_maintenance`
+  - `mould_treatment_repaint`
+  - `strata_common_area_touch_up`
+
+  Each pack may define allowed surfaces, common prep steps, risk clauses, likely pricing methods, and required confirmation questions. It must not define prices.
+
+- [ ] **Step 8: Explicitly reject all-trade maintenance scope**
+
+  Do not add property manager request tables, tenant/owner permission tables, plumbing/electrical/carpentry item libraries, or generic maintenance rates in Task 4. Those belong to v1.1+ after a separate validation gate.
 
 ## Task 5: Scope Builder, Clause Library, PDF/Public Rendering
 
@@ -365,6 +395,15 @@
 
   `ClauseLibraryPicker` lets the painter add inclusions, exclusions, warranty, payment, validity, colour/sheen confirmation, water damage, peeling paint, efflorescence, wet area, furniture moving, difficult access, and attachment notes.
 
+  Maintenance-specific clause keys must include:
+  - `source_repair_excluded`
+  - `water_damage_best_effort`
+  - `mould_recurrence_risk`
+  - `touch_up_colour_match_limit`
+  - `tenant_owner_access_required`
+  - `strata_common_area_access`
+  - `before_after_photo_note`
+
 - [ ] **Step 3: Connect sections to priced rows carefully**
 
   Scope sections may link to one authoritative priced row, but they can also be included/unpriced. Optional customer-visible scope can connect to a selected optional line item only when that item is the single source of price.
@@ -373,9 +412,20 @@
 
   PDF and public quote must render scope sections first, pricing summary second, optional items third, clauses last. Totals come from quote calculated fields, not from scope text.
 
+  If `quote_scope_sections.metadata.report_context` is true, the same data can render a "Maintenance summary" band before the quote price summary. This is still a quote artifact, not a separate property manager report product.
+
 - [ ] **Step 5: Add reconstruction tests**
 
   Add anonymized fixture scenarios for Winchester interior, Edgar checklist, and Paint Buddy exterior. Tests should confirm section order, optional item handling, clauses, PDF/public rendering, and no duplicate priced scope.
+
+- [ ] **Step 6: Add maintenance reconstruction tests**
+
+  Add fixture scenarios for:
+  - end-of-lease touch-up with colour-match limitation clause
+  - water damage repaint with source-repair-excluded and stain-blocking steps
+  - strata/common area touch-up with access note and optional extra-area add-on
+
+  Each scenario must assert section order, clause presence, optional item behavior, and preview/save/detail/PDF/public quote total parity.
 
 ## Task 6: AI Input Schema and Qwen Provider Adapter
 
@@ -394,7 +444,7 @@
 
 - [ ] **Step 1: Replace freeform draft output with quote form draft output**
 
-  AI draft output type must be `scope_sections`, `pricing_candidates`, `clauses`, `assumptions`, and `questions_for_user`. It must reject price/rate/GST/total fields.
+  AI draft output type must be `job_type`, `maintenance_job_pack`, `scope_sections`, `pricing_candidates`, `clauses`, `assumptions`, and `questions_for_user`. It must reject price/rate/GST/total fields.
 
 - [ ] **Step 2: Add Qwen adapter boundary**
 
@@ -408,9 +458,18 @@
 
   `lib/ai/validator.ts` removes forbidden price fields, normalizes missing arrays, caps section count, marks uncertain photo-derived claims as `to_confirm`, and rejects hidden damage or unsupported scope.
 
+  Unsupported scope examples:
+  - plumbing, electrical, HVAC, structural, roofing repair, pest, asbestos, waterproofing diagnosis
+  - statements that claim hidden moisture source has been repaired without user notes
+  - photo-only exact sqm/lm or fixed price
+
+  When unsupported work appears in notes/photos, return a non-priced section or `questions_for_user` entry that tells the painter to confirm/exclude or refer to a specialist. Do not create a priced row.
+
 - [ ] **Step 5: Apply deterministic pricing after validation**
 
   `lib/ai/apply-deterministic-pricing.ts` maps accepted `pricing_candidates` to painter price rate snapshots and quote estimate items. If no matching rate exists, candidate stays `to_confirm` and does not affect subtotal.
+
+  Maintenance candidates must map only to existing painting pricing paths: Room Price Library, Advanced room/opening/trim, exterior estimate, day rate, manual/service add-on, or optional add-on. There is no generic maintenance rate table in v1.
 
 - [ ] **Step 6: Update tests away from legacy provider wording**
 
@@ -481,11 +540,13 @@
 
 - [ ] **Step 2: Collect safe AI inputs**
 
-  Inputs are job type, interior/exterior, scope notes, rough measurements, known surfaces, colour/sheen status, access notes, customer-visible tone, and optional photos. Avoid sending unrelated customer history unless needed for the selected draft.
+  Inputs are job type, interior/exterior/maintenance selection, optional `maintenance_job_pack`, scope notes, rough measurements, known surfaces, colour/sheen status, access notes, customer-visible tone, and optional photos. Avoid sending unrelated customer history unless needed for the selected draft.
 
 - [ ] **Step 3: Review before save**
 
   AI draft populates Scope Builder and Clause Library first. Painter can edit sections, remove uncertain claims, and map pricing candidates before any quote is sent.
+
+  Maintenance drafts must show unsupported or specialist work separately from included scope. The painter must explicitly exclude, rewrite, or remove unsupported work before sending.
 
 - [ ] **Step 4: Show price snapshot**
 
@@ -494,6 +555,20 @@
 - [ ] **Step 5: Track edit ratio**
 
   Store draft metadata for generated section count, edited section count, removed clauses, and accepted pricing candidates. This is used in Pro trial quality tracking and trial-to-paid conversion review.
+
+- [ ] **Step 6: Add maintenance start path**
+
+  Quote create start choices should include `Maintenance / touch-up`. The next choice should be a compact job pack picker:
+  - Wall patch + repaint
+  - Water damage repaint
+  - End-of-lease touch-up
+  - Pre-sale refresh
+  - Exterior maintenance repaint
+  - Deck/stain maintenance
+  - Mould treatment + repaint
+  - Strata/common area touch-up
+
+  This picker sets AI context only. It does not choose prices or skip review.
 
 ## Task 9: Photo Helper and Qwen Vision Input
 
@@ -528,7 +603,9 @@
 
 - [ ] **Step 5: Restrict photo output**
 
-  Qwen vision output may include visible surface candidates, condition hints, access/prep hints, and questions. It may not include exact sqm/lm, price, GST, or hidden damage statements.
+  Qwen vision output may include visible surface candidates, condition hints, access/prep hints, defect/photo refs, and questions. It may not include exact sqm/lm, price, GST, hidden damage statements, or claims that a moisture/mould source has been fixed.
+
+  For maintenance drafts, photo-derived condition should default to `measurement_status = photo_hint` or `to_confirm`, not `confirmed`.
 
 - [ ] **Step 6: Provide manual fallback**
 
@@ -569,7 +646,7 @@
 
 - [ ] **Step 1: Build deterministic task list first**
 
-  Query sent quotes without response, overdue invoices, soon-due invoices, approved quotes needing booking, and today/this-week jobs. This list must work without AI.
+  Query sent quotes without response, overdue invoices, soon-due invoices, approved quotes needing booking, today/this-week jobs, approved maintenance quotes needing access confirmation, and maintenance jobs missing before/after photo follow-up. This list must work without AI.
 
 - [ ] **Step 2: Add AI summary only for Pro**
 
@@ -597,9 +674,15 @@
 
 **Method:**
 
-- [ ] **Step 1: Support three message types**
+- [ ] **Step 1: Support four message types**
 
-  Message types are quote check-in, approved quote booking request, and invoice reminder. Each type has a narrow context schema.
+  Message types are quote check-in, approved quote booking request, invoice reminder, and maintenance explanation. Each type has a narrow context schema.
+
+  Maintenance explanation covers only painting-adjacent wording:
+  - water damage repaint limitation
+  - touch-up colour match limitation
+  - mould recurrence risk
+  - strata/common area access request
 
 - [ ] **Step 2: Require user review**
 
@@ -654,11 +737,16 @@
 
 - [ ] **Step 1: Prepare five pilot accounts**
 
-  Each pilot account needs business profile, price rates, quote template defaults, clause defaults, plan state, trial start/end date, and AI usage limit. P1/P2/P3 are the strongest painter trial candidates. P4/P5 remain insight or adjacent-user candidates unless current quote volume changes.
+  Each pilot account needs business profile, price rates, quote template defaults, maintenance clause defaults, plan state, trial start/end date, and AI usage limit. P1/P2/P3 are the strongest painter trial candidates. P4/P5 remain insight or adjacent-user candidates unless current quote volume changes.
 
 - [ ] **Step 2: Run first quote smoke test per painter**
 
   For each painter, create one quote draft from notes, one quote draft with photos if enabled, preview PDF, open public quote, and confirm `ai_usage_logs` captured cost metadata.
+
+  For Paint Buddy/internal validation, also create at least three maintenance-style drafts before pilot start:
+  - wall patch + repaint
+  - water damage repaint
+  - end-of-lease or strata/common area touch-up
 
 - [ ] **Step 3: Set trial baseline**
 
@@ -685,6 +773,8 @@
 | Usage cost leak | `ai_usage_logs` tests for success/failure/retry/cancelled attempts |
 | Assistant overreach | Today/Follow-up tests confirm no status/date/send side effects |
 | Legacy quote form coverage | fixture tests for Winchester interior, Edgar checklist, Paint Buddy exterior |
+| Maintenance scope creep | validator tests reject unsupported plumbing/electrical/structural/roofing/pest/asbestos/waterproofing claims |
+| Maintenance report-style quote coverage | fixture tests for water damage repaint, end-of-lease touch-up, strata/common area touch-up |
 
 ## Trial Start Checklist
 
@@ -695,6 +785,7 @@
 - [ ] Qwen provider adapter records provider/model/cost metadata.
 - [ ] Basic/Pro/Pro trial AI limits are enforced server-side.
 - [ ] Photo helper is capped by plan, compressed, cached, and clearly marked as scope support only.
+- [ ] Maintenance job packs are limited to painting-adjacent work and unsupported trades are rejected or marked `to_confirm`.
 - [ ] Today Assistant works with deterministic fallback.
 - [ ] Follow-up Writer creates draft only and cannot auto-send.
 - [ ] AI usage page shows current month counts and estimated cost.
@@ -712,3 +803,5 @@
 | Automatic send/follow-up/status change | v1 must keep user review and operational control |
 | Full billing dashboard | v1 needs Pro trial state, Stripe subscription mapping if used, cancel path, and conversion tracking; a polished billing dashboard can wait |
 | Full AI analytics dashboard | v1 only needs limits, cost, and usage counts |
+| Property manager portal / tenant-owner approval workflow | v1 only creates quote/report-style artifacts from existing quote data |
+| Generic maintenance estimating across all trades | too broad and high-liability before painting-first wedge proves paid usage |
