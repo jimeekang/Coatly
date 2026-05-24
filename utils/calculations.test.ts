@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculateQuickEstimate } from '@/utils/calculations';
 import { buildDefaultRateSettings } from '@/lib/rate-settings';
-import type { QuickInputs } from '@/types/quote';
+import type { QuickInputs, SelectedQuickPropertyPreset } from '@/types/quote';
 
 function makeSettings(overrides?: Partial<ReturnType<typeof buildDefaultRateSettings>>) {
   const base = buildDefaultRateSettings();
@@ -116,7 +116,7 @@ describe('calculateQuickEstimate', () => {
 
   it('uses a whole-property preset surface price split for selected scope pricing', () => {
     const rates = makeSettings();
-    const basePreset = {
+    const basePreset: SelectedQuickPropertyPreset = {
       preset_id: 'preset-surface-split',
       label: '2 Bed 2 Bath Apartment',
       property_type: 'apartment' as const,
@@ -126,7 +126,7 @@ describe('calculateQuickEstimate', () => {
       sqm: 89,
       storeys: null,
       condition: 'fair' as const,
-      scope: ['walls'] as const,
+      scope: ['walls'],
       wall_paint_system: 'repaint_2coat' as const,
       trim_paint_system: 'oil_2coat' as const,
       subtotal_cents: 0,

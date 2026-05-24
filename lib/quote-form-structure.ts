@@ -62,7 +62,15 @@ export type QuoteClauseItemView = {
   updated_at: string;
 };
 
-type QuoteScopeSectionRow = Omit<QuoteScopeSectionView, 'steps'> & {
+type QuoteScopeSectionRow = Omit<
+  QuoteScopeSectionView,
+  | 'steps'
+  | 'maintenance_job_pack'
+  | 'visible_defects'
+  | 'priority'
+  | 'report_context'
+  | 'unsupported_scope'
+> & {
   metadata: unknown;
 };
 

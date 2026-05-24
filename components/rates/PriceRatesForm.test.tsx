@@ -54,7 +54,7 @@ describe('PriceRatesForm pricing setup', () => {
   it('saves user-defined surface price shares for whole-property quick presets', async () => {
     const user = userEvent.setup();
     vi.mocked(updateRateSettingsAction).mockResolvedValue({
-      success: true,
+      error: null,
     });
     const rates = buildDefaultRateSettings();
     rates.pricing.preferred_pricing_method = 'detailed_quick';

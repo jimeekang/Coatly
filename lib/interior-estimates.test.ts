@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateInteriorEstimate,
   snapshotInteriorEstimateInput,
+  type InteriorEstimateInput,
 } from '@/lib/interior-estimates';
 import { buildDefaultRateSettings } from '@/lib/rate-settings';
 
@@ -682,11 +683,11 @@ describe('calculateInteriorEstimate', () => {
     userRates.window_unit_rates.oil_2coat.normal.window_and_frame = 20000;
     userRates.window_unit_rates.water_3coat_white_finish.normal.window_and_frame = 40000;
 
-    const baseEstimate = {
+    const baseEstimate: Omit<InteriorEstimateInput, 'trim_paint_system'> = {
       property_type: 'apartment' as const,
       estimate_mode: 'entire_property' as const,
       condition: 'fair' as const,
-      scope: ['walls', 'ceiling', 'trim'] as const,
+      scope: ['walls', 'ceiling', 'trim'],
       wall_paint_system: 'repaint_2coat' as const,
       property_details: {
         apartment_type: '2_bedroom_standard' as const,
@@ -727,11 +728,11 @@ describe('calculateInteriorEstimate', () => {
     userRates.window_unit_rates.oil_2coat.normal.window_and_frame = 20000;
     userRates.window_unit_rates.water_3coat_white_finish.normal.window_and_frame = 40000;
 
-    const baseEstimate = {
+    const baseEstimate: Omit<InteriorEstimateInput, 'trim_paint_system'> = {
       property_type: 'apartment' as const,
       estimate_mode: 'entire_property' as const,
       condition: 'fair' as const,
-      scope: ['walls', 'ceiling', 'trim'] as const,
+      scope: ['walls', 'ceiling', 'trim'],
       wall_paint_system: 'repaint_2coat' as const,
       property_details: {
         apartment_type: '2_bedroom_standard' as const,

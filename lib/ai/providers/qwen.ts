@@ -13,7 +13,9 @@ export const DEFAULT_QWEN_BASE_URL =
   'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
 
 export interface QwenProviderOptions {
-  env?: Pick<NodeJS.ProcessEnv, 'QWEN_API_KEY' | 'QWEN_MODEL' | 'QWEN_BASE_URL'>;
+  env?: Partial<
+    Pick<NodeJS.ProcessEnv, 'QWEN_API_KEY' | 'QWEN_MODEL' | 'QWEN_BASE_URL'>
+  >;
   fetch?: typeof fetch;
 }
 
