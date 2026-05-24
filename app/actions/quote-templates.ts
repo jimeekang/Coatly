@@ -13,6 +13,7 @@ import { STARTER_TEMPLATE_LIMIT } from '@/config/plans';
 export type QuoteTemplatePayload = Pick<
   QuoteCreateInput,
   | 'title'
+  | 'job_type'
   | 'complexity'
   | 'labour_margin_percent'
   | 'material_margin_percent'
@@ -20,6 +21,8 @@ export type QuoteTemplatePayload = Pick<
   | 'internal_notes'
   | 'working_days'
   | 'rooms'
+  | 'scope_sections'
+  | 'clause_items'
   | 'line_items'
 >;
 
@@ -37,18 +40,31 @@ export async function listQuoteTemplates(): Promise<{
   const supabase = await createServerClient();
   const user = await requireCurrentUser();
 
-  const { data, error } = await (supabase as unknown as {
-    from: (table: string) => {
-      select: (cols: string) => {
-        eq: (col: string, val: string) => {
-          order: (col: string, opts: { ascending: boolean }) => Promise<{
-            data: Array<{ id: string; name: string; payload: unknown; created_at: string }> | null;
-            error: { message: string } | null;
-          }>;
+  const { data, error } = await (
+    supabase as unknown as {
+      from: (table: string) => {
+        select: (cols: string) => {
+          eq: (
+            col: string,
+            val: string
+          ) => {
+            order: (
+              col: string,
+              opts: { ascending: boolean }
+            ) => Promise<{
+              data: Array<{
+                id: string;
+                name: string;
+                payload: unknown;
+                created_at: string;
+              }> | null;
+              error: { message: string } | null;
+            }>;
+          };
         };
       };
-    };
-  })
+    }
+  )
     .from('quote_templates')
     .select('id, name, payload, created_at')
     .eq('user_id', user.id)
@@ -68,7 +84,7 @@ export async function listQuoteTemplates(): Promise<{
 
 export async function saveQuoteTemplate(
   name: string,
-  payload: QuoteTemplatePayload,
+  payload: QuoteTemplatePayload
 ): Promise<{ error: string | null }> {
   if (!name.trim()) return { error: 'Template name is required' };
 
@@ -88,12 +104,17 @@ export async function saveQuoteTemplate(
         cols: string,
         opts: { count: 'exact'; head: true }
       ) => {
-        eq: (col: string, val: string) => Promise<{
+        eq: (
+          col: string,
+          val: string
+        ) => Promise<{
           count: number | null;
           error: { message: string } | null;
         }>;
       };
-      insert: (row: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      insert: (
+        row: Record<string, unknown>
+      ) => Promise<{ error: { message: string } | null }>;
     };
   };
 
@@ -127,7 +148,7 @@ export async function saveQuoteTemplate(
 }
 
 export async function deleteQuoteTemplate(
-  templateId: string,
+  templateId: string
 ): Promise<{ error: string | null }> {
   const supabase = await createServerClient();
   const user = await requireCurrentUser();
@@ -135,8 +156,14 @@ export async function deleteQuoteTemplate(
   const db2 = supabase as unknown as {
     from: (table: string) => {
       delete: () => {
-        eq: (col: string, val: string) => {
-          eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+        eq: (
+          col: string,
+          val: string
+        ) => {
+          eq: (
+            col: string,
+            val: string
+          ) => Promise<{ error: { message: string } | null }>;
         };
       };
     };

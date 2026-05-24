@@ -45,6 +45,12 @@ import {
   getBusinessRateSettings,
 } from '@/lib/businesses';
 import {
+  mapQuoteClauseItems,
+  mapQuoteScopeSections,
+  type QuoteClauseItemView,
+  type QuoteScopeSectionView,
+} from '@/lib/quote-form-structure';
+import {
   sendQuoteApprovalNotification,
   sendQuoteEmail,
 } from '@/lib/email/resend';
@@ -78,7 +84,11 @@ import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import type { Json } from '@/lib/supabase/types';
-import { MATERIAL_ITEM_CATEGORIES, type MaterialItemCategory, type QuoteCreateInput } from '@/lib/supabase/validators';
+import {
+  MATERIAL_ITEM_CATEGORIES,
+  type MaterialItemCategory,
+  type QuoteCreateInput,
+} from '@/lib/supabase/validators';
 import { formatAUD, formatDate } from '@/utils/format';
 
 type QuoteListRow = {
@@ -311,8 +321,8 @@ function hasQuoteFormStructurePayload(data: {
 }) {
   return Boolean(
     data.scope_sections?.length ||
-      data.clause_items?.length ||
-      data.ai_intake_snapshot
+    data.clause_items?.length ||
+    data.ai_intake_snapshot
   );
 }
 
@@ -351,7 +361,9 @@ async function insertQuoteFormStructure(
         area_label: section.area_label ?? null,
         surface_category: section.surface_category ?? null,
         is_optional: section.is_optional ?? false,
-        is_selected: section.is_optional ? (section.is_selected ?? false) : true,
+        is_selected: section.is_optional
+          ? (section.is_selected ?? false)
+          : true,
         pricing_status: section.pricing_status ?? 'unpriced',
         measurement_status: section.measurement_status ?? 'to_confirm',
         source: section.source ?? 'manual',
@@ -458,11 +470,11 @@ const QUOTE_CUSTOMER_SELECT =
   'customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, address_line2, city, state, postcode)';
 const QUOTE_LIST_SELECT = `id, user_id, customer_id, customer_email, customer_address, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_LIST_SELECT_LEGACY = `id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const QUOTE_DETAIL_SELECT = `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT = `id, user_id, customer_id, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_DETAIL_SELECT = `id, user_id, customer_id, job_type, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT = `id, user_id, customer_id, job_type, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 
-const PUBLIC_QUOTE_DETAIL_SELECT = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, ${QUOTE_CUSTOMER_SELECT}`;
+const PUBLIC_QUOTE_DETAIL_SELECT = `id, user_id, job_type, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, deposit_percent, ${QUOTE_CUSTOMER_SELECT}`;
 
 const PUBLIC_QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
@@ -498,6 +510,8 @@ type QuoteHydratedRelations = {
   }>;
   estimate_items: QuoteDetail['estimate_items'];
   line_items: QuoteDetail['line_items'];
+  scope_sections: QuoteScopeSectionView[];
+  clause_items: QuoteClauseItemView[];
 };
 
 type PublicQuoteRow = {
@@ -509,6 +523,7 @@ type PublicQuoteRow = {
   approval_signature?: string | null;
   customer_email?: string | null;
   customer_address?: string | null;
+  job_type?: string | null;
   quote_number: string;
   title: string | null;
   status: string;
@@ -520,6 +535,7 @@ type PublicQuoteRow = {
   total_cents: number;
   discount_cents?: number | null;
   manual_adjustment_cents?: number | null;
+  deposit_percent?: number | null;
   customer: QuoteListRow['customer'];
 };
 
@@ -527,6 +543,8 @@ type PublicQuoteHydratedRelations = {
   rooms: PublicQuoteDetail['rooms'];
   estimate_items: PublicQuoteDetail['estimate_items'];
   line_items: PublicQuoteDetail['line_items'];
+  scope_sections: QuoteScopeSectionView[];
+  clause_items: QuoteClauseItemView[];
 };
 
 type PublicQuoteApprovalRow = {
@@ -563,7 +581,9 @@ function resolveQuotePricingPreviewForSave(
     : null;
   const exteriorEstimateResult = data.exterior_estimate
     ? calculateExteriorEstimate(
-        data.exterior_estimate as Parameters<typeof calculateExteriorEstimate>[0],
+        data.exterior_estimate as Parameters<
+          typeof calculateExteriorEstimate
+        >[0],
         effectiveRates
       )
     : null;
@@ -631,7 +651,10 @@ function resolveQuotePricingPreviewForSave(
       base_subtotal_cents: result.subtotal_cents,
       ...totals,
     };
-  } else if (pricingMethod === 'manual' && rawMethodInputs?.method === 'manual') {
+  } else if (
+    pricingMethod === 'manual' &&
+    rawMethodInputs?.method === 'manual'
+  ) {
     const inputs: ManualInputs = rawMethodInputs.inputs;
     const result = calculateManualQuote(inputs);
     const totals = composeQuoteTotals({
@@ -659,7 +682,9 @@ function resolveQuotePricingPreviewForSave(
   } else if (interiorEstimate) {
     const base = interiorEstimate.subtotal_cents;
     const labourMarkup = Math.round(base * (data.labour_margin_percent / 100));
-    const materialMarkup = Math.round(base * (data.material_margin_percent / 100));
+    const materialMarkup = Math.round(
+      base * (data.material_margin_percent / 100)
+    );
     const subtotal = base + labourMarkup + materialMarkup;
     const totals = composeQuoteTotals({
       base_subtotal_cents: subtotal,
@@ -716,7 +741,10 @@ function getFirstQuoteRateBoundaryError(
   if (data.interior_estimate) {
     return (
       getFirstBlockingRateSetupIssue(
-        getSelectedAdvancedEstimateIssues(data.interior_estimate, effectiveRates)
+        getSelectedAdvancedEstimateIssues(
+          data.interior_estimate,
+          effectiveRates
+        )
       )?.message ?? null
     );
   }
@@ -755,6 +783,7 @@ async function sendQuoteDocumentEmail(input: {
       abn: businessBranding?.abn ?? null,
       phone: businessBranding?.phone ?? null,
       email: businessBranding?.email ?? input.userEmail,
+      businessAddress: businessBranding?.address ?? null,
       logoUrl,
     })
   );
@@ -928,6 +957,45 @@ async function loadQuoteRelations(
     return { data: null, error: lineItemsError.message };
   }
 
+  const { data: scopeSections, error: scopeSectionsError } = await supabase
+    .from('quote_scope_sections')
+    .select(
+      'id, quote_id, section_kind, title, description, area_label, surface_category, is_optional, is_selected, pricing_status, measurement_status, source, metadata, sort_order, created_at, updated_at'
+    )
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (scopeSectionsError) {
+    return { data: null, error: scopeSectionsError.message };
+  }
+
+  const scopeSectionIds = scopeSections?.map((section) => section.id) ?? [];
+  const { data: scopeSteps, error: scopeStepsError } = scopeSectionIds.length
+    ? await supabase
+        .from('quote_scope_steps')
+        .select(
+          'id, section_id, step_type, label, description, prep_type, paint_system, coats_min, coats_max, product_name, colour_status, colour, sheen, requires_confirmation, is_customer_visible, metadata, sort_order, created_at, updated_at'
+        )
+        .in('section_id', scopeSectionIds)
+        .order('sort_order', { ascending: true })
+    : { data: [], error: null };
+
+  if (scopeStepsError) {
+    return { data: null, error: scopeStepsError.message };
+  }
+
+  const { data: clauseItems, error: clauseItemsError } = await supabase
+    .from('quote_clause_items')
+    .select(
+      'id, quote_id, section_id, clause_key, category, title, body, severity, source, is_customer_visible, metadata, sort_order, created_at, updated_at'
+    )
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (clauseItemsError) {
+    return { data: null, error: clauseItemsError.message };
+  }
+
   return {
     data: {
       rooms:
@@ -988,6 +1056,13 @@ async function loadQuoteRelations(
           is_selected: item.is_optional ? (item.is_selected ?? false) : true,
         })
       ),
+      scope_sections: mapQuoteScopeSections(
+        (scopeSections ?? []) as Parameters<typeof mapQuoteScopeSections>[0],
+        (scopeSteps ?? []) as Parameters<typeof mapQuoteScopeSections>[1]
+      ),
+      clause_items: mapQuoteClauseItems(
+        (clauseItems ?? []) as Parameters<typeof mapQuoteClauseItems>[0]
+      ),
     },
     error: null,
   };
@@ -1047,6 +1122,45 @@ async function loadPublicQuoteRelations(
 
   if (lineItemsError) {
     return { data: null, error: lineItemsError.message };
+  }
+
+  const { data: scopeSections, error: scopeSectionsError } = await supabase
+    .from('quote_scope_sections')
+    .select(
+      'id, quote_id, section_kind, title, description, area_label, surface_category, is_optional, is_selected, pricing_status, measurement_status, source, metadata, sort_order, created_at, updated_at'
+    )
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (scopeSectionsError) {
+    return { data: null, error: scopeSectionsError.message };
+  }
+
+  const scopeSectionIds = scopeSections?.map((section) => section.id) ?? [];
+  const { data: scopeSteps, error: scopeStepsError } = scopeSectionIds.length
+    ? await supabase
+        .from('quote_scope_steps')
+        .select(
+          'id, section_id, step_type, label, description, prep_type, paint_system, coats_min, coats_max, product_name, colour_status, colour, sheen, requires_confirmation, is_customer_visible, metadata, sort_order, created_at, updated_at'
+        )
+        .in('section_id', scopeSectionIds)
+        .order('sort_order', { ascending: true })
+    : { data: [], error: null };
+
+  if (scopeStepsError) {
+    return { data: null, error: scopeStepsError.message };
+  }
+
+  const { data: clauseItems, error: clauseItemsError } = await supabase
+    .from('quote_clause_items')
+    .select(
+      'id, quote_id, section_id, clause_key, category, title, body, severity, source, is_customer_visible, metadata, sort_order, created_at, updated_at'
+    )
+    .eq('quote_id', quoteId)
+    .order('sort_order', { ascending: true });
+
+  if (clauseItemsError) {
+    return { data: null, error: clauseItemsError.message };
   }
 
   return {
@@ -1128,6 +1242,13 @@ async function loadPublicQuoteRelations(
         is_optional: item.is_optional ?? false,
         is_selected: item.is_optional ? (item.is_selected ?? false) : true,
       })),
+      scope_sections: mapQuoteScopeSections(
+        (scopeSections ?? []) as Parameters<typeof mapQuoteScopeSections>[0],
+        (scopeSteps ?? []) as Parameters<typeof mapQuoteScopeSections>[1]
+      ),
+      clause_items: mapQuoteClauseItems(
+        (clauseItems ?? []) as Parameters<typeof mapQuoteClauseItems>[0]
+      ),
     },
     error: null,
   };
@@ -1160,6 +1281,8 @@ function mapHydratedPublicQuoteDetail(
   relations: PublicQuoteHydratedRelations
 ): PublicQuoteDetail {
   return {
+    job_type:
+      (quote.job_type as PublicQuoteDetail['job_type'] | null) ?? 'interior',
     approved_at: quote.approved_at ?? null,
     approved_by_name: quote.approved_by_name ?? null,
     approved_by_email: quote.approved_by_email ?? null,
@@ -1177,6 +1300,7 @@ function mapHydratedPublicQuoteDetail(
     total_cents: quote.total_cents,
     discount_cents: quote.discount_cents ?? 0,
     manual_adjustment_cents: quote.manual_adjustment_cents ?? 0,
+    deposit_percent: quote.deposit_percent ?? 0,
     working_days:
       (quote as unknown as { working_days?: number | null }).working_days ??
       null,
@@ -1188,6 +1312,8 @@ function mapHydratedPublicQuoteDetail(
     rooms: relations.rooms,
     estimate_items: relations.estimate_items,
     line_items: relations.line_items,
+    scope_sections: relations.scope_sections,
+    clause_items: relations.clause_items,
   };
 }
 
@@ -2143,7 +2269,10 @@ export async function setPublicQuoteOptionalLineItemSelection(
       valid_until: quote.valid_until,
     }) !== 'sent'
   ) {
-    return { error: 'This quote is no longer available for add-on changes.', selectedIds: [] };
+    return {
+      error: 'This quote is no longer available for add-on changes.',
+      selectedIds: [],
+    };
   }
 
   const linkedInvoicesResult = await getLinkedInvoiceCountForQuote(
@@ -2151,7 +2280,10 @@ export async function setPublicQuoteOptionalLineItemSelection(
     quote.id
   );
   if (linkedInvoicesResult.error || linkedInvoicesResult.count > 0) {
-    return { error: 'This quote already has a linked invoice.', selectedIds: [] };
+    return {
+      error: 'This quote already has a linked invoice.',
+      selectedIds: [],
+    };
   }
 
   const { data: lineItems, error: lineItemsError } = await supabase
@@ -2234,7 +2366,9 @@ export async function setPublicQuoteOptionalLineItemSelection(
   return {
     error: null,
     selectedIds: (lineItems ?? [])
-      .filter((item) => (item.id === lineItemId ? isSelected : item.is_selected))
+      .filter((item) =>
+        item.id === lineItemId ? isSelected : item.is_selected
+      )
       .map((item) => item.id),
   };
 }
@@ -2772,7 +2906,8 @@ export async function updateQuote(
     .from('quote_estimate_items')
     .delete()
     .eq('quote_id', quoteId);
-  if (estimateItemsDeleteError) return { error: estimateItemsDeleteError.message };
+  if (estimateItemsDeleteError)
+    return { error: estimateItemsDeleteError.message };
 
   const { error: lineItemsDeleteError } = await supabase
     .from('quote_line_items')

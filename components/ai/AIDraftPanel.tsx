@@ -43,7 +43,7 @@ export function AIDraftPanel({
             AI prepares a structured draft only. You still review the form before saving.
           </p>
           <p className="mt-2 rounded-xl border border-primary-container/40 bg-surface-container-lowest/80 px-3 py-2 text-xs text-on-surface-variant">
-            AI may use business, customer, and job context to draft this form. Check all details before applying or saving.
+            AI drafts scope and questions only. Prices stay tied to your saved rates and must be reviewed before saving.
           </p>
         </div>
       </div>

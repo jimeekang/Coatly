@@ -34,6 +34,12 @@ function SpinnerIcon() {
   );
 }
 
+function getQuotePdfFilename(quoteNumber: string) {
+  const safeQuoteNumber =
+    quoteNumber.replace(/[^a-z0-9_-]+/gi, '-') || 'document';
+  return `quote-${safeQuoteNumber}.pdf`;
+}
+
 export function QuoteActions({
   quoteId,
   quoteNumber,
@@ -274,6 +280,9 @@ export function QuoteActions({
         {/* PDF */}
         <a
           href={`/api/pdf/quote?id=${quoteId}`}
+          target="_blank"
+          rel="noreferrer"
+          download={getQuotePdfFilename(quoteNumber)}
           className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors"
         >
           <svg

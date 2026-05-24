@@ -11,6 +11,7 @@ import {
   QUOTE_COATING_LABELS,
   QUOTE_STATUS_LABELS,
   QUOTE_SURFACE_LABELS,
+  calculateDepositCents,
   calculateQuoteTotals,
   groupQuoteLineItemsByCategory,
 } from '@/lib/quotes';
@@ -43,12 +44,27 @@ const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-pm-surface text-pm-secondary border-pm-border',
 };
 
+function getQuotePdfFilename(quoteNumber: string) {
+  const safeQuoteNumber =
+    quoteNumber.replace(/[^a-z0-9_-]+/gi, '-') || 'document';
+  return `quote-${safeQuoteNumber}.pdf`;
+}
+
+function formatLabel(value: string | null | undefined) {
+  if (!value) return null;
+  return value
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 function PriceSummary({
   displaySubtotal,
   displayGst,
   displayTotal,
   displayDiscount,
   displayAdjustment,
+  displayDeposit,
+  depositPercent,
   optionalSelectedCents,
   optionalAvailableCents,
   validUntil,
@@ -60,6 +76,8 @@ function PriceSummary({
   displayTotal: number;
   displayDiscount: number;
   displayAdjustment: number;
+  displayDeposit: number;
+  depositPercent: number;
   optionalSelectedCents: number;
   optionalAvailableCents: number;
   validUntil: string | null;
@@ -93,7 +111,7 @@ function PriceSummary({
       {displayDiscount > 0 && (
         <div className="border-pm-border/60 flex items-center justify-between border-t py-2.5 text-sm">
           <span className="text-pm-secondary">Discount</span>
-          <span className="font-medium text-pm-coral-dark">
+          <span className="text-pm-coral-dark font-medium">
             -{formatAUD(displayDiscount)}
           </span>
         </div>
@@ -110,7 +128,7 @@ function PriceSummary({
           <span
             className={
               displayAdjustment < 0
-                ? 'font-medium text-pm-coral-dark'
+                ? 'text-pm-coral-dark font-medium'
                 : 'text-pm-body font-medium'
             }
           >
@@ -136,6 +154,24 @@ function PriceSummary({
           <p className="text-pm-secondary mt-2 text-xs">
             Valid until {formatDate(validUntil)}
           </p>
+        )}
+        {displayDeposit > 0 && (
+          <div className="border-pm-border/60 mt-3 border-t pt-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-pm-secondary">
+                Deposit ({depositPercent}%)
+              </span>
+              <span className="text-pm-body font-medium">
+                {formatAUD(displayDeposit)}
+              </span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-sm">
+              <span className="text-pm-secondary">Balance</span>
+              <span className="text-pm-body font-medium">
+                {formatAUD(Math.max(0, displayTotal - displayDeposit))}
+              </span>
+            </div>
+          </div>
         )}
         {approvedAt && (
           <div className="mt-3 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2">
@@ -241,9 +277,20 @@ export function PublicQuoteClient({
     })),
   });
   const displaySubtotal = displayTotals.subtotal_cents;
-  const displayDiscount = displaySubtotal - displayTotals.discounted_subtotal_cents;
+  const displayDiscount =
+    displaySubtotal - displayTotals.discounted_subtotal_cents;
   const displayGst = displayTotals.gst_cents;
   const displayTotal = displayTotals.total_cents;
+  const displayDeposit = calculateDepositCents(
+    displayTotal,
+    quote.deposit_percent
+  );
+  const scopeSections = quote.scope_sections.filter(
+    (section) => !section.is_optional || section.is_selected
+  );
+  const reportSections = scopeSections.filter(
+    (section) => section.report_context
+  );
 
   const canApprove = quote.status === 'sent';
   const canEditOptional = quote.status === 'sent';
@@ -289,6 +336,9 @@ export function PublicQuoteClient({
                   </span>
                   <a
                     href={`/api/pdf/quote?token=${encodeURIComponent(token)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    download={getQuotePdfFilename(quote.quote_number)}
                     className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/30 px-4 text-xs font-semibold text-white transition-colors hover:bg-white/10"
                   >
                     PDF
@@ -338,6 +388,8 @@ export function PublicQuoteClient({
                   displayTotal={displayTotal}
                   displayDiscount={displayDiscount}
                   displayAdjustment={quote.manual_adjustment_cents}
+                  displayDeposit={displayDeposit}
+                  depositPercent={quote.deposit_percent}
                   optionalSelectedCents={optionalSelectedCents}
                   optionalAvailableCents={optionalAvailableCents}
                   validUntil={quote.valid_until}
@@ -347,12 +399,105 @@ export function PublicQuoteClient({
             </div>
           </div>
 
-          {/* Scope of work */}
-          {(quote.rooms.length > 0 || quote.estimate_items.length > 0) && (
+          {/* Customer-visible scope */}
+          {scopeSections.length > 0 && (
             <SectionCard>
               <SectionHeader
                 label="Scope of Work"
-                description="Areas and surfaces included in this quote"
+                description="Customer-visible work sections and site notes"
+              />
+              <div className="space-y-4 p-5">
+                {reportSections.length > 0 && (
+                  <div className="border-pm-border bg-pm-surface rounded-xl border px-4 py-3">
+                    <p className="text-pm-body text-sm font-semibold">
+                      Maintenance Summary
+                    </p>
+                    <div className="mt-2 space-y-1.5">
+                      {reportSections.map((section) => (
+                        <p
+                          key={section.id}
+                          className="text-pm-secondary text-sm"
+                        >
+                          {section.area_label ? `${section.area_label}: ` : ''}
+                          {section.title}
+                          {section.visible_defects.length > 0
+                            ? ` (${section.visible_defects.join(', ')})`
+                            : ''}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {scopeSections.map((section) => (
+                  <div
+                    key={section.id}
+                    className="border-pm-border overflow-hidden rounded-xl border"
+                  >
+                    <div className="bg-pm-surface flex items-start justify-between gap-4 px-4 py-3">
+                      <div>
+                        <p className="text-pm-body font-semibold">
+                          {section.title}
+                        </p>
+                        <p className="text-pm-secondary mt-0.5 text-xs capitalize">
+                          {section.area_label ||
+                            formatLabel(section.section_kind)}
+                        </p>
+                      </div>
+                      <span className="text-pm-teal shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase">
+                        {formatLabel(section.pricing_status) ?? 'Included'}
+                      </span>
+                    </div>
+                    <div className="space-y-3 bg-white px-4 py-3">
+                      {section.description && (
+                        <p className="text-pm-body text-sm whitespace-pre-wrap">
+                          {section.description}
+                        </p>
+                      )}
+                      <div className="text-pm-secondary flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                        <span>
+                          Measurement:{' '}
+                          {formatLabel(section.measurement_status) ??
+                            'To Confirm'}
+                        </span>
+                        {section.surface_category && (
+                          <span>
+                            Surface: {formatLabel(section.surface_category)}
+                          </span>
+                        )}
+                      </div>
+                      {section.visible_defects.length > 0 && (
+                        <p className="text-pm-secondary text-xs">
+                          Visible defects: {section.visible_defects.join(', ')}
+                        </p>
+                      )}
+                      {section.steps.length > 0 && (
+                        <div className="border-pm-border/60 divide-pm-border/60 divide-y rounded-lg border">
+                          {section.steps.map((step) => (
+                            <div key={step.id} className="px-3 py-2">
+                              <p className="text-pm-secondary text-[10px] font-bold tracking-widest uppercase">
+                                {step.label || formatLabel(step.step_type)}
+                              </p>
+                              <p className="text-pm-body mt-0.5 text-sm">
+                                {step.description}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Pricing summary */}
+          {(quote.rooms.length > 0 || quote.estimate_items.length > 0) && (
+            <SectionCard>
+              <SectionHeader
+                label="Pricing Summary"
+                description="Priced rows included in this quote"
               />
               <div className="space-y-3 p-5">
                 {quote.rooms.map((room) => (
@@ -514,6 +659,28 @@ export function PublicQuoteClient({
             </SectionCard>
           )}
 
+          {/* Clauses */}
+          {quote.clause_items.length > 0 && (
+            <SectionCard>
+              <SectionHeader
+                label="Clauses & Terms"
+                description="Customer-visible inclusions, exclusions, and site conditions"
+              />
+              <div className="divide-pm-border/60 divide-y p-5 pt-2">
+                {quote.clause_items.map((clause) => (
+                  <div key={clause.id} className="py-3">
+                    <p className="text-pm-body text-sm font-semibold">
+                      {clause.title}
+                    </p>
+                    <p className="text-pm-secondary mt-1 text-sm whitespace-pre-wrap">
+                      {clause.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
           {/* Approval */}
           <SectionCard>
             <SectionHeader
@@ -553,8 +720,12 @@ export function PublicQuoteClient({
                     bookingAvailability?.workingDays ?? quote.working_days ?? 1
                   }
                   initialLoadError={bookingAvailability?.error ?? null}
-                  initialAvailabilityStatus={bookingAvailability?.availabilityStatus}
-                  initialAvailabilityMessage={bookingAvailability?.availabilityMessage}
+                  initialAvailabilityStatus={
+                    bookingAvailability?.availabilityStatus
+                  }
+                  initialAvailabilityMessage={
+                    bookingAvailability?.availabilityMessage
+                  }
                   contractorName={business?.name ?? null}
                   contractorPhone={business?.phone ?? null}
                   contractorEmail={business?.email ?? null}
@@ -614,6 +785,8 @@ export function PublicQuoteClient({
                   displayTotal={displayTotal}
                   displayDiscount={displayDiscount}
                   displayAdjustment={quote.manual_adjustment_cents}
+                  displayDeposit={displayDeposit}
+                  depositPercent={quote.deposit_percent}
                   optionalSelectedCents={optionalSelectedCents}
                   optionalAvailableCents={optionalAvailableCents}
                   validUntil={quote.valid_until}

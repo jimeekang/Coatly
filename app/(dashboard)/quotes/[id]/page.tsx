@@ -28,7 +28,12 @@ export default async function QuoteDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ jobError?: string; emailDemo?: string; editLocked?: string }>;
+  searchParams?: Promise<{
+    jobError?: string;
+    emailDemo?: string;
+    emailSent?: string;
+    editLocked?: string;
+  }>;
 }) {
   const { id } = await params;
   const resolvedSearchParams = (await searchParams) ?? {};
@@ -43,7 +48,9 @@ export default async function QuoteDetailPage({
   const linkedInvoiceSummary = linkedInvoiceResult.data?.summary ?? null;
   const jobError =
     typeof resolvedSearchParams.jobError === 'string' ? resolvedSearchParams.jobError : null;
-  const emailDemo = resolvedSearchParams.emailDemo === '1';
+  const emailSent =
+    resolvedSearchParams.emailSent === '1' ||
+    resolvedSearchParams.emailDemo === '1';
   const editLocked = resolvedSearchParams.editLocked === '1';
 
   const hasManualRooms = (quote?.rooms?.length ?? 0) > 0;
@@ -88,6 +95,8 @@ export default async function QuoteDetailPage({
   const publicQuoteUrl = quote?.public_share_token
     ? `${APP_URL}/q/${quote.public_share_token}`
     : null;
+  const emailSentRecipient =
+    quote?.customer_email?.trim() || quote?.customer.email || 'the customer';
   const remainingLinkedInvoiceTotal =
     quote && linkedInvoiceSummary
       ? Math.max(quote.total_cents - linkedInvoiceSummary.billed_total_cents, 0)
@@ -141,10 +150,10 @@ export default async function QuoteDetailPage({
       ) : (
         <>
           {/* Banners */}
-          {emailDemo && (
+          {emailSent && (
             <div className="mb-4 rounded-lg border border-primary/20 bg-primary/8 px-4 py-3">
               <p className="text-sm text-primary">
-                Quote email sent to {quote.customer.email ?? 'the customer'}.
+                Quote email sent to {emailSentRecipient}.
               </p>
             </div>
           )}

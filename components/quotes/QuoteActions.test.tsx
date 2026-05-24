@@ -59,6 +59,24 @@ describe('QuoteActions', () => {
     });
   });
 
+  it('opens the quote PDF in a separate downloadable tab', () => {
+    render(
+      <QuoteActions
+        quoteId="quote-1"
+        quoteNumber="QUO-0010"
+        status="sent"
+        publicQuoteUrl={null}
+      />
+    );
+
+    const pdfLink = screen.getByRole('link', { name: 'PDF' });
+
+    expect(pdfLink).toHaveAttribute('href', '/api/pdf/quote?id=quote-1');
+    expect(pdfLink).toHaveAttribute('target', '_blank');
+    expect(pdfLink).toHaveAttribute('rel', 'noreferrer');
+    expect(pdfLink).toHaveAttribute('download', 'quote-QUO-0010.pdf');
+  });
+
   it('approves then converts to job from More menu when quote is not approved yet', async () => {
     const user = userEvent.setup();
 

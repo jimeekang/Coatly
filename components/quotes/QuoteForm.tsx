@@ -3,7 +3,15 @@
 import { useMemo, useState, useTransition, type ElementType } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Zap, Layers, CalendarDays, PenLine, Home, Trees } from 'lucide-react';
+import {
+  Zap,
+  Layers,
+  CalendarDays,
+  PenLine,
+  Home,
+  Trees,
+  Wrench,
+} from 'lucide-react';
 import {
   FormField,
   formControlClassName,
@@ -48,7 +56,10 @@ import type {
   MaterialItem,
   QuoteLineItemFormInput,
 } from '@/lib/supabase/validators';
-import { DEFAULT_RATE_SETTINGS, type UserRateSettings } from '@/lib/rate-settings';
+import {
+  DEFAULT_RATE_SETTINGS,
+  type UserRateSettings,
+} from '@/lib/rate-settings';
 import { LineItemsSection } from '@/components/quotes/LineItemsSection';
 import {
   QuoteExtraLineItems,
@@ -56,6 +67,8 @@ import {
   type ExtraLineItemInput,
 } from '@/components/quotes/QuoteExtraLineItems';
 import { QuoteStatusCard } from '@/components/quotes/QuoteStatusCard';
+import { ScopeBuilder } from '@/components/quotes/ScopeBuilder';
+import { ClauseLibraryPicker } from '@/components/quotes/ClauseLibraryPicker';
 import { PRICING_METHOD_LABELS } from '@/lib/rate-settings';
 import { formatAUD } from '@/utils/format';
 import type {
@@ -64,6 +77,10 @@ import type {
   RoomRateInputs,
   ManualInputs,
   QuickInputs,
+  QuoteJobType,
+  QuoteAiIntakeSnapshotInput,
+  QuoteClauseItemInput,
+  QuoteScopeSectionInput,
 } from '@/types/quote';
 import {
   calculateDayRateQuote,
@@ -90,7 +107,12 @@ import { calculateExteriorEstimate } from '@/lib/exterior-estimates';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** Which high-level pricing strategy the user has chosen */
-type PricingStrategy = 'hybrid' | 'day_rate' | 'room_rate' | 'manual' | 'detailed_quick';
+type PricingStrategy =
+  | 'hybrid'
+  | 'day_rate'
+  | 'room_rate'
+  | 'manual'
+  | 'detailed_quick';
 
 const ROOM_TYPES = [
   'bedroom',
@@ -117,14 +139,15 @@ type LegacyRoomDefault = {
   length_m: number | null;
   width_m: number | null;
   height_m: number | null;
-	  surfaces?: Array<{
-	    surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
-	    area_m2?: number | null;
-	  }>;
-	};
+  surfaces?: Array<{
+    surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
+    area_m2?: number | null;
+  }>;
+};
 
 export type QuoteFormDefaultValues = {
   customer_id: string;
+  job_type?: QuoteJobType;
   title: string;
   status: QuoteStatus;
   valid_until: string;
@@ -139,6 +162,9 @@ export type QuoteFormDefaultValues = {
   pricing_method?: PricingMethod | null;
   pricing_method_inputs?: Record<string, unknown> | null;
   interior_estimate?: InteriorEstimateInput | null;
+  scope_sections?: QuoteScopeSectionInput[];
+  clause_items?: QuoteClauseItemInput[];
+  ai_intake_snapshot?: QuoteAiIntakeSnapshotInput;
   // Line items pre-fill
   line_items?: QuoteLineItemFormInput[];
   extra_line_items?: ExtraLineItemInput[];
@@ -173,7 +199,12 @@ type SummaryLine = {
 function normalizePreferredPricingStrategy(
   method?: PricingMethod | null
 ): PricingStrategy {
-  if (method === 'day_rate' || method === 'room_rate' || method === 'manual' || method === 'detailed_quick') {
+  if (
+    method === 'day_rate' ||
+    method === 'room_rate' ||
+    method === 'manual' ||
+    method === 'detailed_quick'
+  ) {
     return method;
   }
 
@@ -349,8 +380,11 @@ function buildInitialAdvancedEstimate(
           ? str(room.surfaces.find((s) => s.surface_type === 'walls')?.area_m2)
           : '',
       ceiling_area_m2:
-        room.surfaces?.find((s) => s.surface_type === 'ceiling')?.area_m2 != null
-          ? str(room.surfaces.find((s) => s.surface_type === 'ceiling')?.area_m2)
+        room.surfaces?.find((s) => s.surface_type === 'ceiling')?.area_m2 !=
+        null
+          ? str(
+              room.surfaces.find((s) => s.surface_type === 'ceiling')?.area_m2
+            )
           : '',
       trim_linear_m: '',
       include_walls:
@@ -395,20 +429,20 @@ function buildAdvancedEstimatePayload(
     estimate.estimate_mode === 'specific_areas'
       ? emptySpecificAreaDetails
       : estimate.property_type === 'apartment'
-      ? {
-          apartment_type: estimate.apartment_type,
-          sqm: num(estimate.apartment_sqm),
-          bedrooms: null,
-          bathrooms: null,
-          storeys: null,
-        }
-      : {
-          apartment_type: null,
-          sqm: num(estimate.house_sqm),
-          bedrooms: num(estimate.house_bedrooms),
-          bathrooms: num(estimate.house_bathrooms),
-          storeys: estimate.house_storeys,
-        };
+        ? {
+            apartment_type: estimate.apartment_type,
+            sqm: num(estimate.apartment_sqm),
+            bedrooms: null,
+            bathrooms: null,
+            storeys: null,
+          }
+        : {
+            apartment_type: null,
+            sqm: num(estimate.house_sqm),
+            bedrooms: num(estimate.house_bedrooms),
+            bathrooms: num(estimate.house_bathrooms),
+            storeys: estimate.house_storeys,
+          };
 
   if (estimate.estimate_mode === 'entire_property') {
     return {
@@ -564,10 +598,7 @@ function getQuoteRateSetupIssues(
         ) ?? 'repaint_2coat',
     } as InteriorEstimateInput;
 
-    return getSelectedAdvancedEstimateIssues(
-      interiorEstimate,
-      rateSettings
-    );
+    return getSelectedAdvancedEstimateIssues(interiorEstimate, rateSettings);
   }
 
   return [];
@@ -634,7 +665,7 @@ function PricingSummaryPanel({
 
   return (
     <div className="space-y-4">
-      <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm">
+      <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
@@ -653,7 +684,7 @@ function PricingSummaryPanel({
                     setIsEditingNumber(false);
                   }
                 }}
-                className="border-primary text-on-surface focus:ring-primary/20 mt-1 min-h-11 w-full rounded-lg border bg-surface-container-lowest px-2 text-lg font-semibold focus:ring-2 focus:outline-none"
+                className="border-primary text-on-surface focus:ring-primary/20 bg-surface-container-lowest mt-1 min-h-11 w-full rounded-lg border px-2 text-lg font-semibold focus:ring-2 focus:outline-none"
               />
             ) : (
               <button
@@ -710,10 +741,14 @@ function PricingSummaryPanel({
         </div>
       </section>
 
-      <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm">
+      <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm">
         <div className="mb-3">
-          <h3 className="text-on-surface text-base font-bold leading-snug">Price Summary</h3>
-          <p className="text-on-surface-variant mt-0.5 text-xs">Live internal pricing while you build the quote.</p>
+          <h3 className="text-on-surface text-base leading-snug font-bold">
+            Price Summary
+          </h3>
+          <p className="text-on-surface-variant mt-0.5 text-xs">
+            Live internal pricing while you build the quote.
+          </p>
         </div>
 
         {roomLines.length > 0 && (
@@ -792,7 +827,7 @@ function PricingSummaryPanel({
                   value={discountInput}
                   onChange={(e) => onDiscountInputChange(e.target.value)}
                   placeholder="0.00"
-                  className="border-outline-variant text-on-surface focus:border-error focus:ring-error/20 h-11 flex-1 rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline-variant text-on-surface focus:border-error focus:ring-error/20 bg-surface-container-lowest h-11 flex-1 rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
                 />
                 {discountCents > 0 && (
                   <span className="text-error text-sm font-medium">
@@ -850,9 +885,11 @@ function PricingSummaryPanel({
                   value={depositInput}
                   onChange={(e) => onDepositInputChange(e.target.value)}
                   placeholder="50"
-                  className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-20 rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 bg-surface-container-lowest h-11 w-20 rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
                 />
-                <span className="text-on-surface-variant text-sm">% of total</span>
+                <span className="text-on-surface-variant text-sm">
+                  % of total
+                </span>
                 {depositPercent > 0 && (
                   <span className="text-primary ml-auto text-sm font-medium">
                     = {formatAUD(Math.round((total * depositPercent) / 100))}
@@ -1047,6 +1084,15 @@ export function QuoteForm({
   const [extraLineItems, setExtraLineItems] = useState<ExtraLineItemInput[]>(
     defaultValues?.extra_line_items ?? []
   );
+  const [jobType, setJobType] = useState<QuoteJobType>(
+    defaultValues?.job_type ?? 'interior'
+  );
+  const [scopeSections, setScopeSections] = useState<QuoteScopeSectionInput[]>(
+    defaultValues?.scope_sections ?? []
+  );
+  const [clauseItems, setClauseItems] = useState<QuoteClauseItemInput[]>(
+    defaultValues?.clause_items ?? []
+  );
 
   const [form, setForm] = useState({
     customer_id: defaultValues?.customer_id ?? '',
@@ -1080,7 +1126,7 @@ export function QuoteForm({
 
   // Interior / exterior scope (only affects hybrid method)
   const [quoteScope, setQuoteScope] = useState<'interior' | 'exterior'>(
-    'interior'
+    defaultValues?.job_type === 'exterior' ? 'exterior' : 'interior'
   );
 
   // Advanced mode state
@@ -1094,22 +1140,13 @@ export function QuoteForm({
 
   // Live preview totals
   const advancedPreview = useMemo(() => {
-    if (
-      pricingStrategy !== 'hybrid' ||
-      quoteScope !== 'interior'
-    )
-      return null;
+    if (pricingStrategy !== 'hybrid' || quoteScope !== 'interior') return null;
     if (hasInvalidSpecificAreaRoom(advancedEstimate)) return null;
     return calculateInteriorEstimate(
       buildAdvancedEstimatePayload(advancedEstimate, rateSettings),
       rateSettings
     );
-  }, [
-    advancedEstimate,
-    pricingStrategy,
-    quoteScope,
-    rateSettings,
-  ]);
+  }, [advancedEstimate, pricingStrategy, quoteScope, rateSettings]);
 
   const exteriorPreview = useMemo(() => {
     if (pricingStrategy !== 'hybrid' || quoteScope !== 'exterior') return null;
@@ -1171,7 +1208,14 @@ export function QuoteForm({
     if (pricingStrategy === 'detailed_quick' && rateSettings)
       return calculateQuickEstimate(quickInputs, rateSettings);
     return null;
-  }, [pricingStrategy, dayRateState, roomRateItems, manualInputs, quickInputs, rateSettings]);
+  }, [
+    pricingStrategy,
+    dayRateState,
+    roomRateItems,
+    manualInputs,
+    quickInputs,
+    rateSettings,
+  ]);
   const composedMethodPreview = useMemo(() => {
     if (!methodPreview) return null;
     return composeQuoteTotals({
@@ -1248,7 +1292,9 @@ export function QuoteForm({
     }
 
     if (
-      (pricingStrategy === 'detailed_quick' || pricingStrategy === 'room_rate' || pricingStrategy === 'manual') &&
+      (pricingStrategy === 'detailed_quick' ||
+        pricingStrategy === 'room_rate' ||
+        pricingStrategy === 'manual') &&
       methodPreview &&
       composedMethodPreview
     ) {
@@ -1334,9 +1380,9 @@ export function QuoteForm({
         (quoteScope === 'exterior'
           ? (exteriorPreview?.subtotal_cents ?? 0) > 0
           : advancedEstimate.estimate_mode === 'entire_property'
-	            ? (advancedPreview?.subtotal_cents ?? 0) > 0
-	            : advancedEstimate.rooms.length > 0 &&
-	              !hasInvalidSpecificAreaRoom(advancedEstimate))))
+            ? (advancedPreview?.subtotal_cents ?? 0) > 0
+            : advancedEstimate.rooms.length > 0 &&
+              !hasInvalidSpecificAreaRoom(advancedEstimate))))
   );
 
   function handleDiscountInputChange(value: string) {
@@ -1373,6 +1419,51 @@ export function QuoteForm({
     } else {
       setShowDepositEditor(true);
     }
+  }
+
+  function resolveFormJobType(): QuoteJobType {
+    if (jobType === 'maintenance') return 'maintenance';
+    if (pricingStrategy === 'hybrid' && quoteScope === 'exterior') {
+      return 'exterior';
+    }
+    return jobType;
+  }
+
+  function normalizeScopeSectionsForPayload() {
+    return scopeSections
+      .filter(
+        (section) =>
+          section.title.trim() ||
+          section.description?.trim() ||
+          (section.steps ?? []).some((step) => step.description.trim())
+      )
+      .map((section, sectionIndex) => ({
+        ...section,
+        title: section.title.trim(),
+        description: section.description?.trim() || undefined,
+        area_label: section.area_label?.trim() || undefined,
+        surface_category: section.surface_category?.trim() || undefined,
+        sort_order: section.sort_order ?? sectionIndex,
+        steps: (section.steps ?? [])
+          .filter((step) => step.description.trim())
+          .map((step, stepIndex) => ({
+            ...step,
+            label: step.label?.trim() || undefined,
+            description: step.description.trim(),
+            sort_order: step.sort_order ?? stepIndex,
+          })),
+      }));
+  }
+
+  function normalizeClauseItemsForPayload() {
+    return clauseItems
+      .filter((clause) => clause.title.trim() && clause.body.trim())
+      .map((clause, index) => ({
+        ...clause,
+        title: clause.title.trim(),
+        body: clause.body.trim(),
+        sort_order: clause.sort_order ?? index,
+      }));
   }
 
   function handleChange(
@@ -1529,6 +1620,12 @@ export function QuoteForm({
     // Attach discount & deposit
     payload.discount_cents = discountCents;
     payload.deposit_percent = depositPercent;
+    payload.job_type = resolveFormJobType();
+    payload.scope_sections = normalizeScopeSectionsForPayload();
+    payload.clause_items = normalizeClauseItemsForPayload();
+    if (defaultValues?.ai_intake_snapshot) {
+      payload.ai_intake_snapshot = defaultValues.ai_intake_snapshot;
+    }
 
     // Attach editable quote number if it's a real number (not the placeholder)
     if (editableQuoteNumber && editableQuoteNumber !== 'Assigned on save') {
@@ -1790,6 +1887,43 @@ export function QuoteForm({
                 placeholder="Interior repaint — 42 Ocean View Rd"
               />
               <div>
+                <p className={formLabelClassName}>Quote Type</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {(
+                    [
+                      ['interior', Home, 'Interior'],
+                      ['exterior', Trees, 'Exterior'],
+                      ['both', Layers, 'Both'],
+                      ['maintenance', Wrench, 'Maintenance / touch-up'],
+                    ] as [QuoteJobType, ElementType, string][]
+                  ).map(([type, Icon, label]) => {
+                    const isActive = jobType === type;
+
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => {
+                          setJobType(type);
+                          if (type === 'interior') setQuoteScope('interior');
+                          if (type === 'exterior') setQuoteScope('exterior');
+                          setError(null);
+                        }}
+                        className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors ${
+                          isActive
+                            ? 'border-primary bg-primary text-on-primary'
+                            : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary'
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
                 <label htmlFor="valid_until" className={formLabelClassName}>
                   Valid Until
                 </label>
@@ -1831,7 +1965,7 @@ export function QuoteForm({
                       }));
                     }}
                     aria-describedby="working_days_help"
-                    className="border-outline-variant text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-surface-container-lowest pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
+                    className="border-outline-variant text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 bg-surface-container-lowest h-12 w-full rounded-xl border pr-16 pl-4 text-base focus:ring-2 focus:outline-none"
                   />
                   <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                     days
@@ -1849,10 +1983,12 @@ export function QuoteForm({
           </FormSection>
 
           {/* Pricing method selector */}
-          <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm sm:p-6">
+          <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
             <div className="mb-4">
-              <h3 className="text-base font-bold leading-snug text-on-surface">Pricing Method</h3>
-              <p className="mt-0.5 text-sm text-on-surface-variant">
+              <h3 className="text-on-surface text-base leading-snug font-bold">
+                Pricing Method
+              </h3>
+              <p className="text-on-surface-variant mt-0.5 text-sm">
                 Choose how you want to calculate this quote.
               </p>
             </div>
@@ -1896,12 +2032,14 @@ export function QuoteForm({
                       <Icon className="h-3.5 w-3.5" />
                     </span>
                     <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="text-sm font-bold leading-snug">
+                      <span className="text-sm leading-snug font-bold">
                         {label}
                       </span>
                       <span
                         className={`text-xs leading-snug ${
-                          isActive ? 'text-on-primary/80' : 'text-on-surface-variant'
+                          isActive
+                            ? 'text-on-primary/80'
+                            : 'text-on-surface-variant'
                         }`}
                       >
                         {desc}
@@ -1911,13 +2049,13 @@ export function QuoteForm({
                 );
               })}
             </div>
-            <p className="mt-3 text-xs text-on-surface-variant">
+            <p className="text-on-surface-variant mt-3 text-xs">
               {pricingStrategy === 'detailed_quick' ? (
                 <>
                   Pick rooms, sizes &amp; scope — ~30 sec.{' '}
                   <Link
                     href="/price-rates"
-                    className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-primary underline underline-offset-2 hover:bg-primary/10"
+                    className="text-primary hover:bg-primary/10 inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-2"
                   >
                     Edit room prices
                   </Link>
@@ -1927,7 +2065,7 @@ export function QuoteForm({
                   Using Detailed Estimate Anchors from Price Rates.{' '}
                   <Link
                     href="/price-rates"
-                    className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-primary underline underline-offset-2 hover:bg-primary/10"
+                    className="text-primary hover:bg-primary/10 inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-2"
                   >
                     Edit Price Rates
                   </Link>
@@ -1937,7 +2075,7 @@ export function QuoteForm({
                   Using default rates from Price Rates.{' '}
                   <Link
                     href="/price-rates"
-                    className="inline-flex min-h-11 items-center rounded-lg px-2 font-semibold text-primary underline underline-offset-2 hover:bg-primary/10"
+                    className="text-primary hover:bg-primary/10 inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-2"
                   >
                     Edit default rates
                   </Link>
@@ -1948,23 +2086,42 @@ export function QuoteForm({
 
           {/* Interior / Exterior scope toggle — only for detailed estimate */}
           {pricingStrategy === 'hybrid' && (
-            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
+            <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
               <div className="mb-3 flex flex-wrap items-center gap-3">
-                <h3 className="text-on-surface text-base font-bold leading-snug">Job Scope</h3>
+                <h3 className="text-on-surface text-base leading-snug font-bold">
+                  Job Scope
+                </h3>
               </div>
               <div className="border-outline-variant bg-surface-container-low inline-flex gap-0.5 rounded-xl border p-0.5">
                 {(['interior', 'exterior'] as const).map((scope) => (
                   <button
                     key={scope}
                     type="button"
-                    onClick={() => setQuoteScope(scope)}
+                    onClick={() => {
+                      setQuoteScope(scope);
+                      if (jobType !== 'maintenance') setJobType(scope);
+                    }}
                     className={`inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all ${
                       quoteScope === scope
                         ? 'bg-surface-container-lowest text-on-surface shadow-sm'
                         : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
-                    {scope === 'interior' ? <><Home className={`h-3.5 w-3.5 ${quoteScope === scope ? 'text-primary' : ''}`} />Interior</> : <><Trees className={`h-3.5 w-3.5 ${quoteScope === scope ? 'text-primary' : ''}`} />Exterior</>}
+                    {scope === 'interior' ? (
+                      <>
+                        <Home
+                          className={`h-3.5 w-3.5 ${quoteScope === scope ? 'text-primary' : ''}`}
+                        />
+                        Interior
+                      </>
+                    ) : (
+                      <>
+                        <Trees
+                          className={`h-3.5 w-3.5 ${quoteScope === scope ? 'text-primary' : ''}`}
+                        />
+                        Exterior
+                      </>
+                    )}
                   </button>
                 ))}
               </div>
@@ -1984,9 +2141,11 @@ export function QuoteForm({
 
           {/* Day rate inputs */}
           {pricingStrategy === 'day_rate' && (
-            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
+            <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
               <div className="mb-4">
-                <h3 className="text-on-surface text-base font-bold leading-snug">Labour × Days</h3>
+                <h3 className="text-on-surface text-base leading-snug font-bold">
+                  Labour × Days
+                </h3>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -2006,7 +2165,9 @@ export function QuoteForm({
                   />
                 </div>
                 <div>
-                  <label className={formLabelClassName}>Daily labour rate ($)</label>
+                  <label className={formLabelClassName}>
+                    Daily labour rate ($)
+                  </label>
                   <NumericInput
                     inputMode="numeric"
                     value={(dayRateState.daily_rate_cents / 100).toFixed(0)}
@@ -2063,7 +2224,7 @@ export function QuoteForm({
                           material_percent: parseInt(e.target.value, 10) || 0,
                         }))
                       }
-                      className="border-outline-variant w-20 rounded-xl border bg-surface-container-lowest px-3 py-2.5 text-center text-base"
+                      className="border-outline-variant bg-surface-container-lowest w-20 rounded-xl border px-3 py-2.5 text-center text-base"
                     />
                     <span className="text-on-surface-variant text-sm">
                       % of labour
@@ -2090,7 +2251,7 @@ export function QuoteForm({
                           material_flat_cents: Math.round(nextValue * 100),
                         }));
                       }}
-                      className="border-outline-variant w-32 rounded-xl border bg-surface-container-lowest px-3 py-2.5 text-base"
+                      className="border-outline-variant bg-surface-container-lowest w-32 rounded-xl border px-3 py-2.5 text-base"
                     />
                   </div>
                 )}
@@ -2109,11 +2270,14 @@ export function QuoteForm({
               <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
                 <span className="mt-0.5 shrink-0">⚠️</span>
                 <span>
-                  <span className="font-semibold">Room Flat Rate is no longer available</span>{' '}
-                  for new quotes. Switch to <strong>Quick estimate</strong> for a faster, more accurate result.
+                  <span className="font-semibold">
+                    Room Flat Rate is no longer available
+                  </span>{' '}
+                  for new quotes. Switch to <strong>Quick estimate</strong> for
+                  a faster, more accurate result.
                 </span>
               </div>
-              <h3 className="text-on-surface mb-4 text-base font-bold leading-snug">
+              <h3 className="text-on-surface mb-4 text-base leading-snug font-bold">
                 Room Flat Rates (read-only)
               </h3>
               {roomRatePresets.length > 0 && (
@@ -2137,7 +2301,7 @@ export function QuoteForm({
                             preset.rate_cents
                           )
                         }
-                        className="inline-flex min-h-11 items-center rounded-full border border-primary/30 bg-white px-3 text-xs font-medium text-on-surface hover:border-primary hover:bg-primary/15"
+                        className="border-primary/30 text-on-surface hover:border-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border bg-white px-3 text-xs font-medium"
                       >
                         {preset.title} · {preset.sqm} sqm ·{' '}
                         {formatAUD(preset.rate_cents)}
@@ -2181,7 +2345,7 @@ export function QuoteForm({
                             )
                           )
                         }
-                        className="min-h-11 rounded-lg border border-outline-variant bg-white px-2 text-sm"
+                        className="border-outline-variant min-h-11 rounded-lg border bg-white px-2 text-sm"
                       >
                         {ROOM_TYPES.map((t) => (
                           <option key={t} value={t}>
@@ -2209,7 +2373,7 @@ export function QuoteForm({
                             )
                           );
                         }}
-                        className="min-h-11 rounded-lg border border-outline-variant bg-white px-2 text-sm"
+                        className="border-outline-variant min-h-11 rounded-lg border bg-white px-2 text-sm"
                       >
                         {ROOM_SIZES.map((s) => (
                           <option key={s} value={s}>
@@ -2218,7 +2382,9 @@ export function QuoteForm({
                         ))}
                       </select>
                       <div className="flex items-center gap-1">
-                        <span className="text-on-surface-variant text-sm">$</span>
+                        <span className="text-on-surface-variant text-sm">
+                          $
+                        </span>
                         <NumericInput
                           inputMode="numeric"
                           value={(item.rate_cents / 100).toFixed(0)}
@@ -2241,7 +2407,7 @@ export function QuoteForm({
                               )
                             );
                           }}
-                          className="min-h-11 w-24 rounded-lg border border-outline-variant bg-white px-2 text-sm"
+                          className="border-outline-variant min-h-11 w-24 rounded-lg border bg-white px-2 text-sm"
                         />
                       </div>
                     </div>
@@ -2277,11 +2443,15 @@ export function QuoteForm({
           {pricingStrategy === 'manual' && (
             <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
               <div className="mb-4">
-                <h3 className="text-on-surface text-base font-bold leading-snug">Direct Price Entry</h3>
+                <h3 className="text-on-surface text-base leading-snug font-bold">
+                  Direct Price Entry
+                </h3>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={formLabelClassName}>Labour cost ($, ex-GST)</label>
+                  <label className={formLabelClassName}>
+                    Labour cost ($, ex-GST)
+                  </label>
                   <NumericInput
                     inputMode="numeric"
                     value={(manualInputs.labor_cents / 100).toFixed(0)}
@@ -2302,7 +2472,9 @@ export function QuoteForm({
                   />
                 </div>
                 <div>
-                  <label className={formLabelClassName}>Material cost ($, ex-GST)</label>
+                  <label className={formLabelClassName}>
+                    Material cost ($, ex-GST)
+                  </label>
                   <NumericInput
                     inputMode="numeric"
                     value={(manualInputs.material_cents / 100).toFixed(0)}
@@ -2350,6 +2522,23 @@ export function QuoteForm({
             />
           )}
 
+          <ScopeBuilder
+            jobType={jobType}
+            value={scopeSections}
+            onChange={(sections) => {
+              setScopeSections(sections);
+              setError(null);
+            }}
+          />
+
+          <ClauseLibraryPicker
+            value={clauseItems}
+            onChange={(clauses) => {
+              setClauseItems(clauses);
+              setError(null);
+            }}
+          />
+
           {/* Materials & Services line items */}
           <LineItemsSection
             libraryItems={libraryItems}
@@ -2373,7 +2562,7 @@ export function QuoteForm({
               }`}
             >
               <p
-                className={`text-xs font-semibold uppercase tracking-wide ${
+                className={`text-xs font-semibold tracking-wide uppercase ${
                   blockingRateSetupIssue ? 'text-red-800' : 'text-amber-800'
                 }`}
               >
@@ -2399,7 +2588,7 @@ export function QuoteForm({
 
           {pricingScopeWarnings.length > 0 && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+              <p className="text-xs font-semibold tracking-wide text-amber-800 uppercase">
                 Scope warning
               </p>
               <div className="mt-1 space-y-1">
@@ -2418,7 +2607,9 @@ export function QuoteForm({
           {/* Notes */}
           <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
             <div className="mb-4">
-              <h3 className="text-on-surface text-base font-bold leading-snug">Notes</h3>
+              <h3 className="text-on-surface text-base leading-snug font-bold">
+                Notes
+              </h3>
             </div>
             <div className="grid gap-4">
               <div>
@@ -2456,9 +2647,12 @@ export function QuoteForm({
           {pricingStrategy === 'hybrid' && (
             <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
               <div className="mb-4">
-                <h3 className="text-on-surface text-base font-bold leading-snug">Markup</h3>
+                <h3 className="text-on-surface text-base leading-snug font-bold">
+                  Markup
+                </h3>
                 <p className="text-on-surface-variant mt-0.5 text-sm">
-                  Applies to the detailed estimate only. Internal only — not visible on the quote PDF.
+                  Applies to the detailed estimate only. Internal only — not
+                  visible on the quote PDF.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -2484,7 +2678,10 @@ export function QuoteForm({
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="material_markup" className={formLabelClassName}>
+                  <label
+                    htmlFor="material_markup"
+                    className={formLabelClassName}
+                  >
                     Materials Markup
                   </label>
                   <div className="relative">
@@ -2566,7 +2763,10 @@ export function QuoteForm({
 
             <div className="mt-5 space-y-4">
               <div>
-                <label htmlFor="send_quote_email" className={formLabelClassName}>
+                <label
+                  htmlFor="send_quote_email"
+                  className={formLabelClassName}
+                >
                   Send to
                 </label>
                 <select
@@ -2649,7 +2849,7 @@ export function QuoteForm({
                 type="button"
                 onClick={handleConfirmSendQuote}
                 disabled={isPending || !sendDialog.email}
-                className="bg-primary hover:bg-primary/90 h-12 rounded-xl px-4 text-sm font-semibold text-on-primary transition-colors disabled:opacity-50"
+                className="bg-primary hover:bg-primary/90 text-on-primary h-12 rounded-xl px-4 text-sm font-semibold transition-colors disabled:opacity-50"
               >
                 {isPending && activeSubmitIntent === 'send_email'
                   ? 'Sending...'
@@ -2695,7 +2895,7 @@ export function QuoteForm({
                 variant="secondary"
                 onClick={() => (onCancel ? onCancel() : router.back())}
                 disabled={isPending}
-                className="text-sm font-medium text-on-surface-variant hover:text-on-surface md:flex-1"
+                className="text-on-surface-variant hover:text-on-surface text-sm font-medium md:flex-1"
               >
                 {cancelLabel}
               </FormFooterButton>
@@ -2708,7 +2908,7 @@ export function QuoteForm({
               variant="secondary"
               onClick={() => (onCancel ? onCancel() : router.back())}
               disabled={isPending}
-              className="font-medium text-on-surface-variant hover:text-on-surface"
+              className="text-on-surface-variant hover:text-on-surface font-medium"
             >
               {cancelLabel}
             </FormFooterButton>

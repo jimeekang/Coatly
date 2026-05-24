@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AIDraftPanel } from '@/components/ai/AIDraftPanel';
 
 describe('AIDraftPanel', () => {
-  it('shows a compact AI context and review disclosure', () => {
+  it('shows a compact AI draft and deterministic pricing disclosure', () => {
     render(
       <AIDraftPanel
         entityLabel="Quote"
@@ -22,7 +22,10 @@ describe('AIDraftPanel', () => {
     );
 
     expect(
-      screen.getByText(/AI may use business, customer, and job context/i),
+      screen.getByText(/AI drafts scope and questions only/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Prices stay tied to your saved rates/i),
     ).toBeInTheDocument();
   });
 });

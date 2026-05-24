@@ -119,7 +119,7 @@ describe('generateAIDraft', () => {
     });
   });
 
-  it('returns a configuration error when Gemini is not configured', async () => {
+  it('returns a configuration error when Qwen is not configured', async () => {
     isAIDraftConfiguredMock.mockReturnValue(false);
     createServerClientMock.mockResolvedValue({
       auth: {
@@ -136,7 +136,7 @@ describe('generateAIDraft', () => {
 
     expect(result).toEqual({
       data: null,
-      error: 'AI draft is not configured. Add GEMINI_API_KEY to .env.local.',
+      error: 'AI draft is not configured. Add QWEN_API_KEY to .env.local.',
     });
   });
 
@@ -353,5 +353,135 @@ describe('generateAIDraft', () => {
     expect(serializedInput).not.toContain('0412 555 012');
     expect(serializedInput).not.toContain('128 Beach Street');
     expect(serializedInput).not.toContain('owner@example.com');
+  });
+
+  it('passes Task 6 quote input fields without customer context or quote totals', async () => {
+    isAIDraftConfiguredMock.mockReturnValue(true);
+    generateWorkspaceDraftMock.mockResolvedValue({
+      entity: 'quote',
+      summary: 'Prepared a quote draft.',
+      warnings: [],
+      customer: null,
+      quote: {
+        job_type: 'maintenance',
+        maintenance_job_pack: 'water_damage_repaint',
+        scope_sections: [],
+        pricing_candidates: [],
+        clauses: [],
+        assumptions: [],
+        questions_for_user: [],
+      },
+      invoice: null,
+    });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'businesses') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({
+                  data: {
+                    name: 'Coatly Co',
+                    email: 'owner@example.com',
+                    phone: '0412 111 222',
+                    address: '1 Test St, Sydney NSW 2000',
+                  },
+                }),
+              }),
+            }),
+          };
+        }
+
+        if (table === 'customers') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'customer-1',
+                    name: 'Sarah Johnson',
+                    company_name: 'Harbor Cafe',
+                    email: 'sarah@example.com',
+                    phone: '0412 555 012',
+                    address_line1: '128 Beach Street',
+                    city: 'Manly',
+                    state: 'NSW',
+                    postcode: '2095',
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+
+        if (table === 'quotes') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: 'quote-1',
+                    quote_number: 'QUO-0007',
+                    title: 'Cafe repaint',
+                    customer_id: 'customer-1',
+                    status: 'draft',
+                    total_cents: 79695,
+                    valid_until: '2026-04-10',
+                  },
+                ],
+              }),
+            }),
+          };
+        }
+
+        if (table === 'ai_usage_events') {
+          return {
+            insert: vi.fn().mockResolvedValue({ error: null }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const result = await generateAIDraft({
+      entity: 'quote',
+      prompt: 'Draft a water damage repaint scope from visible stains',
+      job_type: 'maintenance',
+      maintenance_job_pack: 'water_damage_repaint',
+      property_context: 'Occupied apartment bathroom ceiling',
+      visible_defects: ['water_stain'],
+      access_notes: 'Tenant access required',
+      rough_measurements: 'Ceiling patch size to confirm on site',
+    });
+
+    expect(result.error).toBeNull();
+    expect(generateWorkspaceDraftMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity: 'quote',
+        job_type: 'maintenance',
+        maintenance_job_pack: 'water_damage_repaint',
+        property_context: 'Occupied apartment bathroom ceiling',
+        visible_defects: ['water_stain'],
+        access_notes: 'Tenant access required',
+        rough_measurements: 'Ceiling patch size to confirm on site',
+        customers: [],
+        quotes: [],
+      })
+    );
+    const serializedInput = JSON.stringify(generateWorkspaceDraftMock.mock.calls[0]?.[0]);
+    expect(serializedInput).not.toContain('79695');
+    expect(serializedInput).not.toContain('sarah@example.com');
+    expect(serializedInput).not.toContain('0412 555 012');
   });
 });

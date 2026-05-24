@@ -1,3 +1,12 @@
+import type {
+  MaintenanceJobPackId,
+  QuoteJobType,
+  QuoteScopeMeasurementStatus,
+  QuoteScopePricingStatus,
+  QuoteScopePriority,
+  QuoteScopeSectionKind,
+} from '@/types/quote';
+
 export type WorkspaceDraftEntity = 'customer' | 'quote' | 'invoice';
 export type WorkspaceRecordType = WorkspaceDraftEntity;
 
@@ -54,7 +63,145 @@ export type AICustomerDraft = {
   notes: string;
 };
 
-export type AIQuoteSurfaceDraft = {
+export type AIQuoteDraftInput = {
+  prompt: string;
+  job_type?: QuoteJobType;
+  maintenance_job_pack?: MaintenanceJobPackId;
+  property_context?: string | null;
+  visible_defects?: string[];
+  access_notes?: string | null;
+  rough_measurements?: string | null;
+  photo_refs?: Array<{
+    id?: string;
+    storage_path?: string;
+    url?: string;
+    description?: string;
+  }>;
+};
+
+export type AIQuoteScopeStep = {
+  client_id?: string;
+  step_type:
+    | 'prep'
+    | 'primer'
+    | 'topcoat'
+    | 'repair'
+    | 'paint_system'
+    | 'colour_note'
+    | 'special_note'
+    | 'exclusion_note';
+  label?: string;
+  description: string;
+  prep_type?: string;
+  paint_system?: string;
+  coats_min?: number;
+  coats_max?: number;
+  product_name?: string;
+  colour_status?: 'confirmed' | 'partial' | 'to_confirm' | 'not_applicable';
+  colour?: string;
+  sheen?: string;
+  requires_confirmation?: boolean;
+  is_customer_visible?: boolean;
+  sort_order?: number;
+  metadata?: Record<string, unknown>;
+};
+
+export type AIQuoteScopeSection = {
+  client_id?: string;
+  section_kind: QuoteScopeSectionKind;
+  title: string;
+  description?: string;
+  area_label?: string;
+  surface_category?: string;
+  is_optional?: boolean;
+  is_selected?: boolean;
+  pricing_status: QuoteScopePricingStatus;
+  measurement_status: QuoteScopeMeasurementStatus;
+  source: 'ai';
+  sort_order?: number;
+  metadata?: Record<string, unknown>;
+  maintenance_job_pack?: MaintenanceJobPackId;
+  visible_defects: string[];
+  priority?: QuoteScopePriority;
+  report_context?: boolean;
+  unsupported_scope?: string;
+  steps: AIQuoteScopeStep[];
+};
+
+export type AIQuotePricingPath =
+  | 'quick_room'
+  | 'advanced_interior'
+  | 'exterior_surface'
+  | 'day_rate'
+  | 'manual_service'
+  | 'optional_add_on';
+
+export type AIQuotePricingCandidate = {
+  client_id?: string;
+  label: string;
+  description?: string;
+  pricing_path: AIQuotePricingPath;
+  scope_section_client_id?: string;
+  area_label?: string;
+  surface_category?: string;
+  quantity_label?: string;
+  measurement_status: QuoteScopeMeasurementStatus;
+  confidence: 'low' | 'medium' | 'high' | 'to_confirm';
+  maintenance_job_pack?: MaintenanceJobPackId;
+  metadata?: Record<string, unknown>;
+};
+
+export type AIQuoteClause = {
+  client_id?: string;
+  applies_to_section_client_id?: string;
+  clause_key: string;
+  category:
+    | 'inclusion'
+    | 'exclusion'
+    | 'risk_disclosure'
+    | 'warranty'
+    | 'payment'
+    | 'validity'
+    | 'insurance'
+    | 'brand_proof';
+  title: string;
+  body: string;
+  severity: 'info' | 'warning' | 'critical';
+  source: 'ai';
+  is_customer_visible: boolean;
+  sort_order?: number;
+  metadata?: Record<string, unknown>;
+};
+
+export type AIQuoteQuestionReason =
+  | 'missing_information'
+  | 'to_confirm'
+  | 'refer_to_specialist'
+  | 'unsupported_scope';
+
+export type AIQuoteQuestion = {
+  question: string;
+  reason: AIQuoteQuestionReason;
+  related_scope?: string;
+  details?: string;
+};
+
+export type AIQuoteDraft = {
+  job_type: QuoteJobType;
+  maintenance_job_pack: MaintenanceJobPackId | null;
+  scope_sections: AIQuoteScopeSection[];
+  pricing_candidates: AIQuotePricingCandidate[];
+  clauses: AIQuoteClause[];
+  assumptions: string[];
+  questions_for_user: AIQuoteQuestion[];
+};
+
+export type AIQuoteValidationResult = {
+  draft: AIQuoteDraft;
+  warnings: string[];
+};
+
+export type AIWorkspaceQuoteSurfaceDraft = {
   surface_type: 'walls' | 'ceiling' | 'trim' | 'doors' | 'windows';
   coating_type:
     | 'refresh_1coat'
@@ -67,16 +214,16 @@ export type AIQuoteSurfaceDraft = {
   notes: string | null;
 };
 
-export type AIQuoteRoomDraft = {
+export type AIWorkspaceQuoteRoomDraft = {
   name: string;
   room_type: 'interior' | 'exterior';
   length_m: number | null;
   width_m: number | null;
   height_m: number | null;
-  surfaces: AIQuoteSurfaceDraft[];
+  surfaces: AIWorkspaceQuoteSurfaceDraft[];
 };
 
-export type AIQuoteDraft = {
+export type AIWorkspaceQuoteDraft = {
   customer_id: string | null;
   title: string;
   status: 'draft' | 'sent';
@@ -86,7 +233,7 @@ export type AIQuoteDraft = {
   material_margin_percent: number;
   notes: string;
   internal_notes: string;
-  rooms: AIQuoteRoomDraft[];
+  rooms: AIWorkspaceQuoteRoomDraft[];
 };
 
 export type AIInvoiceDraft = {
@@ -139,6 +286,6 @@ export type WorkspaceAssistantResult = {
   warnings: string[];
   matches: WorkspaceAssistantMatch[];
   customer: AICustomerDraft | null;
-  quote: AIQuoteDraft | null;
+  quote: AIWorkspaceQuoteDraft | null;
   invoice: AIInvoiceDraft | null;
 };

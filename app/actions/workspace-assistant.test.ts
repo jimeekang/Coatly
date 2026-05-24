@@ -117,7 +117,7 @@ describe('runWorkspaceAssistant', () => {
     });
   });
 
-  it('returns a configuration error when Gemini is not configured', async () => {
+  it('returns a configuration error when Qwen is not configured', async () => {
     isAIDraftConfiguredMock.mockReturnValue(false);
     createServerClientMock.mockResolvedValue({
       auth: {
@@ -133,7 +133,7 @@ describe('runWorkspaceAssistant', () => {
 
     expect(result).toEqual({
       data: null,
-      error: 'AI draft is not configured. Add GEMINI_API_KEY to .env.local.',
+      error: 'AI draft is not configured. Add QWEN_API_KEY to .env.local.',
     });
   });
 

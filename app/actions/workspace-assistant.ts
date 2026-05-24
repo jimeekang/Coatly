@@ -30,8 +30,8 @@ async function recordAIUsage(input: {
     await input.supabase.from('ai_usage_events').insert({
       user_id: input.userId,
       action: 'workspace_assistant',
-      provider: 'google',
-      model: 'gemini-2.5-flash',
+      provider: 'alibaba-qwen',
+      model: process.env.QWEN_MODEL?.trim() || 'qwen3-vl-flash',
       status: input.status,
       latency_ms: Date.now() - input.startedAt,
       error_message: input.errorMessage ?? null,
@@ -72,7 +72,7 @@ export async function runWorkspaceAssistant(input: {
   if (!isAIDraftConfigured()) {
     return {
       data: null,
-      error: 'AI draft is not configured. Add GEMINI_API_KEY to .env.local.',
+      error: 'AI draft is not configured. Add QWEN_API_KEY to .env.local.',
     };
   }
 

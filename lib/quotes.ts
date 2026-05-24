@@ -27,6 +27,10 @@ import type {
   QuoteJobType,
   QuoteScopeSectionInput,
 } from '@/types/quote';
+import type {
+  QuoteClauseItemView,
+  QuoteScopeSectionView,
+} from '@/lib/quote-form-structure';
 
 export type QuoteStatus =
   | 'draft'
@@ -42,7 +46,11 @@ export type QuoteSurfaceType =
   | 'trim'
   | 'doors'
   | 'windows';
-export type QuoteEstimateCategory = 'manual' | 'interior' | 'exterior' | 'maintenance';
+export type QuoteEstimateCategory =
+  | 'manual'
+  | 'interior'
+  | 'exterior'
+  | 'maintenance';
 export type QuoteEstimateItemCategory =
   | 'entire_property'
   | 'room'
@@ -263,8 +271,7 @@ export function calculateQuoteTotals({
 }) {
   const line_items_subtotal_cents = calculateQuoteLineItemsSubtotal(line_items);
   const subtotal_cents =
-    Math.max(0, Math.round(base_subtotal_cents)) +
-    line_items_subtotal_cents;
+    Math.max(0, Math.round(base_subtotal_cents)) + line_items_subtotal_cents;
   const clampedDiscountCents = Math.min(
     Math.max(0, Math.round(discount_cents)),
     subtotal_cents
@@ -338,6 +345,8 @@ export type QuoteDetail = {
   approved_by_name: string | null;
   approved_by_email: string | null;
   approval_signature: string | null;
+  customer_email: string | null;
+  customer_address: string | null;
   quote_number: string;
   title: string | null;
   status: QuoteStatus;
@@ -369,6 +378,8 @@ export type QuoteDetail = {
   rooms: QuoteRoomDraft[];
   estimate_items: QuoteEstimateItemDraft[];
   line_items: QuoteLineItemRecord[];
+  scope_sections: QuoteScopeSectionView[];
+  clause_items: QuoteClauseItemView[];
 };
 
 export type PublicQuoteSurface = Pick<
@@ -415,6 +426,7 @@ export type PublicQuoteLineItem = Pick<
 >;
 
 export type PublicQuoteDetail = {
+  job_type: QuoteJobType;
   approved_at: string | null;
   approved_by_name: string | null;
   approved_by_email: string | null;
@@ -429,11 +441,14 @@ export type PublicQuoteDetail = {
   total_cents: number;
   discount_cents: number;
   manual_adjustment_cents: number;
+  deposit_percent: number;
   working_days: number | null;
   customer: QuoteCustomerSummary;
   rooms: PublicQuoteRoom[];
   estimate_items: PublicQuoteEstimateItem[];
   line_items: PublicQuoteLineItem[];
+  scope_sections: QuoteScopeSectionView[];
+  clause_items: QuoteClauseItemView[];
 };
 
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -592,7 +607,8 @@ function normalizeInteriorEstimate(
       };
 
       if (room.pricing_model) normalizedRoom.pricing_model = room.pricing_model;
-      if (room.wall_area_m2 != null) normalizedRoom.wall_area_m2 = room.wall_area_m2;
+      if (room.wall_area_m2 != null)
+        normalizedRoom.wall_area_m2 = room.wall_area_m2;
       if (room.ceiling_area_m2 != null)
         normalizedRoom.ceiling_area_m2 = room.ceiling_area_m2;
       if (room.trim_linear_m != null)
@@ -612,7 +628,8 @@ function normalizeInteriorEstimate(
         normalizedRoom.source_room_template_label =
           room.source_room_template_label;
       if (room.source_room_template_size)
-        normalizedRoom.source_room_template_size = room.source_room_template_size;
+        normalizedRoom.source_room_template_size =
+          room.source_room_template_size;
       if (room.source_room_template_surface_prices_cents)
         normalizedRoom.source_room_template_surface_prices_cents =
           room.source_room_template_surface_prices_cents;
@@ -625,7 +642,8 @@ function normalizeInteriorEstimate(
       if (room.rate_snapshot_version != null)
         normalizedRoom.rate_snapshot_version = room.rate_snapshot_version;
       if (room.source_anchor_range_cents)
-        normalizedRoom.source_anchor_range_cents = room.source_anchor_range_cents;
+        normalizedRoom.source_anchor_range_cents =
+          room.source_anchor_range_cents;
       if (room.source_wall_rate_cents_per_m2 != null)
         normalizedRoom.source_wall_rate_cents_per_m2 =
           room.source_wall_rate_cents_per_m2;
@@ -656,16 +674,17 @@ function normalizeInteriorEstimate(
       return normalizedRoom;
     }),
     opening_items: estimate.opening_items.map((item) => {
-      const normalizedItem: NormalizedInteriorEstimateInput['opening_items'][number] = {
-        opening_type: item.opening_type,
-        paint_system: item.paint_system,
-        quantity: item.quantity,
-        room_index: item.room_index ?? null,
-        door_type: item.door_type,
-        door_scope: item.door_scope,
-        window_type: item.window_type,
-        window_scope: item.window_scope,
-      };
+      const normalizedItem: NormalizedInteriorEstimateInput['opening_items'][number] =
+        {
+          opening_type: item.opening_type,
+          paint_system: item.paint_system,
+          quantity: item.quantity,
+          room_index: item.room_index ?? null,
+          door_type: item.door_type,
+          door_scope: item.door_scope,
+          window_type: item.window_type,
+          window_scope: item.window_scope,
+        };
       if (item.rate_snapshot_version != null)
         normalizedItem.rate_snapshot_version = item.rate_snapshot_version;
       if (item.source_unit_price_cents != null)
@@ -676,12 +695,13 @@ function normalizeInteriorEstimate(
       return normalizedItem;
     }),
     trim_items: estimate.trim_items.map((item) => {
-      const normalizedItem: NormalizedInteriorEstimateInput['trim_items'][number] = {
-        trim_type: item.trim_type,
-        paint_system: item.paint_system,
-        quantity: item.quantity,
-        room_index: item.room_index ?? null,
-      };
+      const normalizedItem: NormalizedInteriorEstimateInput['trim_items'][number] =
+        {
+          trim_type: item.trim_type,
+          paint_system: item.paint_system,
+          quantity: item.quantity,
+          room_index: item.room_index ?? null,
+        };
       if (item.rate_snapshot_version != null)
         normalizedItem.rate_snapshot_version = item.rate_snapshot_version;
       if (item.source_unit_price_cents != null)
@@ -985,8 +1005,9 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       scope_sections: parsed.data.scope_sections as QuoteScopeSectionInput[],
       clause_items: parsed.data.clause_items as QuoteClauseItemInput[],
       ai_intake_snapshot:
-        (parsed.data.ai_intake_snapshot as QuoteAiIntakeSnapshotInput | undefined) ??
-        null,
+        (parsed.data.ai_intake_snapshot as
+          | QuoteAiIntakeSnapshotInput
+          | undefined) ?? null,
       line_items: (parsed.data.line_items ?? []).map((item) => {
         const is_optional = item.is_optional ?? false;
 
@@ -1137,6 +1158,8 @@ export function mapQuoteDetail(row: {
   }>;
   estimate_items?: QuoteEstimateItemDraft[];
   line_items?: QuoteLineItemRecord[];
+  scope_sections?: QuoteScopeSectionView[];
+  clause_items?: QuoteClauseItemView[];
 }): QuoteDetail {
   const fallbackJobType: QuoteJobType =
     row.estimate_category === 'exterior'
@@ -1155,6 +1178,8 @@ export function mapQuoteDetail(row: {
     approved_by_name: row.approved_by_name ?? null,
     approved_by_email: row.approved_by_email ?? null,
     approval_signature: row.approval_signature ?? null,
+    customer_email: row.customer_email ?? null,
+    customer_address: row.customer_address ?? null,
     quote_number: row.quote_number,
     title: row.title,
     status: resolveQuoteStatus({
@@ -1224,11 +1249,14 @@ export function mapQuoteDetail(row: {
       is_optional: item.is_optional ?? false,
       is_selected: item.is_optional ? (item.is_selected ?? false) : true,
     })),
+    scope_sections: row.scope_sections ?? [],
+    clause_items: row.clause_items ?? [],
   };
 }
 
 export function toPublicQuoteDetail(quote: QuoteDetail): PublicQuoteDetail {
   return {
+    job_type: quote.job_type,
     approved_at: quote.approved_at,
     approved_by_name: quote.approved_by_name,
     approved_by_email: quote.approved_by_email,
@@ -1243,6 +1271,7 @@ export function toPublicQuoteDetail(quote: QuoteDetail): PublicQuoteDetail {
     total_cents: quote.total_cents,
     discount_cents: quote.discount_cents,
     manual_adjustment_cents: quote.manual_adjustment_cents,
+    deposit_percent: quote.deposit_percent,
     working_days:
       (quote as unknown as { working_days?: number | null }).working_days ??
       null,
@@ -1283,6 +1312,8 @@ export function toPublicQuoteDetail(quote: QuoteDetail): PublicQuoteDetail {
       is_optional: item.is_optional,
       is_selected: item.is_selected,
     })),
+    scope_sections: quote.scope_sections,
+    clause_items: quote.clause_items,
   };
 }
 
@@ -1321,8 +1352,13 @@ export function mapPublicQuoteDetail(row: {
   }>;
   estimate_items?: QuoteEstimateItemDraft[];
   line_items?: QuoteLineItemRecord[];
+  scope_sections?: QuoteScopeSectionView[];
+  clause_items?: QuoteClauseItemView[];
 }): PublicQuoteDetail {
   return {
+    job_type:
+      ((row as { job_type?: QuoteJobType | string | null })
+        .job_type as QuoteJobType | null) ?? 'interior',
     approved_at: row.approved_at ?? null,
     approved_by_name: row.approved_by_name ?? null,
     approved_by_email: row.approved_by_email ?? null,
@@ -1340,6 +1376,8 @@ export function mapPublicQuoteDetail(row: {
     total_cents: row.total_cents,
     discount_cents: row.discount_cents ?? 0,
     manual_adjustment_cents: row.manual_adjustment_cents ?? 0,
+    deposit_percent:
+      (row as { deposit_percent?: number | null }).deposit_percent ?? 0,
     working_days:
       (row as { working_days?: number | null }).working_days ?? null,
     customer: resolveQuoteCustomerSummary(row),
@@ -1386,5 +1424,7 @@ export function mapPublicQuoteDetail(row: {
       is_optional: item.is_optional ?? false,
       is_selected: item.is_optional ? (item.is_selected ?? false) : true,
     })),
+    scope_sections: row.scope_sections ?? [],
+    clause_items: row.clause_items ?? [],
   };
 }

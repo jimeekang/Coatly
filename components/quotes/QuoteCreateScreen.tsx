@@ -5,16 +5,71 @@ import { generateAIDraft } from '@/app/actions/ai-drafts';
 import { createQuote } from '@/app/actions/quotes';
 import { saveQuoteTemplate } from '@/app/actions/quote-templates';
 import { AIDraftPanel } from '@/components/ai/AIDraftPanel';
-import { QuoteForm } from '@/components/quotes/QuoteForm';
+import {
+  QuoteForm,
+  type QuoteFormDefaultValues,
+} from '@/components/quotes/QuoteForm';
 import { TemplatePicker } from '@/components/quotes/TemplatePicker';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import type { AIQuoteDraft } from '@/lib/ai/draft-types';
 import type { QuoteCustomerOption } from '@/lib/quotes';
 import type { UserRateSettings } from '@/lib/rate-settings';
 import type { MaterialItem, QuoteCreateInput } from '@/lib/supabase/validators';
-import type { QuoteTemplate, QuoteTemplatePayload } from '@/app/actions/quote-templates';
+import type { QuoteAiIntakeSnapshotInput } from '@/types/quote';
+import type {
+  QuoteTemplate,
+  QuoteTemplatePayload,
+} from '@/app/actions/quote-templates';
 
 type QuoteSubmitIntent = 'save' | 'send_email';
+
+function defaultValidUntil() {
+  const date = new Date();
+  date.setDate(date.getDate() + 14);
+  return date.toISOString().slice(0, 10);
+}
+
+function aiDraftTitle(draft: AIQuoteDraft, prompt: string) {
+  const sectionTitle = draft.scope_sections[0]?.title?.trim();
+  if (sectionTitle) return sectionTitle;
+
+  const trimmedPrompt = prompt.trim();
+  return trimmedPrompt.length > 80
+    ? `${trimmedPrompt.slice(0, 77).trim()}...`
+    : trimmedPrompt;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? { ...(value as Record<string, unknown>) }
+    : {};
+}
+
+function buildAiIntakeSnapshot(
+  draft: AIQuoteDraft,
+  prompt: string
+): QuoteAiIntakeSnapshotInput {
+  return {
+    job_type: draft.job_type,
+    ...(draft.maintenance_job_pack
+      ? { maintenance_job_pack: draft.maintenance_job_pack }
+      : {}),
+    provider: 'alibaba-qwen',
+    model: 'qwen3-vl-flash',
+    prompt_version: 'v1-task6-quote-form',
+    input_json: {
+      prompt,
+      job_type: draft.job_type,
+      maintenance_job_pack: draft.maintenance_job_pack,
+    },
+    output_json: toRecord(draft),
+    photo_refs: [],
+    metadata: {
+      questions_for_user_count: draft.questions_for_user.length,
+      assumptions_count: draft.assumptions.length,
+    },
+  };
+}
 
 export function QuoteCreateScreen({
   customers,
@@ -42,10 +97,14 @@ export function QuoteCreateScreen({
   const [isPending, startTransition] = useTransition();
 
   // Template state
-  const [templateDefault, setTemplateDefault] = useState<QuoteTemplatePayload | null>(null);
-  const [pendingSavePayload, setPendingSavePayload] = useState<QuoteCreateInput | null>(null);
+  const [templateDefault, setTemplateDefault] =
+    useState<QuoteTemplatePayload | null>(null);
+  const [pendingSavePayload, setPendingSavePayload] =
+    useState<QuoteCreateInput | null>(null);
   const [templateName, setTemplateName] = useState('');
-  const [saveTemplateError, setSaveTemplateError] = useState<string | null>(null);
+  const [saveTemplateError, setSaveTemplateError] = useState<string | null>(
+    null
+  );
   const [isSavingTemplate, startSaveTransition] = useTransition();
 
   function handleGenerate() {
@@ -67,7 +126,10 @@ export function QuoteCreateScreen({
 
       setDraft(result.data.quote);
       setSummary(result.data.summary);
-      setWarnings(result.data.warnings);
+      setWarnings([
+        ...result.data.warnings,
+        ...result.data.quote.questions_for_user.map((question) => question.question),
+      ]);
     });
   }
 
@@ -82,7 +144,10 @@ export function QuoteCreateScreen({
     setResetKey((current) => current + 1);
   }
 
-  async function handleSubmit(data: QuoteCreateInput, intent: QuoteSubmitIntent = 'save') {
+  async function handleSubmit(
+    data: QuoteCreateInput,
+    intent: QuoteSubmitIntent = 'save'
+  ) {
     const result = await createQuote(data, { submitIntent: intent });
     if (!result?.error) {
       // Offer to save as template after successful submission
@@ -97,6 +162,7 @@ export function QuoteCreateScreen({
 
     const payload: QuoteTemplatePayload = {
       title: pendingSavePayload.title,
+      job_type: pendingSavePayload.job_type,
       complexity: pendingSavePayload.complexity,
       labour_margin_percent: pendingSavePayload.labour_margin_percent,
       material_margin_percent: pendingSavePayload.material_margin_percent,
@@ -104,6 +170,8 @@ export function QuoteCreateScreen({
       internal_notes: pendingSavePayload.internal_notes,
       working_days: pendingSavePayload.working_days,
       rooms: pendingSavePayload.rooms,
+      scope_sections: pendingSavePayload.scope_sections,
+      clause_items: pendingSavePayload.clause_items,
       line_items: pendingSavePayload.line_items,
     };
 
@@ -118,47 +186,57 @@ export function QuoteCreateScreen({
     });
   }
 
-  const formDefaultValues =
-    draft
+  const formDefaultValues: QuoteFormDefaultValues | undefined = draft
+    ? {
+        customer_id: initialCustomerId ?? '',
+        title: aiDraftTitle(draft, prompt),
+        status: 'draft' as const,
+        valid_until: defaultValidUntil(),
+        working_days: 1,
+        complexity: 'standard' as const,
+        labour_margin_percent: 0,
+        material_margin_percent: 0,
+        notes: draft.assumptions.join('\n'),
+        internal_notes: draft.questions_for_user
+          .map((question) => question.question)
+          .join('\n'),
+        rooms: [],
+        job_type: draft.job_type,
+        scope_sections: draft.scope_sections,
+        clause_items: draft.clauses,
+        ai_intake_snapshot: buildAiIntakeSnapshot(draft, prompt),
+      }
+    : templateDefault
       ? {
-          customer_id: draft.customer_id ?? initialCustomerId ?? '',
-          title: draft.title,
-          status: draft.status,
-          valid_until: draft.valid_until,
-          working_days: 1,
-          complexity: draft.complexity,
-          labour_margin_percent: draft.labour_margin_percent,
-          material_margin_percent: draft.material_margin_percent,
-          notes: draft.notes,
-          internal_notes: draft.internal_notes,
-          rooms: draft.rooms,
+          customer_id: initialCustomerId ?? '',
+          title: templateDefault.title ?? '',
+          status: 'draft' as const,
+          valid_until: '',
+          working_days: templateDefault.working_days ?? 1,
+          complexity: templateDefault.complexity,
+          labour_margin_percent: templateDefault.labour_margin_percent,
+          material_margin_percent: templateDefault.material_margin_percent,
+          notes: templateDefault.notes ?? '',
+          internal_notes: templateDefault.internal_notes ?? '',
+          rooms: [],
+          job_type: templateDefault.job_type,
+          scope_sections:
+            templateDefault.scope_sections as QuoteFormDefaultValues['scope_sections'],
+          clause_items:
+            templateDefault.clause_items as QuoteFormDefaultValues['clause_items'],
         }
-      : templateDefault
+      : initialCustomerId
         ? {
-            customer_id: initialCustomerId ?? '',
-            title: templateDefault.title ?? '',
+            customer_id: initialCustomerId,
+            title: '',
             status: 'draft' as const,
             valid_until: '',
-            working_days: templateDefault.working_days ?? 1,
-            complexity: templateDefault.complexity,
-            labour_margin_percent: templateDefault.labour_margin_percent,
-            material_margin_percent: templateDefault.material_margin_percent,
-            notes: templateDefault.notes ?? '',
-            internal_notes: templateDefault.internal_notes ?? '',
+            working_days: 1,
+            notes: '',
+            internal_notes: '',
             rooms: [],
           }
-        : initialCustomerId
-          ? {
-              customer_id: initialCustomerId,
-              title: '',
-              status: 'draft' as const,
-              valid_until: '',
-              working_days: 1,
-              notes: '',
-              internal_notes: '',
-              rooms: [],
-            }
-          : undefined;
+        : undefined;
 
   return (
     <>
@@ -204,9 +282,11 @@ export function QuoteCreateScreen({
 
       {/* Save as Template prompt — shown after a successful quote submission */}
       {pendingSavePayload && (
-        <div className="mt-6 rounded-xl border border-outline-variant bg-surface-container-lowest p-5">
-          <p className="text-sm font-semibold text-on-surface">Save this quote as a template?</p>
-          <p className="mt-1 text-xs text-on-surface-variant">
+        <div className="border-outline-variant bg-surface-container-lowest mt-6 rounded-xl border p-5">
+          <p className="text-on-surface text-sm font-semibold">
+            Save this quote as a template?
+          </p>
+          <p className="text-on-surface-variant mt-1 text-xs">
             Reuse the rooms, margins, and line items next time.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -215,28 +295,28 @@ export function QuoteCreateScreen({
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder="Template name (e.g. 2-bed interior standard)"
-              className="min-h-11 flex-1 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant focus:ring-primary/30 min-h-11 flex-1 rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
             />
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleSaveTemplate}
                 disabled={isSavingTemplate || !templateName.trim()}
-                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-5"
+                className="bg-primary text-on-primary inline-flex min-h-11 flex-1 items-center justify-center rounded-lg px-4 text-sm font-semibold shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-5"
               >
                 {isSavingTemplate ? 'Saving…' : 'Save Template'}
               </button>
               <button
                 type="button"
                 onClick={() => setPendingSavePayload(null)}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high active:bg-outline-variant sm:px-5"
+                className="border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high active:bg-outline-variant inline-flex min-h-11 items-center justify-center rounded-lg border px-4 text-sm font-semibold transition-colors sm:px-5"
               >
                 Skip
               </button>
             </div>
           </div>
           {saveTemplateError && (
-            <p className="mt-2 text-xs text-error">{saveTemplateError}</p>
+            <p className="text-error mt-2 text-xs">{saveTemplateError}</p>
           )}
         </div>
       )}

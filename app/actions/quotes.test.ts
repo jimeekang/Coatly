@@ -848,6 +848,24 @@ describe('createQuote', () => {
           };
         }
 
+        if (table === 'quote_scope_sections') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_clause_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
         if (table === 'invoices') {
           return {
             select: vi.fn(() => ({
@@ -1108,6 +1126,24 @@ describe('createQuote', () => {
               order: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
             insert: vi.fn(async () => ({ error: null })),
+          };
+        }
+
+        if (table === 'quote_scope_sections') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_clause_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
           };
         }
 
@@ -3029,7 +3065,9 @@ describe('updateQuote', () => {
           return {
             select: vi.fn(() => ({
               eq: vi.fn().mockReturnThis(),
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+              maybeSingle: vi
+                .fn()
+                .mockResolvedValue({ data: null, error: null }),
             })),
           };
         }
@@ -3169,26 +3207,6 @@ describe('setQuoteOptionalLineItemSelection', () => {
               return {
                 eq: vi.fn().mockReturnThis(),
               };
-            }),
-          };
-        }
-
-        if (table === 'invoices') {
-          return {
-            select: vi.fn().mockReturnValue({
-              count: 0,
-              error: null,
-              eq: vi.fn().mockReturnThis(),
-            }),
-          };
-        }
-
-        if (table === 'invoices') {
-          return {
-            select: vi.fn().mockReturnValue({
-              count: 0,
-              error: null,
-              eq: vi.fn().mockReturnThis(),
             }),
           };
         }
@@ -3401,6 +3419,24 @@ describe('public quote access', () => {
                 ],
                 error: null,
               }),
+            }),
+          };
+        }
+
+        if (table === 'quote_scope_sections') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_clause_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
           };
         }
@@ -4058,6 +4094,24 @@ describe('getQuote', () => {
           };
         }
 
+        if (table === 'quote_scope_sections') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_clause_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
         if (table === 'invoices') {
           return {
             select: vi.fn().mockReturnValue({
@@ -4192,6 +4246,24 @@ describe('getQuote', () => {
         }
 
         if (table === 'quote_line_items') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_scope_sections') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnThis(),
+              order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+
+        if (table === 'quote_clause_items') {
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnThis(),

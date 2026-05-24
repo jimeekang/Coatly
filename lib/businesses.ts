@@ -1,6 +1,9 @@
 import type { User } from '@supabase/supabase-js';
 import { createSignedStorageUrl } from '@/lib/supabase/storage';
-import { businessUpdateSchema, type BusinessUpdateInput } from '@/lib/supabase/validators';
+import {
+  businessUpdateSchema,
+  type BusinessUpdateInput,
+} from '@/lib/supabase/validators';
 import { createServerClient } from '@/lib/supabase/server';
 import { parseUserRateSettings } from '@/lib/rate-settings';
 import type { UserRateSettings } from '@/lib/rate-settings';
@@ -53,6 +56,7 @@ export type BusinessFormValues = {
 export type BusinessDocumentBranding = {
   name: string;
   abn: string | null;
+  address: string | null;
   phone: string | null;
   email: string | null;
   logoPath: string | null;
@@ -88,7 +92,10 @@ type ParsedBusinessInput =
       error: string;
     };
 
-function hasMissingBusinessesColumn(error: { message?: string } | null, column: string) {
+function hasMissingBusinessesColumn(
+  error: { message?: string } | null,
+  column: string
+) {
   const message = error?.message ?? '';
 
   return (
@@ -166,14 +173,15 @@ function parseBusinessInput(
 ): ParsedBusinessInput {
   const parsed = businessUpdateSchema.safeParse({
     ...input,
-    email: input.email?.trim() ? input.email : fallbackEmail ?? '',
+    email: input.email?.trim() ? input.email : (fallbackEmail ?? ''),
   });
 
   if (!parsed.success) {
     return {
       success: false,
       error:
-        parsed.error.issues[0]?.message ?? 'Business details could not be validated.',
+        parsed.error.issues[0]?.message ??
+        'Business details could not be validated.',
     };
   }
 
@@ -182,12 +190,13 @@ function parseBusinessInput(
     data: {
       name: parsed.data.name,
       abn: parsed.data.abn ?? null,
-      address: formatStructuredAddress({
-        addressLine1: parsed.data.addressLine1,
-        city: parsed.data.city,
-        state: parsed.data.state,
-        postcode: parsed.data.postcode,
-      }) || null,
+      address:
+        formatStructuredAddress({
+          addressLine1: parsed.data.addressLine1,
+          city: parsed.data.city,
+          state: parsed.data.state,
+          postcode: parsed.data.postcode,
+        }) || null,
       address_line1: parsed.data.addressLine1 ?? null,
       city: parsed.data.city ?? null,
       state: parsed.data.state ?? null,
@@ -201,7 +210,10 @@ function parseBusinessInput(
   };
 }
 
-async function loadBusinessRecords(supabase: AppSupabaseClient, userId: string) {
+async function loadBusinessRecords(
+  supabase: AppSupabaseClient,
+  userId: string
+) {
   const businessQuery = supabase
     .from('businesses')
     .select(
@@ -266,6 +278,15 @@ function mergeBusinessIdentity({
   return {
     name: business?.name ?? profile?.business_name ?? '',
     abn: business?.abn ?? profile?.abn ?? null,
+    address:
+      (business?.address ??
+        formatStructuredAddress({
+          addressLine1: profile?.address_line1,
+          city: profile?.city,
+          state: profile?.state,
+          postcode: profile?.postcode,
+        })) ||
+      null,
     phone: business?.phone ?? profile?.phone ?? null,
     email: business?.email ?? profile?.email ?? fallbackEmail ?? null,
     logoPath: business?.logo_url ?? profile?.logo_url ?? null,
@@ -293,6 +314,7 @@ export async function getBusinessDocumentBranding(
     data: {
       name: merged.name,
       abn: merged.abn,
+      address: merged.address,
       phone: merged.phone,
       email: merged.email,
       logoPath: merged.logoPath,
@@ -319,7 +341,8 @@ export async function getBusinessProfile(
     fallbackEmail,
   });
   const logoUrl = merged.logoPath ?? '';
-  const logoPreviewUrl = (await createSignedStorageUrl(supabase, logoUrl)) ?? '';
+  const logoPreviewUrl =
+    (await createSignedStorageUrl(supabase, logoUrl)) ?? '';
 
   return {
     data: toFormValues({
@@ -372,7 +395,10 @@ export async function getBusinessRateSettings(
 
   if (error) return { data: null, error: error.message };
 
-  return { data: parseUserRateSettings(data?.default_rates ?? {}), error: null };
+  return {
+    data: parseUserRateSettings(data?.default_rates ?? {}),
+    error: null,
+  };
 }
 
 export async function saveBusinessRateSettings(

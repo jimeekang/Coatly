@@ -102,7 +102,9 @@ function getEstimateTotalsCents() {
 }
 
 function getEstimateTotalsKey() {
-  return getEstimateTotalsCents().sort((a, b) => a - b).join(',');
+  return getEstimateTotalsCents()
+    .sort((a, b) => a - b)
+    .join(',');
 }
 
 async function addLibraryItemToQuote(user: ReturnType<typeof userEvent.setup>) {
@@ -113,7 +115,9 @@ async function addLibraryItemToQuote(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Add to Quote' }));
 }
 
-async function addDetailedSpecificRoom(user: ReturnType<typeof userEvent.setup>) {
+async function addDetailedSpecificRoom(
+  user: ReturnType<typeof userEvent.setup>
+) {
   await user.click(screen.getByRole('tab', { name: /Detailed/i }));
   await user.click(screen.getByRole('button', { name: 'Add Room' }));
 }
@@ -174,6 +178,86 @@ describe('QuoteForm', () => {
       expect.objectContaining({
         working_days: 4,
       })
+    );
+  });
+
+  it('submits maintenance scope sections and clauses without scope price fields', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(<QuoteForm customers={[CUSTOMER]} onSubmit={onSubmit} />);
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Water damage touch-up');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
+    await user.click(screen.getByRole('tab', { name: /By day/i }));
+
+    await user.click(
+      screen.getByRole('button', { name: /Maintenance \/ touch-up/i })
+    );
+    await user.click(
+      screen.getByRole('button', { name: /Add scope section/i })
+    );
+    await user.selectOptions(
+      screen.getByLabelText('Maintenance job pack'),
+      'water_damage_repaint'
+    );
+    await user.clear(screen.getByLabelText('Scope title'));
+    await user.type(
+      screen.getByLabelText('Scope title'),
+      'Water damage repaint'
+    );
+    await user.type(screen.getByLabelText('Area label'), 'Bedroom ceiling');
+    await user.type(
+      screen.getByLabelText('Scope description'),
+      'Stain block and repaint the visible ceiling damage.'
+    );
+    await user.selectOptions(
+      screen.getByLabelText('Pricing status'),
+      'to_confirm'
+    );
+    await user.click(screen.getByRole('button', { name: /Add step/i }));
+    await user.type(
+      screen.getByLabelText('Step description'),
+      'Apply stain blocker before repainting.'
+    );
+    await user.click(
+      screen.getByRole('button', { name: /Add Source repair excluded/i })
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save Quote' }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const payload = onSubmit.mock.calls[0][0];
+
+    expect(payload).toMatchObject({
+      job_type: 'maintenance',
+      pricing_method: 'day_rate',
+      scope_sections: [
+        expect.objectContaining({
+          section_kind: 'maintenance',
+          title: 'Water damage repaint',
+          area_label: 'Bedroom ceiling',
+          maintenance_job_pack: 'water_damage_repaint',
+          pricing_status: 'to_confirm',
+          steps: [
+            expect.objectContaining({
+              description: 'Apply stain blocker before repainting.',
+            }),
+          ],
+        }),
+      ],
+      clause_items: [
+        expect.objectContaining({
+          clause_key: 'source_repair_excluded',
+          title: 'Source repair excluded',
+        }),
+      ],
+    });
+
+    expect(JSON.stringify(payload.scope_sections)).not.toMatch(
+      /unit_price|subtotal|gst|total|rate_cents/
     );
   });
 
@@ -241,8 +325,12 @@ describe('QuoteForm', () => {
     const footer = sendButton.closest('.fixed');
     const footerContent = sendButton.closest('.mx-auto');
 
-    expect(footer).toHaveClass('bottom-[calc(4rem+env(safe-area-inset-bottom))]');
-    expect(footer).toHaveClass('pb-[calc(0.75rem+env(safe-area-inset-bottom))]');
+    expect(footer).toHaveClass(
+      'bottom-[calc(4rem+env(safe-area-inset-bottom))]'
+    );
+    expect(footer).toHaveClass(
+      'pb-[calc(0.75rem+env(safe-area-inset-bottom))]'
+    );
     expect(footer).toHaveClass('px-3', 'sm:px-4', 'md:px-6');
     expect(footer).toHaveClass('md:left-60', 'lg:left-64');
     expect(footerContent).toHaveClass('max-w-lg', 'xl:max-w-6xl');
@@ -303,7 +391,10 @@ describe('QuoteForm', () => {
     );
 
     await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
-    await user.type(screen.getByLabelText('Title'), 'Two bed apartment repaint');
+    await user.type(
+      screen.getByLabelText('Title'),
+      'Two bed apartment repaint'
+    );
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
     await user.click(
@@ -413,18 +504,26 @@ describe('QuoteForm', () => {
         version: 2,
         label: 'Bedroom',
         enabled_surfaces: ['walls', 'ceiling', 'trim'],
-	        sizes: {
-	          small: { walls_cents: 90000, ceiling_cents: 30000, trim_cents: 10000 },
-	          medium: {
-	            walls_cents: 120000,
-	            ceiling_cents: 45000,
-	            trim_cents: 15000,
-	            wall_area_m2: 40,
-	            ceiling_area_m2: 12,
-	            trim_linear_m: 18,
-	          },
-	          large: { walls_cents: 150000, ceiling_cents: 60000, trim_cents: 20000 },
-	        },
+        sizes: {
+          small: {
+            walls_cents: 90000,
+            ceiling_cents: 30000,
+            trim_cents: 10000,
+          },
+          medium: {
+            walls_cents: 120000,
+            ceiling_cents: 45000,
+            trim_cents: 15000,
+            wall_area_m2: 40,
+            ceiling_area_m2: 12,
+            trim_linear_m: 18,
+          },
+          large: {
+            walls_cents: 150000,
+            ceiling_cents: 60000,
+            trim_cents: 20000,
+          },
+        },
         sort_order: 0,
       },
     ];
@@ -479,27 +578,27 @@ describe('QuoteForm', () => {
     const payload = onSubmit.mock.calls[0][0];
     expect(payload.interior_estimate.rooms).toEqual([
       expect.objectContaining({
-	        name: 'Bedroom',
-	        anchor_room_type: 'Bedroom',
-	        height_m: null,
-	        pricing_model: 'measured',
-	        wall_area_m2: 40,
-	        ceiling_area_m2: 12,
-	        include_walls: true,
-	        include_ceiling: true,
-	        include_trim: false,
+        name: 'Bedroom',
+        anchor_room_type: 'Bedroom',
+        height_m: null,
+        pricing_model: 'measured',
+        wall_area_m2: 40,
+        ceiling_area_m2: 12,
+        include_walls: true,
+        include_ceiling: true,
+        include_trim: false,
         source_room_template_id: 'quick-bedroom',
-	        source_room_template_version: 2,
-	        source_room_template_label: 'Bedroom',
-	        source_room_template_size: 'medium',
-	        rate_snapshot_version: 1,
-	        source_condition: 'fair',
-	        source_wall_paint_system: 'repaint_2coat',
-	        source_wall_rate_cents_per_m2: 1800,
-	        source_ceiling_rate_cents_per_m2: 2000,
-	        source_condition_multiplier_pct: 100,
-	      }),
-	    ]);
+        source_room_template_version: 2,
+        source_room_template_label: 'Bedroom',
+        source_room_template_size: 'medium',
+        rate_snapshot_version: 1,
+        source_condition: 'fair',
+        source_wall_paint_system: 'repaint_2coat',
+        source_wall_rate_cents_per_m2: 1800,
+        source_ceiling_rate_cents_per_m2: 2000,
+        source_condition_multiplier_pct: 100,
+      }),
+    ]);
   });
 
   it('removes room-level door and window toggles from advanced room surfaces', async () => {
@@ -566,9 +665,14 @@ describe('QuoteForm', () => {
     await user.type(screen.getByLabelText('Valid Until'), '2026-06-10');
     await user.click(screen.getByRole('tab', { name: /Detailed/i }));
     await user.click(screen.getByRole('button', { name: 'Add Room' }));
-    await user.selectOptions(screen.getByLabelText('Condition for Room 1'), 'poor');
+    await user.selectOptions(
+      screen.getByLabelText('Condition for Room 1'),
+      'poor'
+    );
     await user.click(screen.getByRole('button', { name: 'Trim' }));
-    await user.click(screen.getByRole('button', { name: 'New Plaster (3 coats)' }));
+    await user.click(
+      screen.getByRole('button', { name: 'New Plaster (3 coats)' })
+    );
     await user.click(screen.getByRole('button', { name: 'Water Base' }));
     await user.click(screen.getByRole('button', { name: 'Save Quote' }));
 
@@ -578,15 +682,15 @@ describe('QuoteForm', () => {
     expect(room).toEqual(
       expect.objectContaining({
         include_trim: true,
-	        source_condition: 'poor',
-	        source_wall_paint_system: 'new_plaster_3coat',
-	        source_trim_paint_system: 'water_3coat_white_finish',
-	        source_condition_multiplier_pct: 130,
-	        source_wall_rate_cents_per_m2: 2800,
-	        source_ceiling_rate_cents_per_m2: 3000,
-	        source_trim_rate_cents_per_m: expect.any(Number),
-	      })
-	    );
+        source_condition: 'poor',
+        source_wall_paint_system: 'new_plaster_3coat',
+        source_trim_paint_system: 'water_3coat_white_finish',
+        source_condition_multiplier_pct: 130,
+        source_wall_rate_cents_per_m2: 2800,
+        source_ceiling_rate_cents_per_m2: 3000,
+        source_trim_rate_cents_per_m: expect.any(Number),
+      })
+    );
   });
 
   it('keeps specific-area room trim base and dimensions out of the way until needed', async () => {
@@ -614,8 +718,12 @@ describe('QuoteForm', () => {
 
     await user.click(screen.getByRole('button', { name: 'Trim' }));
 
-    expect(screen.getByRole('button', { name: 'Oil Base' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Water Base' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Oil Base' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Water Base' })
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save Quote' }));
 
@@ -712,15 +820,15 @@ describe('QuoteForm', () => {
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
 
-    expect(onSubmit.mock.calls[0][0].interior_estimate.property_details).toEqual(
-      {
-        apartment_type: null,
-        sqm: null,
-        bedrooms: null,
-        bathrooms: null,
-        storeys: null,
-      }
-    );
+    expect(
+      onSubmit.mock.calls[0][0].interior_estimate.property_details
+    ).toEqual({
+      apartment_type: null,
+      sqm: null,
+      bedrooms: null,
+      bathrooms: null,
+      storeys: null,
+    });
   });
 
   it('updates detailed estimate total when switching estimate modes', async () => {
@@ -921,15 +1029,15 @@ describe('QuoteForm', () => {
 
     expect(payload.interior_estimate.rooms[0]).toEqual(
       expect.objectContaining({
-	        include_trim: true,
-	        source_trim_paint_system: 'water_3coat_white_finish',
-	        source_trim_rate_cents_per_m: expect.any(Number),
-	      })
-	    );
-	    expect(
-	      payload.interior_estimate.rooms[0].source_trim_rate_cents_per_m
-	    ).toBeGreaterThan(3500);
-	  });
+        include_trim: true,
+        source_trim_paint_system: 'water_3coat_white_finish',
+        source_trim_rate_cents_per_m: expect.any(Number),
+      })
+    );
+    expect(
+      payload.interior_estimate.rooms[0].source_trim_rate_cents_per_m
+    ).toBeGreaterThan(3500);
+  });
 
   it('ignores invalid saved interior estimate defaults instead of crashing edit mode', () => {
     render(
@@ -975,7 +1083,9 @@ describe('QuoteForm', () => {
       'aria-selected',
       'true'
     );
-    expect(screen.getByRole('button', { name: 'Apartment' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Apartment' })
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('Labour Markup')).toBeInTheDocument();
   });
 
@@ -1039,7 +1149,9 @@ describe('QuoteForm', () => {
     render(<QuoteForm customers={[CUSTOMER]} />);
 
     expect(screen.getByLabelText('Labour Markup')).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: /By day.*Labour.*days/i }));
+    await user.click(
+      screen.getByRole('tab', { name: /By day.*Labour.*days/i })
+    );
     expect(screen.queryByLabelText('Labour Markup')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Materials Markup')).not.toBeInTheDocument();
   });
@@ -1049,7 +1161,9 @@ describe('QuoteForm', () => {
 
     render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
 
-    await user.click(screen.getByRole('tab', { name: /By day.*Labour.*days/i }));
+    await user.click(
+      screen.getByRole('tab', { name: /By day.*Labour.*days/i })
+    );
 
     expect(getEstimateTotalsCents()).toEqual([114400]);
 
@@ -1215,7 +1329,10 @@ describe('QuoteForm', () => {
 
     await addDetailedSpecificRoom(user);
     await user.click(screen.getByRole('button', { name: 'Add Line Item' }));
-    await user.type(screen.getByLabelText('Line item name'), 'Living room walls');
+    await user.type(
+      screen.getByLabelText('Line item name'),
+      'Living room walls'
+    );
 
     expect(
       screen.getByText(/already includes Living Room walls/i)
