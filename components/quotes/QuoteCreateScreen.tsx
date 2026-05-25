@@ -4,7 +4,10 @@ import { useState, useTransition } from 'react';
 import { generateAIDraft } from '@/app/actions/ai-drafts';
 import { createQuote } from '@/app/actions/quotes';
 import { saveQuoteTemplate } from '@/app/actions/quote-templates';
-import { AIDraftPanel } from '@/components/ai/AIDraftPanel';
+import {
+  AIDraftPanel,
+  type AIDraftPhotoAttachment,
+} from '@/components/ai/AIDraftPanel';
 import {
   QuoteForm,
   type QuoteFormDefaultValues,
@@ -47,8 +50,14 @@ function toRecord(value: unknown): Record<string, unknown> {
 
 function buildAiIntakeSnapshot(
   draft: AIQuoteDraft,
-  prompt: string
+  prompt: string,
+  photos: AIDraftPhotoAttachment[]
 ): QuoteAiIntakeSnapshotInput {
+  const photoRefs = photos.map((photo) => ({
+    id: photo.id,
+    description: photo.description ?? photo.name,
+  }));
+
   return {
     job_type: draft.job_type,
     ...(draft.maintenance_job_pack
@@ -61,12 +70,14 @@ function buildAiIntakeSnapshot(
       prompt,
       job_type: draft.job_type,
       maintenance_job_pack: draft.maintenance_job_pack,
+      photo_count: photoRefs.length,
     },
     output_json: toRecord(draft),
-    photo_refs: [],
+    photo_refs: photoRefs,
     metadata: {
       questions_for_user_count: draft.questions_for_user.length,
       assumptions_count: draft.assumptions.length,
+      photo_count: photoRefs.length,
     },
   };
 }
@@ -89,6 +100,7 @@ export function QuoteCreateScreen({
   initialCustomerId?: string;
 }) {
   const [prompt, setPrompt] = useState('');
+  const [photos, setPhotos] = useState<AIDraftPhotoAttachment[]>([]);
   const [draft, setDraft] = useState<AIQuoteDraft | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -114,6 +126,11 @@ export function QuoteCreateScreen({
       const result = await generateAIDraft({
         entity: 'quote',
         prompt,
+        photo_refs: photos.map((photo) => ({
+          id: photo.id,
+          url: photo.dataUrl,
+          description: photo.description ?? photo.name,
+        })),
       });
 
       if (result.error || !result.data?.quote) {
@@ -204,7 +221,7 @@ export function QuoteCreateScreen({
         job_type: draft.job_type,
         scope_sections: draft.scope_sections,
         clause_items: draft.clauses,
-        ai_intake_snapshot: buildAiIntakeSnapshot(draft, prompt),
+        ai_intake_snapshot: buildAiIntakeSnapshot(draft, prompt, photos),
       }
     : templateDefault
       ? {
@@ -249,11 +266,14 @@ export function QuoteCreateScreen({
             'Standard-complexity quote for Harbor Cafe interior repaint',
             'Quote for living room walls and ceiling repaint in Bondi',
           ]}
+          photos={photos}
+          maxPhotos={3}
           pending={isPending}
           error={error}
           summary={summary}
           warnings={warnings}
           onPromptChange={setPrompt}
+          onPhotosChange={setPhotos}
           onGenerate={handleGenerate}
           onApply={handleApply}
           canApply={Boolean(draft)}

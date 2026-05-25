@@ -17,32 +17,36 @@ function selectClass() {
 
 export default function GoogleCalendarCard({
   integration,
+  canConnectGoogleCalendar,
   errorMessage,
   successMessage,
 }: {
-  integration: GoogleCalendarIntegrationSummary;
+  integration: GoogleCalendarIntegrationSummary | null;
+  canConnectGoogleCalendar: boolean;
   errorMessage?: string | null;
   successMessage?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [displayCalendarId, setDisplayCalendarId] = useState(integration.displayCalendarId);
+  const [displayCalendarId, setDisplayCalendarId] = useState(
+    integration?.displayCalendarId ?? 'primary'
+  );
   const [availabilityCalendarId, setAvailabilityCalendarId] = useState(
-    integration.availabilityCalendarId
+    integration?.availabilityCalendarId ?? 'primary'
   );
   const [eventDestinationCalendarId, setEventDestinationCalendarId] = useState(
-    integration.eventDestinationCalendarId
+    integration?.eventDestinationCalendarId ?? 'primary'
   );
-  const [timezone, setTimezone] = useState(integration.timezone);
+  const [timezone, setTimezone] = useState(integration?.timezone ?? 'Australia/Sydney');
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
 
   const writableCalendars = useMemo(
     () =>
-      integration.calendars.filter(
+      (integration?.calendars ?? []).filter(
         (calendar) => calendar.accessRole === 'owner' || calendar.accessRole === 'writer'
       ),
-    [integration.calendars]
+    [integration?.calendars]
   );
 
   function handleSave() {
@@ -86,6 +90,25 @@ export default function GoogleCalendarCard({
         router.refresh();
       })();
     });
+  }
+
+  if (!canConnectGoogleCalendar || !integration) {
+    return (
+      <section className="rounded-2xl border border-pm-border bg-white p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-pm-body">Calendar</h3>
+            <p className="mt-1 text-sm text-pm-secondary">
+              This account will use Coatly&apos;s internal calendar for booking dates and schedule
+              checks.
+            </p>
+          </div>
+          <span className="inline-flex min-h-11 items-center rounded-xl border border-pm-border px-4 text-sm font-medium text-pm-secondary">
+            Internal calendar
+          </span>
+        </div>
+      </section>
+    );
   }
 
   return (

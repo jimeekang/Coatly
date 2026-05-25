@@ -1,5 +1,6 @@
 import 'server-only';
 import { randomBytes } from 'node:crypto';
+import type { User } from '@supabase/supabase-js';
 import type { GoogleCalendarScope } from '@/lib/google-calendar/types';
 
 export const GOOGLE_CALENDAR_STATE_COOKIE = 'google-calendar-oauth-state';
@@ -12,6 +13,9 @@ export const GOOGLE_CALENDAR_SCOPES: GoogleCalendarScope[] = [
   'https://www.googleapis.com/auth/calendar.events',
 ];
 
+const DEFAULT_GOOGLE_CLIENT_ID =
+  '1005860908873-6icehiqlp8atsb8m20302avmgosep0da.apps.googleusercontent.com';
+
 type GoogleTokenResponse = {
   access_token: string;
   expires_in: number;
@@ -21,8 +25,12 @@ type GoogleTokenResponse = {
   id_token?: string;
 };
 
+function getGoogleClientId() {
+  return process.env.GOOGLE_CLIENT_ID?.trim() || DEFAULT_GOOGLE_CLIENT_ID;
+}
+
 function getGoogleOAuthClientConfig() {
-  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientId = getGoogleClientId();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
@@ -36,9 +44,20 @@ function getGoogleOAuthClientConfig() {
 
 export function isGoogleCalendarOAuthConfigured() {
   return Boolean(
-    process.env.GOOGLE_CLIENT_ID?.trim() &&
+    getGoogleClientId() &&
       process.env.GOOGLE_CLIENT_SECRET?.trim() &&
       process.env.GOOGLE_CALENDAR_TOKEN_SECRET?.trim()
+  );
+}
+
+export function canUserConnectGoogleCalendar(user: Pick<User, 'app_metadata' | 'identities'>) {
+  const providers = user.app_metadata?.providers;
+  const metadataProvider = user.app_metadata?.provider;
+
+  return Boolean(
+    metadataProvider === 'google' ||
+      (Array.isArray(providers) && providers.includes('google')) ||
+      user.identities?.some((identity) => identity.provider === 'google')
   );
 }
 

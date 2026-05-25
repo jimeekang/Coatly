@@ -8,6 +8,7 @@ import {
   PrimaryActionLink,
 } from '@/components/layout/PageHeader';
 import { getGoogleCalendarIntegrationSummary } from '@/lib/google-calendar/service';
+import { canUserConnectGoogleCalendar } from '@/lib/google-calendar/oauth';
 import { getBusinessProfile } from '@/lib/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -31,10 +32,18 @@ export default async function SettingsPage({
     user.id,
     user.email ?? null
   );
-  const googleCalendar = await getGoogleCalendarIntegrationSummary(supabase, user.id);
-  const calendarError = typeof params?.calendar_error === 'string' ? params.calendar_error : null;
+  const canConnectGoogleCalendar = canUserConnectGoogleCalendar(user);
+  const googleCalendar = canConnectGoogleCalendar
+    ? await getGoogleCalendarIntegrationSummary(supabase, user.id)
+    : null;
+  const calendarError =
+    canConnectGoogleCalendar && typeof params?.calendar_error === 'string'
+      ? params.calendar_error
+      : null;
   const calendarSuccess =
-    params?.calendar_success === 'connected' ? 'Google Calendar connected.' : null;
+    canConnectGoogleCalendar && params?.calendar_success === 'connected'
+      ? 'Google Calendar connected.'
+      : null;
 
   if (error || !business) {
     return (
@@ -57,6 +66,7 @@ export default async function SettingsPage({
 
       <GoogleCalendarCard
         integration={googleCalendar}
+        canConnectGoogleCalendar={canConnectGoogleCalendar}
         errorMessage={calendarError}
         successMessage={calendarSuccess}
       />

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
   buildGoogleCalendarAuthorizationUrl,
+  canUserConnectGoogleCalendar,
   createGoogleCalendarOAuthState,
   GOOGLE_CALENDAR_STATE_COOKIE,
   isGoogleCalendarOAuthConfigured,
@@ -24,6 +25,15 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL('/login', origin));
+  }
+
+  if (!canUserConnectGoogleCalendar(user)) {
+    const settingsUrl = new URL('/settings', origin);
+    settingsUrl.searchParams.set(
+      'calendar_error',
+      'Google Calendar is available only for Coatly accounts that sign in with Google.'
+    );
+    return NextResponse.redirect(settingsUrl);
   }
 
   if (!isGoogleCalendarOAuthConfigured()) {
