@@ -228,6 +228,13 @@ function buildDraftPrompt(input: z.infer<typeof draftInputSchema>) {
 }
 
 function buildQuoteDraftPrompt(input: z.infer<typeof draftInputSchema>) {
+  const photoRefs = input.photo_refs?.map((photo, index) => ({
+    id: photo.id,
+    storage_path: photo.storage_path,
+    description: photo.description,
+    image_ref: `attached_image_${index + 1}`,
+  }));
+
   const quoteInput: AIQuoteDraftInput = {
     prompt: input.prompt,
     ...(input.job_type ? { job_type: input.job_type } : {}),
@@ -244,7 +251,7 @@ function buildQuoteDraftPrompt(input: z.infer<typeof draftInputSchema>) {
     ...(input.rough_measurements !== undefined
       ? { rough_measurements: input.rough_measurements }
       : {}),
-    ...(input.photo_refs ? { photo_refs: input.photo_refs } : {}),
+    ...(photoRefs ? { photo_refs: photoRefs } : {}),
   };
 
   return [
@@ -272,6 +279,14 @@ function buildQuoteDraftPrompt(input: z.infer<typeof draftInputSchema>) {
     '',
     `Quote draft input: ${JSON.stringify(quoteInput, null, 2)}`,
   ].join('\n');
+}
+
+function getAttachedImageInputs(input: z.infer<typeof draftInputSchema>) {
+  return (
+    input.photo_refs
+      ?.map((photo) => photo.url)
+      .filter((url): url is string => Boolean(url?.trim())) ?? []
+  ).map((url) => ({ url }));
 }
 
 function buildWorkspaceAssistantPrompt(
@@ -427,6 +442,7 @@ export async function generateWorkspaceDraft(
         },
         { role: 'user', content: buildQuoteDraftPrompt(parsedInput) },
       ],
+      images: getAttachedImageInputs(parsedInput),
       temperature: 0.2,
       maxOutputTokens: 2200,
       metadata: {

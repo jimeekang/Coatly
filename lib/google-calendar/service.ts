@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { buildQuoteCustomerAddress } from '@/lib/quotes';
 import { decryptGoogleRefreshToken, encryptGoogleRefreshToken } from '@/lib/google-calendar/crypto';
 import {
+  canUserConnectGoogleCalendar,
   exchangeGoogleCalendarCodeForTokens,
   isGoogleCalendarOAuthConfigured,
   refreshGoogleCalendarAccessToken,
@@ -301,6 +302,12 @@ export async function completeGoogleCalendarConnection(input: {
 
   if (!input.user.email) {
     throw new Error('Your Coatly account needs an email address before Google Calendar can connect.');
+  }
+
+  if (!canUserConnectGoogleCalendar(input.user)) {
+    throw new Error(
+      'Google Calendar is available only for Coatly accounts that sign in with Google.'
+    );
   }
 
   const existingState = await getStoredGoogleCalendarState(input.supabase, input.user.id);

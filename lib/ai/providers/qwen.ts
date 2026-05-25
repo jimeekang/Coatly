@@ -23,7 +23,12 @@ interface QwenChatCompletionsPayload {
   model: string;
   messages: Array<{
     role: 'system' | 'user' | 'assistant';
-    content: string;
+    content:
+      | string
+      | Array<
+          | { type: 'text'; text: string }
+          | { type: 'image_url'; image_url: { url: string } }
+        >;
   }>;
   response_format: {
     type: 'json_object';
@@ -83,6 +88,37 @@ function readFirstMessageContent(responseJson: unknown) {
     : null;
 }
 
+function buildMessages(request: AIProviderGenerateRequest): QwenChatCompletionsPayload['messages'] {
+  if (!request.images?.length) {
+    return request.messages;
+  }
+
+  let lastUserMessageIndex = -1;
+  for (let index = request.messages.length - 1; index >= 0; index -= 1) {
+    if (request.messages[index]?.role === 'user') {
+      lastUserMessageIndex = index;
+      break;
+    }
+  }
+
+  return request.messages.map((message, index) => {
+    if (index !== lastUserMessageIndex) {
+      return message;
+    }
+
+    return {
+      role: message.role,
+      content: [
+        { type: 'text', text: message.content },
+        ...request.images!.map((image) => ({
+          type: 'image_url' as const,
+          image_url: { url: image.url },
+        })),
+      ],
+    };
+  });
+}
+
 export function createQwenProvider(options: QwenProviderOptions = {}): AIProvider {
   const env = options.env ?? process.env;
   const apiKey = env.QWEN_API_KEY?.trim() ?? '';
@@ -113,7 +149,7 @@ export function createQwenProvider(options: QwenProviderOptions = {}): AIProvide
 
       const payload: QwenChatCompletionsPayload = {
         model,
-        messages: request.messages,
+        messages: buildMessages(request),
         response_format: {
           type: 'json_object',
         },

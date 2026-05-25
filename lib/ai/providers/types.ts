@@ -7,6 +7,10 @@ export interface AIProviderMessage {
   content: string;
 }
 
+export interface AIProviderImageInput {
+  url: string;
+}
+
 export type AIProviderMetadataValue =
   | string
   | number
@@ -18,6 +22,7 @@ export type AIProviderMetadataMap = Record<string, AIProviderMetadataValue>;
 
 export interface AIProviderGenerateRequest {
   messages: AIProviderMessage[];
+  images?: AIProviderImageInput[];
   temperature?: number;
   maxOutputTokens?: number;
   metadata?: AIProviderMetadataMap;
