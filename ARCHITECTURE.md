@@ -62,6 +62,8 @@ modules/<feature>/
 
 Current feature modules are `materials`, `customers`, `quotes`, `invoices`, `jobs`, `price-rates`, and `settings`. Route files in `app/` stay thin and import from modules.
 
+Detailed DDD-lite dependency rules, file placement guidance, and maintenance checklists live in [`docs/DDD-MODULES.md`](./docs/DDD-MODULES.md).
+
 ## Core Data Model
 
 | 테이블 | 역할 |

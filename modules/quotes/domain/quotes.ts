@@ -18,7 +18,7 @@ import {
   type QuoteCreateInput,
   type QuoteLineItemFormInput,
   type QuoteSurface,
-} from '@/lib/supabase/validators';
+} from '@/modules/quotes/domain/quote-schema';
 import type {
   PricingMethod,
   PricingMethodInputs,

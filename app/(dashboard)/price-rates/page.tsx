@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { PriceRatesForm } from '@/modules/price-rates/ui/PriceRatesForm';
-import { getBusinessRateSettings } from '@/modules/settings/domain/businesses';
+import { getBusinessRateSettings } from '@/modules/settings/infrastructure/businesses';
 import { DEFAULT_RATE_SETTINGS } from '@/modules/price-rates/domain/rate-settings';
 import { getMaterialItems } from '@/modules/materials/application/actions';
 import { createServerClient } from '@/lib/supabase/server';

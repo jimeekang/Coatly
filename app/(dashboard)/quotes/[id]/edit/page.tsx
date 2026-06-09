@@ -10,7 +10,7 @@ import {
   isInteriorEstimateInput,
   normalizeInteriorWallPaintSystem,
 } from '@/modules/quotes/domain/interior-estimates';
-import type { QuoteLineItemFormInput } from '@/lib/supabase/validators';
+import type { QuoteLineItemFormInput } from '@/modules/quotes/domain/quote-schema';
 import type {
   PricingMethod,
   QuoteClauseItemInput,

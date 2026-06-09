@@ -5,8 +5,10 @@ import { NumericInput, sanitizeDecimalInput } from '@/components/shared/NumericI
 import type {
   MaterialItem,
   MaterialItemCategory,
+} from '@/modules/materials/domain/types';
+import type {
   QuoteLineItemFormInput,
-} from '@/lib/supabase/validators';
+} from '@/modules/quotes/domain/quote-schema';
 
 function formatAUD(cents: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100);

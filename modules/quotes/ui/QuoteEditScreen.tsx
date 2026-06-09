@@ -7,10 +7,8 @@ import {
 } from '@/modules/quotes/ui/QuoteForm';
 import type { QuoteCustomerOption } from '@/modules/quotes/domain/quotes';
 import type { UserRateSettings } from '@/modules/price-rates/domain/rate-settings';
-import type {
-  MaterialItem,
-  QuoteCreateInput,
-} from '@/lib/supabase/validators';
+import type { MaterialItem } from '@/modules/materials/domain/types';
+import type { QuoteCreateInput } from '@/modules/quotes/domain/quote-schema';
 
 type QuoteSubmitIntent = 'save' | 'send_email';
 

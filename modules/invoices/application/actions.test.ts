@@ -46,9 +46,9 @@ vi.mock('@/lib/subscription/access', () => ({
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
-vi.mock('@/modules/settings/domain/businesses', async () => {
-  const actual = await vi.importActual<typeof import('@/modules/settings/domain/businesses')>(
-    '@/modules/settings/domain/businesses'
+vi.mock('@/modules/settings/infrastructure/businesses', async () => {
+  const actual = await vi.importActual<typeof import('@/modules/settings/infrastructure/businesses')>(
+    '@/modules/settings/infrastructure/businesses'
   );
 
   return {

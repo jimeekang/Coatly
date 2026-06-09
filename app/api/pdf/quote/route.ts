@@ -17,7 +17,7 @@ import {
   mapQuoteClauseItems,
   mapQuoteScopeSections,
 } from '@/modules/quotes/domain/quote-form-structure';
-import { getBusinessDocumentBranding } from '@/modules/settings/domain/businesses';
+import { getBusinessDocumentBranding } from '@/modules/settings/infrastructure/businesses';
 import { QuoteTemplate } from '@/lib/pdf/quote-template';
 
 const QUOTE_CUSTOMER_SELECT =

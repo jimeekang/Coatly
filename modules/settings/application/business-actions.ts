@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { saveBusinessProfileForUser } from '@/modules/settings/domain/businesses';
+import { saveBusinessProfileForUser } from '@/modules/settings/infrastructure/businesses';
 import type { BusinessUpdateInput } from '@/lib/supabase/validators';
 import { createServerClient } from '@/lib/supabase/server';
 

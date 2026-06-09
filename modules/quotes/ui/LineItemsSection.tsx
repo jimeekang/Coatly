@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { LineItemPicker } from './LineItemPicker';
 import { NumericInput, sanitizeDecimalInput, sanitizeIntegerInput } from '@/components/shared/NumericInput';
-import type { MaterialItem, QuoteLineItemFormInput } from '@/lib/supabase/validators';
+import type { MaterialItem } from '@/modules/materials/domain/types';
+import type { QuoteLineItemFormInput } from '@/modules/quotes/domain/quote-schema';
 import { calculateQuoteLineItemsSubtotal } from '@/modules/quotes/domain/quotes';
 
 function formatAUD(cents: number) {

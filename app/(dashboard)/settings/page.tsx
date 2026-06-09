@@ -9,7 +9,7 @@ import {
 } from '@/components/layout/PageHeader';
 import { getGoogleCalendarIntegrationSummary } from '@/lib/google-calendar/service';
 import { canUserConnectGoogleCalendar } from '@/lib/google-calendar/oauth';
-import { getBusinessProfile } from '@/modules/settings/domain/businesses';
+import { getBusinessProfile } from '@/modules/settings/infrastructure/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Settings' };

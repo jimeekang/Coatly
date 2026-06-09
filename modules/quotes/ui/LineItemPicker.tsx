@@ -12,8 +12,8 @@ import {
   MATERIAL_ITEM_CATEGORY_LABELS,
   type MaterialItem,
   type MaterialItemCategory,
-  type QuoteLineItemFormInput,
-} from '@/lib/supabase/validators';
+} from '@/modules/materials/domain/types';
+import type { QuoteLineItemFormInput } from '@/modules/quotes/domain/quote-schema';
 
 function formatAUD(cents: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100);

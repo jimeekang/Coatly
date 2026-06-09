@@ -2,78 +2,34 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { renderToBuffer } from '@react-pdf/renderer';
 import {
   buildQuoteCustomerAddress,
   calculateQuoteLineItemsSubtotal,
   calculateQuoteTotals,
-  calculateQuotePreview,
-  composeQuoteTotals,
   formatQuoteCustomerPropertyAddress,
   isMissingQuoteCustomerSnapshotColumnError,
-  mapQuoteDetail,
-  mapQuoteListItem,
-  normalizeQuoteCoatingType,
   parseQuoteCreateInput,
   resolveQuoteStatus,
-  resolveQuoteCustomerSummary,
-  serializeLegacyQuoteCoatingType,
-  serializeQuoteCoatingType,
   type QuoteCustomerOption,
   type QuoteCustomerPropertyOption,
-  type QuoteCoatingType,
   type QuoteDetail,
-  type QuoteEstimateItemCategory,
   type QuoteListItem,
-  type QuoteLineItemRecord,
   type PublicQuoteDetail,
-  type QuoteSurfaceType,
 } from '@/modules/quotes/domain/quotes';
-import {
-  calculateInteriorEstimate,
-  snapshotInteriorEstimateInput,
-} from '@/modules/quotes/domain/interior-estimates';
-import { calculateExteriorEstimate } from '@/modules/quotes/domain/exterior-estimates';
 import { getFirstBlockingQuotePricingScopeError } from '@/modules/quotes/domain/quote-pricing-scopes';
-import {
-  getFirstBlockingRateSetupIssue,
-  getSelectedAdvancedEstimateIssues,
-  getSelectedQuickEstimateIssues,
-} from '@/modules/price-rates/domain/rate-setup-diagnostics';
 import {
   getBusinessDocumentBranding,
   getBusinessRateSettings,
-} from '@/modules/settings/domain/businesses';
+} from '@/modules/settings/infrastructure/businesses';
 import {
-  mapQuoteClauseItems,
-  mapQuoteScopeSections,
-  type QuoteClauseItemView,
-  type QuoteScopeSectionView,
-} from '@/modules/quotes/domain/quote-form-structure';
-import {
-  sendQuoteApprovalNotification,
-  sendQuoteEmail,
-} from '@/lib/email/resend';
-import { QuoteTemplate } from '@/lib/pdf/quote-template';
+  getHydratedPublicQuoteDetailByToken,
+  getHydratedQuoteDetailForUser,
+  getLinkedInvoiceCountForQuote,
+  getQuoteListItemsByCustomer,
+  getQuoteListItemsForUser,
+} from '@/modules/quotes/infrastructure/quote-repository';
 import { DEFAULT_RATE_SETTINGS } from '@/modules/price-rates/domain/rate-settings';
 import type { UserRateSettings } from '@/modules/price-rates/domain/rate-settings';
-import {
-  calculateDayRateQuote,
-  calculateRoomRateQuote,
-  calculateManualQuote,
-  calculateQuickEstimate,
-  normalizeQuickEstimateInputsForCalculation,
-} from '@/utils/calculations';
-import type {
-  DayRateInputs,
-  RoomRateInputs,
-  ManualInputs,
-  QuickInputs,
-  PricingMethodInputs,
-  QuoteAiIntakeSnapshotInput,
-  QuoteClauseItemInput,
-  QuoteScopeSectionInput,
-} from '@/types/quote';
 import {
   getActiveSubscriptionRequiredMessage,
   getMonthlyActiveQuoteUsageForUser,
@@ -82,735 +38,24 @@ import {
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
-import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import type { Json } from '@/lib/supabase/types';
 import {
-  MATERIAL_ITEM_CATEGORIES,
-  type MaterialItemCategory,
-  type QuoteCreateInput,
-} from '@/lib/supabase/validators';
-import { formatAUD, formatDate } from '@/utils/format';
-
-type QuoteListRow = {
-  id: string;
-  user_id: string;
-  customer_id: string;
-  customer_email?: string | null;
-  customer_address?: string | null;
-  quote_number: string;
-  title: string | null;
-  status: string;
-  valid_until: string | null;
-  working_days?: number | null;
-  tier: string | null;
-  subtotal_cents: number;
-  gst_cents: number;
-  total_cents: number;
-  created_at: string;
-  updated_at: string;
-  customer:
-    | {
-        id: string;
-        name: string;
-        company_name: string | null;
-        email: string | null;
-        phone: string | null;
-        address_line1: string | null;
-        address_line2: string | null;
-        city: string | null;
-        state: string | null;
-        postcode: string | null;
-      }
-    | Array<{
-        id: string;
-        name: string;
-        company_name: string | null;
-        email: string | null;
-        phone: string | null;
-        address_line1: string | null;
-        address_line2: string | null;
-        city: string | null;
-        state: string | null;
-        postcode: string | null;
-      }>
-    | null;
-};
-
-type QuoteEstimateItemRow = {
-  id: string;
-  quote_id: string;
-  category: string;
-  label: string;
-  quantity: number | string;
-  unit: string;
-  unit_price_cents: number;
-  total_cents: number;
-  metadata: Record<string, unknown> | null;
-  sort_order: number;
-};
-
-type QuoteDetailRow = {
-  id: string;
-  user_id: string;
-  customer_id: string;
-  job_type?: string | null;
-  public_share_token?: string | null;
-  approved_at?: string | null;
-  approved_by_name?: string | null;
-  approved_by_email?: string | null;
-  approval_signature?: string | null;
-  manual_adjustment_cents?: number | null;
-  discount_cents?: number | null;
-  deposit_percent?: number | null;
-  customer_email?: string | null;
-  customer_address?: string | null;
-  quote_number: string;
-  title: string | null;
-  status: string;
-  valid_until: string | null;
-  working_days?: number | null;
-  tier: string | null;
-  notes: string | null;
-  internal_notes?: string | null;
-  labour_margin_percent: number;
-  material_margin_percent: number;
-  subtotal_cents: number;
-  gst_cents: number;
-  total_cents: number;
-  estimate_category?: string | null;
-  property_type?: string | null;
-  estimate_mode?: string | null;
-  estimate_context?: Record<string, unknown> | null;
-  pricing_snapshot?: Record<string, unknown> | null;
-  pricing_method?: string | null;
-  pricing_method_inputs?: Record<string, unknown> | null;
-  linked_invoice_count?: number | null;
-  created_at: string;
-  updated_at: string;
-  customer: QuoteListRow['customer'];
-};
-
-function jsonObjectOrEmpty(value: unknown) {
-  return value != null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function jsonColumnValue(value: unknown): Json {
-  return value == null ? {} : (value as Json);
-}
-
-function materialItemCategoryOrOther(category: string): MaterialItemCategory {
-  return MATERIAL_ITEM_CATEGORIES.includes(category as MaterialItemCategory)
-    ? (category as MaterialItemCategory)
-    : 'other';
-}
-
-type QuickEstimateItemRow = {
-  quote_id: string;
-  category: 'quick_estimate';
-  label: string;
-  quantity: number;
-  unit: 'job' | 'room';
-  unit_price_cents: number;
-  total_cents: number;
-  size: string | null;
-  selected_surfaces: string[];
-  coating_multiplier_pct: number | null;
-  condition_multiplier_pct: number | null;
-  item_notes: string | null;
-  metadata: Json;
-  sort_order: number;
-};
-
-function buildQuickEstimateItemRows(
-  quoteId: string,
-  inputs: QuickInputs
-): QuickEstimateItemRow[] {
-  const rows: QuickEstimateItemRow[] = [];
-
-  if (inputs.property_preset) {
-    const preset = inputs.property_preset;
-    rows.push({
-      quote_id: quoteId,
-      category: 'quick_estimate',
-      label: preset.label,
-      quantity: 1,
-      unit: 'job',
-      unit_price_cents: preset.subtotal_cents,
-      total_cents: preset.subtotal_cents,
-      size: null,
-      selected_surfaces: preset.scope,
-      coating_multiplier_pct: null,
-      condition_multiplier_pct: null,
-      item_notes: null,
-      metadata: jsonColumnValue({
-        kind: 'whole_property',
-        estimate_category: preset.estimate_category ?? 'interior',
-        preset_id: preset.preset_id,
-        source_rate_item_id: preset.source_rate_item_id ?? null,
-        source_rate_item_version: preset.source_rate_item_version ?? null,
-        source_rate_item_label: preset.source_rate_item_label ?? null,
-        rate_snapshot_version: preset.rate_snapshot_version ?? null,
-        property_type: preset.property_type,
-        apartment_type: preset.apartment_type ?? null,
-        bedrooms: preset.bedrooms ?? null,
-        bathrooms: preset.bathrooms ?? null,
-        storeys: preset.storeys ?? null,
-        sqm: preset.sqm ?? null,
-        condition: preset.condition,
-        scope: preset.scope,
-        wall_paint_system: preset.wall_paint_system,
-        trim_paint_system: preset.trim_paint_system ?? 'oil_2coat',
-        subtotal_cents: preset.subtotal_cents,
-        gst_cents: preset.gst_cents,
-        total_cents: preset.total_cents,
-      }),
-      sort_order: 0,
-    });
-  }
-
-  const roomSortOffset = rows.length;
-  inputs.rooms.forEach((room, index) => {
-    rows.push({
-      quote_id: quoteId,
-      category: 'quick_estimate',
-      label: room.label,
-      quantity: 1,
-      unit: 'room',
-      unit_price_cents: room.total_cents,
-      total_cents: room.total_cents,
-      size: room.size,
-      selected_surfaces: room.selected_surfaces,
-      coating_multiplier_pct: room.coating_multiplier_pct,
-      condition_multiplier_pct: room.condition_multiplier_pct,
-      item_notes: room.notes ?? null,
-      metadata: jsonColumnValue({
-        kind: 'room',
-        room_id: room.room_id,
-        source_rate_item_id: room.source_rate_item_id ?? null,
-        source_rate_item_version: room.source_rate_item_version ?? null,
-        source_rate_item_label: room.source_rate_item_label ?? null,
-        rate_snapshot_version: room.rate_snapshot_version ?? null,
-        walls_cents: room.walls_cents,
-        ceiling_cents: room.ceiling_cents,
-        trim_cents: room.trim_cents,
-        trim_paint_system:
-          room.trim_paint_system ??
-          inputs.global_trim_paint_system ??
-          'oil_2coat',
-        selected_surfaces: room.selected_surfaces,
-        coating_multiplier_pct: room.coating_multiplier_pct,
-        condition_multiplier_pct: room.condition_multiplier_pct,
-        global_coating: inputs.global_coating,
-        global_condition: inputs.global_condition,
-        global_trim_paint_system:
-          inputs.global_trim_paint_system ?? 'oil_2coat',
-      }),
-      sort_order: roomSortOffset + index,
-    });
-  });
-
-  return rows;
-}
-
-function hasQuoteFormStructurePayload(data: {
-  scope_sections?: QuoteScopeSectionInput[];
-  clause_items?: QuoteClauseItemInput[];
-  ai_intake_snapshot?: QuoteAiIntakeSnapshotInput | null;
-}) {
-  return Boolean(
-    data.scope_sections?.length ||
-    data.clause_items?.length ||
-    data.ai_intake_snapshot
-  );
-}
-
-function buildScopeSectionMetadata(section: QuoteScopeSectionInput): Json {
-  return jsonColumnValue({
-    ...(section.metadata ?? {}),
-    maintenance_job_pack: section.maintenance_job_pack ?? null,
-    visible_defects: section.visible_defects ?? [],
-    priority: section.priority ?? null,
-    report_context: section.report_context ?? false,
-    unsupported_scope: section.unsupported_scope ?? null,
-  });
-}
-
-async function insertQuoteFormStructure(
-  supabase: QuoteDataClient,
-  quoteId: string,
-  userId: string,
-  data: {
-    job_type: string;
-    scope_sections: QuoteScopeSectionInput[];
-    clause_items: QuoteClauseItemInput[];
-    ai_intake_snapshot: QuoteAiIntakeSnapshotInput | null;
-  }
-): Promise<string | null> {
-  const sectionIdByClientId = new Map<string, string>();
-
-  for (const [sectionIndex, section] of data.scope_sections.entries()) {
-    const { data: insertedSection, error: sectionError } = await supabase
-      .from('quote_scope_sections')
-      .insert({
-        quote_id: quoteId,
-        section_kind: section.section_kind,
-        title: section.title,
-        description: section.description ?? null,
-        area_label: section.area_label ?? null,
-        surface_category: section.surface_category ?? null,
-        is_optional: section.is_optional ?? false,
-        is_selected: section.is_optional
-          ? (section.is_selected ?? false)
-          : true,
-        pricing_status: section.pricing_status ?? 'unpriced',
-        measurement_status: section.measurement_status ?? 'to_confirm',
-        source: section.source ?? 'manual',
-        metadata: buildScopeSectionMetadata(section),
-        sort_order: section.sort_order ?? sectionIndex,
-      })
-      .select('id')
-      .single();
-
-    if (sectionError || !insertedSection) {
-      return sectionError?.message ?? 'Quote scope section could not be saved.';
-    }
-
-    const sectionId = insertedSection.id;
-    if (section.client_id) {
-      sectionIdByClientId.set(section.client_id, sectionId);
-    }
-
-    if (section.steps?.length) {
-      const { error: stepsError } = await supabase
-        .from('quote_scope_steps')
-        .insert(
-          section.steps.map((step, stepIndex) => ({
-            section_id: sectionId,
-            label: step.label ?? null,
-            step_type: step.step_type,
-            description: step.description,
-            prep_type: step.prep_type ?? null,
-            paint_system: step.paint_system ?? null,
-            coats_min: step.coats_min ?? null,
-            coats_max: step.coats_max ?? null,
-            product_name: step.product_name ?? null,
-            colour_status: step.colour_status ?? null,
-            colour: step.colour ?? null,
-            sheen: step.sheen ?? null,
-            requires_confirmation: step.requires_confirmation ?? false,
-            is_customer_visible: step.is_customer_visible ?? true,
-            metadata: jsonColumnValue(step.metadata ?? {}),
-            sort_order: step.sort_order ?? stepIndex,
-          }))
-        );
-
-      if (stepsError) {
-        return stepsError.message;
-      }
-    }
-  }
-
-  if (data.clause_items.length > 0) {
-    const { error: clausesError } = await supabase
-      .from('quote_clause_items')
-      .insert(
-        data.clause_items.map((clause, index) => ({
-          quote_id: quoteId,
-          section_id: clause.applies_to_section_client_id
-            ? (sectionIdByClientId.get(clause.applies_to_section_client_id) ??
-              null)
-            : null,
-          clause_key: clause.clause_key,
-          title: clause.title,
-          body: clause.body,
-          category: clause.category,
-          severity: clause.severity ?? 'info',
-          source: clause.source ?? 'manual',
-          is_customer_visible: clause.is_customer_visible ?? true,
-          metadata: jsonColumnValue(clause.metadata ?? {}),
-          sort_order: clause.sort_order ?? index,
-        }))
-      );
-
-    if (clausesError) {
-      return clausesError.message;
-    }
-  }
-
-  if (data.ai_intake_snapshot) {
-    const snapshot = data.ai_intake_snapshot;
-    const { error: intakeError } = await supabase
-      .from('quote_ai_intake_snapshots')
-      .insert({
-        quote_id: quoteId,
-        painter_user_id: userId,
-        job_type: snapshot.job_type,
-        maintenance_job_pack: snapshot.maintenance_job_pack ?? null,
-        provider: snapshot.provider,
-        model: snapshot.model,
-        prompt_version: snapshot.prompt_version,
-        input_json: jsonColumnValue(snapshot.input_json),
-        output_json: jsonColumnValue(snapshot.output_json),
-        photo_refs: jsonColumnValue(snapshot.photo_refs),
-        price_rates_snapshot_id: snapshot.price_rates_snapshot_id ?? null,
-        metadata: jsonColumnValue(snapshot.metadata ?? {}),
-      });
-
-    if (intakeError) {
-      return intakeError.message;
-    }
-  }
-
-  return null;
-}
-
-const QUOTE_CUSTOMER_SELECT =
-  'customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, address_line2, city, state, postcode)';
-const QUOTE_LIST_SELECT = `id, user_id, customer_id, customer_email, customer_address, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const QUOTE_LIST_SELECT_LEGACY = `id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const QUOTE_DETAIL_SELECT = `id, user_id, customer_id, job_type, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT = `id, user_id, customer_id, job_type, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-
-const PUBLIC_QUOTE_DETAIL_SELECT = `id, user_id, job_type, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, deposit_percent, ${QUOTE_CUSTOMER_SELECT}`;
-
-const PUBLIC_QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, ${QUOTE_CUSTOMER_SELECT}`;
-
-const PUBLIC_QUOTE_APPROVAL_SELECT = `id, user_id, customer_email, customer_address, quote_number, title, status, valid_until, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
-
-const PUBLIC_QUOTE_APPROVAL_SELECT_LEGACY = `id, user_id, quote_number, title, status, valid_until, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
-
-type QuoteDataClient =
-  | Awaited<ReturnType<typeof createServerClient>>
-  | ReturnType<typeof createAdminClient>;
-
-type QuoteHydratedRelations = {
-  rooms: Array<{
-    id: string;
-    quote_id: string;
-    name: string;
-    room_type: string;
-    length_m: number | null;
-    width_m: number | null;
-    height_m: number | null;
-    surfaces: Array<{
-      id: string;
-      room_id: string;
-      surface_type: QuoteSurfaceType;
-      area_m2: number;
-      coating_type: QuoteCoatingType | null;
-      rate_per_m2_cents: number;
-      material_cost_cents: number;
-      labour_cost_cents: number;
-      paint_litres_needed: number | null;
-      notes: string | null;
-    }>;
-  }>;
-  estimate_items: QuoteDetail['estimate_items'];
-  line_items: QuoteDetail['line_items'];
-  scope_sections: QuoteScopeSectionView[];
-  clause_items: QuoteClauseItemView[];
-};
-
-type PublicQuoteRow = {
-  id: string;
-  user_id: string;
-  approved_at?: string | null;
-  approved_by_name?: string | null;
-  approved_by_email?: string | null;
-  approval_signature?: string | null;
-  customer_email?: string | null;
-  customer_address?: string | null;
-  job_type?: string | null;
-  quote_number: string;
-  title: string | null;
-  status: string;
-  valid_until: string | null;
-  working_days?: number | null;
-  notes: string | null;
-  subtotal_cents: number;
-  gst_cents: number;
-  total_cents: number;
-  discount_cents?: number | null;
-  manual_adjustment_cents?: number | null;
-  deposit_percent?: number | null;
-  customer: QuoteListRow['customer'];
-};
-
-type PublicQuoteHydratedRelations = {
-  rooms: PublicQuoteDetail['rooms'];
-  estimate_items: PublicQuoteDetail['estimate_items'];
-  line_items: PublicQuoteDetail['line_items'];
-  scope_sections: QuoteScopeSectionView[];
-  clause_items: QuoteClauseItemView[];
-};
-
-type PublicQuoteApprovalRow = {
-  id: string;
-  user_id: string;
-  customer_email?: string | null;
-  customer_address?: string | null;
-  quote_number: string;
-  title: string | null;
-  status: string;
-  valid_until: string | null;
-  total_cents: number;
-  customer: QuoteListRow['customer'];
-};
+  deleteQuotePricingRelationsForUpdate,
+  getFirstQuoteRateBoundaryError,
+  resolveQuotePricingPreviewForSave,
+  saveQuotePricingRelations,
+} from '@/modules/quotes/application/quote-pricing-save-service';
+import { sendQuoteDocumentEmail } from '@/modules/quotes/application/document-email-service';
+import { duplicateQuoteForUser } from '@/modules/quotes/application/quote-duplicate-service';
+import {
+  approvePublicQuoteResponse,
+  rejectPublicQuoteResponse,
+} from '@/modules/quotes/application/public-quote-response-service';
+import type { QuoteCreateInput } from '@/modules/quotes/domain/quote-schema';
 
 type CreateQuoteOptions = {
   submitIntent?: 'save' | 'send_email';
 };
-
-type ParsedQuoteCreateData = Extract<
-  ReturnType<typeof parseQuoteCreateInput>,
-  { success: true }
->['data'];
-
-function resolveQuotePricingPreviewForSave(
-  data: ParsedQuoteCreateData,
-  effectiveRates: UserRateSettings
-) {
-  const interiorEstimateContext = data.interior_estimate
-    ? snapshotInteriorEstimateInput(data.interior_estimate, effectiveRates)
-    : null;
-  const interiorEstimate = interiorEstimateContext
-    ? calculateInteriorEstimate(interiorEstimateContext, effectiveRates)
-    : null;
-  const exteriorEstimateResult = data.exterior_estimate
-    ? calculateExteriorEstimate(
-        data.exterior_estimate as Parameters<
-          typeof calculateExteriorEstimate
-        >[0],
-        effectiveRates
-      )
-    : null;
-  const adjustmentCents = data.manual_adjustment_cents ?? 0;
-  const discountCents = data.discount_cents ?? 0;
-  const depositPercent = data.deposit_percent ?? 0;
-  const lineItems = data.line_items ?? [];
-  const pricingMethod = data.pricing_method ?? 'hybrid';
-  const rawMethodInputs = data.pricing_method_inputs;
-
-  let resolvedPricingInputs: PricingMethodInputs | null = null;
-  let preview: ReturnType<typeof calculateQuotePreview>;
-
-  if (pricingMethod === 'day_rate' && rawMethodInputs?.method === 'day_rate') {
-    const inputs: DayRateInputs = rawMethodInputs.inputs;
-    const result = calculateDayRateQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'day_rate', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'detailed_quick' &&
-    rawMethodInputs?.method === 'detailed_quick'
-  ) {
-    const inputs = normalizeQuickEstimateInputsForCalculation(
-      rawMethodInputs.inputs as QuickInputs,
-      effectiveRates
-    );
-    const result = calculateQuickEstimate(inputs, effectiveRates);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'detailed_quick', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'room_rate' &&
-    rawMethodInputs?.method === 'room_rate'
-  ) {
-    const inputs: RoomRateInputs = rawMethodInputs.inputs;
-    const result = calculateRoomRateQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'room_rate', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (
-    pricingMethod === 'manual' &&
-    rawMethodInputs?.method === 'manual'
-  ) {
-    const inputs: ManualInputs = rawMethodInputs.inputs;
-    const result = calculateManualQuote(inputs);
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: result.subtotal_cents,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'manual', inputs };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: result.subtotal_cents,
-      ...totals,
-    };
-  } else if (exteriorEstimateResult) {
-    const base = exteriorEstimateResult.subtotal_cents;
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: base,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'hybrid', inputs: null };
-    preview = { rooms: [], base_subtotal_cents: base, ...totals };
-  } else if (interiorEstimate) {
-    const base = interiorEstimate.subtotal_cents;
-    const labourMarkup = Math.round(base * (data.labour_margin_percent / 100));
-    const materialMarkup = Math.round(
-      base * (data.material_margin_percent / 100)
-    );
-    const subtotal = base + labourMarkup + materialMarkup;
-    const totals = composeQuoteTotals({
-      base_subtotal_cents: subtotal,
-      adjustment_cents: adjustmentCents,
-      discount_cents: discountCents,
-      line_items: lineItems,
-    });
-    resolvedPricingInputs = { method: 'hybrid', inputs: null };
-    preview = {
-      rooms: [],
-      base_subtotal_cents: base,
-      ...totals,
-    };
-  } else {
-    resolvedPricingInputs = {
-      method: pricingMethod as 'sqm_rate' | 'hybrid',
-      inputs: null,
-    };
-    preview = calculateQuotePreview(data);
-  }
-
-  return {
-    adjustmentCents,
-    depositPercent,
-    discountCents,
-    exteriorEstimateResult,
-    interiorEstimate,
-    interiorEstimateContext,
-    lineItems,
-    preview,
-    pricingMethod,
-    resolvedPricingInputs,
-  };
-}
-
-function getFirstQuoteRateBoundaryError(
-  data: ParsedQuoteCreateData,
-  effectiveRates: UserRateSettings
-) {
-  const pricingMethod = data.pricing_method ?? 'hybrid';
-  const methodInputs = data.pricing_method_inputs;
-
-  if (
-    pricingMethod === 'detailed_quick' &&
-    methodInputs?.method === 'detailed_quick'
-  ) {
-    return (
-      getFirstBlockingRateSetupIssue(
-        getSelectedQuickEstimateIssues(methodInputs.inputs, effectiveRates)
-      )?.message ?? null
-    );
-  }
-
-  if (data.interior_estimate) {
-    return (
-      getFirstBlockingRateSetupIssue(
-        getSelectedAdvancedEstimateIssues(
-          data.interior_estimate,
-          effectiveRates
-        )
-      )?.message ?? null
-    );
-  }
-
-  return null;
-}
-
-async function sendQuoteDocumentEmail(input: {
-  supabase: QuoteDataClient;
-  userId: string;
-  userEmail: string | null;
-  quoteId: string;
-  to: string;
-}) {
-  const [quoteDetailResult, businessBrandingResult] = await Promise.all([
-    getQuote(input.quoteId),
-    getBusinessDocumentBranding(input.supabase, input.userId, input.userEmail),
-  ]);
-
-  if (quoteDetailResult.error || !quoteDetailResult.data) {
-    return {
-      error: quoteDetailResult.error ?? 'Quote email could not be prepared.',
-    };
-  }
-
-  const businessBranding = businessBrandingResult.data;
-  const businessName = businessBranding?.name || 'My Painting Business';
-  const logoUrl = await createStorageObjectDataUrl(
-    input.supabase,
-    businessBranding?.logoPath ?? null
-  );
-  const pdfBuffer = await renderToBuffer(
-    QuoteTemplate({
-      quote: quoteDetailResult.data,
-      businessName,
-      abn: businessBranding?.abn ?? null,
-      phone: businessBranding?.phone ?? null,
-      email: businessBranding?.email ?? input.userEmail,
-      businessAddress: businessBranding?.address ?? null,
-      logoUrl,
-    })
-  );
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.coatly.com.au';
-  const publicShareToken = quoteDetailResult.data.public_share_token.trim();
-
-  if (!publicShareToken) {
-    return {
-      error:
-        'Quote email could not be sent because the public approval link is missing. Apply the public quote sharing database migration and try again.',
-    };
-  }
-
-  return sendQuoteEmail({
-    to: input.to,
-    customerName: quoteDetailResult.data.customer.name,
-    businessName,
-    quoteNumber: quoteDetailResult.data.quote_number,
-    quoteTitle: quoteDetailResult.data.title,
-    totalFormatted: formatAUD(quoteDetailResult.data.total_cents),
-    validUntil: quoteDetailResult.data.valid_until
-      ? formatDate(quoteDetailResult.data.valid_until)
-      : null,
-    approvalUrl: `${appUrl.replace(/\/$/, '')}/q/${publicShareToken}`,
-    pdfAttachment: Buffer.from(pdfBuffer),
-  });
-}
 
 function parseBooleanFormValue(value: FormDataEntryValue | null) {
   return typeof value === 'string' && value === 'true';
@@ -824,525 +69,10 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-type QuoteRoomSurfaceInsertSource = {
-  surface_type: QuoteSurfaceType;
-  area_m2: number;
-  coating_type: QuoteCoatingType | null;
-  rate_per_m2_cents: number;
-  material_cost_cents: number;
-  labour_cost_cents: number;
-  paint_litres_needed: number | null;
-  notes: string | null;
-};
-
-function isLegacyQuoteCoatingConstraintError(
-  message: string | null | undefined
-) {
-  if (!message) return false;
-
-  return (
-    message.includes('quote_room_surfaces_coating_type_check') ||
-    (message.includes('coating_type') && message.includes('check constraint'))
-  );
-}
-
-function buildQuoteRoomSurfaceInsertRows(
-  roomId: string,
-  surfaces: QuoteRoomSurfaceInsertSource[],
-  complexity:
-    | QuoteCoatingType
-    | QuoteDetail['complexity']
-    | string
-    | null
-    | undefined,
-  useLegacyCoatingType = false
-) {
-  return surfaces.map((surface) => ({
-    room_id: roomId,
-    surface_type: surface.surface_type,
-    area_m2: surface.area_m2,
-    coating_type: useLegacyCoatingType
-      ? serializeLegacyQuoteCoatingType(surface.coating_type)
-      : serializeQuoteCoatingType(surface.coating_type),
-    rate_per_m2_cents: surface.rate_per_m2_cents,
-    material_cost_cents: surface.material_cost_cents,
-    labour_cost_cents: surface.labour_cost_cents,
-    paint_litres_needed: surface.paint_litres_needed,
-    tier: complexity ?? undefined,
-    notes: surface.notes,
-  }));
-}
-
-async function insertQuoteRoomSurfaces(
-  supabase: QuoteDataClient,
-  roomId: string,
-  surfaces: QuoteRoomSurfaceInsertSource[],
-  complexity: QuoteDetail['complexity'] | string | null | undefined
-) {
-  const rows = buildQuoteRoomSurfaceInsertRows(
-    roomId,
-    surfaces,
-    complexity,
-    false
-  );
-  let result = await supabase.from('quote_room_surfaces').insert(rows);
-
-  if (
-    result.error &&
-    surfaces.some((surface) => surface.coating_type === 'refresh_1coat') &&
-    isLegacyQuoteCoatingConstraintError(result.error.message)
-  ) {
-    result = await supabase
-      .from('quote_room_surfaces')
-      .insert(
-        buildQuoteRoomSurfaceInsertRows(roomId, surfaces, complexity, true)
-      );
-  }
-
-  return result;
-}
-
-async function loadQuoteRelations(
-  supabase: QuoteDataClient,
-  quoteId: string
-): Promise<{ data: QuoteHydratedRelations | null; error: string | null }> {
-  const { data: rooms, error: roomsError } = await supabase
-    .from('quote_rooms')
-    .select(
-      'id, quote_id, name, room_type, length_m, width_m, height_m, sort_order'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (roomsError) {
-    return { data: null, error: roomsError.message };
-  }
-
-  const roomIds = rooms?.map((room) => room.id) ?? [];
-
-  const { data: surfaces, error: surfacesError } = roomIds.length
-    ? await supabase
-        .from('quote_room_surfaces')
-        .select(
-          'id, room_id, surface_type, area_m2, coating_type, rate_per_m2_cents, material_cost_cents, labour_cost_cents, paint_litres_needed, notes'
-        )
-        .in('room_id', roomIds)
-    : { data: [], error: null };
-
-  if (surfacesError) {
-    return { data: null, error: surfacesError.message };
-  }
-
-  const { data: estimateItems, error: estimateItemsError } = await supabase
-    .from('quote_estimate_items')
-    .select(
-      'id, quote_id, category, label, quantity, unit, unit_price_cents, total_cents, metadata, sort_order'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (estimateItemsError) {
-    return { data: null, error: estimateItemsError.message };
-  }
-
-  const { data: lineItems, error: lineItemsError } = await supabase
-    .from('quote_line_items')
-    .select(
-      'id, quote_id, material_item_id, name, category, unit, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected, sort_order, created_at, updated_at'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (lineItemsError) {
-    return { data: null, error: lineItemsError.message };
-  }
-
-  const { data: scopeSections, error: scopeSectionsError } = await supabase
-    .from('quote_scope_sections')
-    .select(
-      'id, quote_id, section_kind, title, description, area_label, surface_category, is_optional, is_selected, pricing_status, measurement_status, source, metadata, sort_order, created_at, updated_at'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (scopeSectionsError) {
-    return { data: null, error: scopeSectionsError.message };
-  }
-
-  const scopeSectionIds = scopeSections?.map((section) => section.id) ?? [];
-  const { data: scopeSteps, error: scopeStepsError } = scopeSectionIds.length
-    ? await supabase
-        .from('quote_scope_steps')
-        .select(
-          'id, section_id, step_type, label, description, prep_type, paint_system, coats_min, coats_max, product_name, colour_status, colour, sheen, requires_confirmation, is_customer_visible, metadata, sort_order, created_at, updated_at'
-        )
-        .in('section_id', scopeSectionIds)
-        .order('sort_order', { ascending: true })
-    : { data: [], error: null };
-
-  if (scopeStepsError) {
-    return { data: null, error: scopeStepsError.message };
-  }
-
-  const { data: clauseItems, error: clauseItemsError } = await supabase
-    .from('quote_clause_items')
-    .select(
-      'id, quote_id, section_id, clause_key, category, title, body, severity, source, is_customer_visible, metadata, sort_order, created_at, updated_at'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (clauseItemsError) {
-    return { data: null, error: clauseItemsError.message };
-  }
-
-  return {
-    data: {
-      rooms:
-        rooms?.map((room) => ({
-          id: room.id,
-          quote_id: room.quote_id,
-          name: room.name,
-          room_type: room.room_type,
-          length_m: room.length_m,
-          width_m: room.width_m,
-          height_m: room.height_m,
-          surfaces:
-            surfaces
-              ?.filter((surface) => surface.room_id === room.id)
-              .map((surface) => ({
-                id: surface.id,
-                room_id: surface.room_id,
-                surface_type: surface.surface_type as QuoteSurfaceType,
-                area_m2: Number(surface.area_m2),
-                coating_type: normalizeQuoteCoatingType(
-                  surface.coating_type as
-                    | QuoteCoatingType
-                    | 'touch_up_1coat'
-                    | null
-                ),
-                rate_per_m2_cents: surface.rate_per_m2_cents,
-                material_cost_cents: surface.material_cost_cents,
-                labour_cost_cents: surface.labour_cost_cents,
-                paint_litres_needed:
-                  surface.paint_litres_needed == null
-                    ? null
-                    : Number(surface.paint_litres_needed),
-                notes: surface.notes,
-              })) ?? [],
-        })) ?? [],
-      estimate_items: (
-        (estimateItems as QuoteEstimateItemRow[] | null) ?? []
-      ).map((item) => ({
-        id: item.id,
-        quote_id: item.quote_id,
-        category: item.category as QuoteEstimateItemCategory,
-        label: item.label,
-        quantity:
-          typeof item.quantity === 'string'
-            ? Number(item.quantity)
-            : item.quantity,
-        unit: item.unit,
-        unit_price_cents: item.unit_price_cents,
-        total_cents: item.total_cents,
-        sort_order: item.sort_order,
-        metadata: item.metadata ?? {},
-      })),
-      line_items: ((lineItems as QuoteLineItemRecord[] | null) ?? []).map(
-        (item) => ({
-          ...item,
-          quantity: Number(item.quantity),
-          is_optional: item.is_optional ?? false,
-          is_selected: item.is_optional ? (item.is_selected ?? false) : true,
-        })
-      ),
-      scope_sections: mapQuoteScopeSections(
-        (scopeSections ?? []) as Parameters<typeof mapQuoteScopeSections>[0],
-        (scopeSteps ?? []) as Parameters<typeof mapQuoteScopeSections>[1]
-      ),
-      clause_items: mapQuoteClauseItems(
-        (clauseItems ?? []) as Parameters<typeof mapQuoteClauseItems>[0]
-      ),
-    },
-    error: null,
-  };
-}
-
-async function loadPublicQuoteRelations(
-  supabase: QuoteDataClient,
-  quoteId: string
-): Promise<{
-  data: PublicQuoteHydratedRelations | null;
-  error: string | null;
-}> {
-  const { data: rooms, error: roomsError } = await supabase
-    .from('quote_rooms')
-    .select('id, name, room_type, sort_order')
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (roomsError) {
-    return { data: null, error: roomsError.message };
-  }
-
-  const roomIds = rooms?.map((room) => room.id) ?? [];
-
-  const { data: surfaces, error: surfacesError } = roomIds.length
-    ? await supabase
-        .from('quote_room_surfaces')
-        .select(
-          'id, room_id, surface_type, area_m2, coating_type, rate_per_m2_cents, material_cost_cents, labour_cost_cents, notes'
-        )
-        .in('room_id', roomIds)
-    : { data: [], error: null };
-
-  if (surfacesError) {
-    return { data: null, error: surfacesError.message };
-  }
-
-  const { data: estimateItems, error: estimateItemsError } = await supabase
-    .from('quote_estimate_items')
-    .select(
-      'id, category, label, quantity, unit, unit_price_cents, total_cents, sort_order'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (estimateItemsError) {
-    return { data: null, error: estimateItemsError.message };
-  }
-
-  const { data: lineItems, error: lineItemsError } = await supabase
-    .from('quote_line_items')
-    .select(
-      'id, name, category, unit, quantity, unit_price_cents, total_cents, notes, is_optional, is_selected, sort_order'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (lineItemsError) {
-    return { data: null, error: lineItemsError.message };
-  }
-
-  const { data: scopeSections, error: scopeSectionsError } = await supabase
-    .from('quote_scope_sections')
-    .select(
-      'id, quote_id, section_kind, title, description, area_label, surface_category, is_optional, is_selected, pricing_status, measurement_status, source, metadata, sort_order, created_at, updated_at'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (scopeSectionsError) {
-    return { data: null, error: scopeSectionsError.message };
-  }
-
-  const scopeSectionIds = scopeSections?.map((section) => section.id) ?? [];
-  const { data: scopeSteps, error: scopeStepsError } = scopeSectionIds.length
-    ? await supabase
-        .from('quote_scope_steps')
-        .select(
-          'id, section_id, step_type, label, description, prep_type, paint_system, coats_min, coats_max, product_name, colour_status, colour, sheen, requires_confirmation, is_customer_visible, metadata, sort_order, created_at, updated_at'
-        )
-        .in('section_id', scopeSectionIds)
-        .order('sort_order', { ascending: true })
-    : { data: [], error: null };
-
-  if (scopeStepsError) {
-    return { data: null, error: scopeStepsError.message };
-  }
-
-  const { data: clauseItems, error: clauseItemsError } = await supabase
-    .from('quote_clause_items')
-    .select(
-      'id, quote_id, section_id, clause_key, category, title, body, severity, source, is_customer_visible, metadata, sort_order, created_at, updated_at'
-    )
-    .eq('quote_id', quoteId)
-    .order('sort_order', { ascending: true });
-
-  if (clauseItemsError) {
-    return { data: null, error: clauseItemsError.message };
-  }
-
-  return {
-    data: {
-      rooms:
-        rooms?.map((room) => ({
-          id: room.id,
-          name: room.name,
-          room_type:
-            room.room_type as PublicQuoteDetail['rooms'][number]['room_type'],
-          total_cents: 0,
-          surfaces:
-            surfaces
-              ?.filter((surface) => surface.room_id === room.id)
-              .map((surface) => ({
-                id: surface.id,
-                surface_type: surface.surface_type as QuoteSurfaceType,
-                area_m2: Number(surface.area_m2),
-                coating_type: normalizeQuoteCoatingType(
-                  surface.coating_type as
-                    | QuoteCoatingType
-                    | 'touch_up_1coat'
-                    | null
-                ),
-                rate_per_m2_cents: surface.rate_per_m2_cents,
-                notes: surface.notes,
-                total_cents:
-                  surface.material_cost_cents + surface.labour_cost_cents,
-              })) ?? [],
-        })) ?? [],
-      estimate_items: (
-        (estimateItems as Array<{
-          id: string;
-          category: string;
-          label: string;
-          quantity: number | string;
-          unit: string;
-          unit_price_cents: number;
-          total_cents: number;
-        }> | null) ?? []
-      ).map((item) => ({
-        id: item.id,
-        category:
-          item.category as PublicQuoteDetail['estimate_items'][number]['category'],
-        label: item.label,
-        quantity:
-          typeof item.quantity === 'string'
-            ? Number(item.quantity)
-            : item.quantity,
-        unit: item.unit,
-        unit_price_cents: item.unit_price_cents,
-        total_cents: item.total_cents,
-      })),
-      line_items: (
-        (lineItems as Array<{
-          id: string;
-          name: string;
-          category: string;
-          unit: string;
-          quantity: number | string;
-          unit_price_cents: number;
-          total_cents: number;
-          notes: string | null;
-          is_optional: boolean | null;
-          is_selected: boolean | null;
-        }> | null) ?? []
-      ).map((item) => ({
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        unit: item.unit,
-        quantity:
-          typeof item.quantity === 'string'
-            ? Number(item.quantity)
-            : item.quantity,
-        unit_price_cents: item.unit_price_cents,
-        total_cents: item.total_cents,
-        notes: item.notes,
-        is_optional: item.is_optional ?? false,
-        is_selected: item.is_optional ? (item.is_selected ?? false) : true,
-      })),
-      scope_sections: mapQuoteScopeSections(
-        (scopeSections ?? []) as Parameters<typeof mapQuoteScopeSections>[0],
-        (scopeSteps ?? []) as Parameters<typeof mapQuoteScopeSections>[1]
-      ),
-      clause_items: mapQuoteClauseItems(
-        (clauseItems ?? []) as Parameters<typeof mapQuoteClauseItems>[0]
-      ),
-    },
-    error: null,
-  };
-}
-
-function mapHydratedQuoteDetail(
-  quote: QuoteDetailRow,
-  relations: QuoteHydratedRelations
-): QuoteDetail {
-  return mapQuoteDetail({
-    ...quote,
-    pricing_method_inputs: quote.pricing_method_inputs as Record<
-      string,
-      unknown
-    > | null,
-    customer: resolveQuoteCustomerSummary({
-      customer: quote.customer,
-      customer_email: quote.customer_email,
-      customer_address: quote.customer_address,
-    }),
-    internal_notes: quote.internal_notes ?? null,
-    estimate_context: jsonObjectOrEmpty(quote.estimate_context),
-    pricing_snapshot: jsonObjectOrEmpty(quote.pricing_snapshot),
-    ...relations,
-  });
-}
-
-function mapHydratedPublicQuoteDetail(
-  quote: PublicQuoteRow,
-  relations: PublicQuoteHydratedRelations
-): PublicQuoteDetail {
-  return {
-    job_type:
-      (quote.job_type as PublicQuoteDetail['job_type'] | null) ?? 'interior',
-    approved_at: quote.approved_at ?? null,
-    approved_by_name: quote.approved_by_name ?? null,
-    approved_by_email: quote.approved_by_email ?? null,
-    approval_signature: quote.approval_signature ?? null,
-    quote_number: quote.quote_number,
-    title: quote.title,
-    status: resolveQuoteStatus({
-      status: quote.status,
-      valid_until: quote.valid_until,
-    }),
-    valid_until: quote.valid_until,
-    notes: quote.notes,
-    subtotal_cents: quote.subtotal_cents,
-    gst_cents: quote.gst_cents,
-    total_cents: quote.total_cents,
-    discount_cents: quote.discount_cents ?? 0,
-    manual_adjustment_cents: quote.manual_adjustment_cents ?? 0,
-    deposit_percent: quote.deposit_percent ?? 0,
-    working_days:
-      (quote as unknown as { working_days?: number | null }).working_days ??
-      null,
-    customer: resolveQuoteCustomerSummary({
-      customer: quote.customer,
-      customer_email: quote.customer_email,
-      customer_address: quote.customer_address,
-    }),
-    rooms: relations.rooms,
-    estimate_items: relations.estimate_items,
-    line_items: relations.line_items,
-    scope_sections: relations.scope_sections,
-    clause_items: relations.clause_items,
-  };
-}
-
 const QUOTE_INVOICE_LOCK_MESSAGE =
   'This quote can no longer be edited because an invoice already exists for it.';
 const QUOTE_DELETE_LOCK_MESSAGE =
   'Quotes with linked invoices can no longer be deleted.';
-
-async function getLinkedInvoiceCountForQuote(
-  supabase: QuoteDataClient,
-  quoteId: string,
-  userId?: string
-): Promise<{ count: number; error: string | null }> {
-  let query = supabase
-    .from('invoices')
-    .select('id', { count: 'exact', head: true })
-    .eq('quote_id', quoteId);
-
-  if (userId) {
-    query = query.eq('user_id', userId);
-  }
-
-  const { count, error } = await query;
-
-  return {
-    count: count ?? 0,
-    error: error?.message ?? null,
-  };
-}
 
 function normalizeCustomerEmails(customer: {
   email?: string | null;
@@ -1479,39 +209,7 @@ export async function getQuotes(): Promise<{
     requireCurrentUser(),
   ]);
 
-  const quoteListResult = await supabase
-    .from('quotes')
-    .select(QUOTE_LIST_SELECT)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
-  let data = quoteListResult.data as QuoteListRow[] | null;
-  let error = quoteListResult.error;
-
-  if (error && isMissingQuoteCustomerSnapshotColumnError(error.message)) {
-    const legacyResult = await supabase
-      .from('quotes')
-      .select(QUOTE_LIST_SELECT_LEGACY)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    data = legacyResult.data as QuoteListRow[] | null;
-    error = legacyResult.error;
-  }
-
-  return {
-    data:
-      ((data as QuoteListRow[] | null) ?? []).map((quote) =>
-        mapQuoteListItem({
-          ...quote,
-          customer: resolveQuoteCustomerSummary({
-            customer: quote.customer,
-            customer_email: quote.customer_email,
-            customer_address: quote.customer_address,
-          }),
-        })
-      ) ?? [],
-    error: error?.message ?? null,
-  };
+  return getQuoteListItemsForUser(supabase, user.id);
 }
 
 export async function getQuotesByCustomer(
@@ -1522,41 +220,7 @@ export async function getQuotesByCustomer(
     requireCurrentUser(),
   ]);
 
-  const quoteListResult = await supabase
-    .from('quotes')
-    .select(QUOTE_LIST_SELECT)
-    .eq('user_id', user.id)
-    .eq('customer_id', customerId)
-    .order('created_at', { ascending: false });
-  let data = quoteListResult.data as QuoteListRow[] | null;
-  let error = quoteListResult.error;
-
-  if (error && isMissingQuoteCustomerSnapshotColumnError(error.message)) {
-    const legacyResult = await supabase
-      .from('quotes')
-      .select(QUOTE_LIST_SELECT_LEGACY)
-      .eq('user_id', user.id)
-      .eq('customer_id', customerId)
-      .order('created_at', { ascending: false });
-
-    data = legacyResult.data as QuoteListRow[] | null;
-    error = legacyResult.error;
-  }
-
-  return {
-    data:
-      ((data as QuoteListRow[] | null) ?? []).map((quote) =>
-        mapQuoteListItem({
-          ...quote,
-          customer: resolveQuoteCustomerSummary({
-            customer: quote.customer,
-            customer_email: quote.customer_email,
-            customer_address: quote.customer_address,
-          }),
-        })
-      ) ?? [],
-    error: error?.message ?? null,
-  };
+  return getQuoteListItemsByCustomer(supabase, user.id, customerId);
 }
 
 export async function getQuote(id: string): Promise<{
@@ -1568,108 +232,7 @@ export async function getQuote(id: string): Promise<{
     requireCurrentUser(),
   ]);
 
-  const quoteResult = await supabase
-    .from('quotes')
-    .select(QUOTE_DETAIL_SELECT)
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .single();
-  let quote = quoteResult.data as QuoteDetailRow | null;
-  let quoteError = quoteResult.error;
-
-  if (
-    quoteError &&
-    isMissingQuoteCustomerSnapshotColumnError(quoteError.message)
-  ) {
-    const snapshotLegacyResult = await supabase
-      .from('quotes')
-      .select(QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT)
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
-
-    quote = snapshotLegacyResult.data as QuoteDetailRow | null;
-    quoteError = snapshotLegacyResult.error;
-
-    if (
-      quoteError &&
-      isMissingPublicShareTokenColumnError(quoteError.message)
-    ) {
-      const legacyResult = await supabase
-        .from('quotes')
-        .select(QUOTE_DETAIL_SELECT_LEGACY)
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .single();
-
-      quote = legacyResult.data as QuoteDetailRow | null;
-      quoteError = legacyResult.error;
-    }
-  } else if (
-    quoteError &&
-    isMissingPublicShareTokenColumnError(quoteError.message)
-  ) {
-    const legacyResult = await supabase
-      .from('quotes')
-      .select(QUOTE_DETAIL_SELECT_LEGACY)
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
-
-    quote = legacyResult.data as QuoteDetailRow | null;
-    quoteError = legacyResult.error;
-  }
-
-  if (quoteError || !quote) {
-    return { data: null, error: quoteError?.message ?? 'Quote not found.' };
-  }
-
-  const [relationsResult, linkedInvoicesResult] = await Promise.all([
-    loadQuoteRelations(supabase, id),
-    getLinkedInvoiceCountForQuote(supabase, id, user.id),
-  ]);
-
-  if (relationsResult.error || !relationsResult.data) {
-    return {
-      data: null,
-      error: relationsResult.error ?? 'Quote details could not be loaded.',
-    };
-  }
-
-  if (linkedInvoicesResult.error) {
-    return { data: null, error: linkedInvoicesResult.error };
-  }
-
-  return {
-    data: mapHydratedQuoteDetail(
-      {
-        ...quote,
-        linked_invoice_count: linkedInvoicesResult.count,
-      },
-      relationsResult.data
-    ),
-    error: null,
-  };
-}
-
-function isMissingQuoteSelectColumnError(message: string | null | undefined) {
-  if (!message) return false;
-
-  return (
-    isMissingQuoteCustomerSnapshotColumnError(message) ||
-    isMissingPublicShareTokenColumnError(message)
-  );
-}
-
-function isMissingPublicShareTokenColumnError(
-  message: string | null | undefined
-) {
-  if (!message) return false;
-
-  return (
-    message.includes('quotes.public_share_token') &&
-    message.includes('does not exist')
-  );
+  return getHydratedQuoteDetailForUser(supabase, id, user.id);
 }
 
 export async function getPublicQuoteByToken(token: string): Promise<{
@@ -1698,55 +261,24 @@ export async function getPublicQuoteByToken(token: string): Promise<{
   }
 
   const supabase = createAdminClient();
-  const quoteResult = await supabase
-    .from('quotes')
-    .select(PUBLIC_QUOTE_DETAIL_SELECT)
-    .eq('public_share_token', trimmedToken)
-    .single();
-  let quote = quoteResult.data as PublicQuoteRow | null;
-  let quoteError = quoteResult.error;
+  const quoteResult = await getHydratedPublicQuoteDetailByToken(
+    supabase,
+    trimmedToken
+  );
 
-  if (
-    quoteError &&
-    isMissingQuoteCustomerSnapshotColumnError(quoteError.message)
-  ) {
-    const legacyResult = await supabase
-      .from('quotes')
-      .select(PUBLIC_QUOTE_DETAIL_SELECT_LEGACY)
-      .eq('public_share_token', trimmedToken)
-      .single();
-
-    quote = legacyResult.data as PublicQuoteRow | null;
-    quoteError = legacyResult.error;
+  if (quoteResult.error || !quoteResult.data) {
+    return { data: null, error: quoteResult.error ?? 'Quote not found.' };
   }
 
-  if (quoteError && quoteError.message.includes('public_share_token')) {
-    return {
-      data: null,
-      error:
-        'Public quote sharing is not available until the latest database migration is applied.',
-    };
-  }
-
-  if (quoteError || !quote) {
-    return { data: null, error: quoteError?.message ?? 'Quote not found.' };
-  }
-
-  const [relationsResult, businessResult] = await Promise.all([
-    loadPublicQuoteRelations(supabase, quote.id),
-    getBusinessDocumentBranding(supabase, quote.user_id, null),
-  ]);
-
-  if (relationsResult.error || !relationsResult.data) {
-    return {
-      data: null,
-      error: relationsResult.error ?? 'Quote details could not be loaded.',
-    };
-  }
+  const businessResult = await getBusinessDocumentBranding(
+    supabase,
+    quoteResult.data.userId,
+    null
+  );
 
   return {
     data: {
-      quote: mapHydratedPublicQuoteDetail(quote, relationsResult.data),
+      quote: quoteResult.data.quote,
       business: businessResult.data
         ? {
             name: businessResult.data.name,
@@ -1858,6 +390,10 @@ export async function createQuote(
     return { error: rateBoundaryError };
   }
 
+  const pricing = resolveQuotePricingPreviewForSave(
+    parsed.data,
+    effectiveRates
+  );
   const {
     adjustmentCents,
     depositPercent,
@@ -1865,11 +401,10 @@ export async function createQuote(
     exteriorEstimateResult,
     interiorEstimate,
     interiorEstimateContext,
-    lineItems,
     preview,
     pricingMethod,
     resolvedPricingInputs,
-  } = resolveQuotePricingPreviewForSave(parsed.data, effectiveRates);
+  } = pricing;
 
   const { data: quoteNumber, error: quoteNumberError } = await supabase.rpc(
     'generate_quote_number',
@@ -1952,155 +487,24 @@ export async function createQuote(
     return { error: quoteError?.message ?? 'Quote could not be created.' };
   }
 
-  if (interiorEstimate) {
-    if (interiorEstimate.pricing_items.length > 0) {
-      const { error: estimateItemsError } = await supabase
-        .from('quote_estimate_items')
-        .insert(
-          interiorEstimate.pricing_items.map((item, index) => ({
-            quote_id: quote.id,
-            category: item.category,
-            label: item.label,
-            quantity: item.quantity,
-            unit: item.unit,
-            unit_price_cents: item.unit_price_cents,
-            total_cents: item.total_cents,
-            metadata: {
-              ...(item.metadata ?? {}),
-              room_index: item.room_index ?? null,
-            },
-            sort_order: index,
-          }))
-        );
-
-      if (estimateItemsError) {
-        await supabase
-          .from('quotes')
-          .delete()
-          .eq('id', quote.id)
-          .eq('user_id', user.id);
-        return { error: estimateItemsError.message };
-      }
-    }
-  } else if (
-    pricingMethod === 'detailed_quick' &&
-    resolvedPricingInputs?.method === 'detailed_quick'
-  ) {
-    const quickItemRows = buildQuickEstimateItemRows(
-      quote.id,
-      resolvedPricingInputs.inputs
-    );
-    if (quickItemRows.length > 0) {
-      const { error: quickItemsError } = await supabase
-        .from('quote_estimate_items')
-        .insert(quickItemRows);
-
-      if (quickItemsError) {
-        await supabase
-          .from('quotes')
-          .delete()
-          .eq('id', quote.id)
-          .eq('user_id', user.id);
-        return { error: quickItemsError.message };
-      }
-    }
-  } else {
-    for (const [roomIndex, room] of preview.rooms.entries()) {
-      const { data: insertedRoom, error: roomError } = await supabase
-        .from('quote_rooms')
-        .insert({
-          quote_id: quote.id,
-          name: room.name,
-          room_type: room.room_type,
-          length_m: room.length_m,
-          width_m: room.width_m,
-          height_m: room.height_m,
-          sort_order: roomIndex,
-        })
-        .select('id')
-        .single();
-
-      if (roomError || !insertedRoom) {
-        await supabase
-          .from('quotes')
-          .delete()
-          .eq('id', quote.id)
-          .eq('user_id', user.id);
-        return {
-          error: roomError?.message ?? 'Quote room could not be created.',
-        };
-      }
-
-      const { error: surfacesError } = await insertQuoteRoomSurfaces(
-        supabase,
-        insertedRoom.id,
-        room.surfaces,
-        parsed.data.complexity
-      );
-
-      if (surfacesError) {
-        await supabase
-          .from('quotes')
-          .delete()
-          .eq('id', quote.id)
-          .eq('user_id', user.id);
-        return { error: surfacesError.message };
-      }
-    }
-  }
-
-  // ── Save quote line items (materials & services section) ─────────────────
-  if (lineItems.length > 0) {
-    const { error: lineItemsError } = await supabase
-      .from('quote_line_items')
-      .insert(
-        lineItems.map((item, index) => ({
-          quote_id: quote.id,
-          material_item_id: item.material_item_id ?? null,
-          name: item.name,
-          category: item.category,
-          unit: item.unit,
-          quantity: item.quantity,
-          unit_price_cents: item.unit_price_cents,
-          total_cents: Math.round(item.quantity * item.unit_price_cents),
-          notes: item.notes ?? null,
-          is_optional: item.is_optional ?? false,
-          is_selected: item.is_optional ? (item.is_selected ?? false) : true,
-          sort_order: index,
-        }))
-      );
-
-    if (lineItemsError) {
+  const pricingSaveResult = await saveQuotePricingRelations({
+    supabase,
+    quoteId: quote.id,
+    userId: user.id,
+    data: parsed.data,
+    pricing,
+    mode: 'create',
+    cleanupOnError: async () => {
       await supabase
         .from('quotes')
         .delete()
         .eq('id', quote.id)
         .eq('user_id', user.id);
-      return { error: lineItemsError.message };
-    }
-  }
+    },
+  });
 
-  if (hasQuoteFormStructurePayload(parsed.data)) {
-    const quoteFormError = await insertQuoteFormStructure(
-      supabase,
-      quote.id,
-      user.id,
-      {
-        job_type: parsed.data.job_type,
-        scope_sections: parsed.data.scope_sections,
-        clause_items: parsed.data.clause_items,
-        ai_intake_snapshot: parsed.data.ai_intake_snapshot,
-      }
-    );
-
-    if (quoteFormError) {
-      await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', quote.id)
-        .eq('user_id', user.id);
-      return { error: quoteFormError };
-    }
+  if (pricingSaveResult.error) {
+    return { error: pricingSaveResult.error };
   }
 
   if (shouldSendEmail) {
@@ -2399,88 +803,20 @@ export async function approvePublicQuote(
   }
 
   const supabase = createAdminClient();
-  const quoteResult = await supabase
-    .from('quotes')
-    .select(PUBLIC_QUOTE_APPROVAL_SELECT)
-    .eq('public_share_token', quoteToken)
-    .single();
-  let quote = quoteResult.data as PublicQuoteApprovalRow | null;
-  let quoteError = quoteResult.error;
-
-  if (
-    quoteError &&
-    isMissingQuoteCustomerSnapshotColumnError(quoteError.message)
-  ) {
-    const legacyResult = await supabase
-      .from('quotes')
-      .select(PUBLIC_QUOTE_APPROVAL_SELECT_LEGACY)
-      .eq('public_share_token', quoteToken)
-      .single();
-
-    quote = legacyResult.data as PublicQuoteApprovalRow | null;
-    quoteError = legacyResult.error;
-  }
-
-  if (
-    quoteError ||
-    !quote ||
-    resolveQuoteStatus({
-      status: quote.status,
-      valid_until: quote.valid_until,
-    }) !== 'sent'
-  ) {
-    return { error: 'This quote is no longer available for approval.' };
-  }
-
-  const approvedAt = new Date().toISOString();
-
-  const { error: updateQuoteError } = await supabase
-    .from('quotes')
-    .update({
-      status: 'approved',
-      approved_at: approvedAt,
-      approved_by_name: approvedByName,
-      approved_by_email: approvedByEmail,
-      approval_signature: approvalSignature,
-    })
-    .eq('id', quote.id)
-    .eq('public_share_token', quoteToken);
-
-  if (updateQuoteError) {
-    return { error: updateQuoteError.message };
-  }
-
-  const customer = resolveQuoteCustomerSummary({
-    customer: quote.customer,
-    customer_email: quote.customer_email,
-    customer_address: quote.customer_address,
-  });
-  const businessResult = await getBusinessDocumentBranding(
+  const result = await approvePublicQuoteResponse({
     supabase,
-    quote.user_id,
-    null
-  );
-  const ownerEmail = businessResult.data?.email?.trim() ?? null;
-
-  if (ownerEmail) {
-    await sendQuoteApprovalNotification({
-      to: ownerEmail,
-      businessName: businessResult.data?.name || 'Coatly',
-      quoteNumber: quote.quote_number,
-      quoteTitle: quote.title,
-      customerName: customer.company_name || customer.name,
-      customerEmail: customer.email,
-      approvedByName,
-      approvedByEmail,
-      approvedAt: formatDate(approvedAt),
-      totalFormatted: formatAUD(quote.total_cents),
-      signature: approvalSignature,
-    });
+    quoteToken,
+    approvedByName,
+    approvedByEmail,
+    approvalSignature,
+  });
+  if (result.error || !result.data) {
+    return { error: result.error ?? 'This quote could not be approved.' };
   }
 
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
-  revalidatePath(`/quotes/${quote.id}`);
+  revalidatePath(`/quotes/${result.data.quoteId}`);
   return { error: null };
 }
 
@@ -2502,43 +838,17 @@ export async function rejectPublicQuote(
   }
 
   const supabase = createAdminClient();
-  const quoteResult = await supabase
-    .from('quotes')
-    .select('id, status, valid_until')
-    .eq('public_share_token', quoteToken)
-    .single();
-  const quote = quoteResult.data as {
-    id: string;
-    status: string;
-    valid_until: string | null;
-  } | null;
-
-  if (
-    quoteResult.error ||
-    !quote ||
-    resolveQuoteStatus({
-      status: quote.status,
-      valid_until: quote.valid_until,
-    }) !== 'sent'
-  ) {
-    return { error: 'This quote is no longer available for decline.' };
-  }
-
-  const { error: updateQuoteError } = await supabase
-    .from('quotes')
-    .update({
-      status: 'rejected',
-    })
-    .eq('id', quote.id)
-    .eq('public_share_token', quoteToken);
-
-  if (updateQuoteError) {
-    return { error: updateQuoteError.message };
+  const result = await rejectPublicQuoteResponse({
+    supabase,
+    quoteToken,
+  });
+  if (result.error || !result.data) {
+    return { error: result.error ?? 'This quote could not be declined.' };
   }
 
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
-  revalidatePath(`/quotes/${quote.id}`);
+  revalidatePath(`/quotes/${result.data.quoteId}`);
   return { error: null };
 }
 
@@ -2550,213 +860,13 @@ export async function duplicateQuote(
     requireCurrentUser(),
   ]);
 
-  const quoteResult = await supabase
-    .from('quotes')
-    .select(QUOTE_DETAIL_SELECT)
-    .eq('id', quoteId)
-    .eq('user_id', user.id)
-    .single();
-  let sourceQuote = quoteResult.data as QuoteDetailRow | null;
-  let sourceError = quoteResult.error;
-
-  if (sourceError && isMissingQuoteSelectColumnError(sourceError.message)) {
-    const legacyResult = await supabase
-      .from('quotes')
-      .select(QUOTE_DETAIL_SELECT_LEGACY)
-      .eq('id', quoteId)
-      .eq('user_id', user.id)
-      .single();
-    sourceQuote = legacyResult.data as QuoteDetailRow | null;
-    sourceError = legacyResult.error;
-  }
-
-  if (sourceError || !sourceQuote) {
-    return { error: sourceError?.message ?? 'Quote not found.' };
-  }
-
-  const relationsResult = await loadQuoteRelations(supabase, quoteId);
-  if (relationsResult.error || !relationsResult.data) {
-    return {
-      error: relationsResult.error ?? 'Quote details could not be loaded.',
-    };
-  }
-
-  const { rooms, estimate_items, line_items } = relationsResult.data;
-
-  const { data: newQuoteNumber, error: quoteNumberError } = await supabase.rpc(
-    'generate_quote_number',
-    { user_uuid: user.id }
-  );
-
-  if (quoteNumberError || !newQuoteNumber) {
-    return {
-      error:
-        quoteNumberError?.message ?? 'Quote number could not be generated.',
-    };
-  }
-
-  const quoteInsert = {
-    user_id: user.id,
-    customer_id: sourceQuote.customer_id,
-    job_type: sourceQuote.job_type ?? 'interior',
-    customer_email: sourceQuote.customer_email ?? null,
-    customer_address: sourceQuote.customer_address ?? null,
-    quote_number: newQuoteNumber,
-    title: sourceQuote.title ? `${sourceQuote.title} (Copy)` : 'Copy',
-    status: 'draft' as const,
-    valid_until: null,
-    working_days: sourceQuote.working_days ?? null,
-    tier: sourceQuote.tier,
-    notes: sourceQuote.notes,
-    internal_notes: sourceQuote.internal_notes,
-    labour_margin_percent: sourceQuote.labour_margin_percent,
-    material_margin_percent: sourceQuote.material_margin_percent,
-    subtotal_cents: sourceQuote.subtotal_cents,
-    gst_cents: sourceQuote.gst_cents,
-    total_cents: sourceQuote.total_cents,
-    manual_adjustment_cents: sourceQuote.manual_adjustment_cents ?? 0,
-    discount_cents: sourceQuote.discount_cents ?? 0,
-    deposit_percent: sourceQuote.deposit_percent ?? 0,
-    estimate_category: sourceQuote.estimate_category ?? undefined,
-    property_type: sourceQuote.property_type ?? undefined,
-    estimate_mode: sourceQuote.estimate_mode ?? undefined,
-    estimate_context: jsonColumnValue(sourceQuote.estimate_context),
-    pricing_snapshot: jsonColumnValue(sourceQuote.pricing_snapshot),
-    pricing_method: sourceQuote.pricing_method ?? undefined,
-    pricing_method_inputs: sourceQuote.pricing_method_inputs as Json | null,
-  };
-
-  let { data: newQuote, error: insertError } = await supabase
-    .from('quotes')
-    .insert(quoteInsert)
-    .select('id')
-    .single();
-
-  if (
-    insertError &&
-    isMissingQuoteCustomerSnapshotColumnError(insertError.message)
-  ) {
-    const {
-      customer_email: _e,
-      customer_address: _a,
-      ...legacyInsert
-    } = quoteInsert;
-    void _e;
-    void _a;
-    const legacyResult = await supabase
-      .from('quotes')
-      .insert(legacyInsert)
-      .select('id')
-      .single();
-    newQuote = legacyResult.data;
-    insertError = legacyResult.error;
-  }
-
-  if (insertError || !newQuote) {
-    return { error: insertError?.message ?? 'Quote could not be duplicated.' };
-  }
-
-  const newQuoteId = newQuote.id;
-
-  if (estimate_items.length > 0) {
-    const { error: estimateItemsError } = await supabase
-      .from('quote_estimate_items')
-      .insert(
-        estimate_items.map((item, index) => ({
-          quote_id: newQuoteId,
-          category: item.category,
-          label: item.label,
-          quantity: item.quantity,
-          unit: item.unit,
-          unit_price_cents: item.unit_price_cents,
-          total_cents: item.total_cents,
-          metadata: jsonColumnValue(item.metadata),
-          sort_order: index,
-        }))
-      );
-    if (estimateItemsError) {
-      await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', newQuoteId)
-        .eq('user_id', user.id);
-      return { error: estimateItemsError.message };
-    }
-  }
-
-  for (const [roomIndex, room] of rooms.entries()) {
-    const { data: insertedRoom, error: roomError } = await supabase
-      .from('quote_rooms')
-      .insert({
-        quote_id: newQuoteId,
-        name: room.name,
-        room_type: room.room_type,
-        length_m: room.length_m,
-        width_m: room.width_m,
-        height_m: room.height_m,
-        sort_order: roomIndex,
-      })
-      .select('id')
-      .single();
-
-    if (roomError || !insertedRoom) {
-      await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', newQuoteId)
-        .eq('user_id', user.id);
-      return { error: roomError?.message ?? 'Room could not be copied.' };
-    }
-
-    if (room.surfaces.length > 0) {
-      const { error: surfacesError } = await insertQuoteRoomSurfaces(
-        supabase,
-        insertedRoom.id,
-        room.surfaces,
-        null
-      );
-      if (surfacesError) {
-        await supabase
-          .from('quotes')
-          .delete()
-          .eq('id', newQuoteId)
-          .eq('user_id', user.id);
-        return { error: surfacesError.message };
-      }
-    }
-  }
-
-  if (line_items.length > 0) {
-    const { error: lineItemsError } = await supabase
-      .from('quote_line_items')
-      .insert(
-        line_items.map((item, index) => ({
-          quote_id: newQuoteId,
-          material_item_id: item.material_item_id ?? null,
-          name: item.name,
-          category: materialItemCategoryOrOther(item.category),
-          unit: item.unit,
-          quantity: item.quantity,
-          unit_price_cents: item.unit_price_cents,
-          total_cents: item.total_cents,
-          notes: item.notes ?? null,
-          is_optional: item.is_optional,
-          is_selected: item.is_selected,
-          sort_order: index,
-        }))
-      );
-    if (lineItemsError) {
-      await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', newQuoteId)
-        .eq('user_id', user.id);
-      return { error: lineItemsError.message };
-    }
+  const result = await duplicateQuoteForUser(supabase, user.id, quoteId);
+  if (result.error || !result.data) {
+    return { error: result.error ?? 'Quote could not be duplicated.' };
   }
 
   revalidatePath('/quotes');
-  redirect(`/quotes/${newQuoteId}/edit`);
+  redirect(`/quotes/${result.data.quoteId}/edit`);
 }
 
 export async function updateQuote(
@@ -2842,6 +952,10 @@ export async function updateQuote(
     return { error: rateBoundaryError };
   }
 
+  const pricing = resolveQuotePricingPreviewForSave(
+    parsed.data,
+    effectiveRates
+  );
   const {
     adjustmentCents,
     depositPercent,
@@ -2849,11 +963,10 @@ export async function updateQuote(
     exteriorEstimateResult,
     interiorEstimate,
     interiorEstimateContext,
-    lineItems,
     preview,
     pricingMethod,
     resolvedPricingInputs,
-  } = resolveQuotePricingPreviewForSave(parsed.data, effectiveRates);
+  } = pricing;
 
   // Resolve quote number — allow custom override if different from existing
   let resolvedQuoteNumber = existing.quote_number;
@@ -2878,42 +991,13 @@ export async function updateQuote(
   }
 
   // Delete old relations only after validations that can fail without touching quote details.
-  const { data: oldRooms, error: oldRoomsError } = await supabase
-    .from('quote_rooms')
-    .select('id')
-    .eq('quote_id', quoteId);
-
-  if (oldRoomsError) {
-    return { error: oldRoomsError.message };
+  const deleteRelationsResult = await deleteQuotePricingRelationsForUpdate(
+    supabase,
+    quoteId
+  );
+  if (deleteRelationsResult.error) {
+    return { error: deleteRelationsResult.error };
   }
-
-  const oldRoomIds = oldRooms?.map((r) => r.id) ?? [];
-  if (oldRoomIds.length > 0) {
-    const { error: surfacesDeleteError } = await supabase
-      .from('quote_room_surfaces')
-      .delete()
-      .in('room_id', oldRoomIds);
-    if (surfacesDeleteError) return { error: surfacesDeleteError.message };
-
-    const { error: roomsDeleteError } = await supabase
-      .from('quote_rooms')
-      .delete()
-      .eq('quote_id', quoteId);
-    if (roomsDeleteError) return { error: roomsDeleteError.message };
-  }
-
-  const { error: estimateItemsDeleteError } = await supabase
-    .from('quote_estimate_items')
-    .delete()
-    .eq('quote_id', quoteId);
-  if (estimateItemsDeleteError)
-    return { error: estimateItemsDeleteError.message };
-
-  const { error: lineItemsDeleteError } = await supabase
-    .from('quote_line_items')
-    .delete()
-    .eq('quote_id', quoteId);
-  if (lineItemsDeleteError) return { error: lineItemsDeleteError.message };
 
   // Update the quote record
   const quoteUpdatePayload = {
@@ -2983,126 +1067,17 @@ export async function updateQuote(
     return { error: updateError.message };
   }
 
-  // Re-insert relations
-  if (interiorEstimate && interiorEstimate.pricing_items.length > 0) {
-    const { error: estimateItemsError } = await supabase
-      .from('quote_estimate_items')
-      .insert(
-        interiorEstimate.pricing_items.map((item, index) => ({
-          quote_id: quoteId,
-          category: item.category,
-          label: item.label,
-          quantity: item.quantity,
-          unit: item.unit,
-          unit_price_cents: item.unit_price_cents,
-          total_cents: item.total_cents,
-          metadata: {
-            ...(item.metadata ?? {}),
-            room_index: item.room_index ?? null,
-          },
-          sort_order: index,
-        }))
-      );
-    if (estimateItemsError) return { error: estimateItemsError.message };
-  } else if (
-    pricingMethod === 'detailed_quick' &&
-    resolvedPricingInputs?.method === 'detailed_quick'
-  ) {
-    const quickItemRows = buildQuickEstimateItemRows(
-      quoteId,
-      resolvedPricingInputs.inputs
-    );
-    if (quickItemRows.length > 0) {
-      const { error: quickItemsError } = await supabase
-        .from('quote_estimate_items')
-        .insert(quickItemRows);
-      if (quickItemsError) return { error: quickItemsError.message };
-    }
-  } else {
-    for (const [roomIndex, room] of preview.rooms.entries()) {
-      const { data: insertedRoom, error: roomError } = await supabase
-        .from('quote_rooms')
-        .insert({
-          quote_id: quoteId,
-          name: room.name,
-          room_type: room.room_type,
-          length_m: room.length_m,
-          width_m: room.width_m,
-          height_m: room.height_m,
-          sort_order: roomIndex,
-        })
-        .select('id')
-        .single();
+  const pricingSaveResult = await saveQuotePricingRelations({
+    supabase,
+    quoteId,
+    userId: user.id,
+    data: parsed.data,
+    pricing,
+    mode: 'update',
+  });
 
-      if (roomError || !insertedRoom)
-        return { error: roomError?.message ?? 'Room could not be updated.' };
-
-      const { error: surfacesError } = await insertQuoteRoomSurfaces(
-        supabase,
-        insertedRoom.id,
-        room.surfaces,
-        parsed.data.complexity
-      );
-      if (surfacesError) return { error: surfacesError.message };
-    }
-  }
-
-  if (lineItems.length > 0) {
-    const { error: lineItemsError } = await supabase
-      .from('quote_line_items')
-      .insert(
-        lineItems.map((item, index) => ({
-          quote_id: quoteId,
-          material_item_id: item.material_item_id ?? null,
-          name: item.name,
-          category: item.category,
-          unit: item.unit,
-          quantity: item.quantity,
-          unit_price_cents: item.unit_price_cents,
-          total_cents: Math.round(item.quantity * item.unit_price_cents),
-          notes: item.notes ?? null,
-          is_optional: item.is_optional ?? false,
-          is_selected: item.is_optional ? (item.is_selected ?? false) : true,
-          sort_order: index,
-        }))
-      );
-    if (lineItemsError) return { error: lineItemsError.message };
-  }
-
-  if (hasQuoteFormStructurePayload(parsed.data)) {
-    const { error: clausesDeleteError } = await supabase
-      .from('quote_clause_items')
-      .delete()
-      .eq('quote_id', quoteId);
-    if (clausesDeleteError) return { error: clausesDeleteError.message };
-
-    const { error: intakeDeleteError } = await supabase
-      .from('quote_ai_intake_snapshots')
-      .delete()
-      .eq('quote_id', quoteId);
-    if (intakeDeleteError) return { error: intakeDeleteError.message };
-
-    const { error: sectionsDeleteError } = await supabase
-      .from('quote_scope_sections')
-      .delete()
-      .eq('quote_id', quoteId);
-    if (sectionsDeleteError) return { error: sectionsDeleteError.message };
-
-    const quoteFormError = await insertQuoteFormStructure(
-      supabase,
-      quoteId,
-      user.id,
-      {
-        job_type: parsed.data.job_type,
-        scope_sections: parsed.data.scope_sections,
-        clause_items: parsed.data.clause_items,
-        ai_intake_snapshot: parsed.data.ai_intake_snapshot,
-      }
-    );
-
-    if (quoteFormError) {
-      return { error: quoteFormError };
-    }
+  if (pricingSaveResult.error) {
+    return { error: pricingSaveResult.error };
   }
 
   if (shouldSendEmail) {

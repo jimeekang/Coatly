@@ -17,7 +17,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerClient: createServerClientMock,
 }));
 
-vi.mock('@/modules/settings/domain/businesses', () => ({
+vi.mock('@/modules/settings/infrastructure/businesses', () => ({
   getBusinessRateSettings: getBusinessRateSettingsMock,
 }));
 

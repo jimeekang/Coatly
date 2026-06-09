@@ -1,11 +1,52 @@
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
-import { getProfileWithOnboardingFallback } from '@/modules/settings/domain/onboarding';
+import {
+  isMissingOnboardingColumnError,
+  type OnboardingProfileRecord,
+} from '@/modules/settings/domain/onboarding';
 import {
   getMonthlyActiveQuoteUsageForUser,
   getSubscriptionSnapshotForUser,
 } from '@/lib/subscription/access';
 import { createServerClient } from '@/lib/supabase/server';
+
+type AppSupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
+
+async function getProfileWithOnboardingFallback(
+  supabase: AppSupabaseClient,
+  userId: string,
+  includeAddressFields = false
+) {
+  const fullSelect = includeAddressFields
+    ? 'onboarding_completed, business_name, abn, phone, address_line1, city, state, postcode'
+    : 'onboarding_completed, business_name, abn, phone, address_line1, city, state, postcode';
+
+  const fallbackSelect = includeAddressFields
+    ? 'business_name, abn, phone, address_line1, city, state, postcode'
+    : 'business_name, abn, phone, address_line1, city, state, postcode';
+
+  const initialResult = (await supabase
+    .from('profiles')
+    .select(fullSelect)
+    .eq('user_id', userId)
+    .single()) as {
+    data: OnboardingProfileRecord | null;
+    error: { message?: string } | null;
+  };
+
+  if (!isMissingOnboardingColumnError(initialResult.error)) {
+    return initialResult;
+  }
+
+  return (await supabase
+    .from('profiles')
+    .select(fallbackSelect)
+    .eq('user_id', userId)
+    .single()) as {
+    data: OnboardingProfileRecord | null;
+    error: { message?: string } | null;
+  };
+}
 
 export const getCurrentUser = cache(async () => {
   const supabase = await createServerClient();

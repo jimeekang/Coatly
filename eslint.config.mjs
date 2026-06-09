@@ -37,6 +37,58 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    files: ["modules/*/domain/**/*.ts", "modules/*/domain/**/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: [
+                "next/*",
+                "@/app/*",
+                "@/components/*",
+                "@/lib/supabase",
+                "@/lib/supabase/*",
+                "@/lib/email/*",
+                "@/lib/pdf/*",
+                "@/lib/stripe/*",
+                "@/modules/*/application",
+                "@/modules/*/application/*",
+                "@/modules/*/ui",
+                "@/modules/*/ui/*",
+              ],
+              message:
+                "Domain layer must stay pure. Move DB, Next.js, UI, and external side effects to application or infrastructure.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["lib/**/*.ts", "lib/**/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: [
+                "@/modules/*/application",
+                "@/modules/*/application/*",
+                "@/modules/*/ui",
+                "@/modules/*/ui/*",
+              ],
+              message:
+                "Shared lib must not depend on feature application or UI internals. Move shared contracts to domain, types, config, or utils.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

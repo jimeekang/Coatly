@@ -60,6 +60,7 @@
 | Claude planning context | [`CLAUDE.md`](./CLAUDE.md) |
 | Codex engineering guide | [`docs/ENGINEERING.md`](./docs/ENGINEERING.md) |
 | 기술 아키텍처 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
+| DDD-lite module design and maintenance | [`docs/DDD-MODULES.md`](./docs/DDD-MODULES.md) |
 | **v1 workflow replacement plan** | [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md) |
 | Coatly 가격표 세팅 기준 | [`docs/features/quote/PRICE-BOOK-TEMPLATE.md`](./docs/features/quote/PRICE-BOOK-TEMPLATE.md) |
 | 로드맵 + progress | [`docs/PLANS.md`](./docs/PLANS.md) |

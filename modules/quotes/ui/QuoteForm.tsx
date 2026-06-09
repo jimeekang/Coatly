@@ -51,11 +51,6 @@ import {
   type QuoteStatus,
   type QuoteComplexity,
 } from '@/modules/quotes/domain/quotes';
-import type {
-  QuoteCreateInput,
-  MaterialItem,
-  QuoteLineItemFormInput,
-} from '@/lib/supabase/validators';
 import {
   DEFAULT_RATE_SETTINGS,
   type UserRateSettings,
@@ -103,6 +98,11 @@ import {
   type ExteriorEstimateFormState,
 } from '@/modules/quotes/ui/ExteriorEstimateBuilder';
 import { calculateExteriorEstimate } from '@/modules/quotes/domain/exterior-estimates';
+import type { MaterialItem } from '@/modules/materials/domain/types';
+import type {
+  QuoteCreateInput,
+  QuoteLineItemFormInput,
+} from '@/modules/quotes/domain/quote-schema';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

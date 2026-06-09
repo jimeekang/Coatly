@@ -51,12 +51,35 @@ Codex가 담당하지 않는 것:
 ## DDD-Lite Module Rules
 
 - Dashboard 기능은 기본적으로 `modules/<feature>/` 아래에서 소유합니다.
+- Use [`DDD-MODULES.md`](./DDD-MODULES.md) as the detailed module design and maintenance guide.
 - `app/(dashboard)/`와 `app/q/`는 route/page 조립만 담당하고 업무 규칙을 두지 않습니다.
 - `domain/`은 가능한 한 순수 함수와 타입을 두고 Supabase/Next 의존을 피합니다.
+- Feature-owned form/input schemas should live in that feature's `domain/` layer. Shared validator files may keep compatibility re-exports during migration, but new feature code should import the feature-owned schema directly.
 - `application/`은 server action과 workflow orchestration을 둡니다.
 - `infrastructure/`는 API/repository/외부 adapter가 필요할 때만 둡니다.
+- Large server action files should be split by moving Supabase row types, select strings, relation loaders, and persistence helpers into feature-owned `infrastructure/` repositories before changing public action signatures.
+- Document generation and email side effects should live in feature-owned application services. Server actions should validate the request, call the service with authenticated context, then handle status updates and cache invalidation.
 - `ui/`는 feature-owned 컴포넌트를 둡니다. 재사용 범위가 앱 전체이면 `components/shared`, `components/forms`, `components/layout`에 둡니다.
 - shared integration은 `lib/supabase`, `lib/stripe`, `lib/email`, `lib/pdf`, `lib/ai`, `lib/google-calendar`에 유지합니다.
+- New code should not introduce boundary lint warnings. Existing violations should be reduced incrementally, then cleaned areas can be promoted from `warn` to `error`.
+
+### Dependency Direction
+
+```text
+app/page or api route
+  -> modules/<feature>/ui or application
+  -> modules/<feature>/application
+  -> modules/<feature>/infrastructure
+  -> modules/<feature>/domain
+  -> shared types/config/utils
+```
+
+Forbidden directions:
+
+- `domain` importing Next.js, Supabase clients, email, PDF, Stripe, or other side-effect integrations
+- `lib` importing feature `application` or `ui`
+- feature UI directly calling another feature's `application` action
+- route/page files owning long DB queries and business rules
 
 ## Verification
 

@@ -1,6 +1,6 @@
 'use server';
 
-import { getBusinessRateSettings, saveBusinessRateSettings } from '@/modules/settings/domain/businesses';
+import { getBusinessRateSettings, saveBusinessRateSettings } from '@/modules/settings/infrastructure/businesses';
 import { parseUserRateSettings } from '@/modules/price-rates/domain/rate-settings';
 import type { UserRateSettings } from '@/modules/price-rates/domain/rate-settings';
 import { requireCurrentUser } from '@/lib/supabase/request-context';

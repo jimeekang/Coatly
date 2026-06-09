@@ -1,5 +1,3 @@
-import type { JobUpsertInput } from '@/lib/supabase/validators';
-
 export type JobVariation = {
   id: string;
   job_id: string;
@@ -92,5 +90,3 @@ export type JobQuoteOption = {
   customer_id: string;
   status: string;
 };
-
-export type JobFormInput = JobUpsertInput;

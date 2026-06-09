@@ -6,7 +6,7 @@ import {
   getSubscriptionSnapshotForCurrentUser,
 } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
-import type { QuoteCreateInput } from '@/lib/supabase/validators';
+import type { QuoteCreateInput } from '@/modules/quotes/domain/quote-schema';
 import { getActiveSubscriptionRequiredMessage } from '@/lib/subscription/access';
 import { STARTER_TEMPLATE_LIMIT } from '@/config/plans';
 

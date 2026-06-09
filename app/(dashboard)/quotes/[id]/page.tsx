@@ -11,7 +11,7 @@ import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from 
 import { formatAUD, formatDate } from '@/utils/format';
 import { ProfitabilityCard } from '@/modules/quotes/ui/ProfitabilityCard';
 import { QuoteActions } from '@/modules/quotes/ui/QuoteActions';
-import { getBusinessRateSettings } from '@/modules/settings/domain/businesses';
+import { getBusinessRateSettings } from '@/modules/settings/infrastructure/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Quote Detail' };

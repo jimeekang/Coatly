@@ -5,7 +5,7 @@ import { mapInvoiceDetail } from '@/modules/invoices/domain/invoices';
 import { createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
-import { getBusinessDocumentBranding } from '@/modules/settings/domain/businesses';
+import { getBusinessDocumentBranding } from '@/modules/settings/infrastructure/businesses';
 import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
 
 const UUID_RE =

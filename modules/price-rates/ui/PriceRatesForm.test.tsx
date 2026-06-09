@@ -469,13 +469,13 @@ describe('PriceRatesForm pricing setup', () => {
     const user = userEvent.setup();
     const rates = buildDefaultRateSettings();
     rates.pricing.preferred_pricing_method = 'manual';
-    let exportedBlob: Blob | null = null;
+    const exportedBlob: { current: Blob | null } = { current: null };
     const clickSpy = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
     vi.stubGlobal('URL', {
       createObjectURL: vi.fn((blob: Blob) => {
-        exportedBlob = blob;
+        exportedBlob.current = blob;
         return 'blob:manual-template';
       }),
       revokeObjectURL: vi.fn(),
@@ -489,7 +489,7 @@ describe('PriceRatesForm pricing setup', () => {
     );
 
     expect(clickSpy).toHaveBeenCalled();
-    await expect(exportedBlob?.text()).resolves.toBe(
+    await expect(exportedBlob.current?.text()).resolves.toBe(
       'Service / Item,Unit,Price,Category,Customer Description'
     );
     expect(
