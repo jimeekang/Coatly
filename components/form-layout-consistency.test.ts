@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -7,12 +7,57 @@ function readSource(relativePath: string) {
 }
 
 const D6_FORMS = [
-  'components/quotes/QuoteForm.tsx',
-  'components/invoices/InvoiceForm.tsx',
-  'components/customers/CustomerForm.tsx',
+  'modules/quotes/ui/QuoteForm.tsx',
+  'modules/invoices/ui/InvoiceForm.tsx',
+  'modules/customers/ui/CustomerForm.tsx',
 ] as const;
 
+const UI_SOURCE_ROOTS = ['app', 'components', 'modules'] as const;
+
+function listSourceFiles(relativeDir: string): string[] {
+  const absoluteDir = path.join(process.cwd(), relativeDir);
+  if (!existsSync(absoluteDir)) return [];
+
+  return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = path.join(relativeDir, entry.name);
+
+    if (entry.isDirectory()) return listSourceFiles(relativePath);
+    if (/\.(test|spec)\./.test(entry.name)) return [];
+    if (/\.(tsx|ts|css)$/.test(entry.name)) return [relativePath];
+    return [];
+  });
+}
+
+function findTokenPairOffenders(pattern: RegExp) {
+  return UI_SOURCE_ROOTS.flatMap((root) =>
+    listSourceFiles(root).flatMap((file) =>
+      readSource(file)
+        .split('\n')
+        .flatMap((line, index) =>
+          pattern.test(line) ? [`${file}:${index + 1}: ${line.trim()}`] : [],
+        ),
+    ),
+  );
+}
+
 describe('D6 form layout consistency', () => {
+  it('keeps one dashboard PageHeader primitive and no deprecated global UI classes', () => {
+    expect(existsSync(path.join(process.cwd(), 'components/layout/PageHeader.tsx'))).toBe(
+      true
+    );
+    expect(existsSync(path.join(process.cwd(), 'components/ui/PageHeader.tsx'))).toBe(
+      false
+    );
+
+    const globals = readSource('app/globals.css');
+    expect(globals).not.toMatch(/\.field\b/);
+    expect(globals).not.toMatch(/\.field-error\b/);
+    expect(globals).not.toContain('.sticky-action-bar');
+    expect(globals).not.toContain('.h1-page');
+    expect(globals).not.toContain('.h2-section');
+    expect(globals).not.toContain('.h3-block');
+  });
+
   it('provides shared form primitives with MD3 styling', () => {
     const primitiveFiles = [
       'components/forms/FormField.tsx',
@@ -73,8 +118,26 @@ describe('D6 form layout consistency', () => {
     }
   });
 
+  it('uses on-color text tokens on solid semantic backgrounds', () => {
+    const solidPrimaryWithWhite = /(?<![:\w-])bg-primary(?![/\w-])(?=.*\btext-white\b)|\btext-white\b(?=.*(?<![:\w-])bg-primary(?![/\w-]))/;
+    const solidErrorWithWrongText = /(?<![:\w-])bg-error(?![/\w-])(?=.*\b(text-white|text-primary|text-on-primary|text-error)\b)|\b(text-white|text-primary|text-on-primary|text-error)\b(?=.*(?<![:\w-])bg-error(?![/\w-]))/;
+
+    expect(findTokenPairOffenders(solidPrimaryWithWhite)).toEqual([]);
+    expect(findTokenPairOffenders(solidErrorWithWrongText)).toEqual([]);
+  });
+
+  it('keeps primary-container text on matching container tokens', () => {
+    const primaryContainerWithWrongText =
+      /(?<![:\w-])bg-primary-container(?![/\w-])(?=.*\b(text-white|text-primary)\b)|\b(text-white|text-primary)\b(?=.*(?<![:\w-])bg-primary-container(?![/\w-]))/;
+    const primaryContainerWithoutOnText =
+      /(?<![:\w-])bg-primary-container(?![/\w-])(?!.*\btext-on-primary-container\b)/;
+
+    expect(findTokenPairOffenders(primaryContainerWithWrongText)).toEqual([]);
+    expect(findTokenPairOffenders(primaryContainerWithoutOnText)).toEqual([]);
+  });
+
   it('keeps the quote send modal above mobile navigation', () => {
-    const source = readSource('components/quotes/QuoteForm.tsx');
+    const source = readSource('modules/quotes/ui/QuoteForm.tsx');
 
     expect(source).toContain('fixed inset-0 z-50');
   });

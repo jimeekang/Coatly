@@ -19,7 +19,7 @@ export function FormFooter({
   return (
     <div
       className={cn(
-        'fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-outline-variant bg-surface-container-lowest/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm md:bottom-0 md:left-60 lg:left-64',
+        'fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-outline-variant bg-surface-container-lowest/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm sm:px-4 md:bottom-0 md:left-60 md:px-6 lg:left-64',
         className,
       )}
       {...props}

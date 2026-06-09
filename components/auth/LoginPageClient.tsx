@@ -68,7 +68,7 @@ export default function LoginPageClient({
       footer={
         <>
           Don&apos;t have an account?{' '}
-          <Link href="/signup" className="font-medium text-pm-teal-hover hover:underline">
+          <Link href="/signup" className="font-medium text-primary/90 hover:underline">
             Sign up free
           </Link>
         </>
@@ -77,7 +77,7 @@ export default function LoginPageClient({
       {displayedError && (
         <div
           role="alert"
-          className="mb-4 rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark"
+          className="mb-4 rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container"
         >
           {displayedError}
         </div>
@@ -85,7 +85,7 @@ export default function LoginPageClient({
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-pm-body">
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-on-surface">
             Email
           </label>
           <input
@@ -97,18 +97,18 @@ export default function LoginPageClient({
             disabled={isLoading}
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? 'email-error' : undefined}
-            className="h-12 w-full rounded-lg border border-pm-border bg-white px-4 text-sm text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 disabled:opacity-50"
+            className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
             {...register('email')}
           />
           {errors.email && (
-            <p id="email-error" className="mt-1.5 text-xs text-pm-coral">
+            <p id="email-error" className="mt-1.5 text-xs text-error">
               {errors.email.message}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-pm-body">
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-on-surface">
             Password
           </label>
           <input
@@ -119,11 +119,11 @@ export default function LoginPageClient({
             disabled={isLoading}
             aria-invalid={!!errors.password}
             aria-describedby={errors.password ? 'password-error' : undefined}
-            className="h-12 w-full rounded-lg border border-pm-border bg-white px-4 text-sm text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 disabled:opacity-50"
+            className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
             {...register('password')}
           />
           {errors.password && (
-            <p id="password-error" className="mt-1.5 text-xs text-pm-coral">
+            <p id="password-error" className="mt-1.5 text-xs text-error">
               {errors.password.message}
             </p>
           )}
@@ -132,7 +132,7 @@ export default function LoginPageClient({
         <div className="flex justify-end">
           <Link
             href="/forgot-password"
-            className="text-sm font-medium text-pm-teal-hover hover:underline"
+            className="text-sm font-medium text-primary/90 hover:underline"
           >
             Forgot password?
           </Link>
@@ -141,7 +141,7 @@ export default function LoginPageClient({
         <button
           type="submit"
           disabled={isLoading}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-pm-teal text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           Sign in
@@ -150,10 +150,10 @@ export default function LoginPageClient({
 
       <div className="relative my-5" aria-hidden="true">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-pm-border" />
+          <div className="w-full border-t border-outline" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white px-3 text-xs text-pm-secondary">or</span>
+          <span className="bg-white px-3 text-xs text-on-surface-variant">or</span>
         </div>
       </div>
 
@@ -161,7 +161,7 @@ export default function LoginPageClient({
         type="button"
         onClick={handleGoogleLogin}
         disabled={isLoading}
-        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-pm-border bg-white text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-outline bg-white text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isGooglePending ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -176,7 +176,7 @@ export default function LoginPageClient({
         Continue with Google
       </button>
 
-      <p className="mt-2 text-center text-xs text-pm-secondary">
+      <p className="mt-2 text-center text-xs text-on-surface-variant">
         Google sign-in is available only for emails already registered in {APP_NAME}.
       </p>
     </AuthShell>

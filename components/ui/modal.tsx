@@ -74,21 +74,21 @@ export function Modal({
       >
         {/* 헤더 */}
         {(title || description) && (
-          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-pm-border p-5">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline p-5">
             <div>
               {title && (
-                <h2 id="modal-title" className="text-lg font-semibold text-pm-body">
+                <h2 id="modal-title" className="text-lg font-semibold text-on-surface">
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="mt-1 text-sm leading-relaxed text-pm-secondary">{description}</p>
+                <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">{description}</p>
               )}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-lg p-1 text-pm-secondary transition-colors hover:bg-pm-surface hover:text-pm-body"
+              className="shrink-0 rounded-lg p-1 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
               aria-label="Close"
             >
               <X className="h-5 w-5" />
@@ -101,7 +101,7 @@ export function Modal({
 
         {/* 푸터 */}
         {footer && (
-          <div className="shrink-0 border-t border-pm-border p-5">{footer}</div>
+          <div className="shrink-0 border-t border-outline p-5">{footer}</div>
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { Document, Image, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { APP_NAME } from '@/config/constants';
-import { formatCustomerAddress } from '@/lib/invoices';
+import { formatCustomerAddress } from '@/modules/invoices/domain/invoices';
 import type { InvoiceType, InvoiceWithCustomer } from '@/types/invoice';
 import { formatAUD, formatDate, formatABN } from '@/utils/format';
 

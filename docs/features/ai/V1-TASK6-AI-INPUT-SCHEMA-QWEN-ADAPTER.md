@@ -1,5 +1,7 @@
 # V1 Task 6 — AI Input Schema + Qwen Adapter
 
+> 2026-06-03 UPDATE: Historical completed AI task. The adapter/boundary may remain in code, but no new AI/photo/Qwen work should be prioritized until the core Excel quote workflow replacement is completed, released, and verified.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Status:** COMPLETED as of 2026-05-24.

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import BusinessProfileForm from '@/components/settings/BusinessProfileForm';
-import GoogleCalendarCard from '@/components/settings/GoogleCalendarCard';
+import BusinessProfileForm from '@/modules/settings/ui/BusinessProfileForm';
+import GoogleCalendarCard from '@/modules/settings/ui/GoogleCalendarCard';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import {
   PageHeader,
@@ -9,7 +9,7 @@ import {
 } from '@/components/layout/PageHeader';
 import { getGoogleCalendarIntegrationSummary } from '@/lib/google-calendar/service';
 import { canUserConnectGoogleCalendar } from '@/lib/google-calendar/oauth';
-import { getBusinessProfile } from '@/lib/businesses';
+import { getBusinessProfile } from '@/modules/settings/domain/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Settings' };

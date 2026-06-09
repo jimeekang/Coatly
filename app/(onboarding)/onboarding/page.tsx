@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { BrandLogo } from '@/components/branding/BrandLogo';
 import {
   inferOnboardingCompleted,
-} from '@/lib/profile/onboarding';
+} from '@/modules/settings/domain/onboarding';
 import OnboardingForm from '@/components/onboarding/OnboardingForm';
 import { getOnboardingProfileForCurrentUser, requireCurrentUser } from '@/lib/supabase/request-context';
 
@@ -15,14 +15,14 @@ export default async function OnboardingPage() {
   if (inferOnboardingCompleted(profile)) redirect('/dashboard');
 
   return (
-    <main className="flex min-h-screen items-start justify-center bg-pm-surface px-4 py-10">
+    <main className="flex min-h-screen items-start justify-center bg-surface-container-low px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-8 text-center">
           <div className="mb-4 flex justify-center">
             <BrandLogo width={188} height={42} priority />
           </div>
-          <h1 className="text-2xl font-bold text-pm-body">Set up your business</h1>
-          <p className="mt-1.5 text-sm text-pm-secondary">
+          <h1 className="text-2xl font-bold text-on-surface">Set up your business</h1>
+          <p className="mt-1.5 text-sm text-on-surface-variant">
             This info appears on your quotes and invoices.
           </p>
         </div>

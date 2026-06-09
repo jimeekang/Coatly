@@ -2,7 +2,7 @@ import { type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes } fro
 
 export function Table({ className = '', children, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-pm-border bg-white">
+    <div className="overflow-x-auto rounded-xl border border-outline bg-white">
       <table
         className={['w-full text-left text-sm', className].filter(Boolean).join(' ')}
         {...props}
@@ -20,7 +20,7 @@ export function TableHead({
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead
-      className={['border-b border-pm-border bg-pm-surface', className].filter(Boolean).join(' ')}
+      className={['border-b border-outline bg-surface-container-low', className].filter(Boolean).join(' ')}
       {...props}
     >
       {children}
@@ -35,7 +35,7 @@ export function TableBody({
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <tbody
-      className={['divide-y divide-pm-border', className].filter(Boolean).join(' ')}
+      className={['divide-y divide-outline', className].filter(Boolean).join(' ')}
       {...props}
     >
       {children}
@@ -50,7 +50,7 @@ export function TableRow({
 }: HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={['transition-colors hover:bg-pm-teal-light', className].filter(Boolean).join(' ')}
+      className={['transition-colors hover:bg-success-container', className].filter(Boolean).join(' ')}
       {...props}
     >
       {children}
@@ -66,7 +66,7 @@ export function Th({
   return (
     <th
       className={[
-        'px-5 py-3 text-xs font-semibold uppercase tracking-wide text-pm-secondary',
+        'px-5 py-3 text-xs font-semibold uppercase tracking-wide text-on-surface-variant',
         className,
       ]
         .filter(Boolean)
@@ -85,7 +85,7 @@ export function Td({
 }: TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={['px-5 py-4 text-pm-body', className].filter(Boolean).join(' ')}
+      className={['px-5 py-4 text-on-surface', className].filter(Boolean).join(' ')}
       {...props}
     >
       {children}

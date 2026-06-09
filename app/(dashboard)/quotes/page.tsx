@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { getQuotes } from '@/app/actions/quotes';
-import { QuoteTable } from '@/components/quotes/QuoteTable';
+import { getQuotes } from '@/modules/quotes/application/actions';
+import { QuoteTable } from '@/modules/quotes/ui/QuoteTable';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import {

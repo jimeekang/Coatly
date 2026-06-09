@@ -8,12 +8,12 @@
 |----|--------|------|------|-----------|
 | A1 | P0 | Quote/Invoice 저장 원자성 | 열림 | 다중 insert/update 흐름을 RPC transaction으로 묶을 범위 산정 |
 | A2 | P1 | Public booking + Google Calendar | 열림 | Google event 생성 실패 시 booking 정책을 fail-closed로 정리 |
-| A3 | P0 | AI 거버넌스 + v1 wedge | 진행 중 | Task 1 canonical totals 후 v1 build T4 (`ai_usage_logs` + Basic/Pro/Pro trial limit) + T8 validator. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md), [../ai/V1-TASK1-RATE-SOURCE-AUDIT.md](../ai/V1-TASK1-RATE-SOURCE-AUDIT.md) |
+| A3 | P0 | v1 workflow release gate | 진행 중 | A의 실제 Excel price book을 참고해 앱 안에서 필요한 price items를 세팅한 뒤 quote PDF/email을 재현하고 PDF/email/follow-up/invoice/schedule smoke 통과. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md) |
 | A4 | P1 | Invoice reminder cron | 부분 해결 | `invoice_reminder_events` 기반 멱등성 운영 로그 점검 |
 | A5 | P1 | Public quote security/audit | 부분 | token expiry/revoke/error audit 조회와 운영 화면 검토 |
 | A6 | P1 | Exterior estimate | 열림 | edit/PDF/detail/AI draft 회귀 테스트 강화 |
 | A7 | P2 | 문서 drift | 진행 중 | 모든 MD 200줄 이하, PLANS를 단일 progress source로 유지, [/TODOS.md](../../../TODOS.md) 로 v1.1 deferred 추적 |
-| A8 | P1 | Stale price_rates race (v1.1 deferred) | TODO | painter가 AI 생성 중 price_rates 수정 → AI는 old rate. v1 UI mitigation만, snapshot immutability는 v1.1 — [/TODOS.md](../../../TODOS.md) |
+| A8 | P2 | Deferred AI governance | 보류 | AI/photo/Qwen/usage/cost work는 core workflow release 후 별도 plan. stale price_rates race 포함 — [/TODOS.md](../../../TODOS.md) |
 
 ## Finding Details
 
@@ -33,17 +33,24 @@
 - Google write 실패 시 job 생성/예약 확정 정책이 명확해야 함
 - 고객/페인터에게 재시도 가능 상태가 노출되어야 함
 
-### A3 — AI Governance
+### A3 — v1 Workflow Release Gate
 
-AI draft와 workspace assistant가 구현되어 있습니다. v1 wedge 재정의(2026-05-15)로 governance가 build 핵심 — Task 1 canonical quote totals, T4 `ai_usage_logs` migration + `lib/ai/usage.ts` Basic/Pro/Pro trial rate limit + validator/repair layer + deterministic pricing pass. 자세한 건 [../ai/V1-PLAN.md](../ai/V1-PLAN.md).
+2026-06-03 기준 v1 wedge는 AI Quote Writer가 아니라 Excel quote workflow replacement입니다. 현재 가장 큰 제품 리스크는 A의 실제 Excel 가격표를 참고해 앱 안에서 필요한 price items를 세팅하고 최근 quote PDF/email을 end-to-end 재현하지 않았다는 점입니다.
 
 수용 기준:
-- user/action/model/status/token/latency/request id가 `ai_usage_logs`에 기록됨 (attempt accounting — success/failed/cancelled/partial/retried)
-- per-painter monthly limit 적용, 도달 시 429 + UpgradePrompt
-- AI 실패가 quote 저장을 막지 않음 (graceful degradation → manual builder fallback)
-- AI rate hallucination 방지 — `lib/ai/validator.ts`가 painter price_rates에 없는 rate 거부 + warning
-- DRAFT marker UI + ToS disclaimer (T11)
-- 후속 critical gap: stale `price_rates` race condition은 v1.1 TODO ([/TODOS.md](../../../TODOS.md))
+- A의 실제 Excel price book을 참고해 quote 하나에 필요한 service/unit/price를 앱 안에서 세팅
+- optional bulk input validation이 missing/invalid/duplicate 값을 저장 전 표시
+- 검증된 price items를 Coatly price rates/templates/service items로 세팅
+- 최근 quote PDF/email 1개를 Coatly에서 재현
+- subtotal/GST/total/optional item/manual adjustment parity 확인
+- PDF가 고객에게 보낼 수 있는 수준
+- email send + public quote link smoke 통과
+- follow-up due 상태가 visible
+- approved quote → invoice smoke 통과
+- approved quote → schedule/job smoke 통과
+- lint/test/build + preview/prod smoke 통과
+
+AI governance는 core workflow release 후 별도 항목으로 재개합니다.
 
 ### A4 — Invoice Reminder Cron
 
@@ -79,7 +86,7 @@ Exterior estimate path는 구현되어 있으나 과거 감사에서 편집 시 
 |----|----------|------|------|
 | TD1 | P0 | Quote/Invoice transactional save | Codex |
 | TD2 | P1 | Google Calendar booking failure semantics | Codex |
-| TD3 | P1 | AI usage limits and cost guardrails | Codex |
+| TD3 | P1 | v1 workflow release gate, simple price book setup, and A fixture recreation | Codex |
 | TD4 | P1 | Exterior estimate regression suite | Codex |
 | TD5 | P2 | Public quote event reporting UI | Claude plan → Codex |
 | TD6 | P2 | Monthly analytics trend charts | Claude plan → Codex |
@@ -100,5 +107,6 @@ Exterior estimate path는 구현되어 있으나 과거 감사에서 편집 시 
 |------|--------|
 | Product | quote sent→approved rate, invoice paid time, active quotes per month |
 | Reliability | failed email sends, cron duplicate prevention, Google sync failures |
-| AI | requests/user, token cost, draft apply rate, failed generations |
+| Workflow | price book setup completion, price book setup time, quote recreation time, quote send completion, follow-up due visibility |
+| AI (post-core) | requests/user, token cost, draft apply rate, failed generations |
 | Support | public link errors, booking conflicts, PDF generation failures |

@@ -24,7 +24,7 @@ const signupSchema = z
 type SignupInput = z.infer<typeof signupSchema>;
 
 const inputClass =
-  'w-full h-12 rounded-lg border border-pm-border bg-white px-4 text-sm text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 disabled:opacity-50';
+  'w-full h-12 rounded-lg border border-outline bg-white px-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50';
 
 export default function SignupPage() {
   const [isPending, startTransition] = useTransition();
@@ -63,16 +63,16 @@ export default function SignupPage() {
         sideDescription="Confirm your email and you're in. From there, set up your business profile and start sending quotes straight away."
       >
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-pm-teal-light">
-            <CheckCircle className="h-7 w-7 text-pm-teal-mid" aria-hidden="true" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-container">
+            <CheckCircle className="h-7 w-7 text-primary-container" aria-hidden="true" />
           </div>
-          <p className="text-sm leading-6 text-pm-secondary">
+          <p className="text-sm leading-6 text-on-surface-variant">
             We sent a confirmation link to your email. After confirming, sign in to continue to
             business setup.
           </p>
           <Link
             href="/login"
-            className="mt-6 inline-block text-sm font-medium text-pm-teal-hover hover:underline"
+            className="mt-6 inline-block text-sm font-medium text-primary/90 hover:underline"
           >
             Back to login
           </Link>
@@ -91,7 +91,7 @@ export default function SignupPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-pm-teal-hover hover:underline">
+          <Link href="/login" className="font-medium text-primary/90 hover:underline">
             Sign in
           </Link>
         </>
@@ -100,7 +100,7 @@ export default function SignupPage() {
       {serverError && (
         <div
           role="alert"
-          className="mb-4 rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark"
+          className="mb-4 rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container"
         >
           {serverError}
         </div>
@@ -108,7 +108,7 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <div>
-          <label htmlFor="businessName" className="mb-1.5 block text-sm font-medium text-pm-body">
+          <label htmlFor="businessName" className="mb-1.5 block text-sm font-medium text-on-surface">
             Business Name
           </label>
           <input
@@ -123,14 +123,14 @@ export default function SignupPage() {
             {...register('businessName')}
           />
           {errors.businessName && (
-            <p id="businessName-error" className="mt-1.5 text-xs text-pm-coral">
+            <p id="businessName-error" className="mt-1.5 text-xs text-error">
               {errors.businessName.message}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-pm-body">
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-on-surface">
             Email
           </label>
           <input
@@ -146,14 +146,14 @@ export default function SignupPage() {
             {...register('email')}
           />
           {errors.email && (
-            <p id="email-error" className="mt-1.5 text-xs text-pm-coral">
+            <p id="email-error" className="mt-1.5 text-xs text-error">
               {errors.email.message}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-pm-body">
+          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-on-surface">
             Password
           </label>
           <input
@@ -168,14 +168,14 @@ export default function SignupPage() {
             {...register('password')}
           />
           {errors.password && (
-            <p id="password-error" className="mt-1.5 text-xs text-pm-coral">
+            <p id="password-error" className="mt-1.5 text-xs text-error">
               {errors.password.message}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-pm-body">
+          <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-on-surface">
             Confirm Password
           </label>
           <input
@@ -190,7 +190,7 @@ export default function SignupPage() {
             {...register('confirmPassword')}
           />
           {errors.confirmPassword && (
-            <p id="confirmPassword-error" className="mt-1.5 text-xs text-pm-coral">
+            <p id="confirmPassword-error" className="mt-1.5 text-xs text-error">
               {errors.confirmPassword.message}
             </p>
           )}
@@ -199,14 +199,14 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={isPending}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-pm-teal text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           Create account
         </button>
       </form>
 
-      <p className="mt-3 text-center text-xs text-pm-secondary">
+      <p className="mt-3 text-center text-xs text-on-surface-variant">
         After sign up, you&apos;ll continue to business setup before using the dashboard.
       </p>
     </AuthShell>

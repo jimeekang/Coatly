@@ -60,7 +60,8 @@
 | Claude planning context | [`CLAUDE.md`](./CLAUDE.md) |
 | Codex engineering guide | [`docs/ENGINEERING.md`](./docs/ENGINEERING.md) |
 | 기술 아키텍처 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) |
-| **v1 wedge build plan (AI Quote Writer)** | [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md) |
+| **v1 workflow replacement plan** | [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md) |
+| Coatly 가격표 세팅 기준 | [`docs/features/quote/PRICE-BOOK-TEMPLATE.md`](./docs/features/quote/PRICE-BOOK-TEMPLATE.md) |
 | 로드맵 + progress | [`docs/PLANS.md`](./docs/PLANS.md) |
 | Deferred items / TODOs | [`TODOS.md`](./TODOS.md) |
 | 디자인 정책 | [`docs/DESIGN.md`](./docs/DESIGN.md) |

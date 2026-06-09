@@ -5,7 +5,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Sparkles } from 'lucide-react';
-import { completeOnboarding } from '@/app/actions/profile';
+import { completeOnboarding } from '@/modules/settings/application/profile-actions';
 import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
 import { normalizeAbn } from '@/lib/abn-lookup';
 import { useAbnLookup } from '@/hooks/useAbnLookup';
@@ -46,14 +46,14 @@ const schema = z.object({
 type FormInput = z.infer<typeof schema>;
 
 const inputBase =
-  'w-full h-12 rounded-lg border px-4 text-sm text-pm-body focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 focus:border-pm-teal-mid disabled:opacity-50 bg-white transition-colors';
+  'w-full h-12 rounded-lg border px-4 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 focus:border-primary-container disabled:opacity-50 bg-white transition-colors';
 
 function inputClass(hasError: boolean) {
-  return `${inputBase} ${hasError ? 'border-pm-coral' : 'border-pm-border'}`;
+  return `${inputBase} ${hasError ? 'border-error' : 'border-outline'}`;
 }
 
-const labelClass = 'block text-sm font-medium text-pm-body mb-1.5';
-const errorClass = 'mt-1.5 text-xs text-pm-coral-dark';
+const labelClass = 'block text-sm font-medium text-on-surface mb-1.5';
+const errorClass = 'mt-1.5 text-xs text-on-error-container';
 
 interface Props {
   defaultValues: {
@@ -177,11 +177,11 @@ export default function OnboardingForm({ defaultValues }: Props) {
   }
 
   return (
-    <div className="border-pm-border rounded-2xl border bg-white p-6 shadow-sm">
+    <div className="border-outline rounded-2xl border bg-white p-6 shadow-sm">
       {errors.root && (
         <div
           role="alert"
-          className="border-pm-coral bg-pm-coral-light text-pm-coral-dark mb-5 rounded-lg border px-4 py-3 text-sm"
+          className="border-error bg-error-container text-on-error-container mb-5 rounded-lg border px-4 py-3 text-sm"
         >
           {errors.root.message}
         </div>
@@ -190,7 +190,7 @@ export default function OnboardingForm({ defaultValues }: Props) {
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
         <div>
           <label htmlFor="abn" className={labelClass}>
-            ABN <span className="text-red-500">*</span>
+            ABN <span className="text-error">*</span>
           </label>
           <input
             id="abn"
@@ -208,10 +208,10 @@ export default function OnboardingForm({ defaultValues }: Props) {
           <p
             className={`mt-1.5 text-xs ${
               abnLookup.status === 'error'
-                ? 'text-pm-coral-dark'
+                ? 'text-on-error-container'
                 : abnLookup.status === 'success'
-                  ? 'text-pm-teal-hover'
-                  : 'text-pm-secondary'
+                  ? 'text-primary/90'
+                  : 'text-on-surface-variant'
             }`}
           >
             {abnLookup.status === 'loading' && 'Looking up ABN details...'}
@@ -229,7 +229,7 @@ export default function OnboardingForm({ defaultValues }: Props) {
 
         <div>
           <label htmlFor="businessName" className={labelClass}>
-            Business Name <span className="text-red-500">*</span>
+            Business Name <span className="text-error">*</span>
           </label>
           <input
             id="businessName"
@@ -247,7 +247,7 @@ export default function OnboardingForm({ defaultValues }: Props) {
 
         <div>
           <label htmlFor="phone" className={labelClass}>
-            Phone <span className="text-red-500">*</span>
+            Phone <span className="text-error">*</span>
           </label>
           <input
             id="phone"
@@ -263,8 +263,8 @@ export default function OnboardingForm({ defaultValues }: Props) {
         </div>
 
         <fieldset>
-          <legend className="text-pm-body mb-3 text-sm font-medium">
-            Business Address <span className="text-red-500">*</span>
+          <legend className="text-on-surface mb-3 text-sm font-medium">
+            Business Address <span className="text-error">*</span>
           </legend>
 
           <div className="space-y-3">
@@ -330,7 +330,7 @@ export default function OnboardingForm({ defaultValues }: Props) {
               <select
                 id="state"
                 disabled={isPending}
-                className={`${inputClass(!!errors.state)} text-pm-body`}
+                className={`${inputClass(!!errors.state)} text-on-surface`}
                 {...register('state')}
               >
                 <option value="">Select state</option>
@@ -347,24 +347,24 @@ export default function OnboardingForm({ defaultValues }: Props) {
           </div>
         </fieldset>
 
-        <div className="border-pm-teal-light bg-pm-teal-light/70 rounded-xl border p-4">
+        <div className="border-success-container bg-success-container/70 rounded-xl border p-4">
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
               disabled={isPending}
-              className="border-pm-teal-pale text-pm-teal focus:ring-pm-teal-mid mt-1 h-5 w-5 rounded focus:ring-2"
+              className="border-primary-fixed text-primary focus:ring-primary-container mt-1 h-5 w-5 rounded focus:ring-2"
               {...register('createExampleData')}
             />
             <div>
-              <div className="text-pm-teal flex items-center gap-2 text-sm font-semibold">
+              <div className="text-primary flex items-center gap-2 text-sm font-semibold">
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
                 Add sample data
               </div>
-              <p className="text-pm-teal-hover mt-1 text-sm">
+              <p className="text-primary/90 mt-1 text-sm">
                 Optional. Add one sample customer, quote, and invoice so you can
                 explore the app straight away.
               </p>
-              <p className="text-pm-teal-mid mt-1 text-xs">
+              <p className="text-primary-container mt-1 text-xs">
                 This only runs when your workspace is empty.
               </p>
             </div>
@@ -374,7 +374,7 @@ export default function OnboardingForm({ defaultValues }: Props) {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-pm-teal hover:bg-pm-teal-hover focus:ring-pm-teal-mid mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-primary hover:bg-primary/90 focus:ring-primary-container mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold text-on-primary transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

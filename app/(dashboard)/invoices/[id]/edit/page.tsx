@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getInvoice, getInvoiceFormOptions, updateInvoice } from '@/app/actions/invoices';
-import { InvoiceForm } from '@/components/invoices/InvoiceForm';
+import { getInvoice, getInvoiceFormOptions, updateInvoice } from '@/modules/invoices/application/actions';
+import { InvoiceForm } from '@/modules/invoices/ui/InvoiceForm';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,31 +23,13 @@ export default async function EditInvoicePage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          href={`/invoices/${invoice.id}`}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors active:bg-surface-container-high"
-          aria-label="Back to invoice"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-on-surface">Edit Invoice</h1>
-          <p className="mt-0.5 text-sm text-on-surface-variant">{invoice.invoice_number}</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Edit Invoice"
+        subtitle={invoice.invoice_number}
+        backHref={`/invoices/${invoice.id}`}
+        backLabel="Back to invoice"
+        className="mb-6"
+      />
 
       {formError ? (
         <div className="rounded-lg border border-error bg-error-container px-4 py-3">

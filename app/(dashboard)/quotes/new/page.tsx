@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
-import { getQuoteFormOptions } from '@/app/actions/quotes';
-import { getMaterialItemsForPicker } from '@/app/actions/materials';
-import { listQuoteTemplates } from '@/app/actions/quote-templates';
-import { QuoteCreateScreen } from '@/components/quotes/QuoteCreateScreen';
+import { getQuoteFormOptions } from '@/modules/quotes/application/actions';
+import { getMaterialItemsForPicker } from '@/modules/materials/application/actions';
+import { listQuoteTemplates } from '@/modules/quotes/application/template-actions';
+import { QuoteCreateScreen } from '@/modules/quotes/ui/QuoteCreateScreen';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import { BackLink } from '@/components/layout/BackLink';
-import { PrimaryActionLink } from '@/components/layout/PageHeader';
+import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server';
 
@@ -41,20 +40,16 @@ export default async function NewQuotePage({
 
   return (
     <div className="mx-auto w-full max-w-lg pt-4 pb-32 lg:max-w-6xl">
-      <div className="mb-4">
-        <BackLink href="/quotes" label="All quotes" />
-      </div>
-      <div className="mb-5">
-        <h1 className="text-[22px] font-extrabold tracking-[-0.02em] text-on-surface sm:text-[26px]">
-          New Quote
-        </h1>
-        <p className="mt-1 text-sm text-on-surface-variant">
-          Build a quote manually{subscription?.features.ai ? ' or let AI prepare a draft first.' : '.'}
-        </p>
-      </div>
+      <PageHeader
+        title="New Quote"
+        subtitle="Build a quote manually."
+        backHref="/quotes"
+        backLabel="All quotes"
+        className="mb-5"
+      />
 
       {quoteUsage && (
-        <div className="mb-6 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-4">
+        <div className="mb-5 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
             Starter Usage
           </p>

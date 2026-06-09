@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { getInvoices } from '@/app/actions/invoices';
-import { InvoiceKpiBand } from '@/components/invoices/InvoiceKpiBand';
-import { InvoiceTable } from '@/components/invoices/InvoiceTable';
+import { getInvoices } from '@/modules/invoices/application/actions';
+import { InvoiceKpiBand } from '@/modules/invoices/ui/InvoiceKpiBand';
+import { InvoiceTable } from '@/modules/invoices/ui/InvoiceTable';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
-import { summarizeInvoices } from '@/lib/invoices';
+import { summarizeInvoices } from '@/modules/invoices/domain/invoices';
 
 export const metadata: Metadata = { title: 'Invoices' };
 

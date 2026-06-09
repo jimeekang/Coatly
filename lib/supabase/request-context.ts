@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
-import { getProfileWithOnboardingFallback } from '@/lib/profile/onboarding';
+import { getProfileWithOnboardingFallback } from '@/modules/settings/domain/onboarding';
 import {
   getMonthlyActiveQuoteUsageForUser,
   getSubscriptionSnapshotForUser,

@@ -16,20 +16,20 @@ export default function LandingPage() {
           <BrandLogo width={220} height={50} priority />
         </div>
         <h1 className="sr-only">{APP_NAME}</h1>
-        <p className="mb-8 text-sm leading-6 text-pm-secondary sm:text-base">
+        <p className="mb-8 text-sm leading-6 text-on-surface-variant sm:text-base">
           Quote, invoice, and manage customers faster with a workspace built for Australian
           painters.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/login"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-pm-teal px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
           >
             Login
           </Link>
           <Link
             href="/signup"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-pm-border px-6 py-3 text-sm font-semibold text-pm-body transition-colors hover:bg-pm-surface"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-6 py-3 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
           >
             Sign Up Free
           </Link>

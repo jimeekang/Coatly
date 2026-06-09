@@ -1,22 +1,22 @@
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getQuote, getQuoteFormOptions } from '@/app/actions/quotes';
-import { getMaterialItemsForPicker } from '@/app/actions/materials';
-import { type QuoteFormDefaultValues } from '@/components/quotes/QuoteForm';
-import { QuoteEditScreen } from '@/components/quotes/QuoteEditScreen';
-import type { ExtraLineItemInput } from '@/components/quotes/QuoteExtraLineItems';
-import type { QuoteStatus } from '@/lib/quotes';
+import { getQuote, getQuoteFormOptions } from '@/modules/quotes/application/actions';
+import { getMaterialItemsForPicker } from '@/modules/materials/application/actions';
+import { type QuoteFormDefaultValues } from '@/modules/quotes/ui/QuoteForm';
+import { QuoteEditScreen } from '@/modules/quotes/ui/QuoteEditScreen';
+import type { ExtraLineItemInput } from '@/modules/quotes/ui/QuoteExtraLineItems';
+import type { QuoteStatus } from '@/modules/quotes/domain/quotes';
 import {
   isInteriorEstimateInput,
   normalizeInteriorWallPaintSystem,
-} from '@/lib/interior-estimates';
+} from '@/modules/quotes/domain/interior-estimates';
 import type { QuoteLineItemFormInput } from '@/lib/supabase/validators';
 import type {
   PricingMethod,
   QuoteClauseItemInput,
   QuoteScopeSectionInput,
 } from '@/types/quote';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export const metadata: Metadata = { title: 'Edit Quote' };
 
@@ -197,34 +197,13 @@ export default async function EditQuotePage({
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-7xl">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          href={`/quotes/${id}`}
-          className="bg-surface-container-low text-on-surface-variant active:bg-surface-container-high flex h-11 w-11 items-center justify-center rounded-full transition-colors"
-          aria-label="Back to quote"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </Link>
-        <div>
-          <h1 className="text-on-surface text-2xl font-bold">Edit Quote</h1>
-          <p className="text-on-surface-variant mt-0.5 text-sm">
-            {quote.quote_number}
-            {quote.title ? ` · ${quote.title}` : ''}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Edit Quote"
+        subtitle={`${quote.quote_number}${quote.title ? ` · ${quote.title}` : ''}`}
+        backHref={`/quotes/${id}`}
+        backLabel="Back to quote"
+        className="mb-6"
+      />
 
       <QuoteEditScreen
         quoteId={id}

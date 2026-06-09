@@ -2,7 +2,7 @@ import { DEFAULT_COVERAGE_PER_LITRE, STANDARD_DOOR_AREA_M2, STANDARD_WINDOW_AREA
 import {
   calculateInteriorEstimate,
   type InteriorEstimateInput,
-} from '@/lib/interior-estimates';
+} from '@/modules/quotes/domain/interior-estimates';
 import type {
   DayRateInputs,
   RoomRateInputs,
@@ -10,7 +10,7 @@ import type {
   QuickInputs,
   SelectedQuickPropertyPreset,
 } from '@/types/quote';
-import type { RoomRatePreset, UserRateSettings } from '@/lib/rate-settings';
+import type { RoomRatePreset, UserRateSettings } from '@/modules/price-rates/domain/rate-settings';
 
 /**
  * Calculate total wall area for a rectangular room (4 walls).

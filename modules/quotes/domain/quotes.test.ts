@@ -1,0 +1,546 @@
+import { describe, expect, it } from 'vitest';
+import {
+  calculateQuoteTotals,
+  calculateQuoteLineItemsSubtotal,
+  calculateQuotePreview,
+  getSuggestedRatePerSqmCents,
+  groupQuoteLineItemsByCategory,
+  isQuoteExpired,
+  normalizeQuoteCoatingType,
+  parseQuoteCreateInput,
+  resolveQuoteStatus,
+  serializeLegacyQuoteCoatingType,
+  serializeQuoteCoatingType,
+  isMissingQuoteCustomerSnapshotColumnError,
+} from '@/modules/quotes/domain/quotes';
+
+describe('lib/quotes', () => {
+  it('calculates canonical quote totals with selected add-ons, discount, and adjustment', () => {
+    expect(
+      calculateQuoteTotals({
+        base_subtotal_cents: 100000,
+        discount_cents: 10000,
+        manual_adjustment_cents: 5000,
+        line_items: [
+          {
+            quantity: 1,
+            unit_price_cents: 20000,
+            is_optional: true,
+            is_selected: true,
+          },
+          {
+            quantity: 1,
+            unit_price_cents: 30000,
+            is_optional: true,
+            is_selected: false,
+          },
+        ],
+      })
+    ).toEqual({
+      line_items_subtotal_cents: 20000,
+      subtotal_cents: 120000,
+      discounted_subtotal_cents: 110000,
+      gst_cents: 11000,
+      total_cents: 126000,
+    });
+  });
+
+  it('clamps quote discounts and final totals to non-negative values', () => {
+    expect(
+      calculateQuoteTotals({
+        base_subtotal_cents: 5000,
+        discount_cents: 999999,
+        manual_adjustment_cents: -10000,
+      })
+    ).toEqual({
+      line_items_subtotal_cents: 0,
+      subtotal_cents: 5000,
+      discounted_subtotal_cents: 0,
+      gst_cents: 0,
+      total_cents: 0,
+    });
+  });
+
+  it('uses stored quote line item totals as the saved price snapshot', () => {
+    expect(
+      calculateQuoteTotals({
+        base_subtotal_cents: 10000,
+        line_items: [
+          {
+            quantity: 3,
+            unit_price_cents: 9999,
+            total_cents: 25000,
+            is_optional: false,
+            is_selected: true,
+          },
+        ],
+      })
+    ).toMatchObject({
+      line_items_subtotal_cents: 25000,
+      subtotal_cents: 35000,
+      gst_cents: 3500,
+      total_cents: 38500,
+    });
+  });
+
+  it('detects Supabase schema-cache errors for missing quote customer snapshot columns', () => {
+    expect(
+      isMissingQuoteCustomerSnapshotColumnError(
+        "Could not find the 'customer_address' column of 'quotes' in the schema cache"
+      )
+    ).toBe(true);
+  });
+
+  it('calculates quoted totals from rooms, surfaces, and margins', () => {
+    const preview = calculateQuotePreview({
+      complexity: 'standard',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      rooms: [
+        {
+          name: 'Living Room',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              coating_type: 'repaint_2coat',
+              area_m2: 35,
+              rate_per_m2_cents: 1800,
+              notes: null,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(preview.base_subtotal_cents).toBe(63000);
+    expect(preview.subtotal_cents).toBe(72450);
+    expect(preview.gst_cents).toBe(7245);
+    expect(preview.total_cents).toBe(79695);
+  });
+
+  it('normalizes a quote create payload', () => {
+    const parsed = parseQuoteCreateInput({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: '  Harbor Cafe repaint  ',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: '  Client-facing note  ',
+      internal_notes: '  Internal note  ',
+      rooms: [
+        {
+          name: '  Living Room  ',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              area_m2: 35,
+              coating_type: 'repaint_2coat',
+              rate_per_m2_cents: 1800,
+              notes: '  Two coats  ',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(parsed).toEqual({
+      success: true,
+      data: {
+        customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        job_type: 'interior',
+        customer_email: null,
+        customer_address: null,
+        quote_number: null,
+        title: 'Harbor Cafe repaint',
+        status: 'draft',
+        valid_until: '2026-04-10',
+        working_days: 1,
+        complexity: 'standard',
+        discount_cents: 0,
+        deposit_percent: 0,
+        labour_margin_percent: 10,
+        material_margin_percent: 5,
+        manual_adjustment_cents: 0,
+        notes: 'Client-facing note',
+        internal_notes: 'Internal note',
+        pricing_method: 'hybrid',
+        pricing_method_inputs: null,
+        interior_estimate: null,
+        exterior_estimate: null,
+        scope_sections: [],
+        clause_items: [],
+        ai_intake_snapshot: null,
+        line_items: [],
+        rooms: [
+          {
+            name: 'Living Room',
+            room_type: 'interior',
+            length_m: 5,
+            width_m: 4,
+            height_m: 2.7,
+            surfaces: [
+              {
+                surface_type: 'walls',
+                area_m2: 35,
+                coating_type: 'repaint_2coat',
+                rate_per_m2_cents: 1800,
+                notes: 'Two coats',
+              },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
+  it('excludes unselected optional items from quote line item subtotals', () => {
+    expect(
+      calculateQuoteLineItemsSubtotal([
+        {
+          quantity: 1,
+          unit_price_cents: 10000,
+          is_optional: false,
+          is_selected: true,
+        },
+        {
+          quantity: 1,
+          unit_price_cents: 25000,
+          is_optional: true,
+          is_selected: false,
+        },
+      ])
+    ).toBe(10000);
+  });
+
+  it('groups quote line items by saved material and service categories', () => {
+    const groups = groupQuoteLineItemsByCategory([
+      { id: 'service-1', category: 'service', name: 'Wallpaper removal' },
+      { id: 'paint-1', category: 'paint', name: 'Premium wall paint' },
+      { id: 'supply-1', category: 'supply', name: 'Drop sheets' },
+      { id: 'custom-1', category: 'custom', name: 'Misc item' },
+    ]);
+
+    expect(groups).toEqual([
+      {
+        category: 'paint',
+        label: 'Paint',
+        items: [
+          { id: 'paint-1', category: 'paint', name: 'Premium wall paint' },
+        ],
+      },
+      {
+        category: 'supply',
+        label: 'Supplies',
+        items: [{ id: 'supply-1', category: 'supply', name: 'Drop sheets' }],
+      },
+      {
+        category: 'service',
+        label: 'Services',
+        items: [
+          { id: 'service-1', category: 'service', name: 'Wallpaper removal' },
+        ],
+      },
+      {
+        category: 'other',
+        label: 'Other',
+        items: [{ id: 'custom-1', category: 'custom', name: 'Misc item' }],
+      },
+    ]);
+  });
+
+  it('normalizes optional quote line items so only selected add-ons affect totals', () => {
+    const parsed = parseQuoteCreateInput({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Optional extras quote',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      notes: '',
+      internal_notes: '',
+      rooms: [
+        {
+          name: 'Living Room',
+          room_type: 'interior',
+          length_m: 5,
+          width_m: 4,
+          height_m: 2.7,
+          surfaces: [
+            {
+              surface_type: 'walls',
+              area_m2: 35,
+              coating_type: 'repaint_2coat',
+              rate_per_m2_cents: 1800,
+              notes: '',
+            },
+          ],
+        },
+      ],
+      line_items: [
+        {
+          material_item_id: null,
+          name: 'Feature wall upgrade',
+          category: 'service',
+          unit: 'job',
+          quantity: 1,
+          unit_price_cents: 15000,
+          is_optional: true,
+          is_selected: false,
+        },
+        {
+          material_item_id: null,
+          name: 'Premium paint',
+          category: 'paint',
+          unit: 'tin',
+          quantity: 1,
+          unit_price_cents: 10000,
+          is_optional: true,
+          is_selected: true,
+        },
+      ],
+    });
+
+    expect(parsed).toEqual({
+      success: true,
+      data: expect.objectContaining({
+        line_items: [
+          expect.objectContaining({
+            name: 'Feature wall upgrade',
+            is_optional: true,
+            is_selected: false,
+          }),
+          expect.objectContaining({
+            name: 'Premium paint',
+            is_optional: true,
+            is_selected: true,
+          }),
+        ],
+      }),
+    });
+
+    if (!parsed.success) {
+      throw new Error('Expected the payload to parse successfully.');
+    }
+
+    const preview = calculateQuotePreview({
+      complexity: 'standard',
+      labour_margin_percent: 0,
+      material_margin_percent: 0,
+      rooms: parsed.data.rooms,
+      line_items: parsed.data.line_items,
+    });
+
+    expect(preview.subtotal_cents).toBe(73000);
+    expect(preview.total_cents).toBe(80300);
+  });
+
+  it('normalizes an interior estimate payload for anchor pricing', () => {
+    const parsed = parseQuoteCreateInput({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: '  Apartment repaint  ',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: '  Client-facing note  ',
+      internal_notes: '  Internal note  ',
+      rooms: [],
+      interior_estimate: {
+        property_type: 'apartment',
+        estimate_mode: 'specific_areas',
+        condition: 'fair',
+        scope: ['walls', 'trim'],
+        property_details: {
+          apartment_type: '2_bedroom_standard',
+        },
+        rooms: [
+          {
+            name: '  Living Room  ',
+            anchor_room_type: 'Living Room',
+            room_type: 'interior',
+            include_walls: true,
+            include_ceiling: false,
+            include_trim: true,
+          },
+        ],
+        opening_items: [
+          {
+            opening_type: 'door',
+            paint_system: 'oil_2coat',
+            quantity: 2,
+            door_type: 'standard',
+            door_scope: 'door_and_frame',
+          },
+        ],
+        trim_items: [
+          {
+            trim_type: 'skirting',
+            paint_system: 'water_3coat_white_finish',
+            quantity: 12.5,
+          },
+        ],
+      },
+    });
+
+    expect(parsed).toEqual({
+      success: true,
+      data: {
+        customer_id: '550e8400-e29b-41d4-a716-446655440000',
+        job_type: 'interior',
+        customer_email: null,
+        customer_address: null,
+        quote_number: null,
+        title: 'Apartment repaint',
+        status: 'draft',
+        valid_until: '2026-04-10',
+        working_days: 1,
+        complexity: 'standard',
+        discount_cents: 0,
+        deposit_percent: 0,
+        labour_margin_percent: 10,
+        material_margin_percent: 5,
+        manual_adjustment_cents: 0,
+        notes: 'Client-facing note',
+        internal_notes: 'Internal note',
+        pricing_method: 'hybrid',
+        pricing_method_inputs: null,
+        interior_estimate: {
+          property_type: 'apartment',
+          estimate_mode: 'specific_areas',
+          condition: 'fair',
+          scope: ['walls', 'trim'],
+          wall_paint_system: 'repaint_2coat',
+          trim_paint_system: 'oil_2coat',
+          property_details: {
+            apartment_type: '2_bedroom_standard',
+            sqm: null,
+            bedrooms: null,
+            bathrooms: null,
+            storeys: null,
+          },
+          rooms: [
+            {
+              name: 'Living Room',
+              anchor_room_type: 'Living Room',
+              room_type: 'interior',
+              length_m: null,
+              width_m: null,
+              height_m: null,
+              include_walls: true,
+              include_ceiling: false,
+              include_trim: true,
+            },
+          ],
+          opening_items: [
+            {
+              opening_type: 'door',
+              paint_system: 'oil_2coat',
+              quantity: 2,
+              room_index: null,
+              door_type: 'standard',
+              door_scope: 'door_and_frame',
+              window_type: undefined,
+              window_scope: undefined,
+            },
+          ],
+          trim_items: [
+            {
+              trim_type: 'skirting',
+              paint_system: 'water_3coat_white_finish',
+              quantity: 12.5,
+              room_index: null,
+            },
+          ],
+        },
+        exterior_estimate: null,
+        scope_sections: [],
+        clause_items: [],
+        ai_intake_snapshot: null,
+        line_items: [],
+        rooms: [],
+      },
+    });
+  });
+
+  it('rejects quote creation when neither manual rooms nor an interior estimate is provided', () => {
+    const parsed = parseQuoteCreateInput({
+      customer_id: '550e8400-e29b-41d4-a716-446655440000',
+      title: 'Apartment repaint',
+      status: 'draft',
+      valid_until: '2026-04-10',
+      complexity: 'standard',
+      labour_margin_percent: 10,
+      material_margin_percent: 5,
+      notes: '',
+      internal_notes: '',
+      rooms: [],
+    });
+
+    expect(parsed).toEqual({
+      success: false,
+      error: 'Add at least one room',
+    });
+  });
+
+  it('provides a suggested rate for a surface and complexity level', () => {
+    expect(
+      getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'standard')
+    ).toBe(1800);
+    expect(
+      getSuggestedRatePerSqmCents('walls', 'repaint_2coat', 'complex')
+    ).toBeGreaterThan(1800);
+  });
+
+  it('serializes refresh coatings canonically while still supporting legacy fallback', () => {
+    expect(serializeQuoteCoatingType('refresh_1coat')).toBe('refresh_1coat');
+    expect(serializeLegacyQuoteCoatingType('refresh_1coat')).toBe(
+      'touch_up_1coat'
+    );
+    expect(normalizeQuoteCoatingType('touch_up_1coat')).toBe('refresh_1coat');
+  });
+
+  it('marks draft and sent quotes as expired after the valid-until date in Sydney time', () => {
+    expect(
+      isQuoteExpired('2026-04-10', new Date('2026-04-10T23:30:00+10:00'))
+    ).toBe(false);
+    expect(
+      isQuoteExpired('2026-04-10', new Date('2026-04-11T00:30:00+10:00'))
+    ).toBe(true);
+
+    expect(
+      resolveQuoteStatus(
+        { status: 'draft', valid_until: '2026-04-10' },
+        new Date('2026-04-11T00:30:00+10:00')
+      )
+    ).toBe('expired');
+    expect(
+      resolveQuoteStatus(
+        { status: 'sent', valid_until: '2026-04-10' },
+        new Date('2026-04-11T00:30:00+10:00')
+      )
+    ).toBe('expired');
+  });
+
+  it('keeps approved and rejected quotes terminal even after the valid-until date', () => {
+    const now = new Date('2026-04-20T09:00:00+10:00');
+
+    expect(
+      resolveQuoteStatus({ status: 'approved', valid_until: '2026-04-10' }, now)
+    ).toBe('approved');
+    expect(
+      resolveQuoteStatus({ status: 'rejected', valid_until: '2026-04-10' }, now)
+    ).toBe('rejected');
+  });
+});

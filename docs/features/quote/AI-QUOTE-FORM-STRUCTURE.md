@@ -1,5 +1,7 @@
 # AI Quote Form Builder Structure
 
+> 2026-06-03 UPDATE: Post-core reference only. Current v1 is Excel quote workflow replacement. Do not expand AI quote form, photo analysis, or AI pricing work until the core workflow release gate in [../../PLANS.md](../../PLANS.md) passes.
+
 > 기준일: 2026-05-16. 인터뷰 답변과 과거 견적서 3개를 기준으로 정리한 v1 quote form 구조다.
 
 ## Direction

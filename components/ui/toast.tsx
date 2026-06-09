@@ -51,24 +51,24 @@ const STYLES: Record<
   { container: string; icon: typeof CheckCircle; iconClass: string }
 > = {
   success: {
-    container: 'bg-pm-teal-light border-pm-teal-mid',
+    container: 'bg-success-container border-success/30',
     icon: CheckCircle,
-    iconClass: 'text-pm-teal-mid',
+    iconClass: 'text-on-success-container',
   },
   error: {
-    container: 'bg-pm-coral-light border-pm-coral',
+    container: 'bg-error-container border-error',
     icon: AlertCircle,
-    iconClass: 'text-pm-coral',
+    iconClass: 'text-error',
   },
   warning: {
-    container: 'bg-amber-50 border-pm-warning',
+    container: 'bg-warning-container border-warning',
     icon: AlertTriangle,
-    iconClass: 'text-pm-warning',
+    iconClass: 'text-warning',
   },
   info: {
-    container: 'bg-blue-50 border-blue-300',
+    container: 'bg-secondary-container border-secondary/30',
     icon: Info,
-    iconClass: 'text-blue-500',
+    iconClass: 'text-on-secondary-container',
   },
 };
 
@@ -91,11 +91,11 @@ function Toast({ toast }: { toast: ToastItem }) {
       role="alert"
     >
       <Icon className={['mt-0.5 h-5 w-5 shrink-0', iconClass].join(' ')} />
-      <p className="flex-1 text-sm font-medium text-pm-body">{toast.message}</p>
+      <p className="flex-1 text-sm font-medium text-on-surface">{toast.message}</p>
       <button
         type="button"
         onClick={() => remove(toast.id)}
-        className="shrink-0 p-0.5 text-pm-secondary transition-colors hover:text-pm-body"
+        className="shrink-0 p-0.5 text-on-surface-variant transition-colors hover:text-on-surface"
         aria-label="Dismiss"
       >
         <X className="h-4 w-4" />

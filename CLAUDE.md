@@ -4,12 +4,16 @@
 > 기능 구현/버그/DB/배포/git은 Codex 엔지니어링 문서 → [`docs/ENGINEERING.md`](./docs/ENGINEERING.md).
 > 라우팅 표 → [`AGENTS.md`](./AGENTS.md).
 
-## v1 Wedge (2026-05-15 APPROVED)
+## v1 Wedge (2026-06-03 REFRAMED)
 
-**AI Quote Writer for Australian painters.** Notes + rough measurements + 보조 사진 + price_rates → polished quote artifact(scope + assumptions + exclusions + line items). AUD $59/월 Pro 정당화 핵심. AI는 **surface 매핑 + scope writing**만, **pricing은 deterministic** (painter price_rates table server-side lookup). 자세한 건 [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md).
+**Excel quote workflow replacement for Australian painters/tradies.** 실제 painter A의 현재 업무는 Excel 가격표 → PDF 변환 → 직접 이메일 발송 → 사람이 follow-up 체크다. v1의 구매 이유는 AI가 아니라, 기존 가격표를 참고해 Coatly 앱 안에서 단순 price book을 세팅하고 이 반복 workflow를 끝까지 대체하는 것이다.
+
+v1 core: 기존 Excel 가격표 참고 → 앱 내 price item 직접 추가 또는 선택적 단순 Excel/CSV 붙여넣기 → saved Coatly price book → quote 작성 → PDF → email send → follow-up reminder/status → accepted quote → invoice/schedule. AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 실제 Excel/PDF/email 업무를 완전히 재현하고 릴리즈된 뒤에만 검토한다.
+
+자세한 건 [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md). 파일명은 기존 링크 호환을 위해 유지하지만, 현재 내용은 workflow-first plan이다.
 
 ## Stack
-Next.js 16 (App Router) · React 19 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS + Storage) · Stripe · React-PDF · Resend · Gemini Flash via Genkit · Vercel
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS + Storage) · Stripe · React-PDF · Resend · Vercel. AI provider는 post-core workflow 단계에서만 활성화.
 
 ## Key Constraints
 - Mobile-first PWA — 터치 타겟 44px+, 핵심 액션 화면 하단 배치
@@ -18,6 +22,9 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind · Supabase (Postg
 - RLS 필수: 모든 쿼리 `auth.uid()` 기준
 - 금액 cents 정수 저장, `any` 타입 금지
 - 로컬 Supabase CLI/Docker 미사용 — MCP 원격 도구만 (`apply_migration` → `execute_sql` → `generate_typescript_types`)
+- Excel import boundary: v1은 arbitrary Excel 자동 해석이나 복잡한 템플릿 필수 onboarding을 약속하지 않는다. 가격표 세팅은 앱 내 직접 추가가 기본이고, Excel/CSV 템플릿은 `Service / Item`, `Unit`, `Price`, 선택 `Category`, 선택 `Customer Description`만 받는 보조 bulk input으로 본다.
+- AI/photo work sequencing: core quote workflow release 전에는 Qwen/Gemini, photo analysis, damage classification, AI-generated pricing, AI-first onboarding을 새 우선순위로 올리지 않음
+- v1 validation source: A의 실제 Excel 가격표와 최근 quote PDF/email 1개를 Coatly에서 end-to-end 재현하는 테스트
 
 ## Critical Pattern
 ```ts
@@ -40,7 +47,9 @@ const { data } = await supabase.from('quotes').select('*');
 상세: [`docs/DESIGN_CONSISTENCY_AUDIT.md`](./docs/DESIGN_CONSISTENCY_AUDIT.md), [`docs/features/design-system/DESIGN-SYSTEM.md`](./docs/features/design-system/DESIGN-SYSTEM.md)
 
 ## Out of Scope (제안 금지)
-GPS · Team scheduling · Supplier integrations · Native app · Multi-language
+Core workflow release 전: arbitrary Excel auto-import, 복잡한 Excel template onboarding, AI quote automation, photo damage analysis, AI pricing, generic AI assistant, GPS, team scheduling, supplier integrations, native app, multi-language.
+
+Core workflow release 후 별도 검증 필요: AI quote explanation helper, Follow-up Writer, photo scope hints, learning-based pricing.
 
 ## Claude Code Ownership
 
@@ -69,6 +78,7 @@ Claude Code가 직접 담당하지 않음:
 ## Navigation
 - 기술 아키텍처: [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 - v1 build plan: [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md)
+- Simple price book setup: [`docs/features/quote/PRICE-BOOK-TEMPLATE.md`](./docs/features/quote/PRICE-BOOK-TEMPLATE.md)
 - Phase progress: [`docs/PLANS.md`](./docs/PLANS.md)
 - Deferred items: [`TODOS.md`](./TODOS.md)
 - Claude Code commands: [`.claude/commands/`](./.claude/commands/) (lowercase = slash command name)

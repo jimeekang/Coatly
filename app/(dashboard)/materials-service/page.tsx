@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { getMaterialItems } from '@/app/actions/materials';
-import { MaterialItemList } from '@/components/materials/MaterialItemList';
+import { getMaterialItems } from '@/modules/materials/application/actions';
+import { MaterialItemList } from '@/modules/materials/ui/MaterialItemList';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { PageHeader } from '@/components/layout/PageHeader';
 

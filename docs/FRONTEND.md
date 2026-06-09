@@ -43,7 +43,7 @@ export default async function QuotesPage() {
 ```tsx
 'use client'
 import { useFormStatus } from 'react-dom'
-import { createQuote } from '@/app/actions/quotes'
+import { createQuote } from '@/modules/quotes/application/actions'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -67,7 +67,7 @@ export function QuoteForm() {
 ## Server Action Pattern
 
 ```ts
-// app/actions/quotes.ts
+// modules/quotes/application/actions.ts
 'use server'
 import { createServerClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'

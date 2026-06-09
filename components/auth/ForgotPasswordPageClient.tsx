@@ -42,22 +42,22 @@ export default function ForgotPasswordPageClient() {
 
   if (sentEmail) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-pm-surface px-4 py-8">
+      <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
         <div className="w-full max-w-sm text-center">
-          <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-pm-teal-light flex items-center justify-center">
-            <CheckCircle className="h-7 w-7 text-pm-teal-mid" aria-hidden="true" />
+          <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-success-container flex items-center justify-center">
+            <CheckCircle className="h-7 w-7 text-primary-container" aria-hidden="true" />
           </div>
-          <h1 className="mb-2 text-[22px] font-semibold text-pm-body">Check your email</h1>
-          <p className="text-sm text-pm-secondary">
+          <h1 className="mb-2 text-[22px] font-semibold text-on-surface">Check your email</h1>
+          <p className="text-sm text-on-surface-variant">
             We sent a password reset link to{' '}
-            <span className="font-medium text-pm-body">{sentEmail}</span>.
+            <span className="font-medium text-on-surface">{sentEmail}</span>.
           </p>
-          <p className="mt-2 text-sm text-pm-secondary">
+          <p className="mt-2 text-sm text-on-surface-variant">
             Open the link in that email to set a new password.
           </p>
           <Link
             href="/login"
-            className="mt-6 inline-block text-sm font-medium text-pm-teal-hover hover:underline"
+            className="mt-6 inline-block text-sm font-medium text-primary/90 hover:underline"
           >
             Back to sign in
           </Link>
@@ -67,22 +67,22 @@ export default function ForgotPasswordPageClient() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-pm-surface px-4 py-8">
+    <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <BrandLogo width={176} height={40} priority />
         </div>
 
-        <div className="rounded-2xl border border-pm-border bg-white p-6">
-          <h1 className="mb-2 text-[22px] font-semibold text-pm-body">Forgot password</h1>
-          <p className="mb-6 text-sm text-pm-secondary">
+        <div className="rounded-2xl border border-outline bg-white p-6">
+          <h1 className="mb-2 text-[22px] font-semibold text-on-surface">Forgot password</h1>
+          <p className="mb-6 text-sm text-on-surface-variant">
             Enter your email and we&apos;ll send you a reset link.
           </p>
 
           {serverError && (
             <div
               role="alert"
-              className="mb-4 rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark"
+              className="mb-4 rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container"
             >
               {serverError}
             </div>
@@ -90,7 +90,7 @@ export default function ForgotPasswordPageClient() {
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-pm-body">
+              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-on-surface">
                 Email
               </label>
               <input
@@ -102,11 +102,11 @@ export default function ForgotPasswordPageClient() {
                 disabled={isPending}
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? 'email-error' : undefined}
-                className="h-12 w-full rounded-lg border border-pm-border bg-white px-4 text-sm text-pm-body placeholder-pm-secondary focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 disabled:opacity-50"
+                className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
                 {...register('email')}
               />
               {errors.email && (
-                <p id="email-error" className="mt-1.5 text-xs text-pm-coral">
+                <p id="email-error" className="mt-1.5 text-xs text-error">
                   {errors.email.message}
                 </p>
               )}
@@ -115,7 +115,7 @@ export default function ForgotPasswordPageClient() {
             <button
               type="submit"
               disabled={isPending}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-pm-teal text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               Send reset email
@@ -123,9 +123,9 @@ export default function ForgotPasswordPageClient() {
           </form>
         </div>
 
-        <p className="mt-5 text-center text-sm text-pm-secondary">
+        <p className="mt-5 text-center text-sm text-on-surface-variant">
           Remembered your password?{' '}
-          <Link href="/login" className="font-medium text-pm-teal-hover hover:underline">
+          <Link href="/login" className="font-medium text-primary/90 hover:underline">
             Sign in
           </Link>
         </p>

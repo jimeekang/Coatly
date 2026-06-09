@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getJobs } from '@/app/actions/jobs';
+import { getJobs } from '@/modules/jobs/application/actions';
 import { getScheduleEvents } from '@/app/actions/schedule';
 import { listGoogleScheduleEventsForUser } from '@/lib/google-calendar/service';
 import { createServerClient } from '@/lib/supabase/server';

@@ -1,5 +1,7 @@
 # AI-assisted Quote Form Builder Validation, Build, and Trial Checklist
 
+> 2026-06-03 UPDATE: Historical AI-first validation record. Current v1 is Excel quote workflow replacement. Do not use this checklist to start new AI/photo/Qwen work until the core workflow release gate in [../../PLANS.md](../../PLANS.md) passes.
+
 > 기준일: 2026-05-16. Phase 0 validation 기간: 2026-05-15 금요일부터 2026-05-29 금요일까지 14일. 2026-05-17 기준 GREEN으로 판정했고, 이후 8주 build와 4주 Free Pro Trial + Paid Conversion Tracking으로 이어진다.
 
 ## Rule

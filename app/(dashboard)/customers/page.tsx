@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { getCustomers, getRecentJobsPerCustomer } from '@/app/actions/customers';
-import { CustomerTable } from '@/components/customers/CustomerTable';
+import { getCustomers, getRecentJobsPerCustomer } from '@/modules/customers/application/actions';
+import { CustomerTable } from '@/modules/customers/ui/CustomerTable';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
 

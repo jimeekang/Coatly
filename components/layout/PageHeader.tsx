@@ -1,32 +1,57 @@
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 type PageHeaderProps = {
   title: ReactNode;
   subtitle?: ReactNode;
+  description?: ReactNode;
   action?: ReactNode;
+  backHref?: string;
+  backLabel?: string;
   className?: string;
 };
 
-export function PageHeader({ title, subtitle, action, className }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  subtitle,
+  description,
+  action,
+  backHref,
+  backLabel = 'Back',
+  className,
+}: PageHeaderProps) {
+  const supportingText = subtitle ?? description;
+
   return (
-    <div
+    <header
       className={cn(
-        'flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between',
+        'flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between',
         className,
       )}
     >
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
+        {backHref && (
+          <Link
+            href={backHref}
+            className="mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-on-surface-variant transition-colors hover:text-on-surface"
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+            {backLabel}
+          </Link>
+        )}
         <h1 className="text-2xl font-extrabold tracking-tight text-on-surface sm:text-4xl">
           {title}
         </h1>
-        {subtitle && (
-          <p className="mt-1 text-sm font-medium text-on-surface-variant">{subtitle}</p>
+        {supportingText && (
+          <p className="mt-1 text-sm font-medium text-on-surface-variant sm:text-base">
+            {supportingText}
+          </p>
         )}
       </div>
-      {action}
-    </div>
+      {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
+    </header>
   );
 }
 

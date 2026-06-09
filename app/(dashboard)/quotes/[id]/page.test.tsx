@@ -17,24 +17,24 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerClient: createServerClientMock,
 }));
 
-vi.mock('@/lib/businesses', () => ({
+vi.mock('@/modules/settings/domain/businesses', () => ({
   getBusinessRateSettings: getBusinessRateSettingsMock,
 }));
 
-vi.mock('@/app/actions/invoices', () => ({
+vi.mock('@/modules/invoices/application/actions', () => ({
   getLinkedInvoicesForQuote: getLinkedInvoicesForQuoteMock,
 }));
 
-vi.mock('@/app/actions/quotes', () => ({
+vi.mock('@/modules/quotes/application/actions', () => ({
   getQuote: getQuoteMock,
   setQuoteOptionalLineItemSelection: vi.fn(),
 }));
 
-vi.mock('@/components/quotes/ProfitabilityCard', () => ({
+vi.mock('@/modules/quotes/ui/ProfitabilityCard', () => ({
   ProfitabilityCard: () => <div data-testid="profitability-card" />,
 }));
 
-vi.mock('@/components/quotes/QuoteActions', () => ({
+vi.mock('@/modules/quotes/ui/QuoteActions', () => ({
   QuoteActions: () => <div data-testid="quote-actions" />,
 }));
 

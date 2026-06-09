@@ -23,7 +23,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: createAdminClientMock,
 }));
 
-vi.mock('@/lib/businesses', () => ({
+vi.mock('@/modules/settings/domain/businesses', () => ({
   getBusinessDocumentBranding: getBusinessDocumentBrandingMock,
 }));
 

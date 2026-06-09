@@ -200,7 +200,7 @@ export function AIDraftPanel({
         <div className="mt-4 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3">
           {summary && <p className="text-sm font-medium text-on-surface">{summary}</p>}
           {warnings.length > 0 && (
-            <ul className="mt-2 space-y-1 text-sm text-amber-700">
+            <ul className="mt-2 space-y-1 text-sm text-on-warning-container">
               {warnings.map((warning) => (
                 <li key={warning}>• {warning}</li>
               ))}

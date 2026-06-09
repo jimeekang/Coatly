@@ -11,8 +11,8 @@ import {
   INTERIOR_WINDOW_SCOPES,
   INTERIOR_WINDOW_TYPES,
   normalizeInteriorWallPaintSystem,
-} from '@/lib/interior-estimates';
-import { ratePresetSchema, EXTERIOR_COATING_TYPES } from '@/lib/rate-settings';
+} from '@/modules/quotes/domain/interior-estimates';
+import { ratePresetSchema, EXTERIOR_COATING_TYPES } from '@/modules/price-rates/domain/rate-settings';
 import { isValidStorageReference } from '@/lib/supabase/storage';
 import {
   FORBIDDEN_QUOTE_FORM_PRICE_FIELDS,

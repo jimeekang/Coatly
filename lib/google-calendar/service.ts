@@ -1,6 +1,6 @@
 import 'server-only';
 import { revalidatePath } from 'next/cache';
-import { buildQuoteCustomerAddress } from '@/lib/quotes';
+import { buildQuoteCustomerAddress } from '@/modules/quotes/domain/quotes';
 import { decryptGoogleRefreshToken, encryptGoogleRefreshToken } from '@/lib/google-calendar/crypto';
 import {
   canUserConnectGoogleCalendar,

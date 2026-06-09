@@ -1,5 +1,7 @@
 # V1 Task 5 — Scope Builder, Clause Library, PDF/Public Rendering
 
+> 2026-06-03 UPDATE: Historical completed task. Scope/clause rendering can support the core workflow, but do not expand this into AI/photo/maintenance automation until the workflow replacement release gate in [../../PLANS.md](../../PLANS.md) passes.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Status:** COMPLETED as of 2026-05-24.

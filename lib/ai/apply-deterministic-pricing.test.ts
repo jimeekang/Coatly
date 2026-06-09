@@ -3,8 +3,8 @@ import {
   applyDeterministicPricing,
   type AIQuotePricingCandidate,
 } from '@/lib/ai/apply-deterministic-pricing';
-import { buildDefaultRateSettings } from '@/lib/rate-settings';
-import type { UserRateSettings } from '@/lib/rate-settings';
+import { buildDefaultRateSettings } from '@/modules/price-rates/domain/rate-settings';
+import type { UserRateSettings } from '@/modules/price-rates/domain/rate-settings';
 
 function buildRatesWithQuickBedroom(): UserRateSettings {
   const settings = buildDefaultRateSettings();

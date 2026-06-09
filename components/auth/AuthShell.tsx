@@ -34,23 +34,23 @@ export function AuthShell({
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center">
         <div className="grid w-full items-center gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,430px)] lg:gap-10">
           <section className="hidden lg:block rounded-[32px] border border-white/70 bg-white/50 p-6 shadow-[0_24px_60px_rgba(22,42,42,0.06)] backdrop-blur sm:p-8 lg:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-pm-teal-hover/80">
+            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary/80">
               {eyebrow}
             </p>
             <div className="mt-4">
               <BrandLogo width={220} height={50} priority />
             </div>
-            <h1 className="mt-8 max-w-xl text-4xl font-semibold leading-tight text-pm-body sm:text-[44px]">
+            <h1 className="mt-8 max-w-xl text-4xl font-semibold leading-tight text-on-surface sm:text-[44px]">
               {sideTitle}
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-pm-secondary sm:text-lg">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-on-surface-variant sm:text-lg">
               {sideDescription}
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
               {sideHighlights.map((highlight) => (
                 <div
                   key={highlight}
-                  className="rounded-2xl border border-pm-border/70 bg-white/80 px-4 py-4 text-sm leading-6 text-pm-body shadow-sm"
+                  className="rounded-2xl border border-outline/70 bg-white/80 px-4 py-4 text-sm leading-6 text-on-surface shadow-sm"
                 >
                   {highlight}
                 </div>
@@ -64,13 +64,13 @@ export function AuthShell({
                 <div className="mb-5 lg:hidden">
                   <BrandLogo width={176} height={40} priority />
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-pm-teal-hover/70">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
                   {eyebrow}
                 </p>
-                <h2 className="mt-3 text-[30px] font-semibold leading-tight text-pm-body sm:text-[34px]">
+                <h2 className="mt-3 text-[30px] font-semibold leading-tight text-on-surface sm:text-[34px]">
                   {title}
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-pm-secondary sm:text-base">
+                <p className="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
                   {description}
                 </p>
               </div>
@@ -79,7 +79,7 @@ export function AuthShell({
             </div>
 
             {footer ? (
-              <div className="mt-5 text-center text-sm leading-6 text-pm-secondary">{footer}</div>
+              <div className="mt-5 text-center text-sm leading-6 text-on-surface-variant">{footer}</div>
             ) : null}
           </section>
         </div>

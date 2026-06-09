@@ -72,38 +72,6 @@
   --color-success-container: #E6F4F0;
   --color-on-success-container: #064E3B;
 
-  /* ── Legacy pm-* aliases ──
-   * @deprecated Use Material Design 3 tokens above instead:
-   *   pm-teal        → primary
-   *   pm-teal-hover  → primary/90 (or use opacity)
-   *   pm-teal-light  → success-container (#E6F4F0 match)
-   *   pm-teal-mid    → primary-container
-   *   pm-teal-pale   → primary-fixed
-   *   pm-coral       → error
-   *   pm-coral-light → error-container
-   *   pm-coral-dark  → on-error-container
-   *   pm-body        → on-surface
-   *   pm-secondary   → on-surface-variant
-   *   pm-border      → outline
-   *   pm-surface     → surface-container-low
-   *   pm-warning     → warning
-   * Migration tracked in docs/DESIGN_CONSISTENCY_AUDIT.md (P0-2).
-   * New code MUST use MD3 tokens. ESLint warns on pm-* usage.
-   */
-  --color-pm-teal: #0D8068;
-  --color-pm-teal-hover: #0B6E5A;
-  --color-pm-teal-light: #E6F4F0;
-  --color-pm-teal-mid: #0B9E80;
-  --color-pm-teal-pale: #B2DDD6;
-  --color-pm-coral: #B91C1C;
-  --color-pm-coral-light: #FEE2E2;
-  --color-pm-coral-dark: #7F1D1D;
-  --color-pm-coral-mid: #B91C1C;
-  --color-pm-body: #0F1620;
-  --color-pm-secondary: #475569;
-  --color-pm-border: #CBD5E1;
-  --color-pm-surface: #F4F2ED;
-  --color-pm-warning: #B45309;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -143,38 +111,8 @@
 }
 
 body {
-  background: #FBFAF7;
-  color: #0F1620;
   font-family: "Manrope", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-}
-
-/* ── Reusable form field style ── */
-.field {
-  width: 100%;
-  height: 48px;
-  border-radius: 8px;
-  border: 1px solid #d5c3b8;
-  background: white;
-  padding: 0 16px;
-  font-size: 16px;
-  color: #1c1c19;
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.field:focus {
-  border-color: #0D8068;
-  box-shadow: 0 0 0 3px color-mix(in srgb, #0D8068 22%, transparent);
-}
-
-.field::placeholder {
-  color: #94A3B8;
-  opacity: 0.8;
-}
-
-.field-error {
-  border-color: #B91C1C;
 }
 
 /* ── Hidden scrollbar utility (horizontal segmented controls) ── */
@@ -277,27 +215,5 @@ body {
   }
   html {
     @apply font-sans;
-  }
-}
-
-@layer components {
-  /* ── Typography scale (use via @apply or className) ── */
-  .h1-page {
-    @apply text-3xl font-bold tracking-tight text-on-surface sm:text-4xl;
-    letter-spacing: -0.02em;
-  }
-  .h2-section {
-    @apply text-xl font-semibold tracking-tight text-on-surface sm:text-2xl;
-  }
-  .h3-block {
-    @apply text-base font-semibold text-on-surface sm:text-lg;
-  }
-  .text-meta {
-    @apply text-sm text-on-surface-variant;
-  }
-
-  /* ── Sticky bottom action bar (mobile-first save/submit) ── */
-  .sticky-action-bar {
-    @apply sticky bottom-20 left-0 right-0 z-30 -mx-4 mt-6 border-t border-outline-variant bg-surface/95 px-4 py-3 backdrop-blur-md md:bottom-0 md:relative md:mx-0 md:border-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none;
   }
 }

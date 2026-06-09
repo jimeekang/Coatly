@@ -19,7 +19,7 @@ describe('mobile accessibility regressions', () => {
   });
 
   it('keeps quote send overlays above mobile navigation and safe-area aware', () => {
-    const quoteForm = readSource('components/quotes/QuoteForm.tsx');
+    const quoteForm = readSource('modules/quotes/ui/QuoteForm.tsx');
     const formFooter = readSource('components/forms/FormFooter.tsx');
 
     expect(quoteForm).toContain('z-50');
@@ -31,21 +31,21 @@ describe('mobile accessibility regressions', () => {
 
   it('keeps known field-use touch targets at least 44px tall', () => {
     expect(readSource('components/layout/BackButton.tsx')).toContain('h-11 w-11');
-    expect(readSource('components/quotes/QuoteTable.tsx')).not.toContain('min-h-8');
-    expect(readSource('components/invoices/InvoiceTable.tsx')).not.toContain('min-h-8');
-    expect(readSource('components/customers/CustomerTable.tsx')).not.toContain('min-h-8');
+    expect(readSource('modules/quotes/ui/QuoteTable.tsx')).not.toContain('min-h-8');
+    expect(readSource('modules/invoices/ui/InvoiceTable.tsx')).not.toContain('min-h-8');
+    expect(readSource('modules/customers/ui/CustomerTable.tsx')).not.toContain('min-h-8');
     expect(readSource('components/ai/AIDraftPanel.tsx')).not.toContain('min-h-9');
   });
 
   it('keeps expanded field-use controls away from 40px min-height utilities', () => {
     const files = [
       'app/(dashboard)/customers/[id]/page.tsx',
-      'components/customers/CustomerForm.tsx',
-      'components/jobs/JobEditForm.tsx',
-      'components/jobs/JobsWorkspace.tsx',
-      'components/quotes/QuoteExtraLineItems.tsx',
-      'components/quotes/QuoteForm.tsx',
-      'components/rates/PriceRatesForm.tsx',
+      'modules/customers/ui/CustomerForm.tsx',
+      'modules/jobs/ui/JobEditForm.tsx',
+      'modules/jobs/ui/JobsWorkspace.tsx',
+      'modules/quotes/ui/QuoteExtraLineItems.tsx',
+      'modules/quotes/ui/QuoteForm.tsx',
+      'modules/price-rates/ui/PriceRatesForm.tsx',
       'components/schedule/ScheduleCalendar.tsx',
     ];
 

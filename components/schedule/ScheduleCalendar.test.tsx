@@ -31,7 +31,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/app/actions/jobs', () => ({
+vi.mock('@/modules/jobs/application/actions', () => ({
   addJobScheduleDay: addJobScheduleDayMock,
   deleteJobScheduleDay: deleteJobScheduleDayMock,
   updateJobSchedule: updateJobScheduleMock,

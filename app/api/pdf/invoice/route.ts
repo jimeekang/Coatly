@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
-import { mapInvoiceDetail } from '@/lib/invoices';
+import { mapInvoiceDetail } from '@/modules/invoices/domain/invoices';
 import { createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
-import { getBusinessDocumentBranding } from '@/lib/businesses';
+import { getBusinessDocumentBranding } from '@/modules/settings/domain/businesses';
 import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
 
 const UUID_RE =

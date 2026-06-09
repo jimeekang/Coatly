@@ -3,7 +3,7 @@ import type {
   QuickRoomSize,
   QuickRoomSurface,
   UserRateSettings,
-} from '@/lib/rate-settings';
+} from '@/modules/price-rates/domain/rate-settings';
 import {
   calculateQuickEstimateRoomTotal,
   QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,

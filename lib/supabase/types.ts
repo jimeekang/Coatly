@@ -1,4 +1,4 @@
-import type { RatePreset as UserRatePreset } from '@/lib/rate-settings';
+import type { RatePreset as UserRatePreset } from '@/modules/price-rates/domain/rate-settings';
 import type { AppDatabase } from '@/types/app-database';
 import type { Json as GeneratedJson } from '@/types/database';
 

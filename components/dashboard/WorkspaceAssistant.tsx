@@ -16,27 +16,27 @@ import { runWorkspaceAssistant } from '@/app/actions/workspace-assistant';
 import type {
   InvoiceFormCustomerOption,
   InvoiceFormQuoteOption,
-} from '@/components/invoices/InvoiceForm';
+} from '@/modules/invoices/ui/InvoiceForm';
 import type { WorkspaceAssistantMatch, WorkspaceAssistantResult } from '@/lib/ai/draft-types';
-import type { QuoteCustomerOption } from '@/lib/quotes';
-import { createInvoice } from '@/app/actions/invoices';
-import { createQuote } from '@/app/actions/quotes';
+import type { QuoteCustomerOption } from '@/modules/quotes/domain/quotes';
+import { createInvoice } from '@/modules/invoices/application/actions';
+import { createQuote } from '@/modules/quotes/application/actions';
 import { formatAUD, formatDate } from '@/utils/format';
 
 const CustomerForm = dynamic(
-  () => import('@/components/customers/CustomerForm').then((module) => module.CustomerForm),
+  () => import('@/modules/customers/ui/CustomerForm').then((module) => module.CustomerForm),
   {
     loading: () => <AssistantFormLoading />,
   }
 );
 const QuoteForm = dynamic(
-  () => import('@/components/quotes/QuoteForm').then((module) => module.QuoteForm),
+  () => import('@/modules/quotes/ui/QuoteForm').then((module) => module.QuoteForm),
   {
     loading: () => <AssistantFormLoading />,
   }
 );
 const InvoiceForm = dynamic(
-  () => import('@/components/invoices/InvoiceForm').then((module) => module.InvoiceForm),
+  () => import('@/modules/invoices/ui/InvoiceForm').then((module) => module.InvoiceForm),
   {
     loading: () => <AssistantFormLoading />,
   }
@@ -91,7 +91,7 @@ function formatMatchDate(dateLabel: string | null) {
 
 function AssistantFormLoading() {
   return (
-    <div className="rounded-2xl border border-pm-border bg-pm-surface px-4 py-6 text-sm text-pm-secondary">
+    <div className="rounded-2xl border border-outline bg-surface-container-low px-4 py-6 text-sm text-on-surface-variant">
       Loading draft form...
     </div>
   );
@@ -154,30 +154,30 @@ export function WorkspaceAssistant({
   }
 
   return (
-    <section className="mb-10 overflow-hidden rounded-3xl border border-pm-border bg-white shadow-sm">
-      <div className="border-b border-pm-border bg-gradient-to-br from-pm-teal-light via-white to-pm-coral-light px-4 py-5 md:px-5">
+    <section className="mb-10 overflow-hidden rounded-2xl border border-outline bg-white shadow-sm">
+      <div className="border-b border-outline bg-gradient-to-br from-success-container via-white to-error-container px-4 py-5 md:px-5">
         <div className="flex items-start gap-3">
           <div className="rounded-2xl bg-white p-2.5 shadow-sm">
-            <Sparkles className="h-5 w-5 text-pm-teal" />
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-pm-teal">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               Dashboard AI
             </p>
-            <h2 className="mt-1 text-xl font-bold text-pm-body">
+            <h2 className="mt-1 text-xl font-bold text-on-surface">
               Ask once. Search records or draft the next job.
             </h2>
-            <p className="mt-1 text-sm text-pm-secondary">
+            <p className="mt-1 text-sm text-on-surface-variant">
               One prompt can find customers, quotes, and invoices or prepare a form draft
               for review before saving.
             </p>
-            <p className="mt-2 rounded-xl border border-white/70 bg-white/75 px-3 py-2 text-xs text-pm-secondary">
+            <p className="mt-2 rounded-xl border border-white/70 bg-white/75 px-3 py-2 text-xs text-on-surface-variant">
               AI may use business, customer, quote, and invoice context. Review drafts before saving or sending.
             </p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-pm-border bg-white p-3 shadow-sm">
+        <div className="mt-4 rounded-2xl border border-outline bg-white p-3 shadow-sm">
           <label htmlFor="workspace-ai-prompt" className="sr-only">
             Dashboard AI prompt
           </label>
@@ -188,7 +188,7 @@ export function WorkspaceAssistant({
             onKeyDown={handlePromptKeyDown}
             rows={4}
             placeholder="Example: Find Mark's latest quote, or create a deposit invoice for Shara due next Friday."
-            className="w-full resize-none border-0 bg-transparent px-1 py-1 text-base text-pm-body placeholder:text-pm-secondary focus:outline-none"
+            className="w-full resize-none border-0 bg-transparent px-1 py-1 text-base text-on-surface placeholder:text-on-surface-variant focus:outline-none"
           />
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -197,7 +197,7 @@ export function WorkspaceAssistant({
                 key={example}
                 type="button"
                 onClick={() => setPrompt(example)}
-                className="rounded-full border border-pm-border bg-pm-surface px-3 py-1.5 text-xs font-medium text-pm-body transition-colors hover:bg-white"
+                className="rounded-full border border-outline bg-surface-container-low px-3 py-1.5 text-xs font-medium text-on-surface transition-colors hover:bg-white"
               >
                 {example}
               </button>
@@ -209,7 +209,7 @@ export function WorkspaceAssistant({
               type="button"
               onClick={handleRunPrompt}
               disabled={isPending || !prompt.trim()}
-              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-pm-teal px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover disabled:opacity-50"
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               <Search className="h-4 w-4" />
               {isPending ? 'Working...' : 'Run Prompt'}
@@ -218,7 +218,7 @@ export function WorkspaceAssistant({
               type="button"
               onClick={clearAssistant}
               disabled={isPending && !result}
-              className="min-h-11 rounded-2xl border border-pm-border bg-white px-4 py-3 text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface disabled:opacity-50"
+              className="min-h-11 rounded-2xl border border-outline bg-white px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low disabled:opacity-50"
             >
               Clear
             </button>
@@ -228,25 +228,25 @@ export function WorkspaceAssistant({
 
       {(error || result) && (
         <div className="px-4 py-5 md:px-5">
-          <div className="rounded-2xl border border-pm-border bg-pm-surface p-4">
+          <div className="rounded-2xl border border-outline bg-surface-container-low p-4">
             {result && (
               <div className="flex items-start gap-3">
                 <div className="rounded-2xl bg-white p-2 shadow-sm">
-                  <MessageSquareText className="h-4 w-4 text-pm-teal" />
+                  <MessageSquareText className="h-4 w-4 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pm-secondary">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
                     {getIntentLabel(result.intent)}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-pm-body">{result.summary}</p>
+                  <p className="mt-1 text-sm font-semibold text-on-surface">{result.summary}</p>
                   {result.answer && (
-                    <p className="mt-3 rounded-2xl border border-pm-border bg-white px-4 py-3 text-sm text-pm-body">
+                    <p className="mt-3 rounded-2xl border border-outline bg-white px-4 py-3 text-sm text-on-surface">
                       {result.answer}
                     </p>
                   )}
                   {result.warnings.length > 0 && (
-                    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                      <ul className="space-y-1 text-sm text-amber-900">
+                    <div className="mt-3 rounded-2xl border border-warning/30 bg-warning-container px-4 py-3">
+                      <ul className="space-y-1 text-sm text-on-warning-container">
                         {result.warnings.map((warning) => (
                           <li key={warning}>{warning}</li>
                         ))}
@@ -258,8 +258,8 @@ export function WorkspaceAssistant({
             )}
 
             {error && (
-              <div className="rounded-2xl border border-pm-coral bg-pm-coral-light px-4 py-3">
-                <p className="text-sm text-pm-coral-dark">{error}</p>
+              <div className="rounded-2xl border border-error bg-error-container px-4 py-3">
+                <p className="text-sm text-on-error-container">{error}</p>
               </div>
             )}
           </div>
@@ -272,45 +272,45 @@ export function WorkspaceAssistant({
                   <Link
                     key={`${match.type}-${match.id}`}
                     href={match.href}
-                    className="rounded-2xl border border-pm-border bg-white p-4 shadow-sm transition-colors hover:bg-pm-surface"
+                    className="rounded-2xl border border-outline bg-white p-4 shadow-sm transition-colors hover:bg-surface-container-low"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="rounded-2xl bg-pm-teal-light p-2.5">
-                          <Icon className="h-4 w-4 text-pm-teal" />
+                        <div className="rounded-2xl bg-success-container p-2.5">
+                          <Icon className="h-4 w-4 text-primary" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-pm-body">
+                          <p className="truncate text-sm font-semibold text-on-surface">
                             {match.title}
                           </p>
-                          <p className="mt-0.5 text-sm text-pm-secondary">{match.subtitle}</p>
+                          <p className="mt-0.5 text-sm text-on-surface-variant">{match.subtitle}</p>
                           {match.description && (
-                            <p className="mt-1 text-sm text-pm-secondary">{match.description}</p>
+                            <p className="mt-1 text-sm text-on-surface-variant">{match.description}</p>
                           )}
                         </div>
                       </div>
-                      <ArrowUpRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-pm-secondary" />
+                      <ArrowUpRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-on-surface-variant" />
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
                       {match.badge && (
-                        <span className="rounded-full bg-pm-teal-light px-2.5 py-1 font-medium text-pm-teal">
+                        <span className="rounded-full bg-success-container px-2.5 py-1 font-medium text-primary">
                           {match.badge}
                         </span>
                       )}
                       {match.amount_cents != null && (
-                        <span className="rounded-full bg-white px-2.5 py-1 font-medium text-pm-body ring-1 ring-pm-border">
+                        <span className="rounded-full bg-white px-2.5 py-1 font-medium text-on-surface ring-1 ring-outline">
                           {formatAUD(match.amount_cents)}
                         </span>
                       )}
                       {match.date_label && (
-                        <span className="rounded-full bg-white px-2.5 py-1 font-medium text-pm-body ring-1 ring-pm-border">
+                        <span className="rounded-full bg-white px-2.5 py-1 font-medium text-on-surface ring-1 ring-outline">
                           {formatMatchDate(match.date_label)}
                         </span>
                       )}
                     </div>
 
-                    <p className="mt-3 text-sm text-pm-secondary">{match.reason}</p>
+                    <p className="mt-3 text-sm text-on-surface-variant">{match.reason}</p>
                   </Link>
                 );
               })}
@@ -318,15 +318,15 @@ export function WorkspaceAssistant({
           ) : null}
 
           {isCreateIntent && (
-            <div className="mt-5 rounded-3xl border border-pm-border bg-white p-4 shadow-sm">
+            <div className="mt-5 rounded-2xl border border-outline bg-white p-4 shadow-sm">
               <div className="mb-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-pm-secondary">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
                   Review Before Save
                 </p>
-                <h3 className="mt-1 text-lg font-bold text-pm-body">
+                <h3 className="mt-1 text-lg font-bold text-on-surface">
                   {getIntentLabel(result.intent)}
                 </h3>
-                <p className="mt-1 text-sm text-pm-secondary">
+                <p className="mt-1 text-sm text-on-surface-variant">
                   AI filled the draft. Check the form, adjust anything missing, then save
                   through the normal validated action.
                 </p>

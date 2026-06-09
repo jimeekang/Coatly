@@ -9,7 +9,7 @@ import {
   findDuplicateCustomer,
   parseCustomerCreateInput,
   serializeCustomer,
-} from '@/lib/customers-api';
+} from '@/modules/customers/infrastructure/api';
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function GET() {

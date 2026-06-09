@@ -17,7 +17,7 @@ export function Card({ padding = 'md', className = '', children, ...props }: Car
   return (
     <div
       className={[
-        'rounded-xl border border-pm-border bg-white',
+        'rounded-xl border border-outline bg-white',
         PADDING[padding],
         className,
       ]
@@ -38,7 +38,7 @@ export function CardHeader({
   return (
     <div
       className={[
-        'flex items-center justify-between border-b border-pm-border pb-3',
+        'flex items-center justify-between border-b border-outline pb-3',
         className,
       ]
         .filter(Boolean)
@@ -57,7 +57,7 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={['text-base font-semibold text-pm-body', className].filter(Boolean).join(' ')}
+      className={['text-base font-semibold text-on-surface', className].filter(Boolean).join(' ')}
       {...props}
     >
       {children}

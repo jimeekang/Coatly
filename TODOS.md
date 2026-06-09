@@ -1,86 +1,124 @@
 # TODOS — Coatly
 
-> v1 plan-eng-review (2026-05-15)에서 의도적으로 v1 scope 밖으로 보낸 항목들. 각 항목은 cold restart 가능한 컨텍스트 포함.
+> 2026-06-03 product reframe 기준 deferred 항목. 현재 v1은 AI Quote Writer가 아니라 Excel quote workflow replacement다.
 
-## Pending — v1.1 candidates
+## Current Deferred Rule
 
-### 1. Stale `price_rates` race condition — snapshot immutability
+AI, 사진 분석, damage 판별, AI 가격 산출, generic Workspace Assistant는 **core workflow가 완료되고 릴리즈된 뒤** 별도 plan/design/review를 거쳐 진행한다.
+
+Core workflow release gate:
+
+- A의 실제 Excel price book을 참고해 앱 안에서 필요한 price items를 직접 세팅
+- optional simple Excel/CSV paste/upload는 `Service / Item`, `Unit`, `Price` 중심으로 preview/validation
+- A의 최근 quote PDF/email 재현
+- quote PDF/email/public quote/follow-up/invoice/schedule end-to-end 검증
+- lint/test/build/preview/prod smoke
+
+## Pending — Deferred Candidates
+
+### 1. AI quote explanation helper
 
 **What:**
-AI quote draft 생성 시점의 `price_rates`를 snapshot(immutable freeze)해서 painter가 동일 painter의 price_rates table을 수정해도 기존 AI draft의 가격 보전. v1은 가벼운 mitigation만 — AIDraftPanel에 "이 quote는 YYYY-MM-DD HH:MM 기준 rate로 생성됨" 표시.
+저장된 quote scope, line items, optional items, assumptions를 고객에게 보기 좋은 설명으로 바꾸는 helper.
+
+**Rule:**
+AI는 price/rate/GST/total을 만들지 않는다. painter가 검토하기 전에는 저장/발송하지 않는다.
+
+**Blocked by:**
+Core quote workflow release.
+
+### 1A. Arbitrary Excel auto-import
+
+**What:**
+사용자가 가진 아무 Excel 파일을 자동으로 분석해 Coatly price book으로 매핑하는 기능.
+
+**Rule:**
+v1에서는 하지 않는다. 앱 내 직접 price item 추가, 선택적 simple Excel/CSV paste/upload, preview, validation, confirm-save 흐름이 먼저 완성되어야 한다.
+
+**Blocked by:**
+Simple price book setup release and at least 2-3 real painter price sheet examples.
+
+### 2. Follow-up Writer
+
+**What:**
+quote check-in, approved quote booking request, invoice reminder 문구 초안 작성.
+
+**Rule:**
+자동 발송/상태 변경 없음. follow-up due/status/template workflow가 먼저 완성되어야 한다.
+
+**Blocked by:**
+Sent quote follow-up loop release.
+
+### 3. Photo hints, not photo takeoff
+
+**What:**
+사진에서 visible condition/access/prep hint를 사용자가 검토할 수 있게 제안.
+
+**Not:**
+damage diagnosis, hidden moisture/mould 판단, exact sqm/lm, price/rate/GST/total 산출.
+
+**Blocked by:**
+Manual quote workflow, photo storage/upload workflow, and user-reviewed scope workflow.
+
+### 4. Stale `price_rates` race condition — snapshot immutability
+
+**What:**
+quote draft 또는 future AI helper 생성 시점의 `price_rates`를 snapshot으로 고정해, painter가 rate를 수정해도 기존 quote 가격이 흔들리지 않게 한다.
 
 **Why:**
-Race condition — painter가 price_rates 편집 중 AI quote draft 호출 또는 quote 저장 → AI 출력은 old rate 기반인데 painter가 본 rate는 new rate. PDF 생성·send·customer 분쟁 시 "어느 rate가 정확한가" 모호. failure modes 분석에서 critical gap. legal liability 측면에서도 painter가 "AI가 잘못된 rate 썼다"고 주장할 risk.
+AI helper가 다시 열리면 “어느 rate 기준으로 설명/후보가 만들어졌는가”가 중요해진다. 현재 saved quote는 snapshot 기준을 유지해야 한다.
 
-**Pros:** AI quote ↔ painter rate ↔ PDF 일관성. Race condition 100% 해결. legal "AI가 잘못된 rate 썼다" 주장 방지.
-**Cons:** 1–2일 (schema 1 column 추가 + writer/reader). Test에 race scenario 추가.
+**Blocked by:**
+Core workflow release and post-core AI reopening.
 
-**Depends on / blocked by:**
-- v1 T1 (AI input schema) 완료 — schema 패턴 결정 후 적용
-- v1 T4 (ai_usage_logs migration) 완료 — `price_rates_snapshot jsonb` column pattern 결정
-- v1 paid trial에서 painter가 실제 race 경험했는지 확인 (real-world frequency)
-
-**Target:** v1.1 (post-validation, 1–2개월)
-
----
-
-### 2. Productize Stripe pre-order
+### 5. Learning-based pricing recommendation
 
 **What:**
-v1 T10이 manual Stripe payment link로 단축됨. 인터뷰 결과 ≥1 painter 선결제 시 productize 가치 검증 → v1.1로 `app/pre-order/page.tsx` + webhook + idempotency layer + waitlist UI build.
+painter의 과거 accepted/lost quote를 바탕으로 다음 quote 작성 시 참고치를 제안.
 
-**Target:** v1.1 (GREEN gate 통과 시)
+**Rule:**
+추천만 허용. price book을 override하거나 자동 적용하지 않는다.
 
----
+**Blocked by:**
+충분한 quote outcome data.
 
-### 3. Workspace Assistant 재논의
-
-**What:**
-v1 T7로 비활성(feature flag + nav 제거). 코드는 `lib/ai/drafts.ts` (`generateWorkspaceAssistantResult`)와 `components/dashboard/WorkspaceAssistant.tsx`에 유지. paid trial 후 painter가 "quote 외 다른 도구"를 명시적으로 요구하면 활성 검토.
-
-**Target:** v2.0 검토 (post v1 validation)
-
----
-
-### 4. Gemini Vision photo → surface hint (v1.1)
+### 6. Workspace Assistant 재논의
 
 **What:**
-v1은 photo를 evidence/context only (Gemini Flash multimodal에 URL 전달, AI가 보고 참고). v1.1은 Gemini Vision으로 surface area 자동 측정 → AIDraftPanel에 hint로 노출 (painter override 가능).
+범용 dashboard chat은 v1 core에서 사용하지 않는다. 실제 사용자들이 quote/follow-up/invoice 외 운영 질문을 반복적으로 요구할 때 재검토한다.
 
-**Why:** painter가 photo+rough measurements 둘 다 입력하는 cognitive load 줄이는 다음 step. v1 paid trial에서 painter가 사진을 평균 N개 이상 첨부 + rough measurements 텍스트 작성을 부담스러워하면 ROI 있음.
+**Blocked by:**
+Core workflow release + scoped AI helpers validation.
 
-**Target:** v1.1
-
----
-
-### 5. Learning-based pricing recommendation (v1.2)
+### 7. Productize Stripe pre-order / paid conversion
 
 **What:**
-painter의 과거 quote를 학습 데이터로 → 다음 quote 작성 시 "비슷한 작업은 평균 $X" 제안. AI가 rate 결정하는 게 아니라 painter price_rates에 "참고치" 추가.
+실제 workflow replacement가 검증되면 pilot/trial/pay conversion을 productized flow로 만든다.
 
-**Why:** v1 wedge가 검증되면 painter retention의 다음 wedge. Bolster의 ML pricing approach 호주 native 버전.
+**Blocked by:**
+A workflow recreation and first release smoke.
 
-**Target:** v1.2
+## Operational / Continuous
 
----
+### 8. Quarterly Australian tradie software monitoring
 
-## Operational / continuous
+QuoteMate, Sammy, WonDeal, Let’s Quote, ServiceM8, Tradify, PaintScout, BrushQuote류가 빠르게 움직이고 있다. 분기 1회 경쟁사 포지셔닝, 가격, AI/follow-up 기능을 점검한다.
 
-### 6. AI cost economics monitoring (v1 in-flight)
+Trigger:
 
-Phase 0 dependency 첫 항목 — Gemini Flash 토큰/quote × 평균 painter quotes/월 × $59 ARPU → gross margin ≥70% 시뮬레이션. paid trial 시작 후 매주 review.
+- 호주 painter-specific AI/follow-up app이 A$29–A$59 가격대에서 강하게 성장
+- ServiceM8/Tradify가 painter-specific quote workflow를 강화
+- QuoteMate/Sammy가 painting-specific price book import 또는 follow-up loop를 강화
 
-Premise 6 fallback 경로: prompt 압축 → Flash → Flash-Lite cascade → per-painter limit 강화 → 가격 재검토.
+### 9. AI cost economics monitoring
 
-### 7. 분기별 호주 SaaS landscape monitoring
+AI가 post-core로 재개될 때만 다시 필요하다. core workflow phase에서는 Qwen/Gemini token economics가 release blocker가 아니다.
 
-Premise 3 "1–2년 window"는 가설. 매 분기 1회 Tradify/ServiceM8/Quotient changelog + GitHub 활동 + 미국 AI takeoff SaaS 호주 진출 신호 모니터링. 진출 신호 발견 시 reframe trigger.
+## Source Docs
 
----
-
-## Source
-
-- v1 plan eng review (2026-05-15): `~/.gstack/projects/jimeekang-Coatly/jimee-claude-upbeat-galileo-e38c4d-impl-plan-20260515-232820.md`
-- v1 design (2026-05-15 APPROVED): `~/.gstack/projects/jimeekang-Coatly/jimee-claude-upbeat-galileo-e38c4d-design-20260515-230649.md`
-- 메인 build plan: [docs/features/ai/V1-PLAN.md](./docs/features/ai/V1-PLAN.md)
-- Audit table: [docs/features/audit/AUDIT.md](./docs/features/audit/AUDIT.md) (A7, A8)
+- [docs/PLANS.md](./docs/PLANS.md)
+- [docs/PRODUCT_SENSE.md](./docs/PRODUCT_SENSE.md)
+- [docs/features/ai/V1-PLAN.md](./docs/features/ai/V1-PLAN.md)
+- [docs/features/ai/V1-APP-BUILD-PLAN.md](./docs/features/ai/V1-APP-BUILD-PLAN.md)
+- [docs/features/ai/AI-ASSISTANT.md](./docs/features/ai/AI-ASSISTANT.md)
+- [docs/features/quote/PRICE-BOOK-TEMPLATE.md](./docs/features/quote/PRICE-BOOK-TEMPLATE.md)

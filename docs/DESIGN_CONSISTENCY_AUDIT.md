@@ -4,9 +4,11 @@
 
 ## Summary
 
-2026-05-10 기준 P0/P1 디자인 일관성 이슈는 대부분 해결되었습니다. 남은 작업은 legacy token 완전 제거, 일부 상세 컴포넌트의 색상/상태 badge 정리, 모바일 시각 회귀입니다.
+2026-05-10 기준 P0/P1 디자인 일관성 이슈는 대부분 해결되었습니다.
 
 2026-05-16 추가: interactive form 3종(`QuoteForm` / `InvoiceForm` / `CustomerForm`)의 레이아웃·버튼·토큰 불일치 감사 결과를 반영했습니다. 상세 구현 스펙은 [Form Layout Unification Spec (D6)](#form-layout-unification-spec-d6) 참조.
+
+2026-05-25 추가: feature/module DDD-lite 재구성 이후 앱 전역 legacy `pm-*` Tailwind alias 사용을 MD3 토큰으로 정리했습니다. `app/globals.css`의 legacy alias 정의와 `eslint.config.mjs`의 임시 whitelist도 제거했습니다.
 
 ## Canonical Rules
 
@@ -27,24 +29,24 @@
 | ID | 기존 문제 | 상태 |
 |----|-----------|------|
 | P0-1 | 페이지 title typography 불일치 | 해결: dashboard route page에 `PageHeader` 적용 |
-| P0-2 | MD3 token과 legacy `pm-*` 혼용 | 대부분 해결: page-level MD3 적용, legacy alias deprecated |
+| P0-2 | MD3 token과 legacy `pm-*` 혼용 | 해결: 앱 코드 전역 MD3 토큰 전환, legacy alias 제거 |
 | P0-3 | CTA 색상/굵기 혼용 | 해결: CTA link 컴포넌트화 |
 | P1-1 | 오류 박스 스타일 4종 | 해결: `ErrorAlert` 단일화 |
 | P1-2 | CTA prefix 불일치 | 해결: `+ New {Entity}` |
 | P1-3 | Back button 터치 피드백 누락 | 해결: `hover:` + `active:` |
 | P2-2 | 헤더 spacing 혼용 | 개선: PageHeader 중심 |
 | P2-3 | subtitle 색상 혼용 | 개선: `text-on-surface-variant` |
+| D1 | `badge` legacy 색상 | 해결: MD3 토큰 전환 |
+| D2 | `CustomerDetail` legacy status 색상 | 해결: MD3 토큰 전환 |
+| D3 | `app/globals.css` legacy alias | 해결: alias 정의 제거 |
+| D4 | `eslint.config.mjs` legacy whitelist | 해결: whitelist 제거, 전역 경고 유지 |
+| D6 | form 3종 legacy token/레이아웃 불일치 | 해결: MD3 토큰 전환과 공유 form primitive 유지 |
 
 ## Remaining Findings
 
 | ID | 우선순위 | 위치 | 작업 |
 |----|----------|------|------|
-| D1 | P1 | `components/ui/badge.tsx` | legacy `pm-*` 색상 제거 |
-| D2 | P1 | `components/customers/CustomerDetail.tsx` | legacy status 색상 제거 |
-| D3 | P2 | `app/globals.css` | legacy alias 삭제 가능 시점 재검토 |
-| D4 | P2 | `eslint.config.mjs` | `pm-*` whitelist 제거 가능 시점 재검토 |
 | D5 | P2 | detailed quote/job screens | 모바일 screenshot 기반 spacing 점검 |
-| D6 | P1 | `QuoteForm` / `InvoiceForm` / `CustomerForm` | form 레이아웃·버튼·토큰 통일 — 상세 스펙 ↓ |
 
 ## Form Layout Unification Spec (D6)
 

@@ -1,5 +1,41 @@
 # Coatly — Security
 
+> Current security snapshot: 2026-06-01. This document records both the intended security model and the active remediation queue.
+
+## Current Security Snapshot
+
+Latest checked state:
+
+| Area | Status | Notes |
+|------|--------|-------|
+| App security headers | In place | `next.config.ts` sets CSP, Referrer-Policy, X-Content-Type-Options, X-Frame-Options, and Permissions-Policy. |
+| Stripe webhook signature | In place | Webhook handler validates `stripe-signature` against `STRIPE_WEBHOOK_SECRET` before processing. |
+| Vercel cron auth | In place | `/api/cron/invoice-reminders` requires `Authorization: Bearer ${CRON_SECRET}`. |
+| Supabase RLS | Verified 2026-06-01 | Live public base tables returned no RLS-disabled rows in the spot check. |
+| Public security definer functions | Restricted | `before_user_created_signup_guard`, `enforce_job_schedule_day_owner`, and `handle_new_user` exist in `public`, but `anon` and `authenticated` do not have direct execute permission. |
+| Production deployment | Live | `https://coatly.vercel.app` returned HTTP 200 and Vercel status `Ready`. |
+
+## Active Security Findings & Fix Plan
+
+| Priority | Finding | Risk | Current mitigation | Required fix |
+|----------|---------|------|--------------------|--------------|
+| P1 | Public quote rate limit is in memory in `proxy.ts` | Vercel serverless instances do not share memory, so `/q/[token]` abuse protection is best-effort only. | 60 requests/minute/IP per warm instance. | Move public quote rate limiting to durable storage such as Upstash Redis, Vercel KV, or Supabase-backed counters with expiry. |
+| P1 | Supabase CLI project is not linked locally | `supabase db lint --linked` cannot run from the repo, so DB advisor/lint checks can be missed before release. | Manual Management API SQL spot checks were used on 2026-06-01. | Link the Supabase project or document the approved remote lint command, then add it to the release checklist. |
+| P1 | Local migration history needs reconciliation | Local file `20260517020123_quote_estimate_item_task2_categories.sql` was not visible in live migration history during the 2026-06-01 spot check. | Live DB does include `20260524022420 / 050_quote_form_structure`. | Confirm whether the local migration was superseded, manually applied, or missed. If missed, add a new corrective migration instead of rewriting history. |
+| P2 | Duplicate env var keys in `.env.local` | Duplicate names can hide the effective runtime value and cause local/Vercel drift. | `.env.example` remains clean enough for onboarding. | Remove duplicate local keys and compare Vercel production/preview env names against `.env.example`. |
+| P2 | Public quote and public invoice token routes need periodic abuse review | Tokenized public routes are intentionally unauthenticated. Weak rate limiting or leaked tokens can expose customer documents. | Token lookup and RLS-aware server code protect normal access paths. | Add token audit logging, durable throttling, and smoke tests for invalid/expired/mismatched public tokens. |
+| P2 | DDD module refactor is not yet deployed | Local code passes build/tests but production is still the previous deployment. | Production is stable and `Ready`. | Land DDD refactor through preview deployment, browser smoke QA, then production promotion/deploy. |
+
+## Implementation Direction
+
+Security work should move in this order:
+
+1. Stabilize the current DDD module refactor without changing behavior. Keep route files thin and preserve existing auth checks while moving feature code under `modules/`.
+2. Reconcile Supabase migrations before shipping new schema work. Treat migration mismatches as release blockers.
+3. Replace best-effort public route rate limiting with durable rate limiting before increasing public quote usage.
+4. Add a release security gate: RLS check, security definer execute check, webhook/cron secret check, lint, tests, build, Vercel preview smoke.
+5. Resume v1 core workflow release after the security gate is green: A price book setup, quote recreation, PDF/email, public quote, follow-up, invoice, and schedule smoke. AI/photo work remains deferred until that workflow is released and verified.
+
 ## RLS (Row Level Security) Policy Matrix
 
 모든 테이블에 RLS가 활성화되어 있으며, 클라이언트는 자신의 데이터에만 접근 가능하다.
@@ -31,7 +67,7 @@ user_id 컬럼 없음 — 부모 테이블 EXISTS 서브쿼리로 소유권 확�
 ```
 사용자 요청
     │
-    ├── middleware.ts (Supabase Auth 세션 확인)
+    ├── proxy.ts (Supabase Auth 세션 확인)
     │   ├── /login, /signup → 로그인 상태면 /dashboard 리다이렉트
     │   └── /dashboard/* → 미로그인 시 /login 리다이렉트
     │                       로그인 + onboarding 미완료 → /onboarding
@@ -104,7 +140,14 @@ const event = stripe.webhooks.constructEvent(
 - [ ] Admin client 사용처가 webhook/번호생성으로 제한
 - [ ] 환경변수 하드코딩 없음
 - [ ] .env 파일 .gitignore에 포함
+- [ ] `.env.example`과 Vercel env var 이름 불일치 없음
+- [ ] `.env.local` 중복 key 없음
 - [ ] Stripe webhook signature 검증
+- [ ] Vercel cron endpoint가 `CRON_SECRET` 없이는 실패
 - [ ] Server Action에서 auth 체크
 - [ ] API route에서 auth 체크
 - [ ] `server-only` import guard 적용 (admin.ts)
+- [ ] public token route는 invalid/expired/mismatched token 테스트 포함
+- [ ] `/q/[token]` rate limit은 durable store 기반
+- [ ] Supabase migration history와 로컬 migration 파일 불일치 없음
+- [ ] production 배포 전 Vercel preview에서 smoke QA 완료

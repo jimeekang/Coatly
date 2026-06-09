@@ -125,10 +125,10 @@ export default function ResetPasswordPageClient() {
 
   if (recoveryState === 'checking') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-pm-surface px-4 py-8">
-        <div className="w-full max-w-sm rounded-2xl border border-pm-border bg-white p-6 text-center shadow-sm">
-          <Loader2 className="mx-auto mb-4 h-6 w-6 animate-spin text-pm-teal" />
-          <p className="text-sm text-pm-secondary">Checking your reset link...</p>
+      <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
+        <div className="w-full max-w-sm rounded-2xl border border-outline bg-white p-6 text-center shadow-sm">
+          <Loader2 className="mx-auto mb-4 h-6 w-6 animate-spin text-primary" />
+          <p className="text-sm text-on-surface-variant">Checking your reset link...</p>
         </div>
       </main>
     );
@@ -136,23 +136,23 @@ export default function ResetPasswordPageClient() {
 
   if (recoveryState === 'invalid') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-pm-surface px-4 py-8">
+      <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex justify-center">
             <BrandLogo width={176} height={40} priority />
           </div>
 
-          <div className="rounded-2xl border border-pm-border bg-white p-6 text-center shadow-sm">
-            <h1 className="mb-2 text-xl font-bold text-pm-body">Reset link expired</h1>
-            <p className="text-sm text-pm-secondary">
+          <div className="rounded-2xl border border-outline bg-white p-6 text-center shadow-sm">
+            <h1 className="mb-2 text-xl font-bold text-on-surface">Reset link expired</h1>
+            <p className="text-sm text-on-surface-variant">
               This password reset link is invalid or has expired.
             </p>
             {serverError && (
-              <p className="mt-3 text-sm text-pm-coral-dark">{serverError}</p>
+              <p className="mt-3 text-sm text-on-error-container">{serverError}</p>
             )}
             <Link
               href="/forgot-password"
-              className="mt-6 inline-block text-sm font-medium text-pm-teal hover:underline"
+              className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
             >
               Request a new reset email
             </Link>
@@ -164,36 +164,36 @@ export default function ResetPasswordPageClient() {
 
   if (recoveryState === 'success') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-pm-surface px-4 py-8">
-        <div className="w-full max-w-sm rounded-2xl border border-pm-border bg-white p-6 text-center shadow-sm">
+      <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
+        <div className="w-full max-w-sm rounded-2xl border border-outline bg-white p-6 text-center shadow-sm">
           <CheckCircle
-            className="mx-auto mb-4 h-12 w-12 text-pm-teal-mid"
+            className="mx-auto mb-4 h-12 w-12 text-primary-container"
             aria-hidden="true"
           />
-          <h1 className="mb-2 text-xl font-bold text-pm-body">Password updated</h1>
-          <p className="text-sm text-pm-secondary">Redirecting you back into {APP_NAME}...</p>
+          <h1 className="mb-2 text-xl font-bold text-on-surface">Password updated</h1>
+          <p className="text-sm text-on-surface-variant">Redirecting you back into {APP_NAME}...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-pm-surface px-4 py-8">
+    <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center">
           <BrandLogo width={176} height={40} priority />
         </div>
 
-        <div className="rounded-2xl border border-pm-border bg-white p-6 shadow-sm">
-          <h1 className="mb-2 text-xl font-bold text-pm-body">Set new password</h1>
-          <p className="mb-6 text-sm text-pm-secondary">
+        <div className="rounded-2xl border border-outline bg-white p-6 shadow-sm">
+          <h1 className="mb-2 text-xl font-bold text-on-surface">Set new password</h1>
+          <p className="mb-6 text-sm text-on-surface-variant">
             Enter a new password for your account.
           </p>
 
           {serverError && (
             <div
               role="alert"
-              className="mb-4 rounded-lg border border-pm-coral bg-pm-coral-light px-4 py-3 text-sm text-pm-coral-dark"
+              className="mb-4 rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container"
             >
               {serverError}
             </div>
@@ -203,7 +203,7 @@ export default function ResetPasswordPageClient() {
             <div>
               <label
                 htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-pm-body"
+                className="mb-1.5 block text-sm font-medium text-on-surface"
               >
                 New password
               </label>
@@ -215,11 +215,11 @@ export default function ResetPasswordPageClient() {
                 disabled={isPending}
                 aria-invalid={!!errors.password}
                 aria-describedby={errors.password ? 'password-error' : undefined}
-                className="h-12 w-full rounded-lg border border-pm-border px-4 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 disabled:opacity-50"
+                className="h-12 w-full rounded-lg border border-outline px-4 text-sm text-on-surface focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
                 {...register('password')}
               />
               {errors.password && (
-                <p id="password-error" className="mt-1.5 text-xs text-pm-coral-dark">
+                <p id="password-error" className="mt-1.5 text-xs text-on-error-container">
                   {errors.password.message}
                 </p>
               )}
@@ -228,7 +228,7 @@ export default function ResetPasswordPageClient() {
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="mb-1.5 block text-sm font-medium text-pm-body"
+                className="mb-1.5 block text-sm font-medium text-on-surface"
               >
                 Confirm new password
               </label>
@@ -242,13 +242,13 @@ export default function ResetPasswordPageClient() {
                 aria-describedby={
                   errors.confirmPassword ? 'confirmPassword-error' : undefined
                 }
-                className="h-12 w-full rounded-lg border border-pm-border px-4 text-sm text-pm-body focus:border-pm-teal-mid focus:outline-none focus:ring-2 focus:ring-pm-teal-pale/30 disabled:opacity-50"
+                className="h-12 w-full rounded-lg border border-outline px-4 text-sm text-on-surface focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
                 {...register('confirmPassword')}
               />
               {errors.confirmPassword && (
                 <p
                   id="confirmPassword-error"
-                  className="mt-1.5 text-xs text-pm-coral-dark"
+                  className="mt-1.5 text-xs text-on-error-container"
                 >
                   {errors.confirmPassword.message}
                 </p>
@@ -258,7 +258,7 @@ export default function ResetPasswordPageClient() {
             <button
               type="submit"
               disabled={isPending}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-pm-teal text-sm font-semibold text-white transition-colors hover:bg-pm-teal-hover focus:outline-none focus:ring-2 focus:ring-pm-teal-mid focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending && (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

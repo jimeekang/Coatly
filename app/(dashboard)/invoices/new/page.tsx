@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getInvoiceDraftFromQuote, getInvoiceFormOptions } from '@/app/actions/invoices';
-import { InvoiceCreateScreen } from '@/components/invoices/InvoiceCreateScreen';
+import { getInvoiceDraftFromQuote, getInvoiceFormOptions } from '@/modules/invoices/application/actions';
+import { InvoiceCreateScreen } from '@/modules/invoices/ui/InvoiceCreateScreen';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import { BackLink } from '@/components/layout/BackLink';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveSubscriptionSnapshotForUser } from '@/lib/subscription/server';
 
@@ -39,18 +39,13 @@ export default async function NewInvoicePage({
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
-      <div className="mb-4">
-        <BackLink href="/invoices" label="All invoices" />
-      </div>
-      <div className="mb-5">
-        <h1 className="text-[22px] font-extrabold tracking-[-0.02em] text-on-surface sm:text-[26px]">
-          New Invoice
-        </h1>
-        <p className="mt-1 text-sm text-on-surface-variant">
-          Create a draft, compare it against the linked quote, and keep payment details ready
-          for sending.
-        </p>
-      </div>
+      <PageHeader
+        title="New Invoice"
+        subtitle="Create a draft, compare it against the linked quote, and keep payment details ready for sending."
+        backHref="/invoices"
+        backLabel="All invoices"
+        className="mb-5"
+      />
 
       {pageError ? (
         <ErrorAlert>{pageError}</ErrorAlert>

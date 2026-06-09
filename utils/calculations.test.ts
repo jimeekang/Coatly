@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { calculateQuickEstimate } from '@/utils/calculations';
-import { buildDefaultRateSettings } from '@/lib/rate-settings';
+import { buildDefaultRateSettings } from '@/modules/price-rates/domain/rate-settings';
 import type { QuickInputs, SelectedQuickPropertyPreset } from '@/types/quote';
 
 function makeSettings(overrides?: Partial<ReturnType<typeof buildDefaultRateSettings>>) {

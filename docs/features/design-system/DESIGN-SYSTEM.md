@@ -107,7 +107,7 @@ Coatly = Next.js 16 + Tailwind + Supabase 모바일 우선 PWA. 감사 결과 �
 
 - 터치 타겟 혼재: `h-10` (40px, 미달), `h-11` (44px, 최소), `min-h-12` (48px, 권장)
 - `hidden md:grid` 헤더 — 모바일 별도 레이아웃 없음
-- `ScheduleCalendar.tsx` — `bg-pm-teal` / `bg-amber-400` / `bg-emerald-500` Tailwind 기본색 혼용
+- `ScheduleCalendar.tsx` — schedule/event/google 색상은 MD3 토큰으로 정리됨. 남은 화면은 상태별 공통 badge 추출 시 추가 정리.
 
 ### 2.5 모바일 핵심 기능 가용성
 
@@ -130,7 +130,7 @@ Coatly = Next.js 16 + Tailwind + Supabase 모바일 우선 PWA. 감사 결과 �
 
 신규 파일:
 - `lib/constants/status-colors.ts` — quote/invoice/schedule 상태 → MD3 토큰 단일 출처
-- `components/ui/PageHeader.tsx` — 표준 헤더
+- `components/layout/PageHeader.tsx` — 표준 대시보드 페이지 헤더
 - `components/ui/StatusBadge.tsx` — 상태 + kind(quote/invoice/schedule) prop
 - `components/ui/FormField.tsx` — label + input/textarea + error
 - `components/ui/EmptyState.tsx`, `components/ui/ErrorState.tsx`
@@ -138,8 +138,9 @@ Coatly = Next.js 16 + Tailwind + Supabase 모바일 우선 PWA. 감사 결과 �
 
 ### Step 3 — 타이포그래피 표준
 
-- `app/globals.css`에 typography utility: `h1` = `text-3xl sm:text-4xl font-bold` 등
-- 임의 `text-[Npx]` 제거. `PageHeader`가 h1 스타일 강제
+- 페이지 제목은 `components/layout/PageHeader.tsx`가 담당한다.
+- `app/globals.css`에 `.h1-page`, `.h2-section`, `.h3-block` 같은 전역 타이포그래피 class를 다시 추가하지 않는다.
+- 컴팩트 카드/테이블 내부의 임의 `text-[Npx]`는 필요 시 유지하되, 페이지 타이틀과 섹션 타이틀에는 공통 컴포넌트를 우선한다.
 
 ### Step 4 — 모바일 사용성
 

@@ -1,16 +1,17 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { ChevronLeft, Pencil } from 'lucide-react';
 import {
   getQuote,
   setQuoteOptionalLineItemSelection,
-} from '@/app/actions/quotes';
-import { getLinkedInvoicesForQuote } from '@/app/actions/invoices';
+} from '@/modules/quotes/application/actions';
+import { getLinkedInvoicesForQuote } from '@/modules/invoices/application/actions';
 import { APP_URL } from '@/config/constants';
-import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/lib/quotes';
+import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/modules/quotes/domain/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
-import { ProfitabilityCard } from '@/components/quotes/ProfitabilityCard';
-import { QuoteActions } from '@/components/quotes/QuoteActions';
-import { getBusinessRateSettings } from '@/lib/businesses';
+import { ProfitabilityCard } from '@/modules/quotes/ui/ProfitabilityCard';
+import { QuoteActions } from '@/modules/quotes/ui/QuoteActions';
+import { getBusinessRateSettings } from '@/modules/settings/domain/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Quote Detail' };
@@ -136,9 +137,7 @@ export default async function QuoteDetailPage({
           href="/quotes"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
+          <ChevronLeft className="h-4 w-4" />
           All quotes
         </Link>
       </div>
@@ -194,10 +193,7 @@ export default async function QuoteDetailPage({
                   href={`/quotes/${id}/edit`}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-on-primary hover:opacity-90 transition-opacity"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
+                  <Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />
                   Edit
                 </Link>
               )}
@@ -208,7 +204,7 @@ export default async function QuoteDetailPage({
           <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
 
             {/* ── Main card: Line items + Totals ── */}
-            <div className="self-start bg-white border border-outline-variant rounded-3xl shadow-sm">
+            <div className="self-start bg-white border border-outline-variant rounded-2xl shadow-sm">
               <div className="p-4">
                 <p className="text-[13px] font-bold text-on-surface mb-3 tracking-[-0.005em]">
                   Line items
@@ -371,7 +367,7 @@ export default async function QuoteDetailPage({
             <div className="flex flex-col gap-4">
 
               {/* Customer meta-box */}
-              <div className="p-4 rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm">
+              <div className="p-4 rounded-2xl border border-outline-variant bg-surface-container-low shadow-sm">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
                   Customer
                 </p>
@@ -393,7 +389,7 @@ export default async function QuoteDetailPage({
               </div>
 
               {/* Dates meta-box */}
-              <div className="p-4 rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm">
+              <div className="p-4 rounded-2xl border border-outline-variant bg-surface-container-low shadow-sm">
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
                   Dates
                 </p>
@@ -410,7 +406,7 @@ export default async function QuoteDetailPage({
 
               {/* Client Link meta-box */}
               {publicQuoteUrl && (
-                <div className="p-4 rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm">
+                <div className="p-4 rounded-2xl border border-outline-variant bg-surface-container-low shadow-sm">
                   <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
                     Client Link
                   </p>
@@ -427,7 +423,7 @@ export default async function QuoteDetailPage({
 
               {/* Cost Breakdown (internal) — directly below Profitability */}
               {showBreakdown && (
-                <div className="rounded-3xl border border-warning/20 bg-warning-container overflow-hidden">
+                <div className="rounded-2xl border border-warning/20 bg-warning-container overflow-hidden">
                   <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-warning/20">
                     <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-warning">
                       Cost Breakdown
@@ -489,7 +485,7 @@ export default async function QuoteDetailPage({
 
               {/* Approval */}
               {quote.approved_at && (
-                <div className="p-4 rounded-3xl border border-success/20 bg-success-container shadow-sm">
+                <div className="p-4 rounded-2xl border border-success/20 bg-success-container shadow-sm">
                   <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-success mb-1.5">
                     Approved
                   </p>
@@ -510,7 +506,7 @@ export default async function QuoteDetailPage({
 
               {/* Notes — directly above Billing Progress */}
               {(quote.notes || quote.internal_notes) && (
-                <div className="p-4 rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm space-y-3">
+                <div className="p-4 rounded-2xl border border-outline-variant bg-surface-container-low shadow-sm space-y-3">
                   {quote.notes && (
                     <div>
                       <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface mb-1.5">
@@ -532,7 +528,7 @@ export default async function QuoteDetailPage({
 
               {/* Billing Progress — directly below Notes */}
               {linkedInvoices.length > 0 && (
-                <div className="rounded-3xl border border-outline-variant bg-white shadow-sm overflow-hidden">
+                <div className="rounded-2xl border border-outline-variant bg-white shadow-sm overflow-hidden">
                   <div className="bg-surface-container-low px-4 py-3 border-b border-outline-variant">
                     <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface">
                       Billing Progress

@@ -9,8 +9,8 @@ import {
   findDuplicateCustomer,
   parseCustomerUpdateInput,
   serializeCustomer,
-} from '@/lib/customers-api';
-import { buildQuoteCustomerAddress } from '@/lib/quotes';
+} from '@/modules/customers/infrastructure/api';
+import { buildQuoteCustomerAddress } from '@/modules/quotes/domain/quotes';
 import { createServerClient } from '@/lib/supabase/server';
 
 type RouteContext = {

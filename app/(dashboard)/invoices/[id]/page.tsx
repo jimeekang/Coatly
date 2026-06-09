@@ -4,8 +4,8 @@ import {
   getInvoice,
   getInvoiceFormOptions,
   getLinkedInvoicesForQuote,
-} from '@/app/actions/invoices';
-import { InvoiceDetail } from '@/components/invoices/InvoiceDetail';
+} from '@/modules/invoices/application/actions';
+import { InvoiceDetail } from '@/modules/invoices/ui/InvoiceDetail';
 import { BackLink } from '@/components/layout/BackLink';
 
 interface Props {

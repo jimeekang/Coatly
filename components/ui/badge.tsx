@@ -9,13 +9,13 @@ interface BadgeProps {
 }
 
 const VARIANT: Record<BadgeVariant, string> = {
-  default:  'bg-pm-surface text-pm-secondary',
-  draft:    'bg-pm-surface text-pm-secondary',
-  success:  'bg-pm-teal-light text-pm-teal',
-  approved: 'bg-pm-teal-mid text-white',
-  warning:  'bg-amber-50 text-amber-700',
-  danger:   'bg-pm-coral-light text-pm-coral-mid',
-  info:     'bg-blue-50 text-blue-600',
+  default:  'bg-surface-container-low text-on-surface-variant',
+  draft:    'bg-surface-container-low text-on-surface-variant',
+  success:  'bg-success-container text-on-success-container',
+  approved: 'bg-primary-container text-on-primary-container',
+  warning:  'bg-warning-container text-on-warning-container',
+  danger:   'bg-error-container text-on-error-container',
+  info:     'bg-secondary-container text-on-secondary-container',
 };
 
 export function Badge({ variant = 'default', children, className = '' }: BadgeProps) {

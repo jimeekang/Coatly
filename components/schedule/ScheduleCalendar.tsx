@@ -21,7 +21,7 @@ import {
   deleteJobScheduleDay,
   updateJobSchedule,
   updateJobScheduleDay,
-} from '@/app/actions/jobs';
+} from '@/modules/jobs/application/actions';
 import {
   createScheduleEvent,
   deleteScheduleEvent,
@@ -30,7 +30,7 @@ import {
   type ScheduleEventInput,
 } from '@/app/actions/schedule';
 import { useToast } from '@/components/ui/toast';
-import { JOB_STATUS_LABELS, type JobStatus } from '@/lib/jobs';
+import { JOB_STATUS_LABELS, type JobStatus } from '@/modules/jobs/domain/jobs';
 
 export type CalendarJob = {
   id: string;
@@ -139,10 +139,10 @@ const SYDNEY_TIME_FORMATTER = new Intl.DateTimeFormat('en-AU', {
 });
 
 const STATUS_BADGE: Record<JobStatus, string> = {
-  scheduled: 'border-pm-teal/20 bg-pm-teal/10 text-pm-teal',
-  in_progress: 'border-amber-200 bg-amber-50 text-amber-700',
-  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  cancelled: 'border-rose-200 bg-rose-50 text-rose-700',
+  scheduled: 'border-primary/20 bg-primary/10 text-primary',
+  in_progress: 'border-warning/30 bg-warning-container text-warning',
+  completed: 'border-success/30 bg-success-container text-success',
+  cancelled: 'border-error/30 bg-error-container text-error',
 };
 
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -527,7 +527,7 @@ function EventModal({
               value={form.title}
               onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
               placeholder="e.g. Site inspection"
-              className="h-11 rounded-xl border border-pm-border bg-white px-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               autoFocus
             />
           </Field>
@@ -536,15 +536,15 @@ function EventModal({
               type="date"
               value={form.date}
               onChange={(e) => setForm((c) => ({ ...c, date: e.target.value }))}
-              className="h-11 rounded-xl border border-pm-border bg-white px-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
             />
           </Field>
-          <label className="flex min-h-11 items-center gap-3 text-sm font-medium text-pm-body">
+          <label className="flex min-h-11 items-center gap-3 text-sm font-medium text-on-surface">
             <input
               type="checkbox"
               checked={form.isAllDay}
               onChange={(e) => setForm((c) => ({ ...c, isAllDay: e.target.checked }))}
-              className="h-5 w-5 rounded border-pm-border accent-pm-teal"
+              className="h-5 w-5 rounded border-outline accent-primary"
             />
             All day
           </label>
@@ -555,7 +555,7 @@ function EventModal({
                   type="time"
                   value={form.startTime}
                   onChange={(e) => setForm((c) => ({ ...c, startTime: e.target.value }))}
-                  className="h-11 rounded-xl border border-pm-border bg-white px-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                 />
               </Field>
               <Field label="End time">
@@ -563,7 +563,7 @@ function EventModal({
                   type="time"
                   value={form.endTime}
                   onChange={(e) => setForm((c) => ({ ...c, endTime: e.target.value }))}
-                  className="h-11 rounded-xl border border-pm-border bg-white px-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                 />
               </Field>
             </div>
@@ -574,7 +574,7 @@ function EventModal({
               value={form.location}
               onChange={(e) => setForm((c) => ({ ...c, location: e.target.value }))}
               placeholder="Optional"
-              className="h-11 rounded-xl border border-pm-border bg-white px-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
             />
           </Field>
           <Field label="Notes">
@@ -583,17 +583,17 @@ function EventModal({
               onChange={(e) => setForm((c) => ({ ...c, notes: e.target.value }))}
               rows={3}
               placeholder="Optional"
-              className="rounded-xl border border-pm-border bg-white px-3 py-2.5 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+              className="rounded-xl border border-outline bg-white px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
             />
           </Field>
-          {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+          {error && <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-error">{error}</p>}
           <div className="flex items-center gap-3 pt-1">
             {editing && (
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="flex h-11 w-11 items-center justify-center rounded-xl border border-rose-200 text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-error/30 text-error transition-colors hover:bg-error-container disabled:opacity-50"
                 aria-label="Delete event"
                 title="Delete event"
               >
@@ -603,14 +603,14 @@ function EventModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-pm-border text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
+              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-outline text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-pm-teal text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {isPending ? 'Saving...' : editing ? 'Save' : 'Add'}
             </button>
@@ -737,14 +737,14 @@ function JobScheduleModal({
       <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-2xl">
         <ModalHeader title="Edit Job Schedule" onClose={onClose} />
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="rounded-xl border border-pm-border bg-pm-surface/40 p-4">
-            <p className="text-sm font-semibold text-pm-body">{job.customerName}</p>
-            <p className="mt-1 text-xs text-pm-secondary">{job.title}</p>
+          <div className="rounded-xl border border-outline bg-surface-container-low/40 p-4">
+            <p className="text-sm font-semibold text-on-surface">{job.customerName}</p>
+            <p className="mt-1 text-xs text-on-surface-variant">{job.title}</p>
           </div>
-          <div className="rounded-xl border border-pm-border bg-white p-4">
+          <div className="rounded-xl border border-outline bg-white p-4">
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-pm-body">Scheduled days</p>
-              <p className="text-xs text-pm-secondary">
+              <p className="text-sm font-semibold text-on-surface">Scheduled days</p>
+              <p className="text-xs text-on-surface-variant">
                 Drag on the calendar to move one day, or manage the exact dates here.
               </p>
             </div>
@@ -752,17 +752,17 @@ function JobScheduleModal({
               {scheduledDates.map((date) => (
                 <div
                   key={date}
-                  className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-pm-border bg-pm-surface/30 px-3 py-2"
+                  className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-outline bg-surface-container-low/30 px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-pm-body">{formatDate(date)}</p>
-                    <p className="text-xs text-pm-secondary">{date}</p>
+                    <p className="text-sm font-medium text-on-surface">{formatDate(date)}</p>
+                    <p className="text-xs text-on-surface-variant">{date}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleDeleteDay(date)}
                     disabled={isManagingDays}
-                    className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-rose-200 px-3 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
+                    className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-error/30 px-3 text-xs font-semibold text-error transition-colors hover:bg-error-container disabled:opacity-50"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     {activeDate === date ? 'Deleting...' : 'Delete'}
@@ -771,10 +771,10 @@ function JobScheduleModal({
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-pm-border bg-white p-4">
+          <div className="rounded-xl border border-outline bg-white p-4">
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-pm-body">Add a day</p>
-              <p className="text-xs text-pm-secondary">
+              <p className="text-sm font-semibold text-on-surface">Add a day</p>
+              <p className="text-xs text-on-surface-variant">
                 Pick one extra date to add to this job.
               </p>
             </div>
@@ -783,23 +783,23 @@ function JobScheduleModal({
                 type="date"
                 value={addDate}
                 onChange={(e) => setAddDate(e.target.value)}
-                className="h-11 flex-1 rounded-xl border border-pm-border bg-white px-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                className="h-11 flex-1 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
               <button
                 type="button"
                 onClick={handleAddDay}
                 disabled={isManagingDays}
-                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 <Plus className="h-4 w-4" />
                 {activeDate === addDate ? 'Adding...' : 'Add day'}
               </button>
             </div>
           </div>
-          <div className="rounded-xl border border-pm-border bg-white p-4">
+          <div className="rounded-xl border border-outline bg-white p-4">
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-pm-body">Reset as date range</p>
-              <p className="text-xs text-pm-secondary">
+              <p className="text-sm font-semibold text-on-surface">Reset as date range</p>
+              <p className="text-xs text-on-surface-variant">
                 Save a continuous range if you want to rebuild the schedule from start to end.
               </p>
             </div>
@@ -813,7 +813,7 @@ function JobScheduleModal({
                     setStartDate(nextStart);
                     if (endDate < nextStart) setEndDate(nextStart);
                   }}
-                  className="h-11 rounded-xl border border-pm-border bg-white px-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                 />
               </Field>
               <Field label="End date">
@@ -822,27 +822,27 @@ function JobScheduleModal({
                   value={endDate}
                   min={startDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="h-11 rounded-xl border border-pm-border bg-white px-3 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                 />
               </Field>
             </div>
-            <p className="mt-3 text-xs text-pm-secondary">
+            <p className="mt-3 text-xs text-on-surface-variant">
               {getInclusiveDayCount(startDate, endDate)} day range
             </p>
           </div>
-          {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+          {error && <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-error">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-pm-border text-sm font-medium text-pm-body transition-colors hover:bg-pm-surface"
+              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-outline text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-pm-teal text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {isPending ? 'Saving...' : 'Save range'}
             </button>
@@ -856,10 +856,10 @@ function JobScheduleModal({
 function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
     <div className="mb-5 flex items-center justify-between">
-      <h2 className="text-lg font-bold text-pm-body">{title}</h2>
+      <h2 className="text-lg font-bold text-on-surface">{title}</h2>
       <button
         onClick={onClose}
-        className="flex h-11 w-11 items-center justify-center rounded-full text-pm-secondary transition-colors hover:bg-pm-surface"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-low"
         aria-label="Close"
       >
         <X className="h-4 w-4" />
@@ -870,7 +870,7 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1.5 text-sm font-medium text-pm-body">
+    <label className="flex flex-col gap-1.5 text-sm font-medium text-on-surface">
       {label}
       {children}
     </label>
@@ -902,20 +902,20 @@ function JobEventCard({
         e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className={`flex flex-col gap-2 rounded-xl border border-pm-border bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:gap-3 sm:rounded-2xl sm:p-4 ${
+      className={`flex flex-col gap-2 rounded-xl border border-outline bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:gap-3 sm:rounded-2xl sm:p-4 ${
         dragPayload ? 'cursor-grab active:cursor-grabbing' : ''
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           {job.quoteNumber && (
-            <p className="text-[10px] font-semibold uppercase text-pm-secondary">
+            <p className="text-[10px] font-semibold uppercase text-on-surface-variant">
               {job.quoteNumber}
             </p>
           )}
-          <p className="truncate text-sm font-semibold text-pm-body">{job.customerName}</p>
-          {job.title && <p className="line-clamp-1 text-xs text-pm-secondary">{job.title}</p>}
-          {job.address && <p className="line-clamp-1 text-xs text-pm-secondary">{job.address}</p>}
+          <p className="truncate text-sm font-semibold text-on-surface">{job.customerName}</p>
+          {job.title && <p className="line-clamp-1 text-xs text-on-surface-variant">{job.title}</p>}
+          {job.address && <p className="line-clamp-1 text-xs text-on-surface-variant">{job.address}</p>}
         </div>
         <span
           className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_BADGE[job.status]}`}
@@ -924,32 +924,32 @@ function JobEventCard({
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
-        <span className="max-w-full truncate rounded-full bg-pm-surface px-2.5 py-1 text-[11px] font-medium text-pm-secondary sm:text-xs">
+        <span className="max-w-full truncate rounded-full bg-surface-container-low px-2.5 py-1 text-[11px] font-medium text-on-surface-variant sm:text-xs">
           {scheduleSummary.dateLabel}
         </span>
-        <span className="rounded-full bg-pm-surface px-2.5 py-1 text-[11px] font-medium text-pm-secondary sm:text-xs">
+        <span className="rounded-full bg-surface-container-low px-2.5 py-1 text-[11px] font-medium text-on-surface-variant sm:text-xs">
           {scheduleSummary.countLabel}
         </span>
       </div>
-      {job.notes && <p className="line-clamp-2 text-xs text-pm-secondary">{job.notes}</p>}
+      {job.notes && <p className="line-clamp-2 text-xs text-on-surface-variant">{job.notes}</p>}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => onEditSchedule(job)}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-pm-border px-3 text-xs font-semibold text-pm-body transition-colors hover:bg-pm-surface"
+          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-outline px-3 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit dates
         </button>
         <Link
           href={`/jobs/${job.id}`}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-pm-teal/15 px-3 text-xs font-semibold text-pm-teal transition-colors hover:bg-pm-teal/5"
+          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-primary/15 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/5"
         >
           View job
           <ExternalLink className="h-3.5 w-3.5" />
         </Link>
         {dragPayload && (
-          <span className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-pm-surface px-3 py-2 text-[11px] font-medium text-pm-secondary sm:ml-auto sm:bg-transparent sm:px-0 sm:py-0">
+          <span className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-surface-container-low px-3 py-2 text-[11px] font-medium text-on-surface-variant sm:ml-auto sm:bg-transparent sm:px-0 sm:py-0">
             <GripHorizontal className="h-4 w-4" aria-label="Drag to move" />
             Drag day
           </span>
@@ -961,22 +961,22 @@ function JobEventCard({
 
 function GoogleEventCard({ event }: { event: CalendarGoogleEvent }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-blue-100 bg-blue-50/40 p-3 shadow-sm sm:rounded-2xl sm:p-4">
+    <div className="border-secondary/20 bg-secondary-container/30 flex flex-col gap-2 rounded-xl border p-3 shadow-sm sm:rounded-2xl sm:p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase text-blue-500">
+          <p className="text-secondary text-[10px] font-semibold uppercase">
             Google Calendar
           </p>
-          <p className="truncate text-sm font-semibold text-pm-body">{event.title}</p>
-          {event.location && <p className="line-clamp-1 text-xs text-pm-secondary">{event.location}</p>}
+          <p className="truncate text-sm font-semibold text-on-surface">{event.title}</p>
+          {event.location && <p className="line-clamp-1 text-xs text-on-surface-variant">{event.location}</p>}
           {!event.isAllDay && event.startDateTime && (
-            <p className="text-xs text-pm-secondary">
+            <p className="text-xs text-on-surface-variant">
               {formatIsoTime(event.startDateTime)}
               {event.endDateTime ? ` - ${formatIsoTime(event.endDateTime)}` : ''}
             </p>
           )}
         </div>
-        <span className="inline-flex shrink-0 items-center rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-blue-600">
+        <span className="border-secondary/20 bg-secondary-container text-secondary inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase">
           {event.isAllDay ? 'All Day' : 'Timed'}
         </span>
       </div>
@@ -985,7 +985,7 @@ function GoogleEventCard({ event }: { event: CalendarGoogleEvent }) {
           href={event.htmlLink}
           target="_blank"
           rel="noreferrer"
-          className="flex min-h-11 items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline"
+          className="text-secondary flex min-h-11 items-center gap-1.5 text-xs font-medium hover:underline"
         >
           Open in Google Calendar
           <ExternalLink className="h-3.5 w-3.5" />
@@ -1012,28 +1012,28 @@ function NativeEventCard({
         e.dataTransfer.effectAllowed = 'move';
       }}
       onClick={() => onEdit(event)}
-      className="flex w-full flex-col gap-2 rounded-xl border border-violet-100 bg-violet-50/40 p-3 text-left shadow-sm transition-shadow hover:shadow-md active:scale-[0.99] sm:rounded-2xl sm:p-4"
+      className="border-tertiary/20 bg-tertiary/10 flex w-full flex-col gap-2 rounded-xl border p-3 text-left shadow-sm transition-shadow hover:shadow-md active:scale-[0.99] sm:rounded-2xl sm:p-4"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase text-violet-500">
+          <p className="text-tertiary text-[10px] font-semibold uppercase">
             Event
           </p>
-          <p className="truncate text-sm font-semibold text-pm-body">{event.title}</p>
-          {event.location && <p className="line-clamp-1 text-xs text-pm-secondary">{event.location}</p>}
+          <p className="truncate text-sm font-semibold text-on-surface">{event.title}</p>
+          {event.location && <p className="line-clamp-1 text-xs text-on-surface-variant">{event.location}</p>}
           {!event.isAllDay && event.startTime && (
-            <p className="text-xs text-pm-secondary">
+            <p className="text-xs text-on-surface-variant">
               {formatTime(event.startTime)}
               {event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
             </p>
           )}
-          {event.notes && <p className="mt-1 line-clamp-2 text-xs text-pm-secondary">{event.notes}</p>}
+          {event.notes && <p className="mt-1 line-clamp-2 text-xs text-on-surface-variant">{event.notes}</p>}
         </div>
-        <span className="inline-flex shrink-0 items-center rounded-full border border-violet-200 bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-violet-600">
+        <span className="border-tertiary/20 bg-tertiary/10 text-tertiary inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase">
           {event.isAllDay ? 'All Day' : 'Timed'}
         </span>
       </div>
-      <span className="flex items-center gap-1.5 text-[10px] font-medium text-violet-500">
+      <span className="text-tertiary flex items-center gap-1.5 text-[10px] font-medium">
         Tap to edit
         <GripHorizontal className="h-3.5 w-3.5" />
       </span>
@@ -1222,22 +1222,22 @@ export function ScheduleCalendar({
 
   return (
     <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
-      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-pm-border bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
+      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-outline bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
         <div className="flex flex-col gap-3">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pm-secondary" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search jobs, quotes, addresses..."
-              className="h-11 w-full rounded-xl border border-pm-border bg-white pl-9 pr-10 text-sm text-pm-body outline-none transition focus:border-pm-teal focus:ring-2 focus:ring-pm-teal/10"
+              className="h-11 w-full rounded-xl border border-outline bg-white pl-9 pr-10 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-pm-secondary transition-colors hover:bg-pm-surface hover:text-pm-body"
+                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
                 aria-label="Clear search"
               >
                 <X className="h-4 w-4" />
@@ -1256,16 +1256,16 @@ export function ScheduleCalendar({
           </div>
         </div>
 
-        <div className="rounded-xl border border-pm-border bg-pm-surface/30 p-2.5 sm:hidden">
+        <div className="rounded-xl border border-outline bg-surface-container-low/30 p-2.5 sm:hidden">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase text-pm-secondary">Now showing</p>
-              <p className="mt-1 text-sm font-semibold text-pm-body">
+              <p className="text-xs font-semibold uppercase text-on-surface-variant">Now showing</p>
+              <p className="mt-1 text-sm font-semibold text-on-surface">
                 {filteredEvents.length} result{filteredEvents.length === 1 ? '' : 's'}
               </p>
             </div>
             {activeFilterCount > 0 && (
-              <span className="rounded-full border border-pm-teal/20 bg-pm-teal/10 px-2.5 py-1 text-xs font-semibold text-pm-teal">
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                 {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'}
               </span>
             )}
@@ -1279,7 +1279,7 @@ export function ScheduleCalendar({
 
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <p className="px-1 text-xs font-semibold uppercase text-pm-secondary">Show</p>
+            <p className="px-1 text-xs font-semibold uppercase text-on-surface-variant">Show</p>
             <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
               {(['all', 'jobs', 'schedule', 'google'] as SourceFilter[]).map((source) => (
                 <FilterButton
@@ -1293,7 +1293,7 @@ export function ScheduleCalendar({
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <p className="px-1 text-xs font-semibold uppercase text-pm-secondary">Job status</p>
+            <p className="px-1 text-xs font-semibold uppercase text-on-surface-variant">Job status</p>
             <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
               {(['all', 'scheduled', 'in_progress', 'completed', 'cancelled'] as StatusFilter[]).map((status) => (
                 <FilterButton
@@ -1310,15 +1310,15 @@ export function ScheduleCalendar({
       </div>
 
       {view === 'calendar' ? (
-        <div className="rounded-xl border border-pm-border bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
+        <div className="rounded-xl border border-outline bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase text-pm-secondary">Calendar month</p>
-              <h2 className="mt-1 text-lg font-bold text-pm-body">{monthLabel}</h2>
+              <p className="text-xs font-semibold uppercase text-on-surface-variant">Calendar month</p>
+              <h2 className="mt-1 text-lg font-bold text-on-surface">{monthLabel}</h2>
             </div>
             <button
               onClick={goToToday}
-              className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-pm-border px-3 text-sm font-semibold text-pm-body transition-colors hover:bg-pm-surface"
+              className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-outline px-3 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
             >
               Today
             </button>
@@ -1327,13 +1327,13 @@ export function ScheduleCalendar({
             <button
               onClick={prevMonth}
               aria-label="Previous month"
-              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
+              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-surface-container-low"
             >
-              <ChevronLeft className="h-5 w-5 text-pm-secondary" />
+              <ChevronLeft className="h-5 w-5 text-on-surface-variant" />
             </button>
             <button
               onClick={() => openAddEvent()}
-              className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-pm-teal px-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 sm:min-w-[140px] sm:px-4"
+              className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 sm:min-w-[140px] sm:px-4"
             >
               <Plus className="h-4 w-4" />
               Add event
@@ -1341,23 +1341,23 @@ export function ScheduleCalendar({
             <button
               onClick={nextMonth}
               aria-label="Next month"
-              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-pm-surface"
+              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-surface-container-low"
             >
-              <ChevronRight className="h-5 w-5 text-pm-secondary" />
+              <ChevronRight className="h-5 w-5 text-on-surface-variant" />
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 rounded-xl border border-pm-border bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:rounded-2xl sm:p-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-outline bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:rounded-2xl sm:p-4">
           <div>
-            <p className="text-xs font-semibold uppercase text-pm-secondary">Job list</p>
-            <p className="mt-1 text-sm text-pm-secondary">
+            <p className="text-xs font-semibold uppercase text-on-surface-variant">Job list</p>
+            <p className="mt-1 text-sm text-on-surface-variant">
               Search past work, check status, and jump into each job without leaving schedule.
             </p>
           </div>
           <button
             onClick={() => openAddEvent()}
-            className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-pm-teal px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
             Add event
@@ -1366,20 +1366,20 @@ export function ScheduleCalendar({
       )}
 
       {googleError && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm text-amber-800">
+        <div className="rounded-xl border border-warning/30 bg-warning-container px-4 py-3">
+          <p className="text-sm text-on-warning-container">
             Google Calendar could not be loaded. Showing Coatly jobs and events only.
           </p>
         </div>
       )}
       {dragError && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-          <p className="text-sm text-rose-700">{dragError}</p>
+        <div className="rounded-xl border border-error/30 bg-error-container px-4 py-3">
+          <p className="text-sm text-error">{dragError}</p>
         </div>
       )}
       {isMoving && (
-        <div className="rounded-xl border border-pm-border bg-pm-surface px-4 py-3">
-          <p className="text-sm text-pm-secondary">Updating schedule...</p>
+        <div className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
+          <p className="text-sm text-on-surface-variant">Updating schedule...</p>
         </div>
       )}
 
@@ -1397,19 +1397,19 @@ export function ScheduleCalendar({
           <Legend googleConnected={googleConnected} />
           {selected && (
             <section className="flex flex-col gap-3">
-              <div className="rounded-xl border border-pm-border bg-white p-3 shadow-sm sm:rounded-2xl sm:p-4">
+              <div className="rounded-xl border border-outline bg-white p-3 shadow-sm sm:rounded-2xl sm:p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase text-pm-secondary">Selected day</p>
-                    <h3 className="mt-1 text-base font-bold text-pm-body">{selectedLabel}</h3>
+                    <p className="text-xs font-semibold uppercase text-on-surface-variant">Selected day</p>
+                    <h3 className="mt-1 text-base font-bold text-on-surface">{selectedLabel}</h3>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full border border-pm-border bg-pm-surface px-2.5 py-1 text-xs font-semibold text-pm-secondary">
+                    <span className="rounded-full border border-outline bg-surface-container-low px-2.5 py-1 text-xs font-semibold text-on-surface-variant">
                       {selectedEvents.length} item{selectedEvents.length === 1 ? '' : 's'}
                     </span>
                     <button
                       onClick={() => openAddEvent(selected)}
-                      className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-pm-border px-4 text-xs font-semibold text-pm-secondary transition-colors hover:bg-pm-surface"
+                      className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-outline px-4 text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Add
@@ -1428,7 +1428,7 @@ export function ScheduleCalendar({
         </>
       ) : (
         <section className="flex flex-col gap-3">
-          <p className="text-sm text-pm-secondary">
+          <p className="text-sm text-on-surface-variant">
             {filteredEvents.length} result{filteredEvents.length === 1 ? '' : 's'}
             {sourceFilter === 'jobs' ? ' in jobs' : ''}
           </p>
@@ -1438,7 +1438,7 @@ export function ScheduleCalendar({
             <ul className="flex flex-col gap-3">
               {filteredEvents.map((event) => (
                 <li key={event.id}>
-                  <div className="mb-2 text-xs font-medium text-pm-secondary">
+                  <div className="mb-2 text-xs font-medium text-on-surface-variant">
                     {formatDateRange(event.start, event.end)}
                   </div>
                   {event.kind === 'job' ? (
@@ -1525,20 +1525,20 @@ function getChipLabel(event: DayEvent): string {
 function getChipClassName(event: DayEvent): string {
   if (event.kind === 'job') {
     const color = {
-      scheduled: 'border-pm-teal/30 bg-pm-teal/10 text-pm-teal',
-      in_progress: 'border-amber-200 bg-amber-50 text-amber-700',
-      completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-      cancelled: 'border-rose-200 bg-rose-50 text-rose-700',
+      scheduled: 'border-primary/30 bg-primary/10 text-primary',
+      in_progress: 'border-warning/30 bg-warning-container text-warning',
+      completed: 'border-success/30 bg-success-container text-success',
+      cancelled: 'border-error/30 bg-error-container text-error',
     } satisfies Record<JobStatus, string>;
 
     return color[event.job.status];
   }
 
   if (event.kind === 'native') {
-    return 'border-violet-200 bg-violet-50 text-violet-700';
+    return 'border-tertiary/20 bg-tertiary/10 text-tertiary';
   }
 
-  return 'border-blue-200 bg-blue-50 text-blue-700';
+  return 'border-secondary/20 bg-secondary-container/30 text-secondary';
 }
 
 function CalendarEventChip({
@@ -1597,11 +1597,11 @@ function CalendarGrid({
       <div className="min-w-0 pb-1">
         <div
           aria-label="Schedule calendar month"
-          className="w-full min-w-0 overflow-hidden rounded-xl border border-pm-border bg-white shadow-sm sm:rounded-2xl"
+          className="w-full min-w-0 overflow-hidden rounded-xl border border-outline bg-white shadow-sm sm:rounded-2xl"
         >
-          <div className="grid grid-cols-7 border-b border-pm-border bg-pm-surface">
+          <div className="grid grid-cols-7 border-b border-outline bg-surface-container-low">
             {DAY_HEADERS.map((d) => (
-              <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase text-pm-secondary sm:text-[11px]">
+              <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase text-on-surface-variant sm:text-[11px]">
                 {d}
               </div>
             ))}
@@ -1612,7 +1612,7 @@ function CalendarGrid({
                 return (
                   <div
                     key={`pad-${i}`}
-                    className="min-h-[96px] border-b border-r border-pm-border/40 bg-pm-surface/20 last:border-r-0 xl:min-h-[64px]"
+                    className="min-h-[96px] border-b border-r border-outline/40 bg-surface-container-low/20 last:border-r-0 xl:min-h-[64px]"
                   />
                 );
               }
@@ -1632,8 +1632,8 @@ function CalendarGrid({
                     e.preventDefault();
                     onDrop(dateStr, e.dataTransfer.getData('application/json'));
                   }}
-                  className={`group relative min-h-[190px] border-b border-r border-pm-border/40 last:border-r-0 xl:min-h-[118px] ${
-                    isSelected ? 'bg-pm-teal/5 ring-1 ring-inset ring-pm-teal/30' : 'hover:bg-pm-surface/50'
+                  className={`group relative min-h-[190px] border-b border-r border-outline/40 last:border-r-0 xl:min-h-[118px] ${
+                    isSelected ? 'bg-primary/5 ring-1 ring-inset ring-primary/30' : 'hover:bg-surface-container-low/50'
                   }`}
                 >
                   <button
@@ -1643,7 +1643,7 @@ function CalendarGrid({
                   >
                     <span
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold xl:h-7 xl:w-7 ${
-                        isToday ? 'bg-pm-teal text-white' : isSelected ? 'text-pm-teal' : 'text-pm-body'
+                        isToday ? 'bg-primary text-on-primary' : isSelected ? 'text-primary' : 'text-on-surface'
                       }`}
                     >
                       {dayNum}
@@ -1661,7 +1661,7 @@ function CalendarGrid({
                       <button
                         type="button"
                         onClick={() => onSelect(dateStr)}
-                        className="min-h-11 rounded border border-pm-border bg-white px-2 text-left text-xs font-semibold leading-tight text-pm-secondary xl:min-h-6 xl:px-1 xl:text-[10px]"
+                        className="min-h-11 rounded border border-outline bg-white px-2 text-left text-xs font-semibold leading-tight text-on-surface-variant xl:min-h-6 xl:px-1 xl:text-[10px]"
                       >
                         +{hiddenCount} more
                       </button>
@@ -1669,7 +1669,7 @@ function CalendarGrid({
                   </div>
                   <button
                     onClick={() => onAdd(dateStr)}
-                    className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-white text-pm-secondary shadow-sm ring-1 ring-pm-border transition-colors hover:text-pm-teal xl:hidden xl:group-hover:flex"
+                    className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-white text-on-surface-variant shadow-sm ring-1 ring-outline transition-colors hover:text-primary xl:hidden xl:group-hover:flex"
                     aria-label="Add schedule on this day"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -1697,8 +1697,8 @@ function EventStack({
 }) {
   if (events.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-pm-border bg-white px-6 py-8 text-center">
-        <p className="text-sm text-pm-secondary">{emptyText}</p>
+      <div className="rounded-2xl border border-dashed border-outline bg-white px-6 py-8 text-center">
+        <p className="text-sm text-on-surface-variant">{emptyText}</p>
       </div>
     );
   }
@@ -1726,11 +1726,11 @@ function EventStack({
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="rounded-2xl border border-dashed border-pm-border bg-white px-6 py-8 text-center">
-      <p className="text-sm text-pm-secondary">No matching jobs or events.</p>
+    <div className="rounded-2xl border border-dashed border-outline bg-white px-6 py-8 text-center">
+      <p className="text-sm text-on-surface-variant">No matching jobs or events.</p>
       <button
         onClick={onAdd}
-        className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-pm-teal hover:bg-pm-teal/5"
+        className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-primary hover:bg-primary/5"
       >
         Add an event
       </button>
@@ -1740,7 +1740,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 function SummaryChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full border border-pm-border bg-white px-2 py-0.5 text-[11px] font-medium text-pm-secondary sm:px-2.5 sm:py-1 sm:text-xs">
+    <span className="rounded-full border border-outline bg-white px-2 py-0.5 text-[11px] font-medium text-on-surface-variant sm:px-2.5 sm:py-1 sm:text-xs">
       {children}
     </span>
   );
@@ -1762,8 +1762,8 @@ function SegmentButton({
       aria-pressed={active}
       className={`flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors sm:gap-2 sm:px-3 sm:text-sm ${
         active
-          ? 'border-pm-teal bg-pm-teal/10 text-pm-teal'
-          : 'border-pm-border bg-white text-pm-secondary hover:bg-pm-surface'
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-outline bg-white text-on-surface-variant hover:bg-surface-container-low'
       }`}
     >
       {children}
@@ -1786,8 +1786,8 @@ function FilterButton({
       onClick={onClick}
       className={`min-h-11 min-w-0 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
         active
-          ? 'border-pm-teal bg-pm-teal/10 text-pm-teal'
-          : 'border-pm-border bg-white text-pm-secondary hover:bg-pm-surface'
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-outline bg-white text-on-surface-variant hover:bg-surface-container-low'
       }`}
     >
       {children}
@@ -1798,12 +1798,12 @@ function FilterButton({
 function Legend({ googleConnected }: { googleConnected: boolean }) {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-2 px-1">
-      <LegendDot color="bg-pm-teal" label="Scheduled" />
-      <LegendDot color="bg-amber-400" label="In Progress" />
-      <LegendDot color="bg-emerald-500" label="Completed" />
-      <LegendDot color="bg-rose-400" label="Cancelled" />
-      <LegendDot color="bg-violet-500" label="Event" />
-      {googleConnected && <LegendDot color="bg-blue-500" label="Google Calendar" />}
+      <LegendDot color="bg-primary" label="Scheduled" />
+      <LegendDot color="bg-warning" label="In Progress" />
+      <LegendDot color="bg-success" label="Completed" />
+      <LegendDot color="bg-error" label="Cancelled" />
+      <LegendDot color="bg-tertiary" label="Event" />
+      {googleConnected && <LegendDot color="bg-secondary" label="Google Calendar" />}
     </div>
   );
 }
@@ -1812,7 +1812,7 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className={`h-2 w-2 rounded-full ${color}`} />
-      <span className="text-xs text-pm-secondary">{label}</span>
+      <span className="text-xs text-on-surface-variant">{label}</span>
     </div>
   );
 }

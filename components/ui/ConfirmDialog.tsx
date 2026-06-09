@@ -64,28 +64,28 @@ export function ConfirmDialog({
         <div>
           <h2
             id="confirm-dialog-title"
-            className="text-lg font-semibold text-pm-body"
+            className="text-lg font-semibold text-on-surface"
           >
             {title}
           </h2>
-          <p className="mt-1.5 text-sm text-pm-secondary leading-relaxed">{message}</p>
+          <p className="mt-1.5 text-sm text-on-surface-variant leading-relaxed">{message}</p>
         </div>
 
         <div className="flex gap-3 pt-1">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 h-12 rounded-xl border border-pm-border bg-white text-sm font-medium text-pm-body hover:bg-pm-surface active:bg-pm-surface transition-colors"
+            className="flex-1 h-12 rounded-xl border border-outline bg-white text-sm font-medium text-on-surface hover:bg-surface-container-low active:bg-surface-container-low transition-colors"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`flex-1 h-12 rounded-xl text-sm font-semibold text-white transition-colors ${
+            className={`flex-1 h-12 rounded-xl text-sm font-semibold transition-colors ${
               destructive
-                ? 'bg-red-600 hover:bg-red-700 active:bg-red-800'
-                : 'bg-pm-teal hover:bg-pm-teal-hover active:bg-pm-teal-hover'
+                ? 'bg-error text-on-error hover:bg-error/90 active:bg-error/90'
+                : 'bg-primary text-on-primary hover:bg-primary/90 active:bg-primary/90'
             }`}
           >
             {confirmLabel}

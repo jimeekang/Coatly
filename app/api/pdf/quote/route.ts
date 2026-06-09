@@ -12,12 +12,12 @@ import {
   type QuoteCoatingType,
   type QuoteEstimateItemCategory,
   type QuoteSurfaceType,
-} from '@/lib/quotes';
+} from '@/modules/quotes/domain/quotes';
 import {
   mapQuoteClauseItems,
   mapQuoteScopeSections,
-} from '@/lib/quote-form-structure';
-import { getBusinessDocumentBranding } from '@/lib/businesses';
+} from '@/modules/quotes/domain/quote-form-structure';
+import { getBusinessDocumentBranding } from '@/modules/settings/domain/businesses';
 import { QuoteTemplate } from '@/lib/pdf/quote-template';
 
 const QUOTE_CUSTOMER_SELECT =

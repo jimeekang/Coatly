@@ -4,7 +4,11 @@
 
 ## Product Shape
 
-Coatly는 호주 소규모 페인터를 위한 모바일 우선 SaaS입니다. 고객 관리, 견적, PDF, 청구, 일정, 자재/서비스 카탈로그, Stripe 구독, **AI Quote Writer (v1 wedge)**, Google Calendar 연동을 한 워크스페이스에서 처리합니다. v1 wedge 자세한 건 [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md).
+Coatly는 호주 소규모 painter/tradie를 위한 모바일 우선 SaaS입니다. v1 wedge는 **Excel quote workflow replacement**입니다. 기존 Excel 가격표를 참고해 Coatly 앱 안에서 단순 price book을 세팅하고, 고객 관리, 견적 작성, PDF, 이메일 발송, follow-up, 청구, 일정 전환을 한 워크스페이스에서 처리합니다.
+
+v1은 arbitrary Excel parser가 아닙니다. Excel 파일은 reference 또는 선택적 bulk input이고, 저장 후 quote 계산은 Coatly price book data를 기준으로 합니다. 단순 가격표 세팅 기준은 [`docs/features/quote/PRICE-BOOK-TEMPLATE.md`](./docs/features/quote/PRICE-BOOK-TEMPLATE.md)에 둡니다.
+
+AI Quote Writer, 사진 분석, damage 판별은 현재 핵심 workflow가 아닙니다. core quote workflow가 실제 Excel/PDF/email 업무를 완전히 대체하고 릴리즈된 뒤, AI는 설명 작성과 follow-up 문구 보조로만 검토합니다. 자세한 건 [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md).
 
 ## Stack {#stack}
 
@@ -15,7 +19,7 @@ Coatly는 호주 소규모 페인터를 위한 모바일 우선 SaaS입니다. �
 | Data | Supabase Postgres, Auth, RLS, Storage |
 | Payments | Stripe Checkout, Portal, Webhook |
 | PDF/Email | `@react-pdf/renderer`, Resend |
-| AI | Alibaba Cloud / Qwen `qwen3-vl-flash` for v1 AI Quote Writer, photo analysis, Today Assistant, and Follow-up Writer |
+| AI | Post-core workflow only. Provider adapter code may exist, but AI/photo analysis is deferred until quote workflow replacement is released and verified |
 | Calendar | Google Calendar OAuth + Calendar API |
 | Deploy | Vercel serverless |
 
@@ -34,13 +38,29 @@ Coatly는 호주 소규모 페인터를 위한 모바일 우선 SaaS입니다. �
 | `app/(auth)/` | 로그인, 가입, 비밀번호 재설정 |
 | `app/(onboarding)/` | 사업자 프로필/ABN/로고 온보딩 |
 | `app/(dashboard)/` | dashboard, customers, quotes, invoices, schedule, settings |
-| `app/actions/` | 서버 액션: CRUD, 이메일, AI, jobs, schedule |
+| `app/actions/` | 공통 서버 액션: auth, AI, schedule, Google Calendar |
 | `app/api/` | ABN, PDF, Stripe, cron, Google Calendar OAuth |
 | `app/q/[token]/` | 고객용 공개 견적 검토/승인/예약 |
-| `components/` | 도메인별 React 컴포넌트 |
-| `lib/` | 계산, Supabase, Stripe, email, calendar, AI, validators |
+| `modules/` | DDD-lite 기능 모듈: domain, application, infrastructure, ui |
+| `components/` | 공통/shared React 컴포넌트와 앱 shell |
+| `lib/` | Supabase, Stripe, email, calendar, AI, PDF, validators 등 shared integration |
 | `supabase/migrations/` | 원격 DB 변경 이력 |
 | `docs/` | 기능/보안/신뢰성/로드맵 문서 |
+
+## Feature Modules
+
+Coatly uses a DDD-lite module layout for reusable dashboard features:
+
+```text
+modules/<feature>/
+  domain/          business rules, calculations, types, pure tests
+  application/     server actions and workflow orchestration
+  infrastructure/  API/repository adapters when a feature needs them
+  ui/              feature-owned React components and component tests
+  index.ts         feature manifest and public module types
+```
+
+Current feature modules are `materials`, `customers`, `quotes`, `invoices`, `jobs`, `price-rates`, and `settings`. Route files in `app/` stay thin and import from modules.
 
 ## Core Data Model
 
@@ -69,7 +89,7 @@ Coatly는 호주 소규모 페인터를 위한 모바일 우선 SaaS입니다. �
 
 ### Quote
 
-사용자는 manual/room/day-rate/detailed quick 방식으로 견적을 작성합니다. 견적은 `draft → sent → approved/rejected/expired`로 이동하며 PDF 생성, Resend 발송, 공개 `/q/[token]` 승인, 서명, 선택 항목, 예약 날짜 선택을 지원합니다.
+사용자는 앱 안에서 직접 세팅한 price book 또는 manual/room/day-rate/detailed quick 방식으로 견적을 작성합니다. 견적은 `draft → sent → approved/rejected/expired`로 이동하며 PDF 생성, Resend 발송, 공개 `/q/[token]` 승인, 서명, 선택 항목, 예약 날짜 선택을 지원합니다.
 
 ### Invoice
 
@@ -81,7 +101,13 @@ Schedule 화면은 jobs, internal events, Google Calendar events를 통합해 �
 
 ### AI
 
-Pro 사용자는 dashboard workspace assistant와 quote 생성 화면의 AI draft panel을 사용할 수 있습니다. 감사/사용량 추적은 `ai_usage_events`에 저장하는 방향입니다.
+AI surfaces are not the v1 release gate. Existing Workspace Assistant / AI draft code is treated as dormant or experimental until the core quote workflow passes release criteria: simple in-app price book setup, real price book validation, quote PDF/email send, follow-up status, invoice conversion, schedule conversion, tests, build, and preview/prod smoke.
+
+Post-core AI rules:
+
+- AI may draft customer-facing quote explanations, assumptions, exclusions, and follow-up messages.
+- AI must not set price, rate, GST, total, schedule, invoice status, or send messages automatically.
+- Photo analysis must not infer hidden damage, exact sqm/lm, or price. It can only become a user-reviewed hint after the manual workflow is stable.
 
 ## API Routes
 

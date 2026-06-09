@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import PricingSection from '@/components/settings/PricingSection';
+import PricingSection from '@/modules/settings/ui/PricingSection';
 import { APP_NAME } from '@/config/constants';
 import { buildSubscriptionSnapshot } from '@/lib/subscription/access';
 import {
   inferOnboardingCompleted,
-} from '@/lib/profile/onboarding';
+} from '@/modules/settings/domain/onboarding';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripeClient } from '@/lib/stripe/client';
 import { syncSubscription } from '@/lib/stripe/subscription-sync';
@@ -53,7 +53,7 @@ function getStatusMessage(subscriptionState?: string) {
     return {
       title: 'Checkout complete',
       body: 'We are confirming your subscription with Stripe now. If this page does not move you into the dashboard within a few seconds, refresh once.',
-      tone: 'border-pm-teal-pale bg-pm-teal-light text-pm-teal-hover',
+      tone: 'border-primary-fixed bg-success-container text-primary/90',
     };
   }
 
@@ -61,7 +61,7 @@ function getStatusMessage(subscriptionState?: string) {
     return {
       title: 'Checkout canceled',
       body: `No charge was made. Pick a plan when you are ready to start using ${APP_NAME}.`,
-      tone: 'border-pm-border bg-white text-pm-secondary',
+      tone: 'border-outline bg-white text-on-surface-variant',
     };
   }
 
@@ -118,13 +118,13 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-center gap-8">
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           <section className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_60px_rgba(22,42,42,0.08)] backdrop-blur md:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-pm-teal-mid">
+            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary-container">
               Activate {APP_NAME}
             </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-pm-body md:text-4xl">
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-on-surface md:text-4xl">
               Finish checkout before using the quoting workspace.
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-pm-secondary md:text-base">
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-on-surface-variant md:text-base">
               Your account is ready, but quotes, customers, invoices, AI tools, and dashboard
               workflows stay locked until a plan is active.
             </p>
@@ -137,23 +137,23 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
             )}
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-pm-border bg-pm-surface px-4 py-4">
-                <p className="text-sm font-semibold text-pm-body">What unlocks after payment</p>
-                <ul className="mt-3 space-y-2 text-sm text-pm-secondary">
+              <div className="rounded-2xl border border-outline bg-surface-container-low px-4 py-4">
+                <p className="text-sm font-semibold text-on-surface">What unlocks after payment</p>
+                <ul className="mt-3 space-y-2 text-sm text-on-surface-variant">
                   <li>Quotes, customers, and invoices</li>
                   <li>PDF generation and billing workflows</li>
                   <li>Starter or Pro feature set based on your plan</li>
                 </ul>
               </div>
 
-              <div className="rounded-2xl border border-pm-border bg-pm-surface px-4 py-4">
-                <p className="text-sm font-semibold text-pm-body">Need to update business details?</p>
-                <p className="mt-3 text-sm text-pm-secondary">
+              <div className="rounded-2xl border border-outline bg-surface-container-low px-4 py-4">
+                <p className="text-sm font-semibold text-on-surface">Need to update business details?</p>
+                <p className="mt-3 text-sm text-on-surface-variant">
                   You can still finish setup before paying.
                 </p>
                 <Link
                   href="/onboarding"
-                  className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-pm-border px-4 py-2.5 text-sm font-semibold text-pm-body transition-colors hover:bg-white"
+                  className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-white"
                 >
                   Back to onboarding
                 </Link>

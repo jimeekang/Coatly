@@ -23,13 +23,13 @@ export function ErrorPage({
     <div className="flex min-h-[60dvh] flex-col items-center justify-center px-6 text-center">
       {/* 코드 */}
       {code && (
-        <p className="mb-2 text-6xl font-extrabold tracking-tight text-pm-teal opacity-20 select-none">
+        <p className="mb-2 text-6xl font-extrabold tracking-tight text-primary opacity-20 select-none">
           {code}
         </p>
       )}
 
       {/* 아이콘 */}
-      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2 border-pm-border bg-pm-surface text-pm-secondary">
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2 border-outline bg-surface-container-low text-on-surface-variant">
         {code === 404 || code === '404' ? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -65,15 +65,15 @@ export function ErrorPage({
         )}
       </div>
 
-      <h1 className="mb-2 text-xl font-bold text-pm-body">{title}</h1>
-      <p className="mb-8 max-w-xs text-sm leading-relaxed text-pm-secondary">{description}</p>
+      <h1 className="mb-2 text-xl font-bold text-on-surface">{title}</h1>
+      <p className="mb-8 max-w-xs text-sm leading-relaxed text-on-surface-variant">{description}</p>
 
       <div className="flex flex-col items-center gap-3 sm:flex-row">
         {onRetry && (
           <button
             type="button"
             onClick={onRetry}
-            className="h-12 rounded-xl bg-pm-teal px-6 text-base font-semibold text-white transition-colors hover:bg-pm-teal-hover active:bg-pm-teal-hover"
+            className="h-12 rounded-xl bg-primary px-6 text-base font-semibold text-on-primary transition-colors hover:bg-primary/90 active:bg-primary/90"
           >
             Try again
           </button>
@@ -81,7 +81,7 @@ export function ErrorPage({
         {showHome && (
           <Link
             href="/dashboard"
-            className="h-12 rounded-xl border border-pm-border bg-white px-6 text-base font-medium text-pm-body transition-colors hover:bg-pm-surface active:bg-pm-surface inline-flex items-center"
+            className="h-12 rounded-xl border border-outline bg-white px-6 text-base font-medium text-on-surface transition-colors hover:bg-surface-container-low active:bg-surface-container-low inline-flex items-center"
           >
             Back to Dashboard
           </Link>

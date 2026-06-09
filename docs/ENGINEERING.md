@@ -41,11 +41,22 @@ Codex가 담당하지 않는 것:
 
 1. DB schema/RLS/RPC 변경
 2. Supabase TypeScript types 업데이트
-3. Server Action 또는 API route
-4. Domain library (`lib/`)
-5. React component (`components/`)
-6. Page wiring (`app/(dashboard)/`)
-7. Tests
+3. Feature module domain (`modules/<feature>/domain/`)
+4. Feature module application/server action (`modules/<feature>/application/`)
+5. Infrastructure adapter (`modules/<feature>/infrastructure/`) 또는 API route
+6. Feature UI (`modules/<feature>/ui/`) 또는 shared component (`components/`)
+7. Page wiring (`app/(dashboard)/`)
+8. Tests
+
+## DDD-Lite Module Rules
+
+- Dashboard 기능은 기본적으로 `modules/<feature>/` 아래에서 소유합니다.
+- `app/(dashboard)/`와 `app/q/`는 route/page 조립만 담당하고 업무 규칙을 두지 않습니다.
+- `domain/`은 가능한 한 순수 함수와 타입을 두고 Supabase/Next 의존을 피합니다.
+- `application/`은 server action과 workflow orchestration을 둡니다.
+- `infrastructure/`는 API/repository/외부 adapter가 필요할 때만 둡니다.
+- `ui/`는 feature-owned 컴포넌트를 둡니다. 재사용 범위가 앱 전체이면 `components/shared`, `components/forms`, `components/layout`에 둡니다.
+- shared integration은 `lib/supabase`, `lib/stripe`, `lib/email`, `lib/pdf`, `lib/ai`, `lib/google-calendar`에 유지합니다.
 
 ## Verification
 
@@ -64,6 +75,19 @@ npm run db:types
 ```
 
 필요 시 변경 파일 중심으로 더 좁은 테스트를 먼저 돌린 뒤 전체 검증으로 마무리합니다.
+
+## Security & Release Gate
+
+대규모 리팩터링, DB 변경, public token route, billing/webhook, cron, AI 기능을 배포하기 전에는 아래 순서로 확인합니다.
+
+1. `git status --short`로 의도한 변경 범위와 사용자 변경을 분리합니다.
+2. Supabase migration history와 로컬 migration 파일이 일치하는지 확인합니다.
+3. public schema table RLS, security definer function execute 권한, public view 권한을 점검합니다.
+4. `.env.example`, `.env.local`, Vercel preview/prod env var 이름이 맞는지 비교합니다.
+5. public route(`/q/[token]`, public invoice PDF)는 invalid/expired/mismatched token regression을 포함합니다.
+6. `/q/[token]` rate limit은 Vercel serverless에서 공유되는 durable store 기반이어야 합니다.
+7. `npm run lint`, `npm run test:run`, `npm run build`를 통과시킵니다.
+8. Vercel preview deployment에서 auth, customer, quote, PDF, invoice, schedule, public quote smoke를 확인합니다.
 
 ## Coding Checklist
 
@@ -90,9 +114,10 @@ npm run db:types
 
 1. `git status --short`로 사용자 변경과 Codex 변경을 분리합니다.
 2. lint/test/build 또는 요청된 검증을 실행합니다.
-3. 의도적인 commit message를 작성합니다.
-4. `git push` 또는 Vercel 배포 명령을 실행합니다.
-5. 배포 URL, 검증 결과, 실패 시 원인을 보고합니다.
+3. DB/security 영향이 있으면 [`SECURITY.md`](./SECURITY.md)의 Active Security Findings & Fix Plan을 갱신합니다.
+4. 의도적인 commit message를 작성합니다.
+5. `git push` 또는 Vercel 배포 명령을 실행합니다.
+6. 배포 URL, 검증 결과, 실패 시 원인을 보고합니다.
 
 주의:
 - 사용자 변경을 되돌리지 않습니다.

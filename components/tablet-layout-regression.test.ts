@@ -17,8 +17,8 @@ describe('tablet layout regressions', () => {
   });
 
   it('keeps complex form sidebars off tablet widths', () => {
-    const quoteForm = readSource('components/quotes/QuoteForm.tsx');
-    const invoiceForm = readSource('components/invoices/InvoiceForm.tsx');
+    const quoteForm = readSource('modules/quotes/ui/QuoteForm.tsx');
+    const invoiceForm = readSource('modules/invoices/ui/InvoiceForm.tsx');
 
     expect(quoteForm).toContain('xl:grid-cols-[minmax(0,1fr)_20rem]');
     expect(quoteForm).toContain('xl:hidden');
@@ -43,8 +43,8 @@ describe('tablet layout regressions', () => {
 
   it('does not split detail pages into cramped tablet sidebars', () => {
     const quoteDetail = readSource('app/(dashboard)/quotes/[id]/page.tsx');
-    const jobDetail = readSource('components/jobs/JobDetail.tsx');
-    const invoiceDetail = readSource('components/invoices/InvoiceDetail.tsx');
+    const jobDetail = readSource('modules/jobs/ui/JobDetail.tsx');
+    const invoiceDetail = readSource('modules/invoices/ui/InvoiceDetail.tsx');
     const customerDetailPage = readSource('app/(dashboard)/customers/[id]/page.tsx');
 
     expect(quoteDetail).toContain('xl:grid-cols-[2fr_1fr]');
@@ -57,7 +57,7 @@ describe('tablet layout regressions', () => {
 
   it('keeps form controls and modal shells tablet-safe for keyboard and Safari viewport changes', () => {
     const formField = readSource('components/forms/FormField.tsx');
-    const quoteForm = readSource('components/quotes/QuoteForm.tsx');
+    const quoteForm = readSource('modules/quotes/ui/QuoteForm.tsx');
 
     expect(formField).toContain('scroll-mb-40');
     expect(formField).toContain('md:scroll-mb-32');

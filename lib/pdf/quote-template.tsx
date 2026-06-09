@@ -13,7 +13,7 @@ import {
   calculateDepositCents,
   groupQuoteLineItemsByCategory,
   type QuoteDetail,
-} from '@/lib/quotes';
+} from '@/modules/quotes/domain/quotes';
 import { formatABN, formatAUD, formatDate } from '@/utils/format';
 
 const styles = StyleSheet.create({

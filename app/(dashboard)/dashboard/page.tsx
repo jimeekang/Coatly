@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { WorkspaceAssistant } from '@/components/dashboard/WorkspaceAssistant';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
-import { getInvoiceQuoteOptions, resolveInvoiceStatus } from '@/lib/invoices';
+import { getInvoiceQuoteOptions, resolveInvoiceStatus } from '@/modules/invoices/domain/invoices';
 import { createServerClient } from '@/lib/supabase/server';
 import { getSubscriptionSnapshotForCurrentUser, requireCurrentUser } from '@/lib/supabase/request-context';
 import { formatAUD } from '@/utils/format';

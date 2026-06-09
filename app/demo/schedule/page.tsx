@@ -79,9 +79,9 @@ const DEMO_GOOGLE_EVENTS: CalendarGoogleEvent[] = [
 export default function DemoSchedulePage() {
   return (
     <div className="mx-auto max-w-md px-4 py-8">
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <p className="text-xs font-semibold text-amber-700">DEMO MODE — no auth required</p>
-        <p className="mt-0.5 text-xs text-amber-600">
+      <div className="mb-6 rounded-xl border border-warning/30 bg-warning-container px-4 py-3">
+        <p className="text-xs font-semibold text-on-warning-container">DEMO MODE — no auth required</p>
+        <p className="mt-0.5 text-xs text-on-warning-container">
           Click a job card to navigate to <code>/jobs?jobId=demo-job-1</code> etc.
         </p>
       </div>

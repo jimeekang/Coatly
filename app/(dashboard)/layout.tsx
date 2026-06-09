@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { inferOnboardingCompleted } from '@/lib/profile/onboarding';
+import { inferOnboardingCompleted } from '@/modules/settings/domain/onboarding';
 import DashboardSidebar from '@/components/dashboard/Sidebar';
 import {
   getOnboardingProfileForCurrentUser,
