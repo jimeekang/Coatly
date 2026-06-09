@@ -330,12 +330,16 @@ error: 정리 완료되어 새 위반을 허용하지 않는 영역
     - public token 기반 접근과 기존 legacy customer snapshot fallback 동작을 유지
     - `actions.ts`는 약 1,316줄에서 약 1,218줄로 축소
     - `npx tsc --noEmit --pretty false`, `npm run lint`, quote/price-rates 관련 테스트, 전체 테스트, production build 통과
+12. `modules/quotes/application/quote-pdf-data-service.ts`
+    - quote PDF route 안의 quote/business/logo data loading을 quote application service와 infrastructure repository로 이동
+    - `app/api/pdf/quote/route.ts`는 request parameter 검증, PDF rendering, HTTP response 생성만 담당하도록 축소
+    - private quote id 접근과 public token 접근의 인증/조회 동작을 유지
+    - `app/api/pdf/quote/route.ts`는 약 307줄에서 66줄로 축소
+    - `npx tsc --noEmit --pretty false`, `npm run lint`, PDF/quote 관련 테스트, 전체 테스트, production build 통과
 
 다음 후보:
 
-1. `app/api/pdf/quote/route.ts`
-   - quote PDF data loader를 quotes application/infrastructure로 이동
-2. Cross-feature UI 호출
+1. Cross-feature UI 호출
    - quote UI에서 jobs action을 직접 호출하는 흐름을 page/application 조립으로 이동
-3. Legacy fallback
+2. Legacy fallback
    - DB baseline이 확정된 뒤 `*_LEGACY`, missing-column fallback을 제거

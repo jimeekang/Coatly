@@ -404,6 +404,65 @@ export async function getHydratedQuoteDetailForUser(
   };
 }
 
+export async function getHydratedQuoteDetailByPublicTokenForPdf(
+  supabase: QuoteDataClient,
+  token: string
+): Promise<{ data: QuoteDetail | null; error: string | null }> {
+  const quoteResult = await supabase
+    .from('quotes')
+    .select(QUOTE_DETAIL_SELECT)
+    .eq('public_share_token', token)
+    .single();
+  let quote = quoteResult.data as QuoteDetailRow | null;
+  let quoteError = quoteResult.error;
+
+  if (
+    quoteError &&
+    isMissingQuoteCustomerSnapshotColumnError(quoteError.message)
+  ) {
+    const snapshotLegacyResult = await supabase
+      .from('quotes')
+      .select(QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT)
+      .eq('public_share_token', token)
+      .single();
+
+    quote = snapshotLegacyResult.data as QuoteDetailRow | null;
+    quoteError = snapshotLegacyResult.error;
+  }
+
+  if (quoteError && isMissingPublicShareTokenColumnError(quoteError.message)) {
+    return {
+      data: null,
+      error:
+        'Public quote sharing is not available until the latest database migration is applied.',
+    };
+  }
+
+  if (quoteError || !quote) {
+    return { data: null, error: quoteError?.message ?? 'Quote not found.' };
+  }
+
+  const relationsResult = await loadQuoteRelations(supabase, quote.id);
+
+  if (relationsResult.error || !relationsResult.data) {
+    return {
+      data: null,
+      error: relationsResult.error ?? 'Quote details could not be loaded.',
+    };
+  }
+
+  return {
+    data: mapHydratedQuoteDetail(
+      {
+        ...quote,
+        linked_invoice_count: 0,
+      },
+      relationsResult.data
+    ),
+    error: null,
+  };
+}
+
 export async function getHydratedPublicQuoteDetailByToken(
   supabase: QuoteDataClient,
   token: string
