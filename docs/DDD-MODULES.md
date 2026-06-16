@@ -336,10 +336,13 @@ error: 정리 완료되어 새 위반을 허용하지 않는 영역
     - private quote id 접근과 public token 접근의 인증/조회 동작을 유지
     - `app/api/pdf/quote/route.ts`는 약 307줄에서 66줄로 축소
     - `npx tsc --noEmit --pretty false`, `npm run lint`, PDF/quote 관련 테스트, 전체 테스트, production build 통과
+13. Cross-feature UI 호출
+    - `modules/quotes/ui/QuoteActions.tsx`가 jobs application action을 직접 import하지 않고, `app/(dashboard)/quotes/[id]/page.tsx`에서 주입받은 `convertQuoteToJobAction`을 호출하도록 변경
+    - `modules/quotes/ui/public/PublicDatePickerStep.tsx`가 jobs application action을 직접 import하지 않고, `app/q/[token]/page.tsx`에서 주입받은 availability/booking action을 호출하도록 변경
+    - quote UI 테스트는 jobs 모듈 mock 대신 action prop stub으로 UI 동작을 검증하도록 정리
+    - `npx tsc --noEmit --pretty false`, `npm run lint`, quote/public quote 관련 테스트, 전체 테스트, production build 통과
 
 다음 후보:
 
-1. Cross-feature UI 호출
-   - quote UI에서 jobs action을 직접 호출하는 흐름을 page/application 조립으로 이동
-2. Legacy fallback
+1. Legacy fallback
    - DB baseline이 확정된 뒤 `*_LEGACY`, missing-column fallback을 제거

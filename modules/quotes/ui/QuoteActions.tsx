@@ -4,8 +4,13 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { approveQuote, duplicateQuote } from '@/modules/quotes/application/actions';
-import { createJobFromQuote } from '@/modules/jobs/application/actions';
 import type { QuoteStatus } from '@/modules/quotes/domain/quotes';
+
+export type ConvertQuoteToJobAction = (quoteId: string) => Promise<{
+  error: string | null;
+  jobId: string | null;
+  existing: boolean;
+}>;
 
 interface Props {
   quoteId: string;
@@ -13,6 +18,7 @@ interface Props {
   status: QuoteStatus;
   publicQuoteUrl: string | null;
   hasLinkedInvoices?: boolean;
+  convertQuoteToJobAction: ConvertQuoteToJobAction;
 }
 
 function SpinnerIcon() {
@@ -46,6 +52,7 @@ export function QuoteActions({
   status,
   publicQuoteUrl,
   hasLinkedInvoices = false,
+  convertQuoteToJobAction,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +74,7 @@ export function QuoteActions({
   function handleConvertToJob() {
     setError(null);
     startJob(async () => {
-      const result = await createJobFromQuote(quoteId);
+      const result = await convertQuoteToJobAction(quoteId);
       if (result.error) {
         setError(result.error);
       } else {
@@ -107,7 +114,7 @@ export function QuoteActions({
         }
       }
 
-      const jobResult = await createJobFromQuote(quoteId);
+      const jobResult = await convertQuoteToJobAction(quoteId);
       if (jobResult.error) {
         setError(jobResult.error);
         return;

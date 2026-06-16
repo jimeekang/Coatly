@@ -6,7 +6,12 @@ import { formatAUD, formatDate } from '@/utils/format';
 import type { PublicQuoteDetail } from '@/modules/quotes/domain/quotes';
 import { PublicOptionalItems } from './PublicOptionalItems';
 import { PublicApprovalForm } from './PublicApprovalForm';
-import { PublicDatePickerStep } from './PublicDatePickerStep';
+import {
+  PublicDatePickerStep,
+  type BookJobFromPublicQuoteAction,
+  type GetAvailableDatesAction,
+  type PublicDateAvailabilityResult,
+} from './PublicDatePickerStep';
 import {
   QUOTE_COATING_LABELS,
   QUOTE_STATUS_LABELS,
@@ -27,13 +32,9 @@ interface PublicQuoteClientProps {
   token: string;
   quote: PublicQuoteDetail;
   business: Business | null;
-  bookingAvailability?: {
-    blockedDates: string[];
-    workingDays: number;
-    error: string | null;
-    availabilityStatus?: 'ready' | 'degraded' | 'unavailable';
-    availabilityMessage?: string | null;
-  } | null;
+  bookingAvailability?: PublicDateAvailabilityResult | null;
+  getAvailableDatesAction: GetAvailableDatesAction;
+  bookJobFromPublicQuoteAction: BookJobFromPublicQuoteAction;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -238,6 +239,8 @@ export function PublicQuoteClient({
   quote,
   business,
   bookingAvailability = null,
+  getAvailableDatesAction,
+  bookJobFromPublicQuoteAction,
 }: PublicQuoteClientProps) {
   const includedLineItems = quote.line_items.filter(
     (item) => !item.is_optional
@@ -729,6 +732,8 @@ export function PublicQuoteClient({
                   contractorName={business?.name ?? null}
                   contractorPhone={business?.phone ?? null}
                   contractorEmail={business?.email ?? null}
+                  getAvailableDatesAction={getAvailableDatesAction}
+                  bookJobFromPublicQuoteAction={bookJobFromPublicQuoteAction}
                 />
               </div>
             </SectionCard>

@@ -23,10 +23,6 @@ vi.mock('@/modules/quotes/application/actions', () => ({
   duplicateQuote: duplicateQuoteMock,
 }));
 
-vi.mock('@/modules/jobs/application/actions', () => ({
-  createJobFromQuote: createJobFromQuoteMock,
-}));
-
 describe('QuoteActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,6 +44,7 @@ describe('QuoteActions', () => {
         quoteNumber="QUO-0010"
         status="draft"
         publicQuoteUrl={null}
+        convertQuoteToJobAction={createJobFromQuoteMock}
       />
     );
 
@@ -66,6 +63,7 @@ describe('QuoteActions', () => {
         quoteNumber="QUO-0010"
         status="sent"
         publicQuoteUrl={null}
+        convertQuoteToJobAction={createJobFromQuoteMock}
       />
     );
 
@@ -86,6 +84,7 @@ describe('QuoteActions', () => {
         quoteNumber="QUO-0011"
         status="sent"
         publicQuoteUrl={null}
+        convertQuoteToJobAction={createJobFromQuoteMock}
       />
     );
 

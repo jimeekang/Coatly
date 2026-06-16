@@ -6,6 +6,7 @@ import {
   setQuoteOptionalLineItemSelection,
 } from '@/modules/quotes/application/actions';
 import { getLinkedInvoicesForQuote } from '@/modules/invoices/application/actions';
+import { createJobFromQuote } from '@/modules/jobs/application/actions';
 import { APP_URL } from '@/config/constants';
 import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from '@/modules/quotes/domain/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
@@ -598,6 +599,7 @@ export default async function QuoteDetailPage({
               status={quote.status}
               publicQuoteUrl={publicQuoteUrl}
               hasLinkedInvoices={quote.has_linked_invoices}
+              convertQuoteToJobAction={createJobFromQuote}
             />
           </div>
         </>

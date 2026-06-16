@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
-import { getAvailableDatesForToken } from '@/modules/jobs/application/actions';
+import {
+  bookJobFromPublicQuote,
+  getAvailableDatesForToken,
+} from '@/modules/jobs/application/actions';
 import { getPublicQuoteByToken } from '@/modules/quotes/application/actions';
 import { PublicQuoteClient } from '@/modules/quotes/ui/public/PublicQuoteClient';
 
@@ -43,6 +46,8 @@ export default async function PublicQuotePage({
         quote={data.quote}
         business={data.business}
         bookingAvailability={bookingAvailability}
+        getAvailableDatesAction={getAvailableDatesForToken}
+        bookJobFromPublicQuoteAction={bookJobFromPublicQuote}
       />
     </main>
   );

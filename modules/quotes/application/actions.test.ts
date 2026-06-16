@@ -3615,7 +3615,7 @@ describe('public quote access', () => {
                 data: {
                   id: 'quote-public-1',
                   status: 'sent',
-                  valid_until: '2026-06-10',
+                  valid_until: '2099-06-10',
                   subtotal_cents: 68000,
                   discount_cents: 0,
                   manual_adjustment_cents: 0,
@@ -3676,7 +3676,7 @@ describe('public quote access', () => {
                 data: {
                   id: 'quote-public-1',
                   status: 'sent',
-                  valid_until: '2026-06-10',
+                  valid_until: '2099-06-10',
                   subtotal_cents: 68000,
                   discount_cents: 0,
                   manual_adjustment_cents: 0,

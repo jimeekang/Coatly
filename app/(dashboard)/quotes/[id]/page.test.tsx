@@ -25,6 +25,10 @@ vi.mock('@/modules/invoices/application/actions', () => ({
   getLinkedInvoicesForQuote: getLinkedInvoicesForQuoteMock,
 }));
 
+vi.mock('@/modules/jobs/application/actions', () => ({
+  createJobFromQuote: vi.fn(),
+}));
+
 vi.mock('@/modules/quotes/application/actions', () => ({
   getQuote: getQuoteMock,
   setQuoteOptionalLineItemSelection: vi.fn(),

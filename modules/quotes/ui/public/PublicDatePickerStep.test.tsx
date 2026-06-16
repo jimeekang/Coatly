@@ -2,42 +2,35 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
-// Mock server actions
+// Action test doubles
 // ---------------------------------------------------------------------------
 const { getAvailableDatesForTokenMock, bookJobFromPublicQuoteMock } = vi.hoisted(() => ({
   getAvailableDatesForTokenMock: vi.fn(),
   bookJobFromPublicQuoteMock: vi.fn(),
 }));
 
-vi.mock('@/modules/jobs/application/actions', () => ({
-  getAvailableDatesForToken: getAvailableDatesForTokenMock,
-  bookJobFromPublicQuote: bookJobFromPublicQuoteMock,
-}));
-
 // ---------------------------------------------------------------------------
-// Import component under test AFTER mocks are set up
+// Import component under test
 // ---------------------------------------------------------------------------
-import { PublicDatePickerStep } from './PublicDatePickerStep';
+import {
+  PublicDatePickerStep,
+  type PublicDatePickerStepProps,
+} from './PublicDatePickerStep';
 
 // ---------------------------------------------------------------------------
 // Shared props factory
 // ---------------------------------------------------------------------------
-interface PublicDatePickerStepProps {
-  token: string;
-  workingDays: number;
-  customerName: string;
-  initialBlockedDates?: string[];
-  initialWorkingDays?: number;
-  initialLoadError?: string | null;
-  initialAvailabilityStatus?: 'ready' | 'degraded' | 'unavailable';
-  initialAvailabilityMessage?: string | null;
-  contractorName?: string | null;
-  contractorPhone?: string | null;
-  contractorEmail?: string | null;
-}
-
-function renderStep(props: PublicDatePickerStepProps = { token: 'test-token', workingDays: 1, customerName: 'Test Customer' }) {
-  return render(<PublicDatePickerStep {...props} />);
+function renderStep(props: Partial<PublicDatePickerStepProps> = {}) {
+  return render(
+    <PublicDatePickerStep
+      token="test-token"
+      workingDays={1}
+      customerName="Test Customer"
+      getAvailableDatesAction={getAvailableDatesForTokenMock}
+      bookJobFromPublicQuoteAction={bookJobFromPublicQuoteMock}
+      {...props}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------

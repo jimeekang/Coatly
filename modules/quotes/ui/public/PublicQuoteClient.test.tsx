@@ -136,6 +136,14 @@ function buildQuote(
   };
 }
 
+async function getAvailableDatesAction() {
+  return { blockedDates: [], workingDays: 3, error: null };
+}
+
+async function bookJobFromPublicQuoteAction() {
+  return { error: null, jobId: 'job-1' };
+}
+
 describe('PublicQuoteClient', () => {
   it('shows canonical public totals with discount, adjustment, and selected add-ons', () => {
     render(
@@ -143,6 +151,8 @@ describe('PublicQuoteClient', () => {
         token="11111111-1111-1111-1111-111111111111"
         quote={buildQuote()}
         business={null}
+        getAvailableDatesAction={getAvailableDatesAction}
+        bookJobFromPublicQuoteAction={bookJobFromPublicQuoteAction}
       />
     );
 
@@ -159,6 +169,8 @@ describe('PublicQuoteClient', () => {
         token="11111111-1111-1111-1111-111111111111"
         quote={buildQuote()}
         business={null}
+        getAvailableDatesAction={getAvailableDatesAction}
+        bookJobFromPublicQuoteAction={bookJobFromPublicQuoteAction}
       />
     );
 
@@ -182,6 +194,8 @@ describe('PublicQuoteClient', () => {
         token="11111111-1111-1111-1111-111111111111"
         quote={buildQuote()}
         business={null}
+        getAvailableDatesAction={getAvailableDatesAction}
+        bookJobFromPublicQuoteAction={bookJobFromPublicQuoteAction}
       />
     );
 

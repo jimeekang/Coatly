@@ -1,14 +1,31 @@
 'use client';
 
 import { useCallback, useState, useTransition } from 'react';
-import { bookJobFromPublicQuote, getAvailableDatesForToken } from '@/modules/jobs/application/actions';
 import {
   buildBookingRange,
   getNonWorkingDateReason,
   isNswNonWorkingDate,
 } from '@/lib/calendar/nsw-public-holidays';
 
-interface PublicDatePickerStepProps {
+export type PublicDateAvailabilityResult = {
+  blockedDates: string[];
+  workingDays: number;
+  error: string | null;
+  availabilityStatus?: 'ready' | 'degraded' | 'unavailable';
+  availabilityMessage?: string | null;
+};
+
+export type GetAvailableDatesAction = (
+  token: string,
+) => Promise<PublicDateAvailabilityResult>;
+
+export type BookJobFromPublicQuoteAction = (
+  token: string,
+  startDate: string,
+  options?: { includeNonWorkingDates?: boolean },
+) => Promise<{ error: string | null; jobId: string | null }>;
+
+export interface PublicDatePickerStepProps {
   token: string;
   workingDays: number;
   customerName: string;
@@ -20,6 +37,8 @@ interface PublicDatePickerStepProps {
   contractorName?: string | null;
   contractorPhone?: string | null;
   contractorEmail?: string | null;
+  getAvailableDatesAction: GetAvailableDatesAction;
+  bookJobFromPublicQuoteAction: BookJobFromPublicQuoteAction;
 }
 
 function formatDateYMD(date: Date): string {
@@ -81,6 +100,8 @@ export function PublicDatePickerStep({
   contractorName = null,
   contractorPhone = null,
   contractorEmail = null,
+  getAvailableDatesAction,
+  bookJobFromPublicQuoteAction,
 }: PublicDatePickerStepProps) {
   const today = formatDateYMD(new Date());
 
@@ -107,7 +128,7 @@ export function PublicDatePickerStep({
   const loadAvailableDates = useCallback(async () => {
     setIsLoadingDates(true);
     setLoadError(null);
-    const result = await getAvailableDatesForToken(token);
+    const result = await getAvailableDatesAction(token);
     if (result.error) {
       setLoadError(result.error);
       setAvailabilityStatus('unavailable');
@@ -120,7 +141,7 @@ export function PublicDatePickerStep({
       setAvailabilityMessage(null);
     }
     setIsLoadingDates(false);
-  }, [token, workingDays]);
+  }, [getAvailableDatesAction, token, workingDays]);
 
   // Compute highlight range from selected start
   const highlightRange = useCallback((): Set<string> => {
@@ -198,7 +219,7 @@ export function PublicDatePickerStep({
     setBookError(null);
 
     startBookingTransition(async () => {
-      const result = await bookJobFromPublicQuote(token, selectedStart, {
+      const result = await bookJobFromPublicQuoteAction(token, selectedStart, {
         includeNonWorkingDates: allowNonWorkingDates,
       });
       if (result.error) {
