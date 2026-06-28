@@ -3508,6 +3508,13 @@ describe('public quote access', () => {
     });
   });
 
+  it('rejects malformed public quote tokens before querying the database', async () => {
+    const result = await getPublicQuoteByToken('not-a-valid-token');
+
+    expect(result).toEqual({ data: null, error: 'Quote not found.' });
+    expect(createAdminClientMock).not.toHaveBeenCalled();
+  });
+
   it('updates public optional selections only for sent quotes', async () => {
     const captured: {
       lineItemUpdate?: Record<string, unknown>;

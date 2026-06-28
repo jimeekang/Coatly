@@ -26,6 +26,7 @@ import { buildQuoteInvoicePresetLines } from '@/modules/invoices/domain/invoice-
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
+import { getAppBaseUrl } from '@/lib/config/app-url';
 import { sendInvoiceEmail } from '@/lib/email/resend';
 import { formatAUD, formatDate } from '@/utils/format';
 import type {
@@ -1000,7 +1001,7 @@ export async function sendInvoice(id: string): Promise<{ error: string } | void>
       logoUrl,
     })
   );
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.coatly.com.au';
+  const appUrl = getAppBaseUrl();
 
   const { error: emailError } = await sendInvoiceEmail({
     to: customer.email,

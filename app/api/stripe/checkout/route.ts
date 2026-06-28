@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
+import { getAppBaseUrl } from '@/lib/config/app-url';
 import { resolveSafeInternalPath } from '@/lib/security/paths';
 import { getStripeClient } from '@/lib/stripe/client';
 import { getStripePriceId } from '@/lib/stripe/plans';
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   const stripe = getStripeClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  const appUrl = getAppBaseUrl({ fallback: request.nextUrl.origin });
 
   // Re-use existing Stripe customer if one was already created
   const { data: subscription } = await supabase

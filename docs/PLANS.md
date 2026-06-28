@@ -1,6 +1,6 @@
 # Coatly — Roadmap & Progress
 
-> Phase/progress의 단일 소스입니다. 기준일: 2026-06-03.
+> Phase/progress의 단일 소스입니다. 기준일: 2026-06-27.
 
 ## Ownership
 
@@ -75,6 +75,10 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 - [x] Dashboard KPI cards and quote pipeline summary
 - [x] DB hardening migrations through 049
 - [x] Quote form structure schema migration applied in live DB as `20260524022420 / 050_quote_form_structure`
+- [x] Public quote durable rate-limit implementation added and verified in live DB as `20260626233104 / public_route_rate_limits`
+- [x] Task 2 quote estimate category constraint repaired in live DB as `20260626233327 / quote_estimate_item_task2_categories`
+- [x] Vercel Preview env parity for smoke added: Supabase, Stripe test, Resend sandbox/test recipient, cron, ABR, Google OAuth secret
+- [x] Vercel Preview basic smoke passed on `https://coatly-2ir6cs2rb-kjm12081-3858s-projects.vercel.app`
 
 ## Current Engineering Direction
 
@@ -86,11 +90,13 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 4. **preview/prod release 검증**
 5. **core workflow 릴리즈 후 AI admin layer 재검토**
 
+현재 런칭 가능 여부와 blockers는 [`docs/LAUNCH-READINESS.md`](./LAUNCH-READINESS.md)를 기준으로 확인합니다.
+
 | Step | 목표                              | 완료 기준                                                                                           |
 | ---- | --------------------------------- | --------------------------------------------------------------------------------------------------- |
 | 1    | DDD module refactor landing       | `modules/` 이동이 route wiring, tests, build, browser smoke에서 기존 기능을 깨지 않음               |
-| 2    | Supabase migration reconciliation | 로컬 `supabase/migrations/`와 live `schema_migrations` 불일치 해소                                  |
-| 3    | Security hardening                | public quote durable rate limit, env var 정리, public token route regression                        |
+| 2    | Supabase migration reconciliation | live schema drift 해소, CLI token/link와 migration version bookkeeping 정리                         |
+| 3    | Security hardening                | authenticated preview workflow smoke, production Resend/cron verification, release security gate    |
 | 4    | A workflow fixture 수집           | 실제 Excel price book + 최근 quote PDF/email 1개 + quote에 필요한 price items 확보                  |
 | 5    | Simple price book setup           | A가 앱 안에서 service/unit/price 중심으로 필요한 price items를 세팅하고 saved price book으로 저장함 |
 | 6    | Quote recreation                  | 같은 quote를 Coatly에서 만들고 Excel/PDF와 total/scope 차이를 기록                                  |
@@ -101,20 +107,21 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 
 ## Current P1 Work
 
-| Priority | 작업                                     | 현재 상태                                                                                                                | 담당                |
-| -------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------- |
-| P1       | DDD module refactor release gate         | `modules/` 계층으로 대규모 이동 중. lint/test/build는 2026-06-01 기준 통과했지만 브라우저 smoke와 preview 검증 필요      | Codex               |
-| P1       | Supabase migration reconciliation        | live DB에는 `050_quote_form_structure` 적용 확인. 로컬 migration history 불일치 확인 필요                                | Codex               |
-| P1       | Public quote durable rate limit          | 현재 `proxy.ts`의 in-memory limiter는 Vercel serverless에서 best-effort. durable store 기반 전환 필요                    | Codex               |
-| P1       | Quote/Invoice 저장 원자성                | 다중 쿼리 경로 존재, RPC transaction 검토 필요                                                                           | Codex               |
-| P1       | Simple price book setup                  | Price Rates > Manual 직접 추가와 Excel CSV template/review/import/export 구현. A fixture로 실제 setup friction 검증 필요 | Claude plan → Codex |
-| P1       | A price book onboarding test             | A의 Excel 가격표를 참고해 quote 하나에 필요한 price items를 앱 안에서 직접 저장하고 세팅 난이도 기록                     | Claude plan → Codex |
-| P1       | A quote recreation test                  | 최근 quote PDF/email 1개를 Coatly에서 재현하고 total/scope/PDF/email 차이 기록                                           | Claude plan → Codex |
-| P1       | Quote send/follow-up loop verification   | email send, public quote, viewed/open signal, follow-up due list, quote status가 end-to-end 동작                         | Codex               |
-| P1       | Invoice/schedule conversion verification | approved quote에서 invoice와 schedule/job으로 전환되는 path smoke                                                        | Codex               |
-| P1       | Google Calendar booking fail-closed      | 연결/표시는 구현, write 실패 정책 보강 필요                                                                              | Codex               |
-| P1       | Exterior estimate 회귀                   | 기능 존재, edit/PDF/detail 일관성 테스트 강화 필요                                                                       | Codex               |
-| P1       | Design legacy token cleanup              | 대부분 정리, 일부 badge/detail 컴포넌트 잔여                                                                             | Codex               |
+| Priority | 작업                                     | 현재 상태                                                                                                                                                                               | 담당                |
+| -------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| P1       | DDD module refactor release gate         | `modules/` 계층으로 대규모 이동 중. lint/test/build와 Preview basic smoke는 2026-06-27 통과. authenticated workflow smoke 필요                                                          | Codex               |
+| P1       | Supabase migration reconciliation        | MCP로 live history/schema 확인 완료. `public_route_rate_limits`와 `quote_estimate_item_task2_categories` 원격 적용 완료. 로컬 CLI token/link와 migration version bookkeeping 정리 필요 | Codex               |
+| P1       | Public quote durable rate limit          | `proxy.ts` in-memory limiter 제거, Supabase RPC 기반 limiter와 테스트 추가. 원격 RPC/grant/allow-deny 검증 및 `/q/not-a-valid-token` smoke 통과                                           | Codex               |
+| P1       | Production email/cron verification       | Preview는 Resend sandbox/test recipient와 cron secret으로 smoke 가능. Production은 customer-safe Resend sender/API config와 `CRON_SECRET` 검증 필요                                      | Codex               |
+| P1       | Quote/Invoice 저장 원자성                | 다중 쿼리 경로 존재, RPC transaction 검토 필요                                                                                                                                          | Codex               |
+| P1       | Simple price book setup                  | Price Rates > Manual 직접 추가와 Excel CSV template/review/import/export 구현. A fixture로 실제 setup friction 검증 필요                                                                | Claude plan → Codex |
+| P1       | A price book onboarding test             | A의 Excel 가격표를 참고해 quote 하나에 필요한 price items를 앱 안에서 직접 저장하고 세팅 난이도 기록                                                                                    | Claude plan → Codex |
+| P1       | A quote recreation test                  | 최근 quote PDF/email 1개를 Coatly에서 재현하고 total/scope/PDF/email 차이 기록                                                                                                          | Claude plan → Codex |
+| P1       | Quote send/follow-up loop verification   | email send, public quote, viewed/open signal, follow-up due list, quote status가 end-to-end 동작                                                                                        | Codex               |
+| P1       | Invoice/schedule conversion verification | approved quote에서 invoice와 schedule/job으로 전환되는 path smoke                                                                                                                       | Codex               |
+| P1       | Google Calendar booking fail-closed      | 연결/표시는 구현, write 실패 정책 보강 필요                                                                                                                                             | Codex               |
+| P1       | Exterior estimate 회귀                   | 기능 존재, edit/PDF/detail 일관성 테스트 강화 필요                                                                                                                                      | Codex               |
+| P1       | Design legacy token cleanup              | 대부분 정리, 일부 badge/detail 컴포넌트 잔여                                                                                                                                            | Codex               |
 
 ## Current P2 Work
 
@@ -169,10 +176,12 @@ v1 workflow replacement은 아래가 모두 통과해야 release-ready다.
 - [ ] approved quote → invoice conversion smoke 통과
 - [ ] approved quote → schedule/job conversion smoke 통과
 - [ ] invalid/expired/revoked public token regression 통과
-- [ ] `npm run lint`
-- [ ] `npm run test:run`
-- [ ] `npm run build`
-- [ ] Vercel preview smoke
+- [x] public quote durable rate-limit migration 적용 및 RPC 429 smoke 통과
+- [x] `npm run lint` (2026-06-27)
+- [x] `npm run test:run` (2026-06-27, 76 files / 493 tests)
+- [x] `npm run build` (2026-06-27)
+- [x] Vercel preview basic smoke
+- [ ] Vercel preview authenticated workflow smoke
 - [ ] production deploy verification
 
 ## Progress Update Rules

@@ -1,5 +1,6 @@
 import {
   isMissingQuoteCustomerSnapshotColumnError,
+  getPublicQuoteShareAccessError,
   mapQuoteDetail,
   mapQuoteListItem,
   normalizeQuoteCoatingType,
@@ -86,6 +87,8 @@ export type QuoteDetailRow = {
   customer_id: string;
   job_type?: string | null;
   public_share_token?: string | null;
+  public_share_expires_at?: string | null;
+  public_share_revoked_at?: string | null;
   approved_at?: string | null;
   approved_by_name?: string | null;
   approved_by_email?: string | null;
@@ -128,6 +131,8 @@ type PublicQuoteRow = {
   approved_by_name?: string | null;
   approved_by_email?: string | null;
   approval_signature?: string | null;
+  public_share_expires_at?: string | null;
+  public_share_revoked_at?: string | null;
   customer_email?: string | null;
   customer_address?: string | null;
   job_type?: string | null;
@@ -155,6 +160,8 @@ export type PublicQuoteApprovalRow = {
   title: string | null;
   status: string;
   valid_until: string | null;
+  public_share_expires_at?: string | null;
+  public_share_revoked_at?: string | null;
   total_cents: number;
   customer: QuoteListRow['customer'];
 };
@@ -203,12 +210,12 @@ const QUOTE_CUSTOMER_SELECT =
   'customer:customers!quotes_customer_user_fk(id, name, company_name, email, phone, address_line1, address_line2, city, state, postcode)';
 const QUOTE_LIST_SELECT = `id, user_id, customer_id, customer_email, customer_address, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 const QUOTE_LIST_SELECT_LEGACY = `id, user_id, customer_id, quote_number, title, status, valid_until, tier, subtotal_cents, gst_cents, total_cents, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-export const QUOTE_DETAIL_SELECT = `id, user_id, customer_id, job_type, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT = `id, user_id, customer_id, job_type, public_share_token, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+export const QUOTE_DETAIL_SELECT = `id, user_id, customer_id, job_type, public_share_token, public_share_expires_at, public_share_revoked_at, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, customer_email, customer_address, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
+const QUOTE_DETAIL_SELECT_WITHOUT_CUSTOMER_SNAPSHOT = `id, user_id, customer_id, job_type, public_share_token, public_share_expires_at, public_share_revoked_at, approved_at, approved_by_name, approved_by_email, approval_signature, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
 export const QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, customer_id, manual_adjustment_cents, discount_cents, deposit_percent, quote_number, title, status, valid_until, working_days, tier, notes, internal_notes, labour_margin_percent, material_margin_percent, subtotal_cents, gst_cents, total_cents, estimate_category, property_type, estimate_mode, estimate_context, pricing_snapshot, pricing_method, pricing_method_inputs, created_at, updated_at, ${QUOTE_CUSTOMER_SELECT}`;
-const PUBLIC_QUOTE_DETAIL_SELECT = `id, user_id, job_type, approved_at, approved_by_name, approved_by_email, approval_signature, customer_email, customer_address, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, deposit_percent, ${QUOTE_CUSTOMER_SELECT}`;
-const PUBLIC_QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, ${QUOTE_CUSTOMER_SELECT}`;
-export const PUBLIC_QUOTE_APPROVAL_SELECT = `id, user_id, customer_email, customer_address, quote_number, title, status, valid_until, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
+const PUBLIC_QUOTE_DETAIL_SELECT = `id, user_id, job_type, approved_at, approved_by_name, approved_by_email, approval_signature, public_share_expires_at, public_share_revoked_at, customer_email, customer_address, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, deposit_percent, ${QUOTE_CUSTOMER_SELECT}`;
+const PUBLIC_QUOTE_DETAIL_SELECT_LEGACY = `id, user_id, approved_at, approved_by_name, approved_by_email, approval_signature, public_share_expires_at, public_share_revoked_at, quote_number, title, status, valid_until, working_days, notes, subtotal_cents, gst_cents, total_cents, discount_cents, manual_adjustment_cents, ${QUOTE_CUSTOMER_SELECT}`;
+export const PUBLIC_QUOTE_APPROVAL_SELECT = `id, user_id, customer_email, customer_address, quote_number, title, status, valid_until, public_share_expires_at, public_share_revoked_at, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
 export const PUBLIC_QUOTE_APPROVAL_SELECT_LEGACY = `id, user_id, quote_number, title, status, valid_until, total_cents, ${QUOTE_CUSTOMER_SELECT}`;
 
 function jsonObjectOrEmpty(value: unknown) {
@@ -442,6 +449,11 @@ export async function getHydratedQuoteDetailByPublicTokenForPdf(
     return { data: null, error: quoteError?.message ?? 'Quote not found.' };
   }
 
+  const publicShareAccessError = getPublicQuoteShareAccessError(quote);
+  if (publicShareAccessError) {
+    return { data: null, error: publicShareAccessError };
+  }
+
   const relationsResult = await loadQuoteRelations(supabase, quote.id);
 
   if (relationsResult.error || !relationsResult.data) {
@@ -502,6 +514,11 @@ export async function getHydratedPublicQuoteDetailByToken(
 
   if (quoteError || !quote) {
     return { data: null, error: quoteError?.message ?? 'Quote not found.' };
+  }
+
+  const publicShareAccessError = getPublicQuoteShareAccessError(quote);
+  if (publicShareAccessError) {
+    return { data: null, error: publicShareAccessError };
   }
 
   const relationsResult = await loadPublicQuoteRelations(supabase, quote.id);

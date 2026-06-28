@@ -1,40 +1,43 @@
 # Coatly — Security
 
-> Current security snapshot: 2026-06-01. This document records both the intended security model and the active remediation queue.
+> Current security snapshot: 2026-06-27. This document records both the intended security model and the active remediation queue.
 
 ## Current Security Snapshot
 
 Latest checked state:
 
-| Area | Status | Notes |
-|------|--------|-------|
-| App security headers | In place | `next.config.ts` sets CSP, Referrer-Policy, X-Content-Type-Options, X-Frame-Options, and Permissions-Policy. |
-| Stripe webhook signature | In place | Webhook handler validates `stripe-signature` against `STRIPE_WEBHOOK_SECRET` before processing. |
-| Vercel cron auth | In place | `/api/cron/invoice-reminders` requires `Authorization: Bearer ${CRON_SECRET}`. |
-| Supabase RLS | Verified 2026-06-01 | Live public base tables returned no RLS-disabled rows in the spot check. |
-| Public security definer functions | Restricted | `before_user_created_signup_guard`, `enforce_job_schedule_day_owner`, and `handle_new_user` exist in `public`, but `anon` and `authenticated` do not have direct execute permission. |
-| Production deployment | Live | `https://coatly.vercel.app` returned HTTP 200 and Vercel status `Ready`. |
+| Area                              | Status              | Notes                                                                                                                                                                                                                                                       |
+| --------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App security headers              | In place            | `next.config.ts` sets CSP, Referrer-Policy, X-Content-Type-Options, X-Frame-Options, and Permissions-Policy.                                                                                                                                                |
+| Stripe webhook signature          | In place            | Webhook handler validates `stripe-signature` against `STRIPE_WEBHOOK_SECRET` before processing.                                                                                                                                                             |
+| Vercel cron auth                  | In place            | `/api/cron/invoice-reminders` requires `Authorization: Bearer ${CRON_SECRET}`.                                                                                                                                                                              |
+| Supabase RLS                      | Verified 2026-06-01 | Live public base tables returned no RLS-disabled rows in the spot check.                                                                                                                                                                                    |
+| Public security definer functions | Restricted          | `before_user_created_signup_guard`, `enforce_job_schedule_day_owner`, and `handle_new_user` exist in `public`, but `anon` and `authenticated` do not have direct execute permission.                                                                        |
+| Public quote rate limit           | Verified remotely   | `proxy.ts` now calls service-role-only Supabase RPC `check_public_route_rate_limit`; remote migration `20260626233104 / public_route_rate_limits` is applied, grants are service-role-only, and RPC allow/deny behavior passed.                         |
+| Auth env failure mode             | Hardened locally    | Protected routes now redirect to `/login` when Supabase auth env is missing, preventing Preview deployments with missing env from becoming fail-open.                                                                                                       |
+| Vercel Preview env                | Ready for smoke     | Preview env now includes Supabase, Stripe test, Resend sandbox/test recipient, cron, ABR, and Google OAuth secret values. `NEXT_PUBLIC_APP_URL` is omitted so server links fall back to the active Vercel deployment URL.                                  |
+| Vercel Preview deployment         | Basic smoke passed  | Preview `coatly-2ir6cs2rb-kjm12081-3858s-projects.vercel.app` is Ready; unauthenticated smoke returned expected 200/307/404/401 statuses and no error logs were found.                                                                                      |
+| Production deployment             | Live                | `https://coatly.vercel.app` returned HTTP 200 and Vercel status `Ready`.                                                                                                                                                                                    |
 
 ## Active Security Findings & Fix Plan
 
-| Priority | Finding | Risk | Current mitigation | Required fix |
-|----------|---------|------|--------------------|--------------|
-| P1 | Public quote rate limit is in memory in `proxy.ts` | Vercel serverless instances do not share memory, so `/q/[token]` abuse protection is best-effort only. | 60 requests/minute/IP per warm instance. | Move public quote rate limiting to durable storage such as Upstash Redis, Vercel KV, or Supabase-backed counters with expiry. |
-| P1 | Supabase CLI project is not linked locally | `supabase db lint --linked` cannot run from the repo, so DB advisor/lint checks can be missed before release. | Manual Management API SQL spot checks were used on 2026-06-01. | Link the Supabase project or document the approved remote lint command, then add it to the release checklist. |
-| P1 | Local migration history needs reconciliation | Local file `20260517020123_quote_estimate_item_task2_categories.sql` was not visible in live migration history during the 2026-06-01 spot check. | Live DB does include `20260524022420 / 050_quote_form_structure`. | Confirm whether the local migration was superseded, manually applied, or missed. If missed, add a new corrective migration instead of rewriting history. |
-| P2 | Duplicate env var keys in `.env.local` | Duplicate names can hide the effective runtime value and cause local/Vercel drift. | `.env.example` remains clean enough for onboarding. | Remove duplicate local keys and compare Vercel production/preview env names against `.env.example`. |
-| P2 | Public quote and public invoice token routes need periodic abuse review | Tokenized public routes are intentionally unauthenticated. Weak rate limiting or leaked tokens can expose customer documents. | Token lookup and RLS-aware server code protect normal access paths. | Add token audit logging, durable throttling, and smoke tests for invalid/expired/mismatched public tokens. |
-| P2 | DDD module refactor is not yet deployed | Local code passes build/tests but production is still the previous deployment. | Production is stable and `Ready`. | Land DDD refactor through preview deployment, browser smoke QA, then production promotion/deploy. |
+| Priority | Finding                                                                 | Risk                                                                                                                                                            | Current mitigation                                                                                                                              | Required fix                                                                                                                                             |
+| -------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1       | Supabase CLI project is not linked locally                              | `supabase db lint --linked` cannot run from the repo, so DB advisor/lint checks can be missed before release.                                                   | Supabase MCP is authenticated and was used for remote migration/history checks on 2026-06-27.                                                   | Replace the legacy local CLI token or relink the project, then add the approved remote lint command to the release checklist.                            |
+| P1       | Local migration bookkeeping needs cleanup                               | MCP-applied live migration versions differ from local timestamped filenames, so CLI repair/lint should be cleaned up before future schema-heavy work.            | Live DB now includes `20260626233104 / public_route_rate_limits` and `20260626233327 / quote_estimate_item_task2_categories`; constraints match. | Use Supabase CLI migration repair after token/link restoration or document MCP-first migration flow for this project.                                   |
+| P1       | Authenticated preview workflow smoke remains                            | Basic Preview smoke is green, but logged-in quote/email/invoice/job flows still need fixture-driven verification before production promotion.                    | Preview deployment is Ready and has required smoke envs.                                                                                        | Use a test account/fixture to smoke quote create/edit/PDF/email, public approval, invoice, job booking, and schedule paths.                              |
+| P1       | Production email/cron env needs launch verification                     | Production customer email and invoice reminder cron can fail or route to the wrong recipient if Resend/cron values are missing or sandbox-only.                  | Preview uses Resend sandbox/test recipient for safe smoke.                                                                                      | Add customer-safe Production Resend sender/API config, verify `CRON_SECRET`, then run live email and cron smoke before external launch.                  |
+| P2       | Public quote and public invoice token routes need periodic abuse review | Tokenized public routes are intentionally unauthenticated. Leaked tokens can expose customer documents.                                                          | Token lookup, RLS-aware server code, and durable public quote rate limiting protect normal access paths.                                        | Add token audit logging and periodic smoke tests for invalid/expired/mismatched public tokens.                                                           |
+| P2       | DDD module refactor is not yet deployed                                 | Local code passes build/tests but production is still the previous deployment.                                                                                  | Production is stable and `Ready`.                                                                                                               | Land DDD refactor through preview deployment, browser smoke QA, then production promotion/deploy.                                                        |
 
 ## Implementation Direction
 
 Security work should move in this order:
 
 1. Stabilize the current DDD module refactor without changing behavior. Keep route files thin and preserve existing auth checks while moving feature code under `modules/`.
-2. Reconcile Supabase migrations before shipping new schema work. Treat migration mismatches as release blockers.
-3. Replace best-effort public route rate limiting with durable rate limiting before increasing public quote usage.
-4. Add a release security gate: RLS check, security definer execute check, webhook/cron secret check, lint, tests, build, Vercel preview smoke.
-5. Resume v1 core workflow release after the security gate is green: A price book setup, quote recreation, PDF/email, public quote, follow-up, invoice, and schedule smoke. AI/photo work remains deferred until that workflow is released and verified.
+2. Keep Supabase MCP or CLI available for every schema change. Treat unverified live schema drift as a release blocker.
+3. Add a release security gate: RLS check, security definer execute check, webhook/cron secret check, lint, tests, build, Vercel preview smoke.
+4. Resume v1 core workflow release after the security gate is green: A price book setup, quote recreation, PDF/email, public quote, follow-up, invoice, and schedule smoke. AI/photo work remains deferred until that workflow is released and verified.
 
 ## RLS (Row Level Security) Policy Matrix
 
@@ -44,23 +47,23 @@ Security work should move in this order:
 
 `user_id = auth.uid()` 직접 비교.
 
-| Table | SELECT | INSERT | UPDATE | DELETE |
-|-------|--------|--------|--------|--------|
-| profiles | ✅ own | ✅ own + trigger | ✅ own | ❌ |
-| customers | ✅ own | ✅ own | ✅ own | ✅ own |
-| quotes | ✅ own | ✅ own | ✅ own | ✅ own |
-| invoices | ✅ own | ✅ own | ✅ own | ✅ own |
-| subscriptions | ✅ own | ❌ (service_role only) | ❌ (service_role only) | ❌ |
+| Table         | SELECT | INSERT                 | UPDATE                 | DELETE |
+| ------------- | ------ | ---------------------- | ---------------------- | ------ |
+| profiles      | ✅ own | ✅ own + trigger       | ✅ own                 | ❌     |
+| customers     | ✅ own | ✅ own                 | ✅ own                 | ✅ own |
+| quotes        | ✅ own | ✅ own                 | ✅ own                 | ✅ own |
+| invoices      | ✅ own | ✅ own                 | ✅ own                 | ✅ own |
+| subscriptions | ✅ own | ❌ (service_role only) | ❌ (service_role only) | ❌     |
 
 ### Parent-Chain Tables
 
 user_id 컬럼 없음 — 부모 테이블 EXISTS 서브쿼리로 소유권 확인.
 
-| Table | Parent Chain | 정책 |
-|-------|-------------|------|
-| quote_rooms | → quotes.user_id | EXISTS (quotes WHERE id = quote_id AND user_id = auth.uid()) |
-| quote_room_surfaces | → quote_rooms → quotes.user_id | EXISTS chain |
-| invoice_line_items | → invoices.user_id | EXISTS (invoices WHERE id = invoice_id AND user_id = auth.uid()) |
+| Table               | Parent Chain                   | 정책                                                             |
+| ------------------- | ------------------------------ | ---------------------------------------------------------------- |
+| quote_rooms         | → quotes.user_id               | EXISTS (quotes WHERE id = quote_id AND user_id = auth.uid())     |
+| quote_room_surfaces | → quote_rooms → quotes.user_id | EXISTS chain                                                     |
+| invoice_line_items  | → invoices.user_id             | EXISTS (invoices WHERE id = invoice_id AND user_id = auth.uid()) |
 
 ## Authentication Flow
 
@@ -83,17 +86,19 @@ user_id 컬럼 없음 — 부모 테이블 EXISTS 서브쿼리로 소유권 확�
 
 ```ts
 // lib/supabase/admin.ts
-import 'server-only'  // 클라이언트 번들에 포함 방지
+import 'server-only'; // 클라이언트 번들에 포함 방지
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!  // RLS 우회
-)
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // RLS 우회
+);
 ```
 
 **사용처 제한:**
+
 - Stripe webhook handler (구독 상태 동기화)
 - 번호 생성 함수 (quote_number, invoice_number)
+- public quote rate-limit RPC 호출 (server/proxy only, hashed IP only)
 - 그 외 사용 금지
 
 ## Webhook Security
@@ -105,7 +110,7 @@ const event = stripe.webhooks.constructEvent(
   body,
   signature,
   process.env.STRIPE_WEBHOOK_SECRET!
-)
+);
 ```
 
 - 서명 불일치 시 400 반환
@@ -115,21 +120,21 @@ const event = stripe.webhooks.constructEvent(
 
 ### 노출 금지 (서버 전용)
 
-| 변수 | 용도 |
-|------|------|
+| 변수                        | 용도                       |
+| --------------------------- | -------------------------- |
 | `SUPABASE_SERVICE_ROLE_KEY` | RLS 우회 — 서버에서만 사용 |
-| `STRIPE_SECRET_KEY` | Stripe API 호출 |
-| `STRIPE_WEBHOOK_SECRET` | 웹훅 서명 검증 |
-| `ABR_GUID` | ABN 조회 API 인증 |
+| `STRIPE_SECRET_KEY`         | Stripe API 호출            |
+| `STRIPE_WEBHOOK_SECRET`     | 웹훅 서명 검증             |
+| `ABR_GUID`                  | ABN 조회 API 인증          |
 
-### 공개 가능 (NEXT_PUBLIC_)
+### 공개 가능 (NEXT*PUBLIC*)
 
-| 변수 | 용도 |
-|------|------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 공개 키 (RLS로 보호) |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe 결제 UI |
-| `NEXT_PUBLIC_APP_URL` | 앱 기본 URL |
+| 변수                                 | 용도                          |
+| ------------------------------------ | ----------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`           | Supabase 프로젝트 URL         |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`      | Supabase 공개 키 (RLS로 보호) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe 결제 UI                |
+| `NEXT_PUBLIC_APP_URL`                | 앱 기본 URL                   |
 
 ## Security Checklist
 
@@ -141,13 +146,13 @@ const event = stripe.webhooks.constructEvent(
 - [ ] 환경변수 하드코딩 없음
 - [ ] .env 파일 .gitignore에 포함
 - [ ] `.env.example`과 Vercel env var 이름 불일치 없음
-- [ ] `.env.local` 중복 key 없음
+- [x] `.env.local` 중복 key 없음 (local 2026-06-27)
 - [ ] Stripe webhook signature 검증
 - [ ] Vercel cron endpoint가 `CRON_SECRET` 없이는 실패
 - [ ] Server Action에서 auth 체크
 - [ ] API route에서 auth 체크
 - [ ] `server-only` import guard 적용 (admin.ts)
 - [ ] public token route는 invalid/expired/mismatched token 테스트 포함
-- [ ] `/q/[token]` rate limit은 durable store 기반
-- [ ] Supabase migration history와 로컬 migration 파일 불일치 없음
-- [ ] production 배포 전 Vercel preview에서 smoke QA 완료
+- [x] `/q/[token]` rate limit은 durable store 기반 (remote migration/RPC verified 2026-06-27)
+- [ ] Supabase CLI/link와 migration version bookkeeping 정리 완료
+- [ ] production 배포 전 Vercel preview에서 authenticated workflow smoke QA 완료

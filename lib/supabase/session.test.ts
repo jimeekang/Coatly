@@ -43,4 +43,19 @@ describe('updateSession', () => {
       'http://localhost:3000/login'
     );
   });
+
+  it('fails closed on protected pages when Supabase auth env is missing', async () => {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    const response = await updateSession(
+      new NextRequest('http://localhost:3000/dashboard')
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/login'
+    );
+    expect(createSupabaseServerClientMock).not.toHaveBeenCalled();
+  });
 });

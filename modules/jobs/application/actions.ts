@@ -11,7 +11,10 @@ import {
   buildBookingRange,
   isNswNonWorkingDate,
 } from '@/lib/calendar/nsw-public-holidays';
-import { buildQuoteCustomerAddress } from '@/modules/quotes/domain/quotes';
+import {
+  buildQuoteCustomerAddress,
+  getPublicQuoteShareAccessError,
+} from '@/modules/quotes/domain/quotes';
 import type {
   JobCustomerOption,
   JobDetail,
@@ -26,16 +29,32 @@ import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
 import type { Customer, Job, Quote } from '@/lib/supabase/types';
-import { jobUpsertSchema, type JobUpsertInput } from '@/lib/supabase/validators';
+import {
+  jobUpsertSchema,
+  type JobUpsertInput,
+} from '@/lib/supabase/validators';
 
 type JoinedCustomer = Pick<
   Customer,
-  'id' | 'name' | 'company_name' | 'email' | 'address_line1' | 'city' | 'state' | 'postcode'
+  | 'id'
+  | 'name'
+  | 'company_name'
+  | 'email'
+  | 'address_line1'
+  | 'city'
+  | 'state'
+  | 'postcode'
 >;
 
-type JoinedQuote = Pick<Quote, 'id' | 'quote_number' | 'title' | 'status' | 'customer_id'>;
+type JoinedQuote = Pick<
+  Quote,
+  'id' | 'quote_number' | 'title' | 'status' | 'customer_id'
+>;
 
-type QuoteCreateJobRow = Pick<JoinedQuote, 'id' | 'quote_number' | 'title' | 'customer_id'>;
+type QuoteCreateJobRow = Pick<
+  JoinedQuote,
+  'id' | 'quote_number' | 'title' | 'customer_id'
+>;
 type JobScheduleRecord = Pick<
   JobRow,
   'id' | 'quote_id' | 'status' | 'scheduled_date' | 'start_date' | 'end_date'
@@ -63,7 +82,8 @@ type JobRow = Pick<
 
 const JOB_LIST_SELECT =
   'id, customer_id, quote_id, title, status, scheduled_date, start_date, end_date, duration_days, notes, created_at, updated_at, google_calendar_event_id, google_calendar_id, google_sync_status, google_sync_error';
-const CUSTOMER_JOIN_SELECT = 'id, name, company_name, email, address_line1, city, state, postcode';
+const CUSTOMER_JOIN_SELECT =
+  'id, name, company_name, email, address_line1, city, state, postcode';
 const QUOTE_JOIN_SELECT = 'id, quote_number, title, status, customer_id';
 
 function buildCustomerOption(customer: JoinedCustomer): JobCustomerOption {
@@ -77,7 +97,9 @@ function buildCustomerOption(customer: JoinedCustomer): JobCustomerOption {
 }
 
 function uniqueValues(values: Array<string | null>): string[] {
-  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+  return [
+    ...new Set(values.filter((value): value is string => Boolean(value))),
+  ];
 }
 
 function toJobStatus(status: string): JobListItem['status'] {
@@ -94,7 +116,9 @@ function toJobStatus(status: string): JobListItem['status'] {
 }
 
 function sortUniqueDateValues(dates: string[]): string[] {
-  return [...new Set(dates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort();
+  return [
+    ...new Set(dates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))),
+  ].sort();
 }
 
 function buildDateRangeValues(startDate: string, endDate: string): string[] {
@@ -107,7 +131,9 @@ function buildDateRangeValues(startDate: string, endDate: string): string[] {
   return dates;
 }
 
-function fallbackScheduleDates(job: Pick<JobRow, 'scheduled_date' | 'start_date' | 'end_date'>): string[] {
+function fallbackScheduleDates(
+  job: Pick<JobRow, 'scheduled_date' | 'start_date' | 'end_date'>
+): string[] {
   const startDate = job.start_date ?? job.scheduled_date;
   const endDate = job.end_date ?? startDate;
   return buildDateRangeValues(startDate, endDate);
@@ -117,7 +143,7 @@ function mapJobListItem(
   job: JobRow,
   customer: JoinedCustomer | null,
   quote: JoinedQuote | null,
-  scheduleDates: string[],
+  scheduleDates: string[]
 ): JobListItem | null {
   if (!customer) {
     return null;
@@ -132,7 +158,8 @@ function mapJobListItem(
     scheduled_date: job.scheduled_date,
     start_date: job.start_date,
     end_date: job.end_date,
-    schedule_dates: scheduleDates.length > 0 ? scheduleDates : fallbackScheduleDates(job),
+    schedule_dates:
+      scheduleDates.length > 0 ? scheduleDates : fallbackScheduleDates(job),
     duration_days: job.duration_days,
     notes: job.notes,
     created_at: job.created_at,
@@ -156,31 +183,35 @@ function mapJobListItem(
 async function hydrateJobListItems(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   userId: string,
-  jobs: JobRow[],
+  jobs: JobRow[]
 ): Promise<{ data: JobListItem[]; error: string | null }> {
   const customerIds = uniqueValues(jobs.map((job) => job.customer_id));
   const quoteIds = uniqueValues(jobs.map((job) => job.quote_id));
   const jobIds = uniqueValues(jobs.map((job) => job.id));
 
-  const [customersResult, quotesResult, scheduleDatesResult] = await Promise.all([
-    customerIds.length > 0
-      ? supabase
-          .from('customers')
-          .select(CUSTOMER_JOIN_SELECT)
-          .eq('user_id', userId)
-          .in('id', customerIds)
-      : Promise.resolve({ data: [] as JoinedCustomer[], error: null }),
-    quoteIds.length > 0
-      ? supabase
-          .from('quotes')
-          .select(QUOTE_JOIN_SELECT)
-          .eq('user_id', userId)
-          .in('id', quoteIds)
-      : Promise.resolve({ data: [] as JoinedQuote[], error: null }),
-    jobIds.length > 0
-      ? getJobScheduleDatesForJobIds(supabase, userId, jobIds)
-      : Promise.resolve({ data: {} as Record<string, string[]>, error: null }),
-  ]);
+  const [customersResult, quotesResult, scheduleDatesResult] =
+    await Promise.all([
+      customerIds.length > 0
+        ? supabase
+            .from('customers')
+            .select(CUSTOMER_JOIN_SELECT)
+            .eq('user_id', userId)
+            .in('id', customerIds)
+        : Promise.resolve({ data: [] as JoinedCustomer[], error: null }),
+      quoteIds.length > 0
+        ? supabase
+            .from('quotes')
+            .select(QUOTE_JOIN_SELECT)
+            .eq('user_id', userId)
+            .in('id', quoteIds)
+        : Promise.resolve({ data: [] as JoinedQuote[], error: null }),
+      jobIds.length > 0
+        ? getJobScheduleDatesForJobIds(supabase, userId, jobIds)
+        : Promise.resolve({
+            data: {} as Record<string, string[]>,
+            error: null,
+          }),
+    ]);
 
   const error =
     customersResult.error?.message ??
@@ -192,10 +223,16 @@ async function hydrateJobListItems(
   }
 
   const customersById = new Map(
-    ((customersResult.data ?? []) as JoinedCustomer[]).map((customer) => [customer.id, customer]),
+    ((customersResult.data ?? []) as JoinedCustomer[]).map((customer) => [
+      customer.id,
+      customer,
+    ])
   );
   const quotesById = new Map(
-    ((quotesResult.data ?? []) as JoinedQuote[]).map((quote) => [quote.id, quote]),
+    ((quotesResult.data ?? []) as JoinedQuote[]).map((quote) => [
+      quote.id,
+      quote,
+    ])
   );
 
   return {
@@ -204,7 +241,7 @@ async function hydrateJobListItems(
         job,
         customersById.get(job.customer_id) ?? null,
         job.quote_id ? (quotesById.get(job.quote_id) ?? null) : null,
-        scheduleDatesResult.data[job.id] ?? [],
+        scheduleDatesResult.data[job.id] ?? []
       );
       return mapped ? [mapped] : [];
     }),
@@ -215,7 +252,7 @@ async function hydrateJobListItems(
 async function getJobScheduleDatesForJobIds(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   userId: string,
-  jobIds: string[],
+  jobIds: string[]
 ): Promise<{ data: Record<string, string[]>; error: string | null }> {
   const uniqueJobIds = [...new Set(jobIds.filter(Boolean))];
 
@@ -252,8 +289,14 @@ function getTodayDateValue(): string {
 }
 
 function addDaysToDateValue(dateValue: string, days: number): string {
-  const [year, month, day] = dateValue.split('-').map(Number) as [number, number, number];
-  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+  const [year, month, day] = dateValue.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
 }
 
 function summarizeScheduleDates(dates: string[]): {
@@ -278,7 +321,7 @@ async function replaceJobScheduleDays(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   userId: string,
   jobId: string,
-  dates: string[],
+  dates: string[]
 ): Promise<{ error: string | null }> {
   const sortedDates = sortUniqueDateValues(dates);
 
@@ -296,14 +339,16 @@ async function replaceJobScheduleDays(
     return { error: null };
   }
 
-  const { error: insertError } = await supabase.from('job_schedule_days').insert(
-    sortedDates.map((date, index) => ({
-      user_id: userId,
-      job_id: jobId,
-      date,
-      sort_order: index,
-    })),
-  );
+  const { error: insertError } = await supabase
+    .from('job_schedule_days')
+    .insert(
+      sortedDates.map((date, index) => ({
+        user_id: userId,
+        job_id: jobId,
+        date,
+        sort_order: index,
+      }))
+    );
 
   if (insertError) {
     return { error: insertError.message };
@@ -315,7 +360,7 @@ async function replaceJobScheduleDays(
 async function loadJobScheduleRecord(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   userId: string,
-  jobId: string,
+  jobId: string
 ): Promise<{
   data: { job: JobScheduleRecord; dates: string[] } | null;
   error: string | null;
@@ -363,7 +408,7 @@ async function persistJobScheduleDates(
   userId: string,
   jobId: string,
   existingJob: JobScheduleRecord,
-  dates: string[],
+  dates: string[]
 ): Promise<{ error: string | null }> {
   const nextDates = sortUniqueDateValues(dates);
   if (nextDates.length < 1 || nextDates.length > 30) {
@@ -386,7 +431,12 @@ async function persistJobScheduleDates(
     return { error: updateError.message };
   }
 
-  const scheduleResult = await replaceJobScheduleDays(supabase, userId, jobId, nextDates);
+  const scheduleResult = await replaceJobScheduleDays(
+    supabase,
+    userId,
+    jobId,
+    nextDates
+  );
   if (scheduleResult.error) {
     return { error: scheduleResult.error };
   }
@@ -427,7 +477,7 @@ async function persistJobScheduleDates(
 async function validateJobLinks(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   userId: string,
-  input: JobUpsertInput,
+  input: JobUpsertInput
 ): Promise<
   | { error: string }
   | {
@@ -493,7 +543,10 @@ export async function getJobs(): Promise<{
   data: JobListItem[];
   error: string | null;
 }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
 
   const { data, error } = await supabase
     .from('jobs')
@@ -510,9 +563,12 @@ export async function getJobs(): Promise<{
 }
 
 export async function getJobScheduleDatesForJobs(
-  jobIds: string[],
+  jobIds: string[]
 ): Promise<{ data: Record<string, string[]>; error: string | null }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
   return getJobScheduleDatesForJobIds(supabase, user.id, jobIds);
 }
 
@@ -523,12 +579,17 @@ export async function getJobFormOptions(): Promise<{
   };
   error: string | null;
 }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
 
   const [customersResult, quotesResult] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, name, company_name, email, address_line1, city, state, postcode')
+      .select(
+        'id, name, company_name, email, address_line1, city, state, postcode'
+      )
       .eq('user_id', user.id)
       .eq('is_archived', false)
       .order('name', { ascending: true }),
@@ -539,7 +600,8 @@ export async function getJobFormOptions(): Promise<{
       .order('created_at', { ascending: false }),
   ]);
 
-  const error = customersResult.error?.message ?? quotesResult.error?.message ?? null;
+  const error =
+    customersResult.error?.message ?? quotesResult.error?.message ?? null;
 
   return {
     data: {
@@ -557,8 +619,13 @@ export async function getJobFormOptions(): Promise<{
   };
 }
 
-export async function getJob(id: string): Promise<{ data: JobListItem | null; error: string | null }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+export async function getJob(
+  id: string
+): Promise<{ data: JobListItem | null; error: string | null }> {
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
 
   const { data, error } = await supabase
     .from('jobs')
@@ -581,7 +648,9 @@ export async function getJob(id: string): Promise<{ data: JobListItem | null; er
   };
 }
 
-export async function createJob(input: JobUpsertInput): Promise<{ error: string | null }> {
+export async function createJob(
+  input: JobUpsertInput
+): Promise<{ error: string | null }> {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -626,7 +695,7 @@ export async function createJob(input: JobUpsertInput): Promise<{ error: string 
     supabase,
     user.id,
     insertedJob.id,
-    [validation.parsed.scheduled_date],
+    [validation.parsed.scheduled_date]
   );
   if (scheduleResult.error) {
     return { error: scheduleResult.error };
@@ -722,9 +791,12 @@ export async function createJobFromQuote(quoteId: string): Promise<{
     return { error: insertError.message, jobId: null, existing: false };
   }
 
-  const scheduleResult = await replaceJobScheduleDays(supabase, user.id, insertedJob.id, [
-    getTodayDateValue(),
-  ]);
+  const scheduleResult = await replaceJobScheduleDays(
+    supabase,
+    user.id,
+    insertedJob.id,
+    [getTodayDateValue()]
+  );
   if (scheduleResult.error) {
     return { error: scheduleResult.error, jobId: null, existing: false };
   }
@@ -736,8 +808,13 @@ export async function createJobFromQuote(quoteId: string): Promise<{
   return { error: null, jobId: insertedJob.id, existing: false };
 }
 
-export async function createJobFromQuoteAndRedirect(formData: FormData): Promise<void> {
-  const quoteId = typeof formData.get('quoteId') === 'string' ? String(formData.get('quoteId')) : '';
+export async function createJobFromQuoteAndRedirect(
+  formData: FormData
+): Promise<void> {
+  const quoteId =
+    typeof formData.get('quoteId') === 'string'
+      ? String(formData.get('quoteId'))
+      : '';
   const result = await createJobFromQuote(quoteId);
 
   if (result.error) {
@@ -749,7 +826,7 @@ export async function createJobFromQuoteAndRedirect(formData: FormData): Promise
 
 export async function updateJob(
   id: string,
-  input: JobUpsertInput,
+  input: JobUpsertInput
 ): Promise<{ error: string | null }> {
   const supabase = await createServerClient();
   const {
@@ -897,7 +974,11 @@ export async function deleteJob(id: string): Promise<{ error: string | null }> {
     return { error: googleDeleteResult.error };
   }
 
-  const { error } = await supabase.from('jobs').delete().eq('id', id).eq('user_id', user.id);
+  const { error } = await supabase
+    .from('jobs')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
 
   if (error) {
     return { error: error.message };
@@ -914,7 +995,7 @@ export async function deleteJob(id: string): Promise<{ error: string | null }> {
 
 export async function updateJobSchedule(
   id: string,
-  input: { startDate: string; endDate: string },
+  input: { startDate: string; endDate: string }
 ): Promise<{ error: string | null }> {
   const supabase = await createServerClient();
   const {
@@ -932,7 +1013,10 @@ export async function updateJobSchedule(
 
   const startDate = input.startDate.trim();
   const endDate = input.endDate.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(startDate) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(endDate)
+  ) {
     return { error: 'Schedule dates must use YYYY-MM-DD.' };
   }
 
@@ -961,7 +1045,10 @@ export async function updateJobSchedule(
     return { error: 'Job not found.' };
   }
 
-  if (existingJob.status !== 'completed' && existingJob.status !== 'cancelled') {
+  if (
+    existingJob.status !== 'completed' &&
+    existingJob.status !== 'cancelled'
+  ) {
     const { data: overlapResult, error: overlapError } = await supabase.rpc(
       'check_job_date_overlap',
       {
@@ -969,7 +1056,7 @@ export async function updateJobSchedule(
         p_start_date: startDate,
         p_end_date: endDate,
         p_exclude_job_id: id,
-      },
+      }
     );
 
     if (overlapError) {
@@ -996,7 +1083,12 @@ export async function updateJobSchedule(
     return { error: error.message };
   }
 
-  const scheduleResult = await replaceJobScheduleDays(supabase, user.id, id, scheduleDates);
+  const scheduleResult = await replaceJobScheduleDays(
+    supabase,
+    user.id,
+    id,
+    scheduleDates
+  );
   if (scheduleResult.error) {
     return { error: scheduleResult.error };
   }
@@ -1036,7 +1128,7 @@ export async function updateJobSchedule(
 
 export async function updateJobScheduleDay(
   id: string,
-  input: { fromDate: string; toDate: string },
+  input: { fromDate: string; toDate: string }
 ): Promise<{ error: string | null }> {
   const supabase = await createServerClient();
   const {
@@ -1054,7 +1146,10 @@ export async function updateJobScheduleDay(
 
   const fromDate = input.fromDate.trim();
   const toDate = input.toDate.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(fromDate) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(toDate)
+  ) {
     return { error: 'Schedule dates must use YYYY-MM-DD.' };
   }
 
@@ -1077,7 +1172,10 @@ export async function updateJobScheduleDay(
     return { error: 'This job is already scheduled on that date.' };
   }
 
-  if (existingJob.status !== 'completed' && existingJob.status !== 'cancelled') {
+  if (
+    existingJob.status !== 'completed' &&
+    existingJob.status !== 'cancelled'
+  ) {
     const { data: overlapResult, error: overlapError } = await supabase.rpc(
       'check_job_date_overlap',
       {
@@ -1085,7 +1183,7 @@ export async function updateJobScheduleDay(
         p_start_date: toDate,
         p_end_date: toDate,
         p_exclude_job_id: id,
-      },
+      }
     );
 
     if (overlapError) {
@@ -1098,14 +1196,14 @@ export async function updateJobScheduleDay(
   }
 
   const nextDates = sortUniqueDateValues(
-    currentDates.map((date) => (date === fromDate ? toDate : date)),
+    currentDates.map((date) => (date === fromDate ? toDate : date))
   );
   return persistJobScheduleDates(supabase, user.id, id, existingJob, nextDates);
 }
 
 export async function addJobScheduleDay(
   id: string,
-  input: { date: string },
+  input: { date: string }
 ): Promise<{ error: string | null }> {
   const supabase = await createServerClient();
   const {
@@ -1136,7 +1234,10 @@ export async function addJobScheduleDay(
     return { error: 'This job is already scheduled on that date.' };
   }
 
-  if (existingJob.status !== 'completed' && existingJob.status !== 'cancelled') {
+  if (
+    existingJob.status !== 'completed' &&
+    existingJob.status !== 'cancelled'
+  ) {
     const { data: overlapResult, error: overlapError } = await supabase.rpc(
       'check_job_date_overlap',
       {
@@ -1144,7 +1245,7 @@ export async function addJobScheduleDay(
         p_start_date: date,
         p_end_date: date,
         p_exclude_job_id: id,
-      },
+      }
     );
 
     if (overlapError) {
@@ -1156,12 +1257,15 @@ export async function addJobScheduleDay(
     }
   }
 
-  return persistJobScheduleDates(supabase, user.id, id, existingJob, [...currentDates, date]);
+  return persistJobScheduleDates(supabase, user.id, id, existingJob, [
+    ...currentDates,
+    date,
+  ]);
 }
 
 export async function deleteJobScheduleDay(
   id: string,
-  input: { date: string },
+  input: { date: string }
 ): Promise<{ error: string | null }> {
   const supabase = await createServerClient();
   const {
@@ -1201,7 +1305,7 @@ export async function deleteJobScheduleDay(
     user.id,
     id,
     existingJob,
-    currentDates.filter((scheduledDate) => scheduledDate !== date),
+    currentDates.filter((scheduledDate) => scheduledDate !== date)
   );
 }
 
@@ -1212,7 +1316,7 @@ export async function deleteJobScheduleDay(
 export async function bookJobFromPublicQuote(
   token: string,
   startDate: string,
-  options: { includeNonWorkingDates?: boolean } = {},
+  options: { includeNonWorkingDates?: boolean } = {}
 ): Promise<{ error: string | null; jobId: string | null }> {
   const trimmedToken = token.trim();
   if (!trimmedToken) {
@@ -1232,7 +1336,9 @@ export async function bookJobFromPublicQuote(
 
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
-    .select('id, user_id, customer_id, title, quote_number, status, working_days')
+    .select(
+      'id, user_id, customer_id, title, quote_number, status, working_days, public_share_expires_at, public_share_revoked_at'
+    )
     .eq('public_share_token', trimmedToken)
     .maybeSingle();
 
@@ -1244,6 +1350,11 @@ export async function bookJobFromPublicQuote(
     return { error: 'Quote not found.', jobId: null };
   }
 
+  const publicShareAccessError = getPublicQuoteShareAccessError(quote);
+  if (publicShareAccessError) {
+    return { error: publicShareAccessError, jobId: null };
+  }
+
   if (quote.status !== 'approved') {
     return { error: 'Quote must be approved before booking.', jobId: null };
   }
@@ -1253,17 +1364,22 @@ export async function bookJobFromPublicQuote(
 
   if (!includeNonWorkingDates && isNswNonWorkingDate(startDate)) {
     return {
-      error: 'Weekends and NSW public holidays are unavailable unless you choose to include them.',
+      error:
+        'Weekends and NSW public holidays are unavailable unless you choose to include them.',
       jobId: null,
     };
   }
 
-  const bookingRange = buildBookingRange(startDate, workingDays, includeNonWorkingDates);
+  const bookingRange = buildBookingRange(
+    startDate,
+    workingDays,
+    includeNonWorkingDates
+  );
   const endDate = bookingRange.endDate;
 
   const { data: overlapResult, error: overlapError } = await supabase.rpc(
     'check_job_date_overlap',
-    { p_user_id: quote.user_id, p_start_date: startDate, p_end_date: endDate },
+    { p_user_id: quote.user_id, p_start_date: startDate, p_end_date: endDate }
   );
 
   if (overlapError) {
@@ -1271,7 +1387,11 @@ export async function bookJobFromPublicQuote(
   }
 
   if (overlapResult === true) {
-    return { error: 'The selected dates are not available. Please choose different dates.', jobId: null };
+    return {
+      error:
+        'The selected dates are not available. Please choose different dates.',
+      jobId: null,
+    };
   }
 
   const googleBusy = await getGoogleBusyDatesForUser({
@@ -1283,14 +1403,23 @@ export async function bookJobFromPublicQuote(
 
   if (googleBusy.error) {
     return {
-      error: 'We could not confirm calendar availability. Please contact the contractor before booking.',
+      error:
+        'We could not confirm calendar availability. Please contact the contractor before booking.',
       jobId: null,
     };
   }
 
   const googleBlockedDates = new Set(googleBusy.blockedDates);
-  if (bookingRange.scheduledDates.some((scheduledDate) => googleBlockedDates.has(scheduledDate))) {
-    return { error: 'The selected dates are not available. Please choose different dates.', jobId: null };
+  if (
+    bookingRange.scheduledDates.some((scheduledDate) =>
+      googleBlockedDates.has(scheduledDate)
+    )
+  ) {
+    return {
+      error:
+        'The selected dates are not available. Please choose different dates.',
+      jobId: null,
+    };
   }
 
   const title = quote.title?.trim() || `Job for ${quote.quote_number}`;
@@ -1320,7 +1449,7 @@ export async function bookJobFromPublicQuote(
     supabase,
     quote.user_id,
     insertedJob.id,
-    bookingRange.scheduledDates,
+    bookingRange.scheduledDates
   );
   if (scheduleResult.error) {
     return { error: scheduleResult.error, jobId: null };
@@ -1351,8 +1480,12 @@ export async function bookJobFromPublicQuote(
  * Security: only returns date strings — no job details exposed.
  */
 export async function getAvailableDatesForToken(
-  token: string,
-): Promise<{ blockedDates: string[]; workingDays: number; error: string | null }> {
+  token: string
+): Promise<{
+  blockedDates: string[];
+  workingDays: number;
+  error: string | null;
+}> {
   const trimmedToken = token.trim();
   if (!trimmedToken) {
     return { blockedDates: [], workingDays: 1, error: 'Invalid booking link.' };
@@ -1362,7 +1495,9 @@ export async function getAvailableDatesForToken(
 
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
-    .select('id, user_id, status, working_days')
+    .select(
+      'id, user_id, status, working_days, public_share_expires_at, public_share_revoked_at'
+    )
     .eq('public_share_token', trimmedToken)
     .maybeSingle();
 
@@ -1374,15 +1509,24 @@ export async function getAvailableDatesForToken(
     return { blockedDates: [], workingDays: 1, error: 'Quote not found.' };
   }
 
+  const publicShareAccessError = getPublicQuoteShareAccessError(quote);
+  if (publicShareAccessError) {
+    return { blockedDates: [], workingDays: 1, error: publicShareAccessError };
+  }
+
   if (quote.status !== 'approved') {
-    return { blockedDates: [], workingDays: 1, error: 'Quote must be approved before booking.' };
+    return {
+      blockedDates: [],
+      workingDays: 1,
+      error: 'Quote must be approved before booking.',
+    };
   }
 
   const workingDays = quote.working_days ?? 1;
 
   const { data: blockedRows, error: blockedError } = await supabase.rpc(
     'get_blocked_dates_for_user',
-    { p_user_id: quote.user_id },
+    { p_user_id: quote.user_id }
   );
 
   if (blockedError) {
@@ -1390,7 +1534,7 @@ export async function getAvailableDatesForToken(
   }
 
   const blockedDates = (blockedRows ?? []).map(
-    (row: { blocked_date: string }) => row.blocked_date,
+    (row: { blocked_date: string }) => row.blocked_date
   );
   const today = getTodayDateValue();
 
@@ -1405,17 +1549,25 @@ export async function getAvailableDatesForToken(
     return {
       blockedDates: [],
       workingDays,
-      error: 'Calendar availability could not be confirmed. Please contact the contractor before booking.',
+      error:
+        'Calendar availability could not be confirmed. Please contact the contractor before booking.',
     };
   }
 
-  const mergedBlockedDates = [...new Set([...blockedDates, ...googleBusy.blockedDates])].sort();
+  const mergedBlockedDates = [
+    ...new Set([...blockedDates, ...googleBusy.blockedDates]),
+  ].sort();
 
   return { blockedDates: mergedBlockedDates, workingDays, error: null };
 }
 
-export async function getJobDetail(id: string): Promise<{ data: JobDetail | null; error: string | null }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+export async function getJobDetail(
+  id: string
+): Promise<{ data: JobDetail | null; error: string | null }> {
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
 
   const { data, error } = await supabase
     .from('jobs')
@@ -1439,13 +1591,17 @@ export async function getJobDetail(id: string): Promise<{ data: JobDetail | null
     data.quote_id
       ? supabase
           .from('quote_line_items')
-          .select('id, name, quantity, unit_price_cents, total_cents, is_optional, is_selected, sort_order')
+          .select(
+            'id, name, quantity, unit_price_cents, total_cents, is_optional, is_selected, sort_order'
+          )
           .eq('quote_id', data.quote_id)
           .order('sort_order', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from('job_variations')
-      .select('id, job_id, name, quantity, unit_price_cents, total_cents, notes, sort_order')
+      .select(
+        'id, job_id, name, quantity, unit_price_cents, total_cents, notes, sort_order'
+      )
       .eq('job_id', data.id)
       .eq('user_id', user.id)
       .order('sort_order', { ascending: true }),
@@ -1498,7 +1654,7 @@ export async function getJobDetail(id: string): Promise<{ data: JobDetail | null
 }
 
 export async function retryJobGoogleCalendarSync(
-  id: string,
+  id: string
 ): Promise<{ error: string | null; synced: boolean }> {
   const supabase = await createServerClient();
   const {
@@ -1525,7 +1681,10 @@ export async function retryJobGoogleCalendarSync(
   }
 
   if (!job.quote_id) {
-    return { error: 'Only jobs created from quotes can be synced to Google Calendar.', synced: false };
+    return {
+      error: 'Only jobs created from quotes can be synced to Google Calendar.',
+      synced: false,
+    };
   }
 
   const { data: quote, error: quoteError } = await supabase
@@ -1570,7 +1729,7 @@ export type JobVariationInput = {
 
 export async function saveJobVariations(
   jobId: string,
-  variations: JobVariationInput[],
+  variations: JobVariationInput[]
 ): Promise<{ error: string | null }> {
   const supabase = await createServerClient();
   const {
@@ -1607,7 +1766,9 @@ export async function saveJobVariations(
       sort_order: i,
     }));
 
-    const { error: insertError } = await supabase.from('job_variations').insert(rows);
+    const { error: insertError } = await supabase
+      .from('job_variations')
+      .insert(rows);
     if (insertError) return { error: insertError.message };
   }
 

@@ -4,6 +4,7 @@ import {
   calculateQuoteLineItemsSubtotal,
   calculateQuotePreview,
   getSuggestedRatePerSqmCents,
+  getPublicQuoteShareAccessError,
   groupQuoteLineItemsByCategory,
   isQuoteExpired,
   normalizeQuoteCoatingType,
@@ -542,5 +543,39 @@ describe('lib/quotes', () => {
     expect(
       resolveQuoteStatus({ status: 'rejected', valid_until: '2026-04-10' }, now)
     ).toBe('rejected');
+  });
+
+  it('blocks revoked or expired public quote share links', () => {
+    const now = new Date('2026-04-20T00:00:00.000Z');
+
+    expect(
+      getPublicQuoteShareAccessError(
+        {
+          public_share_revoked_at: '2026-04-19T00:00:00.000Z',
+          public_share_expires_at: null,
+        },
+        now
+      )
+    ).toBe('This public quote link is no longer available.');
+
+    expect(
+      getPublicQuoteShareAccessError(
+        {
+          public_share_revoked_at: null,
+          public_share_expires_at: '2026-04-19T23:59:59.000Z',
+        },
+        now
+      )
+    ).toBe('This public quote link has expired.');
+
+    expect(
+      getPublicQuoteShareAccessError(
+        {
+          public_share_revoked_at: null,
+          public_share_expires_at: '2026-04-20T00:00:01.000Z',
+        },
+        now
+      )
+    ).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { renderToBuffer } from '@react-pdf/renderer';
+import { getAppBaseUrl } from '@/lib/config/app-url';
 import { sendQuoteEmail } from '@/lib/email/resend';
 import { QuoteTemplate } from '@/lib/pdf/quote-template';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
@@ -46,7 +47,7 @@ export async function sendQuoteDocumentEmail(input: {
       logoUrl,
     })
   );
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.coatly.com.au';
+  const appUrl = getAppBaseUrl();
   const publicShareToken = quoteDetailResult.data.public_share_token.trim();
 
   if (!publicShareToken) {

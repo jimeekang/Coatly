@@ -2,6 +2,7 @@ import 'server-only';
 
 import {
   isMissingQuoteCustomerSnapshotColumnError,
+  getPublicQuoteShareAccessError,
   resolveQuoteCustomerSummary,
   resolveQuoteStatus,
 } from '@/modules/quotes/domain/quotes';
@@ -55,9 +56,14 @@ export async function approvePublicQuoteResponse({
     quoteError = legacyResult.error;
   }
 
+  const publicShareAccessError = quote
+    ? getPublicQuoteShareAccessError(quote)
+    : null;
+
   if (
     quoteError ||
     !quote ||
+    publicShareAccessError ||
     resolveQuoteStatus({
       status: quote.status,
       valid_until: quote.valid_until,
@@ -65,7 +71,9 @@ export async function approvePublicQuoteResponse({
   ) {
     return {
       data: null,
-      error: 'This quote is no longer available for approval.',
+      error:
+        publicShareAccessError ??
+        'This quote is no longer available for approval.',
     };
   }
 
@@ -127,18 +135,27 @@ export async function rejectPublicQuoteResponse({
 }): Promise<PublicQuoteResponseResult> {
   const quoteResult = await supabase
     .from('quotes')
-    .select('id, status, valid_until')
+    .select(
+      'id, status, valid_until, public_share_expires_at, public_share_revoked_at'
+    )
     .eq('public_share_token', quoteToken)
     .single();
   const quote = quoteResult.data as {
     id: string;
     status: string;
     valid_until: string | null;
+    public_share_expires_at?: string | null;
+    public_share_revoked_at?: string | null;
   } | null;
+
+  const publicShareAccessError = quote
+    ? getPublicQuoteShareAccessError(quote)
+    : null;
 
   if (
     quoteResult.error ||
     !quote ||
+    publicShareAccessError ||
     resolveQuoteStatus({
       status: quote.status,
       valid_until: quote.valid_until,
@@ -146,7 +163,9 @@ export async function rejectPublicQuoteResponse({
   ) {
     return {
       data: null,
-      error: 'This quote is no longer available for decline.',
+      error:
+        publicShareAccessError ??
+        'This quote is no longer available for decline.',
     };
   }
 

@@ -504,6 +504,30 @@ export function isQuoteExpired(
   return normalizedValidUntil < getSydneyIsoDate(now);
 }
 
+export type PublicQuoteShareState = {
+  public_share_expires_at?: string | null;
+  public_share_revoked_at?: string | null;
+};
+
+export function getPublicQuoteShareAccessError(
+  share: PublicQuoteShareState,
+  now = new Date()
+): string | null {
+  if (share.public_share_revoked_at) {
+    return 'This public quote link is no longer available.';
+  }
+
+  const expiresAt = share.public_share_expires_at;
+  if (expiresAt) {
+    const expiryTime = new Date(expiresAt).getTime();
+    if (Number.isFinite(expiryTime) && expiryTime <= now.getTime()) {
+      return 'This public quote link has expired.';
+    }
+  }
+
+  return null;
+}
+
 function normalizeQuoteStatus(status: QuoteStatus | string): QuoteStatus {
   switch (status) {
     case 'draft':

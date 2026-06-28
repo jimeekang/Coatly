@@ -1,6 +1,7 @@
 import 'server-only';
 import { revalidatePath } from 'next/cache';
 import { buildQuoteCustomerAddress } from '@/modules/quotes/domain/quotes';
+import { getAppBaseUrl } from '@/lib/config/app-url';
 import { decryptGoogleRefreshToken, encryptGoogleRefreshToken } from '@/lib/google-calendar/crypto';
 import {
   canUserConnectGoogleCalendar,
@@ -710,10 +711,7 @@ export async function syncBookedJobToGoogleCalendar(input: {
   const customerLabel = customer.company_name?.trim() || customer.name.trim();
   const title = input.quoteTitle?.trim() || `Job for ${input.quoteNumber}`;
   const address = buildQuoteCustomerAddress(customer);
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ??
-    null;
+  const appUrl = getAppBaseUrl({ fallback: '' }) || null;
 
   try {
     const eventCalendarId =

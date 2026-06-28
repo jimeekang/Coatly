@@ -7,6 +7,7 @@ import {
   calculateQuoteLineItemsSubtotal,
   calculateQuoteTotals,
   formatQuoteCustomerPropertyAddress,
+  getPublicQuoteShareAccessError,
   isMissingQuoteCustomerSnapshotColumnError,
   parseQuoteCreateInput,
   resolveQuoteStatus,
@@ -660,7 +661,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
     .select(
-      'id, status, valid_until, subtotal_cents, discount_cents, manual_adjustment_cents'
+      'id, status, valid_until, public_share_expires_at, public_share_revoked_at, subtotal_cents, discount_cents, manual_adjustment_cents'
     )
     .eq('public_share_token', quoteToken)
     .single();
@@ -668,6 +669,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
   if (
     quoteError ||
     !quote ||
+    getPublicQuoteShareAccessError(quote) ||
     resolveQuoteStatus({
       status: quote.status,
       valid_until: quote.valid_until,
