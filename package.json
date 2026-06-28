@@ -9,6 +9,10 @@
     "lint": "eslint",
     "db:types": "node scripts/generate-supabase-types.mjs",
     "supabase:auth": "node .agents/skills/db-schema/scripts/ensure-supabase-auth.mjs",
+    "smoke:env": "tsx scripts/launch-smoke/env-check.ts",
+    "smoke:install-browser": "playwright install chromium",
+    "smoke:preview": "tsx scripts/launch-smoke/preview-workflow-smoke.ts",
+    "smoke:seed": "tsx scripts/launch-smoke/seed-fixture.ts",
     "test": "vitest",
     "test:run": "vitest run",
     "seed:demo": "npx tsx scripts/seed-demo-data.ts"
@@ -38,6 +42,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -52,6 +57,7 @@
     "prettier-plugin-tailwindcss": "^0.7.2",
     "supabase": "^2.82.0",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.0"
   },

@@ -79,6 +79,7 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 - [x] Task 2 quote estimate category constraint repaired in live DB as `20260626233327 / quote_estimate_item_task2_categories`
 - [x] Vercel Preview env parity for smoke added: Supabase, Stripe test, Resend sandbox/test recipient, cron, ABR, Google OAuth secret
 - [x] Vercel Preview basic smoke passed on `https://coatly-2ir6cs2rb-kjm12081-3858s-projects.vercel.app`
+- [x] Launch smoke scripts added for env check, tagged fixture seed, and authenticated preview workflow runner
 
 ## Current Engineering Direction
 
@@ -113,6 +114,7 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 | P1       | Supabase migration reconciliation        | MCP로 live history/schema 확인 완료. `public_route_rate_limits`와 `quote_estimate_item_task2_categories` 원격 적용 완료. 로컬 CLI token/link와 migration version bookkeeping 정리 필요 | Codex               |
 | P1       | Public quote durable rate limit          | `proxy.ts` in-memory limiter 제거, Supabase RPC 기반 limiter와 테스트 추가. 원격 RPC/grant/allow-deny 검증 및 `/q/not-a-valid-token` smoke 통과                                           | Codex               |
 | P1       | Production email/cron verification       | Preview는 Resend sandbox/test recipient와 cron secret으로 smoke 가능. Production은 customer-safe Resend sender/API config와 `CRON_SECRET` 검증 필요                                      | Codex               |
+| P1       | Launch smoke gate automation             | `smoke:env`, `smoke:seed`, `smoke:preview` 추가. 실제 authenticated preview smoke는 smoke account env와 fixture seed 실행 후 통과 증거 필요                                             | Codex               |
 | P1       | Quote/Invoice 저장 원자성                | 다중 쿼리 경로 존재, RPC transaction 검토 필요                                                                                                                                          | Codex               |
 | P1       | Simple price book setup                  | Price Rates > Manual 직접 추가와 Excel CSV template/review/import/export 구현. A fixture로 실제 setup friction 검증 필요                                                                | Claude plan → Codex |
 | P1       | A price book onboarding test             | A의 Excel 가격표를 참고해 quote 하나에 필요한 price items를 앱 안에서 직접 저장하고 세팅 난이도 기록                                                                                    | Claude plan → Codex |

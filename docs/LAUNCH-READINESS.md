@@ -24,6 +24,7 @@
 | Local smoke             | Passed                    | `/` returns 200; `/dashboard` redirects to `/login`; `/q/not-a-valid-token` returns normal quote error page instead of rate-limit 429 |
 | Vercel Preview env      | Done for smoke            | Preview now has Supabase, Stripe test, Resend sandbox/test recipient, cron, ABR, and Google OAuth secret envs; `NEXT_PUBLIC_APP_URL` is intentionally not fixed in Preview |
 | Vercel Preview deploy   | Basic smoke passed        | Preview `https://coatly-2ir6cs2rb-kjm12081-3858s-projects.vercel.app` is Ready; `/` 200, `/login` 200, `/dashboard` 307 to `/login`, `/q/not-a-valid-token` 200 Quote not found, invoice PDF invalid token 404, cron without secret 401 |
+| Launch smoke tooling    | Added locally             | `smoke:env`, `smoke:seed`, and `smoke:preview` scripts added with unit coverage; live fixture/browser smoke still needs smoke account env and explicit execution |
 
 ## Release Blockers
 

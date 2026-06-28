@@ -17,6 +17,7 @@ Latest checked state:
 | Auth env failure mode             | Hardened locally    | Protected routes now redirect to `/login` when Supabase auth env is missing, preventing Preview deployments with missing env from becoming fail-open.                                                                                                       |
 | Vercel Preview env                | Ready for smoke     | Preview env now includes Supabase, Stripe test, Resend sandbox/test recipient, cron, ABR, and Google OAuth secret values. `NEXT_PUBLIC_APP_URL` is omitted so server links fall back to the active Vercel deployment URL.                                  |
 | Vercel Preview deployment         | Basic smoke passed  | Preview `coatly-2ir6cs2rb-kjm12081-3858s-projects.vercel.app` is Ready; unauthenticated smoke returned expected 200/307/404/401 statuses and no error logs were found.                                                                                      |
+| Launch smoke tooling              | Added locally       | `smoke:env`, `smoke:seed`, and `smoke:preview` are available for repeatable release checks. Production live cron remains manual-only because it can send real reminders.                                                                                   |
 | Production deployment             | Live                | `https://coatly.vercel.app` returned HTTP 200 and Vercel status `Ready`.                                                                                                                                                                                    |
 
 ## Active Security Findings & Fix Plan
@@ -155,4 +156,5 @@ const event = stripe.webhooks.constructEvent(
 - [ ] public token route는 invalid/expired/mismatched token 테스트 포함
 - [x] `/q/[token]` rate limit은 durable store 기반 (remote migration/RPC verified 2026-06-27)
 - [ ] Supabase CLI/link와 migration version bookkeeping 정리 완료
+- [x] Launch smoke tooling exists for env, fixture seed, and authenticated preview checks
 - [ ] production 배포 전 Vercel preview에서 authenticated workflow smoke QA 완료
