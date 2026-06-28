@@ -37,11 +37,34 @@ ALLOW_LAUNCH_SMOKE_SEED=true npm run smoke:seed
 
 After the command returns JSON, export the returned ids/tokens for the browser smoke:
 
+- `LAUNCH_SMOKE_EDIT_QUOTE_ID`
 - `LAUNCH_SMOKE_QUOTE_ID`
 - `LAUNCH_SMOKE_QUOTE_TOKEN`
 - `LAUNCH_SMOKE_INVOICE_ID`
 - `LAUNCH_SMOKE_INVOICE_TOKEN`
 - `LAUNCH_SMOKE_JOB_ID`
+
+Copy/paste helper:
+
+```bash
+eval "$(node - <<'NODE'
+const fs = require('fs');
+const raw = fs.readFileSync('/tmp/coatly-launch-smoke-seed.json', 'utf8');
+const data = JSON.parse(raw.slice(raw.indexOf('{')));
+const map = {
+  LAUNCH_SMOKE_EDIT_QUOTE_ID: data.editQuoteId,
+  LAUNCH_SMOKE_QUOTE_ID: data.quoteId,
+  LAUNCH_SMOKE_QUOTE_TOKEN: data.quoteToken,
+  LAUNCH_SMOKE_INVOICE_ID: data.invoiceId,
+  LAUNCH_SMOKE_INVOICE_TOKEN: data.invoiceToken,
+  LAUNCH_SMOKE_JOB_ID: data.jobId,
+};
+for (const [key, value] of Object.entries(map)) {
+  console.log(`export ${key}=${JSON.stringify(value)}`);
+}
+NODE
+)"
+```
 
 ## Authenticated Preview Workflow
 
@@ -62,6 +85,7 @@ Expected coverage:
 - [ ] Login succeeds.
 - [ ] `/dashboard` stays authenticated and does not redirect to onboarding/subscribe.
 - [ ] Quote detail loads.
+- [ ] Quote edit loads on the unlinked edit fixture.
 - [ ] Authenticated quote PDF returns `application/pdf`.
 - [ ] Public quote page loads from token.
 - [ ] Invoice detail loads.
@@ -104,6 +128,8 @@ Do not run live production actions automatically.
 - [ ] Controlled quote email delivered to a known internal/test recipient.
 - [ ] Controlled invoice email delivered to a known internal/test recipient.
 - [ ] Authorized cron check is run only when the fixture and eligible invoice state are controlled.
+- [ ] Before authorized cron, confirm no real customer invoice is eligible for reminder delivery.
+- [ ] If cron behavior must be exercised, mutate only a `[LAUNCH_SMOKE]` invoice into the exact due-soon/overdue state.
 
 Authorized cron can send real invoice reminders. Only run this manually when the controlled smoke state is prepared:
 

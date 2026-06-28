@@ -28,10 +28,12 @@ export type PageLike = {
     url: string,
     options?: { waitUntil?: 'domcontentloaded' | 'load' | 'networkidle' }
   ): Promise<unknown>;
+  waitForLoadState(state: 'domcontentloaded' | 'load' | 'networkidle'): Promise<void>;
   request: {
     get(url: string): Promise<ResponseLike>;
   };
   waitForURL(url: RegExp | string, options?: { timeout?: number }): Promise<void>;
+  url(): string;
 };
 
 export type BrowserLike = {
@@ -41,6 +43,7 @@ export type BrowserLike = {
 
 export type PreviewSmokeConfig = {
   appUrl: string;
+  editQuoteId: string;
   email: string;
   invoiceId: string;
   invoiceToken: string;
@@ -111,6 +114,9 @@ export function resolvePreviewSmokeConfig({
 
   return {
     appUrl: normalizeBaseUrl(requireInput('app-url', appUrl)),
+    editQuoteId:
+      env.LAUNCH_SMOKE_EDIT_QUOTE_ID?.trim() ||
+      requireInput('LAUNCH_SMOKE_QUOTE_ID', env.LAUNCH_SMOKE_QUOTE_ID),
     email: requireInput('LAUNCH_SMOKE_EMAIL', env.LAUNCH_SMOKE_EMAIL),
     invoiceId: requireInput('LAUNCH_SMOKE_INVOICE_ID', env.LAUNCH_SMOKE_INVOICE_ID),
     invoiceToken: requireInput(
@@ -140,6 +146,15 @@ async function assertPdfResponse(response: ResponseLike) {
   const contentType = response.headers()['content-type'] ?? '';
   if (!contentType.includes('application/pdf')) {
     throw new Error(`Expected PDF response, got ${contentType || 'unknown'}`);
+  }
+}
+
+function assertCurrentPath(page: PageLike, expectedPath: string) {
+  const currentUrl = new URL(page.url());
+  if (currentUrl.pathname !== expectedPath) {
+    throw new Error(
+      `Expected path ${expectedPath}, got ${currentUrl.pathname}`
+    );
   }
 }
 
@@ -177,6 +192,7 @@ export async function runPreviewWorkflowSmoke({
       await page.goto(`${config.appUrl}/login`, {
         waitUntil: 'domcontentloaded',
       });
+      await page.waitForLoadState('networkidle');
       await page.getByLabel(/email/i).fill(config.email);
       await page.getByLabel(/password/i).fill(config.password);
       await page.getByRole('button', { name: /sign in|log in/i }).click();
@@ -189,6 +205,7 @@ export async function runPreviewWorkflowSmoke({
       await page.goto(`${config.appUrl}/dashboard`, {
         waitUntil: 'domcontentloaded',
       });
+      assertCurrentPath(page, '/dashboard');
       await page.getByText(/dashboard|quotes|revenue/i).first().waitFor({
         timeout: 10_000,
       });
@@ -198,16 +215,18 @@ export async function runPreviewWorkflowSmoke({
       await page.goto(`${config.appUrl}/quotes/${config.quoteId}`, {
         waitUntil: 'domcontentloaded',
       });
-      await page.getByText(/launch_smoke|interior repaint|quote/i).first().waitFor({
+      assertCurrentPath(page, `/quotes/${config.quoteId}`);
+      await page.getByText(/\[LAUNCH_SMOKE\] Interior repaint/i).first().waitFor({
         timeout: 10_000,
       });
     });
 
     await runStep(results, 'quote-edit', async () => {
-      await page.goto(`${config.appUrl}/quotes/${config.quoteId}/edit`, {
+      await page.goto(`${config.appUrl}/quotes/${config.editQuoteId}/edit`, {
         waitUntil: 'domcontentloaded',
       });
-      await page.getByText(/launch_smoke|interior repaint|quote/i).first().waitFor({
+      assertCurrentPath(page, `/quotes/${config.editQuoteId}/edit`);
+      await page.getByText(/\[LAUNCH_SMOKE\] Editable smoke quote/i).first().waitFor({
         timeout: 10_000,
       });
     });
@@ -222,7 +241,14 @@ export async function runPreviewWorkflowSmoke({
       await page.goto(`${config.appUrl}/q/${config.quoteToken}`, {
         waitUntil: 'domcontentloaded',
       });
-      await page.getByText(/approve|decline|quote/i).first().waitFor({
+      assertCurrentPath(page, `/q/${config.quoteToken}`);
+      await page.getByText(/\[LAUNCH_SMOKE\] Interior repaint/i).first().waitFor({
+        timeout: 10_000,
+      });
+      await page.getByRole('link', { name: /pdf/i }).first().waitFor({
+        timeout: 10_000,
+      });
+      await page.getByRole('button', { name: /approve quote/i }).first().waitFor({
         timeout: 10_000,
       });
     });
@@ -231,7 +257,8 @@ export async function runPreviewWorkflowSmoke({
       await page.goto(`${config.appUrl}/invoices/${config.invoiceId}`, {
         waitUntil: 'domcontentloaded',
       });
-      await page.getByText(/invoice|launch_smoke/i).first().waitFor({
+      assertCurrentPath(page, `/invoices/${config.invoiceId}`);
+      await page.getByText(/\[LAUNCH_SMOKE\]/i).first().waitFor({
         timeout: 10_000,
       });
     });
@@ -248,6 +275,7 @@ export async function runPreviewWorkflowSmoke({
       await page.goto(`${config.appUrl}/schedule`, {
         waitUntil: 'domcontentloaded',
       });
+      assertCurrentPath(page, '/schedule');
       await page.getByText(/schedule|job/i).first().waitFor({
         timeout: 10_000,
       });
@@ -257,7 +285,8 @@ export async function runPreviewWorkflowSmoke({
       await page.goto(`${config.appUrl}/jobs/${config.jobId}`, {
         waitUntil: 'domcontentloaded',
       });
-      await page.getByText(/launch_smoke|scheduled smoke job|job/i).first().waitFor({
+      assertCurrentPath(page, `/jobs/${config.jobId}`);
+      await page.getByText(/\[LAUNCH_SMOKE\] Scheduled smoke job/i).first().waitFor({
         timeout: 10_000,
       });
     });

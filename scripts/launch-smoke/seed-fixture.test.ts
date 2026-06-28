@@ -16,6 +16,7 @@ const validEnv = {
 
 function createFakeDb(overrides: Partial<LaunchSmokeDb> = {}) {
   const calls: string[] = [];
+  let quoteCreateCount = 0;
   const db: LaunchSmokeDb = {
     cleanupFixture: vi.fn(async () => void calls.push('cleanupFixture')),
     createCustomer: vi.fn(async () => {
@@ -41,9 +42,10 @@ function createFakeDb(overrides: Partial<LaunchSmokeDb> = {}) {
     ),
     createQuote: vi.fn(async () => {
       calls.push('createQuote');
+      quoteCreateCount += 1;
       return {
-        id: 'quote-1',
-        public_share_token: 'quote-token',
+        id: quoteCreateCount === 1 ? 'quote-1' : 'quote-edit-1',
+        public_share_token: quoteCreateCount === 1 ? 'quote-token' : null,
       };
     }),
     createQuoteLineItem: vi.fn(async () => void calls.push('createQuoteLineItem')),
@@ -131,6 +133,7 @@ describe('launch smoke fixture seed', () => {
       ok: true,
       userId: 'user-existing',
       email: 'smoke@example.com',
+      editQuoteId: 'quote-edit-1',
       quoteId: 'quote-1',
       invoiceId: 'invoice-1',
       jobId: 'job-1',
@@ -183,10 +186,26 @@ describe('launch smoke fixture seed', () => {
         status: 'sent',
       })
     );
+    expect(db.createQuote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: 'user-1',
+        customer_id: 'customer-1',
+        quote_number: 'SMOKE-Q-EDIT-20260628',
+        status: 'draft',
+        title: '[LAUNCH_SMOKE] Editable smoke quote',
+      })
+    );
     expect(db.createQuoteLineItem).toHaveBeenCalledWith(
       expect.objectContaining({
         quote_id: 'quote-1',
         name: '[LAUNCH_SMOKE] Interior repaint labour',
+        is_selected: true,
+      })
+    );
+    expect(db.createQuoteLineItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quote_id: 'quote-edit-1',
+        name: '[LAUNCH_SMOKE] Editable quote labour',
         is_selected: true,
       })
     );
@@ -212,8 +231,8 @@ describe('launch smoke fixture seed', () => {
       })
     );
     expect(db.createJobScheduleDay).toHaveBeenCalledWith({
+      date: '2026-07-01',
       job_id: 'job-1',
-      scheduled_date: '2026-07-01',
       user_id: 'user-1',
     });
   });

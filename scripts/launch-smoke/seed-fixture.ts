@@ -31,8 +31,8 @@ type InvoiceLineItemPayload =
   Database['public']['Tables']['invoice_line_items']['Insert'];
 type JobPayload = Database['public']['Tables']['jobs']['Insert'];
 type JobScheduleDayPayload = {
+  date: string;
   job_id: string;
-  scheduled_date: string;
   user_id: string;
 };
 
@@ -79,6 +79,7 @@ export type LaunchSmokeSeedResult = {
   userId: string;
   email: string;
   customerId: string;
+  editQuoteId: string;
   quoteId: string;
   quoteToken: string | null;
   invoiceId: string;
@@ -238,6 +239,39 @@ export async function runLaunchSmokeSeed({
     sort_order: 0,
   });
 
+  const editQuote = await db.createQuote({
+    user_id: user.id,
+    customer_id: customerId,
+    quote_number: `SMOKE-Q-EDIT-${stamp}`,
+    title: `${TAG} Editable smoke quote`,
+    status: 'draft',
+    tier: 'standard',
+    job_type: 'interior',
+    valid_until: isoDateDaysFrom(now, 14),
+    working_days: 1,
+    subtotal_cents: 50_000,
+    gst_cents: 5_000,
+    total_cents: 55_000,
+    labour_margin_percent: 0,
+    material_margin_percent: 0,
+    notes: `${TAG} Unlinked quote for edit route verification.`,
+    internal_notes: `${TAG} Safe to delete and recreate.`,
+  });
+
+  await db.createQuoteLineItem({
+    quote_id: editQuote.id,
+    name: `${TAG} Editable quote labour`,
+    notes: 'Unlinked edit smoke line item.',
+    category: 'service',
+    quantity: 1,
+    unit: 'fixed',
+    unit_price_cents: 50_000,
+    total_cents: 50_000,
+    is_optional: false,
+    is_selected: true,
+    sort_order: 0,
+  });
+
   const invoice = await db.createInvoice({
     user_id: user.id,
     customer_id: customerId,
@@ -278,8 +312,8 @@ export async function runLaunchSmokeSeed({
     notes: `${TAG} Smoke job for preview schedule verification.`,
   });
   await db.createJobScheduleDay({
+    date: scheduledDate,
     job_id: jobId,
-    scheduled_date: scheduledDate,
     user_id: user.id,
   });
 
@@ -288,6 +322,7 @@ export async function runLaunchSmokeSeed({
     userId: user.id,
     email: config.email,
     customerId,
+    editQuoteId: editQuote.id,
     quoteId: quote.id,
     quoteToken: quote.public_share_token,
     invoiceId: invoice.id,

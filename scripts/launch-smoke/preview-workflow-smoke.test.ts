@@ -9,6 +9,7 @@ import {
 const validEnv = {
   LAUNCH_SMOKE_EMAIL: 'smoke@example.com',
   LAUNCH_SMOKE_PASSWORD: 'password',
+  LAUNCH_SMOKE_EDIT_QUOTE_ID: 'quote-edit-1',
   LAUNCH_SMOKE_QUOTE_ID: 'quote-1',
   LAUNCH_SMOKE_QUOTE_TOKEN: 'quote-token',
   LAUNCH_SMOKE_INVOICE_ID: 'invoice-1',
@@ -18,6 +19,7 @@ const validEnv = {
 };
 
 function createPage(overrides: Partial<PageLike> = {}) {
+  let currentUrl = 'https://preview.example.com/dashboard';
   const locator = {
     click: vi.fn(async () => undefined),
     fill: vi.fn(async () => undefined),
@@ -30,7 +32,11 @@ function createPage(overrides: Partial<PageLike> = {}) {
     getByRole: vi.fn(() => locator),
     getByTestId: vi.fn(() => locator),
     getByText: vi.fn(() => locator),
-    goto: vi.fn(async () => undefined),
+    goto: vi.fn(async (url) => {
+      currentUrl = String(url);
+      return undefined;
+    }),
+    waitForLoadState: vi.fn(async () => undefined),
     request: {
       get: vi.fn(async () => ({
         headers: () => ({ 'content-type': 'application/pdf' }),
@@ -38,6 +44,7 @@ function createPage(overrides: Partial<PageLike> = {}) {
       })),
     },
     waitForURL: vi.fn(async () => undefined),
+    url: vi.fn(() => currentUrl),
     ...overrides,
   };
 
@@ -70,6 +77,7 @@ describe('preview workflow smoke runner', () => {
       })
     ).toEqual({
       appUrl: 'https://preview.example.com',
+      editQuoteId: 'quote-edit-1',
       email: 'smoke@example.com',
       invoiceId: 'invoice-1',
       invoiceToken: 'invoice-token',
@@ -80,6 +88,18 @@ describe('preview workflow smoke runner', () => {
       quoteToken: 'quote-token',
       sendEmail: false,
     });
+  });
+
+  it('falls back to the main quote id when no edit quote fixture is provided', () => {
+    const env = { ...validEnv };
+    delete env.LAUNCH_SMOKE_EDIT_QUOTE_ID;
+
+    expect(
+      resolvePreviewSmokeConfig({
+        args: ['--app-url=https://preview.example.com'],
+        env,
+      }).editQuoteId
+    ).toBe('quote-1');
   });
 
   it('refuses production email smoke with a sandbox sender', () => {
@@ -96,7 +116,15 @@ describe('preview workflow smoke runner', () => {
   });
 
   it('checks authenticated pages and PDF endpoints', async () => {
+    const visitedPaths: string[] = [];
     const { page } = createPage();
+    vi.mocked(page.goto).mockImplementation(async (url) => {
+      visitedPaths.push(new URL(String(url)).pathname);
+      return undefined;
+    });
+    vi.mocked(page.url).mockImplementation(
+      () => `https://preview.example.com${visitedPaths.at(-1) ?? '/dashboard'}`
+    );
     const browser = createBrowser(page);
 
     const result = await runPreviewWorkflowSmoke({
@@ -121,17 +149,44 @@ describe('preview workflow smoke runner', () => {
       'job-detail',
     ]);
     expect(page.goto).toHaveBeenCalledWith(
-      'https://preview.example.com/quotes/quote-1/edit',
+      'https://preview.example.com/quotes/quote-edit-1/edit',
       { waitUntil: 'domcontentloaded' }
     );
     expect(page.goto).toHaveBeenCalledWith(
       'https://preview.example.com/quotes/quote-1',
       { waitUntil: 'domcontentloaded' }
     );
+    expect(page.waitForLoadState).toHaveBeenCalledWith('networkidle');
     expect(page.request.get).toHaveBeenCalledWith(
       'https://preview.example.com/api/pdf/invoice?token=invoice-token'
     );
+    expect(page.getByText).toHaveBeenCalledWith(
+      /\[LAUNCH_SMOKE\] Interior repaint/i
+    );
+    expect(page.getByRole).toHaveBeenCalledWith('link', { name: /pdf/i });
     expect(browser.close).toHaveBeenCalled();
+  });
+
+  it('fails authenticated checks when the app redirects to login', async () => {
+    const { page } = createPage({
+      url: vi.fn(() => 'https://preview.example.com/login'),
+    });
+    const browser = createBrowser(page);
+
+    const result = await runPreviewWorkflowSmoke({
+      browser,
+      config: resolvePreviewSmokeConfig({
+        args: ['--app-url=https://preview.example.com'],
+        env: validEnv,
+      }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.results).toContainEqual({
+      name: 'dashboard-authenticated',
+      ok: false,
+      error: 'Expected path /dashboard, got /login',
+    });
   });
 
   it('runs invoice email smoke only when explicitly requested', async () => {

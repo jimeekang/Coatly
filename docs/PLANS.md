@@ -1,6 +1,6 @@
 # Coatly — Roadmap & Progress
 
-> Phase/progress의 단일 소스입니다. 기준일: 2026-06-27.
+> Phase/progress의 단일 소스입니다. 기준일: 2026-06-28.
 
 ## Ownership
 
@@ -80,6 +80,7 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 - [x] Vercel Preview env parity for smoke added: Supabase, Stripe test, Resend sandbox/test recipient, cron, ABR, Google OAuth secret
 - [x] Vercel Preview basic smoke passed on `https://coatly-2ir6cs2rb-kjm12081-3858s-projects.vercel.app`
 - [x] Launch smoke scripts added for env check, tagged fixture seed, and authenticated preview workflow runner
+- [x] Authenticated Preview workflow smoke passed with tagged fixture: login, dashboard, quote detail/edit/PDF, public quote, invoice detail/PDF, schedule, job detail
 
 ## Current Engineering Direction
 
@@ -97,7 +98,7 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 | ---- | --------------------------------- | --------------------------------------------------------------------------------------------------- |
 | 1    | DDD module refactor landing       | `modules/` 이동이 route wiring, tests, build, browser smoke에서 기존 기능을 깨지 않음               |
 | 2    | Supabase migration reconciliation | live schema drift 해소, CLI token/link와 migration version bookkeeping 정리                         |
-| 3    | Security hardening                | authenticated preview workflow smoke, production Resend/cron verification, release security gate    |
+| 3    | Security hardening                | production Resend/cron verification, release security gate                                          |
 | 4    | A workflow fixture 수집           | 실제 Excel price book + 최근 quote PDF/email 1개 + quote에 필요한 price items 확보                  |
 | 5    | Simple price book setup           | A가 앱 안에서 service/unit/price 중심으로 필요한 price items를 세팅하고 saved price book으로 저장함 |
 | 6    | Quote recreation                  | 같은 quote를 Coatly에서 만들고 Excel/PDF와 total/scope 차이를 기록                                  |
