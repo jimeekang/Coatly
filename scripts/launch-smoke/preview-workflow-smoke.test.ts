@@ -9,6 +9,8 @@ import {
 const validEnv = {
   LAUNCH_SMOKE_EMAIL: 'smoke@example.com',
   LAUNCH_SMOKE_PASSWORD: 'password',
+  LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN: 'approval-quote-token',
+  LAUNCH_SMOKE_BOOKING_DATE: '2026-07-08',
   LAUNCH_SMOKE_EDIT_QUOTE_ID: 'quote-edit-1',
   LAUNCH_SMOKE_QUOTE_ID: 'quote-1',
   LAUNCH_SMOKE_QUOTE_TOKEN: 'quote-token',
@@ -21,6 +23,7 @@ const validEnv = {
 function createPage(overrides: Partial<PageLike> = {}) {
   let currentUrl = 'https://preview.example.com/dashboard';
   const locator = {
+    boundingBox: vi.fn(async () => ({ x: 10, y: 20, width: 300, height: 100 })),
     click: vi.fn(async () => undefined),
     fill: vi.fn(async () => undefined),
     first: vi.fn().mockReturnThis(),
@@ -32,10 +35,16 @@ function createPage(overrides: Partial<PageLike> = {}) {
     getByRole: vi.fn(() => locator),
     getByTestId: vi.fn(() => locator),
     getByText: vi.fn(() => locator),
+    locator: vi.fn(() => locator),
     goto: vi.fn(async (url) => {
       currentUrl = String(url);
       return undefined;
     }),
+    mouse: {
+      down: vi.fn(async () => undefined),
+      move: vi.fn(async () => undefined),
+      up: vi.fn(async () => undefined),
+    },
     waitForLoadState: vi.fn(async () => undefined),
     request: {
       get: vi.fn(async () => ({
@@ -77,17 +86,48 @@ describe('preview workflow smoke runner', () => {
       })
     ).toEqual({
       appUrl: 'https://preview.example.com',
+      approvalQuoteToken: null,
+      bookingDate: null,
       editQuoteId: 'quote-edit-1',
       email: 'smoke@example.com',
       invoiceId: 'invoice-1',
       invoiceToken: 'invoice-token',
       jobId: 'job-1',
+      mutatePublicFlow: false,
       password: 'password',
       production: false,
       quoteId: 'quote-1',
       quoteToken: 'quote-token',
       sendEmail: false,
     });
+  });
+
+  it('requires approval fixture inputs only for mutating public flow smoke', () => {
+    const env = { ...validEnv };
+    delete env.LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN;
+
+    expect(() =>
+      resolvePreviewSmokeConfig({
+        args: [
+          '--app-url=https://preview.example.com',
+          '--mutate-public-flow',
+        ],
+        env,
+      })
+    ).toThrow('LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN');
+  });
+
+  it('refuses public-flow mutation smoke in production', () => {
+    expect(() =>
+      resolvePreviewSmokeConfig({
+        args: [
+          '--app-url=https://coatly.vercel.app',
+          '--production',
+          '--mutate-public-flow',
+        ],
+        env: validEnv,
+      })
+    ).toThrow('Refusing production public-flow mutation smoke');
   });
 
   it('falls back to the main quote id when no edit quote fixture is provided', () => {
@@ -202,9 +242,19 @@ describe('preview workflow smoke runner', () => {
     });
 
     expect(result.ok).toBe(true);
+    expect(result.results.at(-2)).toEqual({
+      name: 'quote-email-send',
+      ok: true,
+    });
     expect(result.results.at(-1)).toEqual({
       name: 'invoice-email-send',
       ok: true,
+    });
+    expect(page.getByRole).toHaveBeenCalledWith('button', {
+      name: /send quote to client/i,
+    });
+    expect(page.getByRole).toHaveBeenCalledWith('button', {
+      name: /^send quote$/i,
     });
     expect(page.getByText).toHaveBeenCalledWith(/\[LAUNCH_SMOKE\]/i);
     expect(page.getByRole).toHaveBeenCalledWith('button', {
@@ -214,6 +264,42 @@ describe('preview workflow smoke runner', () => {
       name: /record payment/i,
     });
     expect(page.getByText).toHaveBeenCalledWith(/^Sent$/i);
+  });
+
+  it('runs public approval and booking only when explicitly requested', async () => {
+    const { page } = createPage();
+    const browser = createBrowser(page);
+
+    const result = await runPreviewWorkflowSmoke({
+      browser,
+      config: resolvePreviewSmokeConfig({
+        args: [
+          '--app-url=https://preview.example.com',
+          '--mutate-public-flow',
+        ],
+        env: validEnv,
+      }),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.results.map((step) => step.name)).toContain(
+      'public-quote-approval'
+    );
+    expect(result.results.map((step) => step.name)).toContain(
+      'public-quote-booking'
+    );
+    expect(page.goto).toHaveBeenCalledWith(
+      'https://preview.example.com/q/approval-quote-token',
+      { waitUntil: 'domcontentloaded' }
+    );
+    expect(page.getByLabel).toHaveBeenCalledWith(/your name/i);
+    expect(page.getByLabel).toHaveBeenCalledWith(/your email/i);
+    expect(page.locator).toHaveBeenCalledWith('canvas');
+    expect(page.mouse.move).toHaveBeenCalled();
+    expect(page.getByTestId).toHaveBeenCalledWith('date-2026-07-08');
+    expect(page.getByRole).toHaveBeenCalledWith('button', {
+      name: /book 1 day starting/i,
+    });
   });
 
   it('continues recording later checks when one step fails', async () => {

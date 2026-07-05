@@ -5,6 +5,7 @@ import path from 'node:path';
 type EnvMap = Record<string, string | undefined>;
 
 type LocatorLike = {
+  boundingBox(): Promise<{ height: number; width: number; x: number; y: number } | null>;
   click(): Promise<void>;
   fill(value: string): Promise<void>;
   first(): LocatorLike;
@@ -24,11 +25,17 @@ export type PageLike = {
   ): LocatorLike;
   getByTestId(testId: string): LocatorLike;
   getByText(text: RegExp | string): LocatorLike;
+  locator(selector: string): LocatorLike;
   goto(
     url: string,
     options?: { waitUntil?: 'domcontentloaded' | 'load' | 'networkidle' }
   ): Promise<unknown>;
   waitForLoadState(state: 'domcontentloaded' | 'load' | 'networkidle'): Promise<void>;
+  mouse: {
+    down(): Promise<void>;
+    move(x: number, y: number): Promise<void>;
+    up(): Promise<void>;
+  };
   request: {
     get(url: string): Promise<ResponseLike>;
   };
@@ -43,12 +50,15 @@ export type BrowserLike = {
 
 export type PreviewSmokeConfig = {
   appUrl: string;
+  approvalQuoteToken: string | null;
+  bookingDate: string | null;
   editQuoteId: string;
   email: string;
   invoiceId: string;
   invoiceToken: string;
   jobId: string;
   password: string;
+  mutatePublicFlow: boolean;
   production: boolean;
   quoteId: string;
   quoteToken: string;
@@ -98,6 +108,7 @@ export function resolvePreviewSmokeConfig({
 
   const production = args.includes('--production');
   const sendEmail = args.includes('--send-email');
+  const mutatePublicFlow = args.includes('--mutate-public-flow');
   const resendFrom = env.RESEND_FROM_ADDRESS?.trim() ?? '';
   const resendAddress = extractEmailAddress(resendFrom);
 
@@ -112,8 +123,23 @@ export function resolvePreviewSmokeConfig({
     );
   }
 
+  if (production && mutatePublicFlow) {
+    throw new Error(
+      'Refusing production public-flow mutation smoke. Run it in preview with tagged launch smoke data.'
+    );
+  }
+
   return {
     appUrl: normalizeBaseUrl(requireInput('app-url', appUrl)),
+    approvalQuoteToken: mutatePublicFlow
+      ? requireInput(
+          'LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN',
+          env.LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN
+        )
+      : null,
+    bookingDate: mutatePublicFlow
+      ? requireInput('LAUNCH_SMOKE_BOOKING_DATE', env.LAUNCH_SMOKE_BOOKING_DATE)
+      : null,
     editQuoteId:
       env.LAUNCH_SMOKE_EDIT_QUOTE_ID?.trim() ||
       requireInput('LAUNCH_SMOKE_QUOTE_ID', env.LAUNCH_SMOKE_QUOTE_ID),
@@ -124,6 +150,7 @@ export function resolvePreviewSmokeConfig({
       env.LAUNCH_SMOKE_INVOICE_TOKEN
     ),
     jobId: requireInput('LAUNCH_SMOKE_JOB_ID', env.LAUNCH_SMOKE_JOB_ID),
+    mutatePublicFlow,
     password: requireInput(
       'LAUNCH_SMOKE_PASSWORD',
       env.LAUNCH_SMOKE_PASSWORD
@@ -172,6 +199,34 @@ async function runStep(
       ok: false,
       error: error instanceof Error ? error.message : String(error),
     });
+  }
+}
+
+async function drawSignature(page: PageLike) {
+  const canvas = page.locator('canvas').first();
+  await canvas.waitFor({ timeout: 10_000 });
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Signature canvas is not visible.');
+
+  const startX = box.x + box.width * 0.25;
+  const startY = box.y + box.height * 0.55;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.45, box.y + box.height * 0.4);
+  await page.mouse.move(box.x + box.width * 0.65, box.y + box.height * 0.6);
+  await page.mouse.up();
+}
+
+async function showBookingMonth(page: PageLike, bookingDate: string) {
+  const booking = new Date(`${bookingDate}T00:00:00`);
+  const now = new Date();
+  const monthDelta =
+    (booking.getFullYear() - now.getFullYear()) * 12 +
+    booking.getMonth() -
+    now.getMonth();
+
+  for (let index = 0; index < Math.max(0, monthDelta); index += 1) {
+    await page.getByRole('button', { name: /next month/i }).click();
   }
 }
 
@@ -253,6 +308,55 @@ export async function runPreviewWorkflowSmoke({
       });
     });
 
+    if (config.mutatePublicFlow) {
+      const approvalQuoteToken = requireInput(
+        'LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN',
+        config.approvalQuoteToken ?? undefined
+      );
+      const bookingDate = requireInput(
+        'LAUNCH_SMOKE_BOOKING_DATE',
+        config.bookingDate ?? undefined
+      );
+
+      await runStep(results, 'public-quote-approval', async () => {
+        await page.goto(`${config.appUrl}/q/${approvalQuoteToken}`, {
+          waitUntil: 'domcontentloaded',
+        });
+        assertCurrentPath(page, `/q/${approvalQuoteToken}`);
+        await page.getByText(/\[LAUNCH_SMOKE\] Approval booking smoke quote/i)
+          .first()
+          .waitFor({
+            timeout: 10_000,
+          });
+        await page.getByLabel(/your name/i).fill('Launch Smoke Customer');
+        await page.getByLabel(/your email/i).fill(config.email);
+        await drawSignature(page);
+        await page.getByRole('button', { name: /approve quote/i }).click();
+        await page.getByText(/quote approved/i).first().waitFor({
+          timeout: 20_000,
+        });
+      });
+
+      await runStep(results, 'public-quote-booking', async () => {
+        await page.goto(`${config.appUrl}/q/${approvalQuoteToken}`, {
+          waitUntil: 'domcontentloaded',
+        });
+        assertCurrentPath(page, `/q/${approvalQuoteToken}`);
+        await page.getByText(/book your dates/i).first().waitFor({
+          timeout: 20_000,
+        });
+        await page
+          .getByLabel(/include weekends and NSW public holidays/i)
+          .click();
+        await showBookingMonth(page, bookingDate);
+        await page.getByTestId(`date-${bookingDate}`).click();
+        await page.getByRole('button', { name: /book 1 day starting/i }).click();
+        await page.getByText(/booking confirmed/i).first().waitFor({
+          timeout: 20_000,
+        });
+      });
+    }
+
     await runStep(results, 'invoice-detail', async () => {
       await page.goto(`${config.appUrl}/invoices/${config.invoiceId}`, {
         waitUntil: 'domcontentloaded',
@@ -292,6 +396,27 @@ export async function runPreviewWorkflowSmoke({
     });
 
     if (config.sendEmail) {
+      await runStep(results, 'quote-email-send', async () => {
+        await page.goto(`${config.appUrl}/quotes/${config.editQuoteId}/edit`, {
+          waitUntil: 'domcontentloaded',
+        });
+        assertCurrentPath(page, `/quotes/${config.editQuoteId}/edit`);
+        await page
+          .getByText(/\[LAUNCH_SMOKE\] Editable smoke quote/i)
+          .first()
+          .waitFor({
+            timeout: 10_000,
+          });
+        await page.getByRole('button', { name: /send quote to client/i }).click();
+        await page.getByRole('button', { name: /^send quote$/i }).click();
+        await page.waitForURL(/\/quotes\/[^/?]+(\?.*emailSent=1|$)/, {
+          timeout: 20_000,
+        });
+        await page.getByText(/quote email sent/i).first().waitFor({
+          timeout: 20_000,
+        });
+      });
+
       await runStep(results, 'invoice-email-send', async () => {
         await page.goto(`${config.appUrl}/invoices/${config.invoiceId}`, {
           waitUntil: 'domcontentloaded',

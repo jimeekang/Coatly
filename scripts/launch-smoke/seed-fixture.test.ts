@@ -17,6 +17,8 @@ const validEnv = {
 function createFakeDb(overrides: Partial<LaunchSmokeDb> = {}) {
   const calls: string[] = [];
   let quoteCreateCount = 0;
+  const quoteIds = ['quote-1', 'quote-edit-1', 'quote-approval-1'];
+  const quoteTokens = ['quote-token', null, 'approval-quote-token'];
   const db: LaunchSmokeDb = {
     cleanupFixture: vi.fn(async () => void calls.push('cleanupFixture')),
     createCustomer: vi.fn(async () => {
@@ -44,8 +46,8 @@ function createFakeDb(overrides: Partial<LaunchSmokeDb> = {}) {
       calls.push('createQuote');
       quoteCreateCount += 1;
       return {
-        id: quoteCreateCount === 1 ? 'quote-1' : 'quote-edit-1',
-        public_share_token: quoteCreateCount === 1 ? 'quote-token' : null,
+        id: quoteIds[quoteCreateCount - 1] ?? `quote-${quoteCreateCount}`,
+        public_share_token: quoteTokens[quoteCreateCount - 1] ?? null,
       };
     }),
     createQuoteLineItem: vi.fn(async () => void calls.push('createQuoteLineItem')),
@@ -126,6 +128,7 @@ describe('launch smoke fixture seed', () => {
       randomUUID: vi
         .fn()
         .mockReturnValueOnce('quote-token')
+        .mockReturnValueOnce('approval-quote-token')
         .mockReturnValueOnce('invoice-token'),
     });
 
@@ -135,6 +138,9 @@ describe('launch smoke fixture seed', () => {
       email: 'smoke@example.com',
       editQuoteId: 'quote-edit-1',
       quoteId: 'quote-1',
+      approvalQuoteId: 'quote-approval-1',
+      approvalQuoteToken: 'approval-quote-token',
+      bookingDate: '2026-07-08',
       invoiceId: 'invoice-1',
       jobId: 'job-1',
     });
@@ -167,6 +173,7 @@ describe('launch smoke fixture seed', () => {
       randomUUID: vi
         .fn()
         .mockReturnValueOnce('quote-token')
+        .mockReturnValueOnce('approval-quote-token')
         .mockReturnValueOnce('invoice-token'),
     });
 
@@ -195,6 +202,17 @@ describe('launch smoke fixture seed', () => {
         title: '[LAUNCH_SMOKE] Editable smoke quote',
       })
     );
+    expect(db.createQuote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: 'user-1',
+        customer_id: 'customer-1',
+        public_share_token: 'approval-quote-token',
+        quote_number: 'SMOKE-Q-APPROVE-20260628',
+        status: 'sent',
+        title: '[LAUNCH_SMOKE] Approval booking smoke quote',
+        working_days: 1,
+      })
+    );
     expect(db.createQuoteLineItem).toHaveBeenCalledWith(
       expect.objectContaining({
         quote_id: 'quote-1',
@@ -206,6 +224,13 @@ describe('launch smoke fixture seed', () => {
       expect.objectContaining({
         quote_id: 'quote-edit-1',
         name: '[LAUNCH_SMOKE] Editable quote labour',
+        is_selected: true,
+      })
+    );
+    expect(db.createQuoteLineItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quote_id: 'quote-approval-1',
+        name: '[LAUNCH_SMOKE] Approval quote labour',
         is_selected: true,
       })
     );
@@ -247,6 +272,7 @@ describe('launch smoke fixture seed', () => {
       randomUUID: vi
         .fn()
         .mockReturnValueOnce('quote-token')
+        .mockReturnValueOnce('approval-quote-token')
         .mockReturnValueOnce('invoice-token'),
     });
 

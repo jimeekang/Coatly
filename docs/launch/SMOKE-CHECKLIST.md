@@ -38,6 +38,8 @@ ALLOW_LAUNCH_SMOKE_SEED=true npm run smoke:seed
 After the command returns JSON, export the returned ids/tokens for the browser smoke:
 
 - `LAUNCH_SMOKE_EDIT_QUOTE_ID`
+- `LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN`
+- `LAUNCH_SMOKE_BOOKING_DATE`
 - `LAUNCH_SMOKE_QUOTE_ID`
 - `LAUNCH_SMOKE_QUOTE_TOKEN`
 - `LAUNCH_SMOKE_INVOICE_ID`
@@ -53,6 +55,8 @@ const raw = fs.readFileSync('/tmp/coatly-launch-smoke-seed.json', 'utf8');
 const data = JSON.parse(raw.slice(raw.indexOf('{')));
 const map = {
   LAUNCH_SMOKE_EDIT_QUOTE_ID: data.editQuoteId,
+  LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN: data.approvalQuoteToken,
+  LAUNCH_SMOKE_BOOKING_DATE: data.bookingDate,
   LAUNCH_SMOKE_QUOTE_ID: data.quoteId,
   LAUNCH_SMOKE_QUOTE_TOKEN: data.quoteToken,
   LAUNCH_SMOKE_INVOICE_ID: data.invoiceId,
@@ -104,6 +108,23 @@ Rules:
 - [ ] Use only `[LAUNCH_SMOKE]` fixture records.
 - [ ] In preview, Resend sandbox must route to `RESEND_TEST_RECIPIENT`.
 - [ ] Do not use real customer recipients.
+
+Optional controlled public-flow mutation smoke:
+
+```bash
+npm run smoke:preview -- --app-url=<preview-url> --mutate-public-flow
+```
+
+Expected coverage:
+
+- [ ] Public quote approval submits with signer name, email, and drawn signature.
+- [ ] Public booking creates a scheduled job from the approved quote using `LAUNCH_SMOKE_BOOKING_DATE`.
+
+Rules:
+
+- [ ] Run only against tagged `[LAUNCH_SMOKE]` Preview fixture data.
+- [ ] Do not run public-flow mutation smoke in production.
+- [ ] Reseed before rerunning if the approval/booking fixture has already been approved or booked.
 
 ## Production Gate
 

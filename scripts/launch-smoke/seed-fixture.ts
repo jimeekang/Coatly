@@ -78,6 +78,9 @@ export type LaunchSmokeSeedResult = {
   ok: true;
   userId: string;
   email: string;
+  approvalQuoteId: string;
+  approvalQuoteToken: string | null;
+  bookingDate: string;
   customerId: string;
   editQuoteId: string;
   quoteId: string;
@@ -101,6 +104,10 @@ function isoDateDaysFrom(now: Date, days: number) {
   const value = new Date(now);
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
+}
+
+function isoDateAtLeastDaysFrom(now: Date, days: number) {
+  return isoDateDaysFrom(now, days);
 }
 
 function requireEnv(env: EnvMap, keys: string[]) {
@@ -272,6 +279,40 @@ export async function runLaunchSmokeSeed({
     sort_order: 0,
   });
 
+  const approvalQuote = await db.createQuote({
+    user_id: user.id,
+    customer_id: customerId,
+    quote_number: `SMOKE-Q-APPROVE-${stamp}`,
+    title: `${TAG} Approval booking smoke quote`,
+    status: 'sent',
+    tier: 'standard',
+    job_type: 'interior',
+    valid_until: isoDateDaysFrom(now, 14),
+    working_days: 1,
+    subtotal_cents: 75_000,
+    gst_cents: 7_500,
+    total_cents: 82_500,
+    labour_margin_percent: 0,
+    material_margin_percent: 0,
+    public_share_token: randomUUID(),
+    notes: `${TAG} Smoke quote for public approval and booking verification.`,
+    internal_notes: `${TAG} Safe to delete and recreate.`,
+  });
+
+  await db.createQuoteLineItem({
+    quote_id: approvalQuote.id,
+    name: `${TAG} Approval quote labour`,
+    notes: 'Unlinked quote for public approval and booking smoke.',
+    category: 'service',
+    quantity: 1,
+    unit: 'fixed',
+    unit_price_cents: 75_000,
+    total_cents: 75_000,
+    is_optional: false,
+    is_selected: true,
+    sort_order: 0,
+  });
+
   const invoice = await db.createInvoice({
     user_id: user.id,
     customer_id: customerId,
@@ -299,6 +340,7 @@ export async function runLaunchSmokeSeed({
   });
 
   const scheduledDate = isoDateDaysFrom(now, 3);
+  const bookingDate = isoDateAtLeastDaysFrom(now, 10);
   const jobId = await db.createJob({
     user_id: user.id,
     customer_id: customerId,
@@ -321,6 +363,9 @@ export async function runLaunchSmokeSeed({
     ok: true,
     userId: user.id,
     email: config.email,
+    approvalQuoteId: approvalQuote.id,
+    approvalQuoteToken: approvalQuote.public_share_token,
+    bookingDate,
     customerId,
     editQuoteId: editQuote.id,
     quoteId: quote.id,

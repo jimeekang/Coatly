@@ -1,6 +1,6 @@
 # Coatly — Launch Readiness Snapshot
 
-> 기준일: 2026-06-28. 이 문서는 현재 코드 기준 외부 런칭 가능 여부와 남은 release blockers를 정리합니다.
+> 기준일: 2026-07-05. 이 문서는 현재 코드 기준 외부 런칭 가능 여부와 남은 release blockers를 정리합니다.
 
 ## Verdict
 
@@ -8,7 +8,7 @@
 
 코드 품질 게이트는 크게 개선되었습니다. `npm run lint`, `npm run test:run`, `npm run build`, high/critical 보안 감사가 통과했고, 공개 견적 링크 rate limit과 public token 회귀가 보강되었습니다.
 
-다만 외부 런칭은 아직 막혀 있습니다. Supabase P0, Vercel Preview 기본 배포 smoke, 로그인 후 quote/invoice/job preview smoke는 해소됐습니다. 남은 P0는 production 이메일/cron 설정과 실제 painter A의 price book/quote/email 기준 end-to-end smoke입니다.
+다만 외부 런칭은 아직 막혀 있습니다. Vercel Preview 기본 배포 smoke, 로그인 후 quote/invoice/job preview smoke, smoke tooling 단위 검증은 해소됐습니다. 남은 P0는 Supabase live project 복구, production 이메일 발신자 설정, 그리고 실제 painter A의 price book/quote/email 기준 end-to-end smoke입니다.
 
 ## Completed In This Pass
 
@@ -25,15 +25,18 @@
 | Vercel Preview env      | Done for smoke            | Preview now has Supabase, Stripe test, Resend sandbox/test recipient, cron, ABR, and Google OAuth secret envs; `NEXT_PUBLIC_APP_URL` is intentionally not fixed in Preview |
 | Vercel Preview deploy   | Basic smoke passed        | Preview `https://coatly-2ir6cs2rb-kjm12081-3858s-projects.vercel.app` is Ready; `/` 200, `/login` 200, `/dashboard` 307 to `/login`, `/q/not-a-valid-token` 200 Quote not found, invoice PDF invalid token 404, cron without secret 401 |
 | Launch smoke tooling    | Preview smoke passed      | `smoke:env`, `smoke:seed`, and `smoke:preview` scripts added with unit coverage; tagged live fixture and authenticated Preview browser smoke passed on 2026-06-28 |
+| Production env partial repair | Partially done | `CRON_SECRET` and `RESEND_API_KEY` were added to Vercel Production on 2026-07-05; `RESEND_FROM_ADDRESS` remains missing/customer-safe verification is still open |
+| Public flow smoke coverage | Added in code | Smoke fixture now includes an approval/booking quote; `smoke:preview -- --mutate-public-flow` covers public approval and booking in Preview only |
 
 ## Release Blockers
 
 | Priority | Blocker                                                   | Required Action                                                                                                                                                                              |
 | -------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P0       | Production email/cron env is not launch-ready             | Production Vercel env still needs customer-safe Resend sender/API config and `CRON_SECRET` verification before external customer use                                                        |
+| P0       | Supabase live project used by local/app env is inactive    | Current local env points at `qwjpqujdykojxsisjltd.supabase.co`; DNS lookup fails and Supabase CLI reports the linked `Costly` project as `INACTIVE`. Restore/reactivate this project or rotate all app envs to the active Supabase project before live smoke can pass |
+| P0       | Production email env is not launch-ready                   | Production Vercel now has `RESEND_API_KEY`, but still needs a customer-safe verified `RESEND_FROM_ADDRESS`; production gate must pass before external customer use                         |
 | P1       | Supabase CLI/local migration bookkeeping remains          | MCP connection works and remote schema is corrected, but local Supabase CLI still needs a valid token/link before using CLI migration repair/lint workflows                                  |
 | P1       | Real v1 workflow fixture not validated                    | Use painter A's actual price book and recent quote/email to confirm Coatly total, PDF, email, public approval, follow-up, invoice, schedule/job conversion                                   |
-| P1       | Resend customer email smoke still needs live verification | Send quote/invoice email using verified sender or sandbox route and confirm delivered payload/link                                                                                           |
+| P1       | Resend customer email smoke still needs live verification | Send quote/invoice email using verified sender or sandbox route and confirm delivered payload/link; Preview script now supports quote and invoice email smoke with `--send-email`            |
 | P2       | Design D5 mobile spacing check remains                    | Capture detailed quote/job screens on mobile and fix spacing/overlap if found                                                                                                                |
 
 ## Launch Criteria
