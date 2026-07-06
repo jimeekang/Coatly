@@ -1,5 +1,6 @@
 # Coatly — Architecture
 
+> Owner: **Codex** (high) — 구현/DB/보안/배포/git 문서. 기획·디자인 결정은 Claude(Opus 4.8·extra) 영역.
 > 이 문서는 현재 구현된 시스템의 짧은 기술 지도입니다. 상세 DB 원장은 `supabase/migrations/`와 [`docs/generated/DB-SCHEMA.md`](./docs/generated/DB-SCHEMA.md)를 기준으로 합니다.
 
 ## Product Shape
@@ -93,6 +94,8 @@ Detailed DDD-lite dependency rules, file placement guidance, and maintenance che
 
 사용자는 앱 안에서 직접 세팅한 price book 또는 manual/room/day-rate/detailed quick 방식으로 견적을 작성합니다. 견적은 `draft → sent → approved/rejected/expired`로 이동하며 PDF 생성, Resend 발송, 공개 `/q/[token]` 승인, 서명, 선택 항목, 예약 날짜 선택을 지원합니다.
 
+follow-up reminder cron은 미구현(AUDIT A9)입니다. 현재는 quote의 follow-up due 상태 표시만 존재하고, 자동 리마인더 발송 cron은 invoice(`/api/cron/invoice-reminders`)에만 있습니다.
+
 ### Invoice
 
 승인된 견적 또는 독립 입력에서 invoice를 생성합니다. line item, invoice type, partial payment, public PDF token, Resend 발송, cron reminder를 지원합니다.
@@ -121,7 +124,9 @@ Post-core AI rules:
 | `GET /api/pdf/invoice` | 로그인 또는 public token 기반 invoice PDF |
 | `POST /api/stripe/checkout` | 구독 checkout 생성 |
 | `POST /api/stripe/portal` | customer portal 생성 |
+| `POST /api/stripe/renew` | cancel-at-period-end 구독 갱신 재개 |
 | `POST /api/webhooks/stripe` | Stripe webhook sync |
+| `POST /api/stripe/webhook` | Stripe webhook sync (중복 라우트 — 정리 예정 AUDIT A10) |
 | `GET /api/cron/invoice-reminders` | invoice 리마인더 발송 |
 | `GET /api/integrations/google-calendar/connect` | Google OAuth 시작 |
 | `GET /api/integrations/google-calendar/callback` | OAuth callback 처리 |

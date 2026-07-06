@@ -1,8 +1,13 @@
 # AI Quote Form Builder Structure
 
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/디자인/QA/분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
 > 2026-06-03 UPDATE: Post-core reference only. Current v1 is Excel quote workflow replacement. Do not expand AI quote form, photo analysis, or AI pricing work until the core workflow release gate in [../../PLANS.md](../../PLANS.md) passes.
 
 > 기준일: 2026-05-16. 인터뷰 답변과 과거 견적서 3개를 기준으로 정리한 v1 quote form 구조다.
+
+## Pricing Source Decision (2026-05-23, 유효)
+
+Maintenance quote는 별도 rate 테이블을 만들지 않는다. `water_damage_repaint` 같은 job pack을 선택하더라도 subtotal은 기존 deterministic pricing(Quick room library, Advanced room/surface, exterior surfaces, day rate, manual service add-on)에서만 나온다. 별도 Maintenance rates 탭은 같은 walls/ceiling/trim/prep 작업에 대한 두 번째 authoritative price source를 만들어 이중 청구 위험을 키우므로 v1에서 금지한다. Job pack은 likely pricing method를 추천할 수 있지만 cents, rate, GST, total을 담지 않는다. (근거: Task 4 quote form structure schema 결정 — 완료·삭제됨, git 히스토리 보존.)
 
 ## Direction
 
@@ -202,62 +207,13 @@ AI draft를 만들 때 사용한 입력값을 audit용으로 저장한다. 고�
 | Validity | all sent quotes | valid for 30 days unless changed |
 | Attachments | public quote/PDF | insurance, accreditation, product docs |
 
-## AI Draft Contract
+## AI Draft Contract (post-core deferred, Qwen dormant)
 
-AI output must be structured and price-free.
+AI draft 계약과 provider 세부는 post-core 단계로 defer한다(Qwen adapter는 `QWEN_API_KEY` env-gated dormant). 재개 시 계약 요약만 남긴다:
 
-```ts
-type AIQuoteFormDraft = {
-  job_type: 'interior' | 'exterior' | 'both' | 'maintenance';
-  scope_sections: Array<{
-    section_kind: 'interior' | 'exterior' | 'general' | 'optional';
-    title: string;
-    area_label: string;
-    surface_category: string;
-    is_optional: boolean;
-    pricing_status: 'unpriced' | 'included' | 'to_confirm';
-    measurement_status: 'confirmed' | 'rough' | 'photo_hint' | 'to_confirm';
-    steps: Array<{
-      step_type: 'prep' | 'primer' | 'topcoat' | 'repair' | 'paint_system' | 'colour_note' | 'special_note';
-      description: string;
-      paint_brand?: string;
-      paint_product?: string;
-      coats_min?: number;
-      coats_max?: number;
-      colour?: string;
-      sheen?: string;
-      requires_confirmation: boolean;
-    }>;
-  }>;
-  pricing_candidates: Array<{
-    scope_section_index: number;
-    surface_category: string;
-    unit: 'sqm' | 'lm' | 'each' | 'fixed' | 'room_anchor';
-    quantity?: number;
-    quantity_status: 'confirmed' | 'rough' | 'missing';
-    suggested_pricing_method: 'quick' | 'advanced' | 'exterior' | 'manual';
-  }>;
-  clauses: Array<{
-    clause_key: string;
-    category: 'inclusion' | 'exclusion' | 'risk_disclosure' | 'warranty' | 'payment' | 'validity' | 'insurance';
-    title: string;
-    body: string;
-    applies_to_scope_section_index?: number;
-    severity: 'info' | 'warning' | 'critical';
-  }>;
-  questions_for_user: string[];
-};
-```
-
-Forbidden AI fields:
-
-- `rate`
-- `unit_price_cents`
-- `subtotal_cents`
-- `gst_cents`
-- `total_cents`
-- payment due date invented from nothing
-- hidden repair/restoration claim not present in notes/photos
+- AI output은 구조화되고 **price-free**여야 한다: `job_type`, `scope_sections`(각 section에 nested `steps`), `pricing_candidates`(scope index + surface + unit + `suggested_pricing_method`, 가격 없음), `clauses`, `questions_for_user`.
+- Forbidden AI fields: `rate`, `unit_price_cents`, `subtotal_cents`, `gst_cents`, `total_cents`, 근거 없이 만든 payment due date, notes/photo에 없는 hidden repair/restoration claim.
+- Provider/model 기본값(Qwen 등)과 Interior/Exterior draft 예시는 core workflow release 후 AI 재개 시점에 실행일 기준으로 재확정한다. 지금은 스펙 초안일 뿐 구현 우선순위가 아니다.
 
 ## Deterministic Pricing Pass
 
@@ -268,44 +224,6 @@ Forbidden AI fields:
 5. App creates `quote_line_items` only for selected custom/material/service/optional add-ons.
 6. Canonical calculator computes subtotal, discount, GST, manual adjustment, deposit, total.
 7. Quote detail, PDF, public quote, invoice conversion all read the same calculated values.
-
-## Interior / Exterior AI Examples
-
-### Interior Example
-
-Input notes:
-
-```text
-2 bed 1 bath apartment. Repaint all interior. Ceiling white flat. Walls Lexicon Quarter low sheen. Bathroom kitchen & bath. Dark cornice needs extra coats. Wardrobe inside included.
-```
-
-AI should produce:
-
-- Ceiling section with sanding/dusting/patching/gap filling and 1-2 coats ceiling white.
-- Walls section with 3 coats wall paint and colour/sheen.
-- Bathroom section with primer and kitchen/bath paint.
-- Wardrobe inside section or step.
-- Vivid White or dark colour coverage clause only if relevant.
-- No price.
-
-### Exterior Example
-
-Input notes:
-
-```text
-Exterior repaint. Eaves, rendered walls, cladding, retaining wall, front door. Coloured render is porous. Some difficult access. Fence optional.
-```
-
-AI should produce:
-
-- Eaves section with prep and Weathershield.
-- Rendered walls section with solvent-based primer explanation.
-- Cladding section.
-- Front door/timber section.
-- Difficult access pricing reason clause.
-- Efflorescence or porous render disclosure if notes/photos support it.
-- Fence optional section.
-- No price.
 
 ## Guardrails
 

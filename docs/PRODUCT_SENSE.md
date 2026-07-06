@@ -1,5 +1,7 @@
 # Coatly — Product Sense
 
+> Owner: **Claude** (Opus 4.8 · extra) — 제품 기획/시장 분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
+
 ## v1 Wedge (2026-06-03 REFRAMED)
 
 Coatly의 v1 구매 이유는 **AI Quote Writer**가 아니다. 실제 painter A의 현재 workflow는:
@@ -79,6 +81,20 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 - [Estimo](https://estimo.com.au/)
 - [PaintQuote Pro](https://www.paintquoteapp.com/)
 
+## Market Snapshot (2026-07-05 리서치 반영)
+
+12-agent 교차 검증 분석에서 확정된 시장 사실:
+
+- **시장 규모**: 호주 페인팅/데코 사업체 약 23–24k, 사업체당 평균 2.5명 — 솔로/마이크로 80–90% 추정. 좁게 잡은 SAM ~20k 소규모 업체.
+- **진짜 경쟁자는 Excel/종이** — 소규모 트레이디의 50–60%가 여전히 수기/스프레드시트 운영. 병목은 가격이 아니라 습관 교체 비용.
+- **WTP 앵커**: A$29–50/월. ServiceM8 A$29(job수 과금, 무료 티어)가 심리적 하한. Starter A$39는 "더 싸다"로는 못 이김 — 가벼움·follow-up으로 이겨야 함.
+- **PaintScout**(유일한 페인터 전용 직접 경쟁): USD $119+/user + CRM $49 — 미국 중심·중대형 지향·호주 존재감 낮음. 호주 솔로 페인터용 저가·경량 견적 워크플로우 자리는 실제로 비어 있음.
+- **follow-up 자동화는 경쟁사 전원이 상위 티어/유료 add-on에 gating** (Jobber Connect, PaintScout CRM). **저가 기본 제공이 유일하게 방어 가능한 차별점** — 단, quote follow-up reminder cron은 현재 미구현(AUDIT A9)이라 이 차별점은 코드로 완성돼야 성립.
+- **과금 구조 마찰**이 이 시장 최대 심리 장벽: job수 제한(ServiceM8)·per-user(Tradify/Fergus) 불만 반복 — Coatly의 flat 과금은 유효한 선택.
+- **계절성**: 9–12월 성수기, 겨울 비수기 churn 증폭 위험 → 연간 플랜(A$450/A$680)으로 방어, 신규 획득은 late-winter 집중.
+- **CAC**: 유료 광고 CAC는 이 세그먼트에서 비싸고 데이터 불확실 — 유닛경제는 저CAC 채널(Master Painters 협회, 페인트 도매상, 로컬 FB 그룹, 리퍼럴) 전제로만 성립. 1→10명은 수동 확보, 10→100에서 첫 CAC/churn 실측 후 가격 재검토.
+- **포지셔닝 주의**: 랜딩의 "Job Management" 프레임은 ServiceM8/Tradify와 정면 비교를 자초 — "Excel 대체" wedge 언어로 교체 필요(PLANS P2).
+
 ## Differentiation
 
 Coatly가 이길 수 있는 지점은 “AI가 있다”가 아니라 다음 세 가지다.
@@ -90,7 +106,7 @@ Coatly가 이길 수 있는 지점은 “AI가 있다”가 아니라 다음 세
    generic tradie AI보다 좁게 간다. Interior/exterior painter의 rooms, surfaces, prep, coating, colour, optional items, exclusions, warranty, access, water damage limitation, touch-up limitation을 제대로 다룬다.
 
 3. **Quote send loop, not quote generator**
-   `create quote`에서 끝나지 않는다. `send -> follow-up -> accept -> invoice/schedule`까지 끊기지 않는 운영 루프가 제품의 중심이다.
+   `create quote`에서 끝나지 않는다. `send -> follow-up -> accept -> invoice/schedule`까지 끊기지 않는 운영 루프가 제품의 중심이다. 경쟁사는 follow-up 자동화를 상위 플랜에 gating하므로 **저가 기본 제공**이 핵심 차별점 — 단 quote follow-up reminder cron이 미구현(AUDIT A9)이라 최우선 구현 대상.
 
 ## Pricing Strategy
 

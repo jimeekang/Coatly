@@ -1,3 +1,7 @@
+# Codex 모델 설정 — 구현/DB/보안/배포/git 도메인은 reasoning effort "high" 고정
+# (역할·모델 경계: AGENTS.md 참조. 기획/디자인/QA는 Claude Opus 4.8 · extra)
+model_reasoning_effort = "high"
+
 [shell_environment_policy]
 inherit = "core"
 

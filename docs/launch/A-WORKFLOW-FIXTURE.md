@@ -1,5 +1,6 @@
 # A Workflow Fixture
 
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/디자인/QA/분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
 > 기준일: 2026-06-28. 실제 A 자료가 들어오면 이 파일에 증거를 append-only로 남깁니다. 개인정보는 익명화합니다.
 
 ## Source Inputs

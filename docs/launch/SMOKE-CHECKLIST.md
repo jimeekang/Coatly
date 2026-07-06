@@ -1,5 +1,6 @@
 # Coatly Launch Smoke Checklist
 
+> Owner: **Codex** (high) — 구현/DB/보안/배포/git 문서. 기획·디자인 결정은 Claude(Opus 4.8·extra) 영역.
 > 기준일: 2026-06-28. 이 문서는 배포 전 반복 확인용입니다. 비밀값은 기록하지 않습니다.
 
 ## Preview Gate

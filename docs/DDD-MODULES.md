@@ -1,5 +1,7 @@
 # Coatly DDD-lite 모듈 설계 가이드
 
+> Owner: **Codex** (high) — 구현/DB/보안/배포/git 문서. 기획·디자인 결정은 Claude(Opus 4.8·extra) 영역.
+
 이 문서는 Coatly의 기능 모듈을 유지보수하기 위한 기준 문서입니다. 목표는 완전한 DDD를 도입하는 것이 아니라, 작은 SaaS 코드베이스에서 업무 규칙, 데이터 접근, 화면, 외부 연동이 다시 섞이지 않도록 하는 것입니다.
 
 ## 핵심 원칙
@@ -283,64 +285,7 @@ error: 정리 완료되어 새 위반을 허용하지 않는 영역
 
 ## 현재 정리 상태와 다음 후보
 
-진행 중: 없음
-
-정리 완료:
-
-1. `modules/settings/domain/onboarding.ts`
-   - profile query fallback을 `lib/supabase/request-context.ts`로 이동
-2. `modules/settings/domain/businesses.ts`
-   - DB query, signed URL, upsert 로직을 `modules/settings/infrastructure/businesses.ts`로 이동
-3. `modules/invoices/domain/invoices.ts`
-   - invoice 생성 schema를 `modules/invoices/domain/invoice-schema.ts`로 분리
-   - invoice/customer/quote option query를 `modules/invoices/infrastructure/invoice-options.ts`로 이동
-4. `modules/materials/domain/types.ts`
-   - material 타입과 schema 소유권을 domain으로 이동하고 `lib/supabase/validators.ts`는 호환 re-export만 유지
-5. `modules/quotes/domain/quote-schema.ts`
-   - quote 생성 입력 schema와 quote form line item schema의 소유권을 quote domain으로 이동
-   - `modules/quotes/domain/quotes.ts`가 `lib/supabase/validators.ts`에 의존하지 않도록 정리
-   - quote application/ui import도 feature-owned schema와 materials domain 타입을 직접 사용하도록 정리
-   - `npm run lint`, quote 관련 테스트, 전체 테스트, production build 통과
-6. `lib/supabase/validators.ts`
-   - quote schema 사본을 제거하고 `modules/quotes/domain/quote-schema.ts`의 호환 re-export로 전환
-   - quote schema의 단일 소유권을 유지해 validator drift를 방지
-   - 기존 `@/lib/supabase/validators` import 경로의 테스트 호환성 유지
-7. `modules/quotes/infrastructure/quote-repository.ts`
-   - quote 조회 select string, row type, 관계 로딩, hydrated mapper, linked invoice count를 infrastructure repository로 이동
-   - `getQuotes`, `getQuotesByCustomer`, `getQuote`, `getPublicQuoteByToken`은 인증/토큰 검증 후 repository를 호출하도록 축소
-   - quote application action 파일의 DB 조회 책임을 줄이고 다음 service 분리의 기준점을 마련
-8. `modules/quotes/application/document-email-service.ts`
-   - quote PDF 생성, business branding 조회, public approval link 조립, Resend 이메일 발송을 별도 application service로 이동
-   - `createQuote`, `updateQuote`는 이메일 발송 의도와 상태 변경만 조립하도록 축소
-   - `npm run lint`, quote 관련 테스트, 전체 테스트, production build 통과
-9. `modules/quotes/application/quote-pricing-save-service.ts`
-   - quote 생성/수정 시 반복되는 가격 preview 계산, estimate item/room/line item/form structure 저장 절차를 application service로 분리
-   - `createQuote`, `updateQuote`는 검증, quote 본문 저장, 이메일/redirect 조립에 집중하도록 축소
-   - `actions.ts`는 약 2,351줄에서 약 1,522줄로 축소되고, 상세 가격 저장 실패 시 기존 정리 동작을 유지
-   - `npm run lint`, quote 관련 테스트, 전체 테스트, production build 통과
-10. `modules/quotes/application/quote-duplicate-service.ts`
-    - `duplicateQuote`의 source quote 조회, relation 로딩, quote number 생성, 신규 quote/관계 데이터 복제, 실패 시 정리 절차를 application service로 분리
-    - `actions.ts`는 사용자 확인, service 호출, list revalidation, edit 화면 redirect만 담당하도록 축소
-    - 기존 legacy customer snapshot fallback과 quote surface coating fallback 동작을 유지하고, 복제 성공/실패 정리 테스트를 추가
-    - `actions.ts`는 약 1,522줄에서 약 1,316줄로 축소
-    - `npm run lint`, quote 관련 테스트, 전체 테스트, production build 통과
-11. `modules/quotes/application/public-quote-response-service.ts`
-    - public quote approval/rejection의 quote 조회, 상태 검증, 상태 업데이트, approval notification 발송 절차를 application service로 분리
-    - `approvePublicQuote`, `rejectPublicQuote` server action은 FormData 검증, service 호출, revalidation만 담당하도록 축소
-    - public token 기반 접근과 기존 legacy customer snapshot fallback 동작을 유지
-    - `actions.ts`는 약 1,316줄에서 약 1,218줄로 축소
-    - `npx tsc --noEmit --pretty false`, `npm run lint`, quote/price-rates 관련 테스트, 전체 테스트, production build 통과
-12. `modules/quotes/application/quote-pdf-data-service.ts`
-    - quote PDF route 안의 quote/business/logo data loading을 quote application service와 infrastructure repository로 이동
-    - `app/api/pdf/quote/route.ts`는 request parameter 검증, PDF rendering, HTTP response 생성만 담당하도록 축소
-    - private quote id 접근과 public token 접근의 인증/조회 동작을 유지
-    - `app/api/pdf/quote/route.ts`는 약 307줄에서 66줄로 축소
-    - `npx tsc --noEmit --pretty false`, `npm run lint`, PDF/quote 관련 테스트, 전체 테스트, production build 통과
-13. Cross-feature UI 호출
-    - `modules/quotes/ui/QuoteActions.tsx`가 jobs application action을 직접 import하지 않고, `app/(dashboard)/quotes/[id]/page.tsx`에서 주입받은 `convertQuoteToJobAction`을 호출하도록 변경
-    - `modules/quotes/ui/public/PublicDatePickerStep.tsx`가 jobs application action을 직접 import하지 않고, `app/q/[token]/page.tsx`에서 주입받은 availability/booking action을 호출하도록 변경
-    - quote UI 테스트는 jobs 모듈 mock 대신 action prop stub으로 UI 동작을 검증하도록 정리
-    - `npx tsc --noEmit --pretty false`, `npm run lint`, quote/public quote 관련 테스트, 전체 테스트, production build 통과
+리팩터링 이력은 git 히스토리 참조. 진행 중 항목 없음(2026-07-05).
 
 다음 후보:
 

@@ -1,5 +1,7 @@
 # Coatly — Reliability & Recovery
 
+> Owner: **Codex** (high) — 구현/DB/보안/배포/git 문서. 기획·디자인 결정은 Claude(Opus 4.8·extra) 영역.
+
 ## Error Handling Strategy
 
 ### 계층별 에러 처리
@@ -53,8 +55,8 @@ export async function POST(req: Request) {
 Stripe webhook 실패 시 자동 재시도 메커니즘:
 
 1. Stripe는 실패한 webhook을 최대 **3일간 자동 재시도**
-2. `webhook-handler.ts`는 멱등성(idempotency) 보장:
-   - subscription ID 기준 upsert (중복 처리 안전)
+2. `webhook-handler.ts`는 subscription ID 기준 upsert로 **상태 동기화**를 안전하게 처리:
+   - 단 이는 상태 동기화일 뿐 event-level 멱등성이 아니다. `event.id` 중복 방어는 미구현(AUDIT A10)이므로 non-idempotent 부수효과(예: 이메일 발송, 카운터 증가)는 재전송 시 중복될 수 있다.
 3. 수동 복구: Stripe Dashboard → Events → 재전송
 
 ### 처리 이벤트
@@ -65,7 +67,7 @@ Stripe webhook 실패 시 자동 재시도 메커니즘:
 | `customer.subscription.created` | 구독 상태 동기화 |
 | `customer.subscription.updated` | 플랜/상태 업데이트 |
 | `customer.subscription.deleted` | 구독 취소 처리 |
-| `invoice.payment_failed` | 결제 실패 상태 기록 |
+| `invoice.payment_failed` | 현재 no-op — `console.warn`만 하고 subscription 상태를 `past_due`로 반영하지 않음(AUDIT A10, 매출 누수). 상태 동기화 구현 예정 |
 
 ## Database Migration Recovery
 
@@ -77,16 +79,13 @@ Stripe webhook 실패 시 자동 재시도 메커니즘:
 
 ### 마이그레이션 실패 시
 
-```bash
-# 1. 로컬에서 먼저 테스트
-supabase db reset  # 로컬 DB 초기화 + 전체 마이그레이션 재실행
+로컬 Docker/Supabase CLI에 의존하지 않는다. CLAUDE.md 원칙대로 원격 Supabase MCP 도구를 사용한다:
 
-# 2. 문제 마이그레이션 수정 후
-supabase db push   # 리모트에 적용
+1. **보정 마이그레이션 작성**: 되돌리기 대신 새 forward-only 마이그레이션으로 수정하고 `apply_migration`으로 원격에 적용한다.
+2. **적용 상태 검증**: `execute_sql`로 스키마/제약/데이터 상태를 확인한다.
+3. **타입 재생성**: `generate_typescript_types`로 `types/database.ts`를 갱신한다.
 
-# 3. 타입 재생성
-supabase gen types typescript --local > types/database.ts
-```
+migration history와 로컬 timestamped 파일명이 어긋난 경우는 SECURITY.md의 migration bookkeeping 항목을 따라 정리한다.
 
 ## Vercel Deployment Recovery
 
@@ -128,9 +127,11 @@ main (production)
 
 ## Monitoring (Phase 2+)
 
+현재 관측성은 `console.*` 로그뿐이며 Sentry는 미도입(AUDIT A12) — 도입 예정. 아래는 목표 상태다.
+
 | 영역 | 도구 | 용도 |
 |------|------|------|
-| Error Tracking | Vercel Analytics / Sentry | 런타임 에러 추적 |
+| Error Tracking | Vercel Analytics / Sentry (미도입) | 런타임 에러 추적 |
 | Performance | Vercel Speed Insights | Core Web Vitals |
 | Uptime | Vercel Status | 배포 상태 |
 | Billing | Stripe Dashboard | 결제 상태, 실패 이벤트 |

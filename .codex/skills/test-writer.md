@@ -10,7 +10,7 @@ description: >
 
 # Test Writer Skill (Codex)
 
-> Codex 전용. 단위/통합/회귀 테스트 작성·실행. 브라우저 기반 시각 QA는 Claude Code 영역.
+> **Codex (high) 전용.** 단위/통합/회귀 테스트 작성·실행. 브라우저 기반 시각 QA는 Claude Code 영역.
 > 라우팅 표 → [`../../../AGENTS.md`](../../../AGENTS.md)
 
 ## 작업 순서 (agent loop)
@@ -35,7 +35,7 @@ description: >
 ### Server action 테스트
 ```ts
 import { describe, it, expect, vi } from 'vitest'
-import { createQuote } from '@/app/actions/quotes'
+import { createQuote } from '@/modules/quotes/application/actions'
 
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn(() => ({
@@ -62,10 +62,10 @@ describe('createQuote', () => {
 ```ts
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import QuoteCard from '@/components/quotes/QuoteCard'
+import { QuoteTable } from '@/modules/quotes/ui/QuoteTable'
 
 it('shows total price formatted in AUD', () => {
-  render(<QuoteCard quote={{ ...mockQuote, total: 1500 }} />)
+  render(<QuoteTable quotes={[{ ...mockQuote, total: 1500 }]} />)
   expect(screen.getByText('A$1,500.00')).toBeInTheDocument()
 })
 ```

@@ -1,5 +1,7 @@
 # Feature: Customer Management
 
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/디자인/QA/분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
+
 ## User Story
 
 > 페인터로서, 고객 정보를 한 곳에서 관리하고 견적/청구 이력을 확인하고 싶다.

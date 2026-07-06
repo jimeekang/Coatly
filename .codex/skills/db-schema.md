@@ -10,13 +10,15 @@ description: >
 
 # DB Schema Skill (Codex)
 
-> **로컬 Supabase 미사용** — 모든 DB 작업은 MCP 도구로 원격 직접 제어.
+> **Codex (high) 전용.** 로컬 Supabase 미사용 — 모든 DB 작업은 MCP 도구로 원격 직접 제어.
 > 라우팅 표 → [`../../../AGENTS.md`](../../../AGENTS.md)
 
 ## MCP Supabase 도구 (유일한 제어 방법)
 
 project_id: `qwjpqujdykojxsisjltd`  
 `.env.local`의 API 키로 자동 인증 — CLI 로그인/Docker 불필요.
+
+> ⚠️ 위 `project_id`가 가리키는 Supabase 프로젝트는 현재 **INACTIVE** (런칭 P0 blocker — [`docs/LAUNCH-READINESS.md`](../../../docs/LAUNCH-READINESS.md)). 프로젝트 복구/키 rotation 후 이 `project_id`(및 관련 env)를 최신 값으로 갱신해야 한다.
 
 | 도구 | 용도 |
 |------|------|

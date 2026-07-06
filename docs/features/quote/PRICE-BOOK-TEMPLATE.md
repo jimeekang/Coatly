@@ -1,5 +1,7 @@
 # Feature: Simple Price Book Setup
 
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/디자인/QA/분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
+
 ## Decision
 
 v1 should not make users clean up Excel before they can use Coatly.

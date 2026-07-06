@@ -1,5 +1,6 @@
 # Coatly — Codex Engineering Guide
 
+> Owner: **Codex** (high) — 구현/DB/보안/배포/git 문서. 기획·디자인 결정은 Claude(Opus 4.8·extra) 영역.
 > Codex가 담당하는 엔지니어링 실행 문서입니다. 메인 라우팅은 [`../AGENTS.md`](../AGENTS.md), 계획/progress는 [`../CLAUDE.md`](../CLAUDE.md)와 [`PLANS.md`](./PLANS.md)를 봅니다.
 
 ## Codex Ownership
@@ -135,6 +136,8 @@ npm run db:types
 
 ## Deployment / Git
 
+git 실행은 [`.codex/skills/commit.md`](../.codex/skills/commit.md)를 따릅니다: 민감 파일(`.env*`, key/secret) 커밋 금지, `main` push 전 확인.
+
 1. `git status --short`로 사용자 변경과 Codex 변경을 분리합니다.
 2. lint/test/build 또는 요청된 검증을 실행합니다.
 3. DB/security 영향이 있으면 [`SECURITY.md`](./SECURITY.md)의 Active Security Findings & Fix Plan을 갱신합니다.
@@ -146,6 +149,10 @@ npm run db:types
 - 사용자 변경을 되돌리지 않습니다.
 - destructive git command는 명시 요청 없이는 사용하지 않습니다.
 - 배포 실패는 로그를 보고 수정한 뒤 재검증합니다.
+
+## AI 재활성 (deferred)
+
+AI(Qwen) provider 코드는 존재하지만 env-gated dormant 상태입니다. 재활성 env는 `QWEN_API_KEY`, `QWEN_MODEL`(기본 `qwen3-vl-flash`, `lib/ai/providers/qwen.ts`)입니다. core quote workflow release 전에는 이 env를 켜거나 AI surface를 활성화하지 않습니다.
 
 ## Out of Scope
 

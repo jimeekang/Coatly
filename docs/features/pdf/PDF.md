@@ -1,5 +1,7 @@
 # Feature: PDF Generation
 
+> Owner: **Codex** (high) — 구현/DB/보안/배포/git 문서. 기획·디자인 결정은 Claude(Opus 4.8·extra) 영역.
+
 ## Overview
 
 견적서/청구서를 React-PDF로 서버사이드 렌더링하여 PDF 바이너리를 반환.

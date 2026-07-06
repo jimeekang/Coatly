@@ -1,5 +1,6 @@
 # Coatly v1 — Quote Workflow Replacement
 
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/디자인/QA/분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
 > 2026-06-03 product reframe. This file keeps the historical `features/ai` path so existing links do not break, but the current v1 plan is **workflow-first**. The old AI-first Quote Writer plan is superseded until the core quote workflow is released.
 
 ## Decision

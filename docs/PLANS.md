@@ -1,13 +1,13 @@
 # Coatly — Roadmap & Progress
 
-> Phase/progress의 단일 소스입니다. 기준일: 2026-06-28.
+> Owner: **Claude** (Opus 4.8 · extra). Phase/progress의 단일 소스입니다. 기준일: 2026-07-05.
 
 ## Ownership
 
-| 영역                                           | 담당        |
-| ---------------------------------------------- | ----------- |
-| 플랜, 우선순위, 디자인, 앱 구성, progress 정리 | Claude Code |
-| 구현, 버그 수정, DB, 테스트, 배포, git         | Codex       |
+| 영역                                           | 담당        | 모델 |
+| ---------------------------------------------- | ----------- | ---- |
+| 플랜, 우선순위, 디자인, 앱 구성, progress 정리, 분석/QA 리포트 | Claude Code | Opus 4.8 · extra |
+| 구현, 버그 수정, DB, 보안, 테스트, 배포, git   | Codex       | high |
 
 ## Current Product Decision
 
@@ -116,7 +116,7 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 | P1       | Public quote durable rate limit          | `proxy.ts` in-memory limiter 제거, Supabase RPC 기반 limiter와 테스트 추가. 원격 RPC/grant/allow-deny 검증 및 `/q/not-a-valid-token` smoke 통과                                           | Codex               |
 | P1       | Production email/cron verification       | Preview는 Resend sandbox/test recipient와 cron secret으로 smoke 가능. Production은 customer-safe Resend sender/API config와 `CRON_SECRET` 검증 필요                                      | Codex               |
 | P1       | Launch smoke gate automation             | `smoke:env`, `smoke:seed`, `smoke:preview` 추가. 실제 authenticated preview smoke는 smoke account env와 fixture seed 실행 후 통과 증거 필요                                             | Codex               |
-| P1       | Quote/Invoice 저장 원자성                | 다중 쿼리 경로 존재, RPC transaction 검토 필요                                                                                                                                          | Codex               |
+| P1       | Quote/Invoice 저장 원자성                | 다중 쿼리 경로 존재, RPC transaction 필요 — AUDIT A1은 **P0**. 모바일 약한 네트워크에서 유령 견적 재현 가능, 첫 유료 고객 전 필수                                                       | Codex               |
 | P1       | Simple price book setup                  | Price Rates > Manual 직접 추가와 Excel CSV template/review/import/export 구현. A fixture로 실제 setup friction 검증 필요                                                                | Claude plan → Codex |
 | P1       | A price book onboarding test             | A의 Excel 가격표를 참고해 quote 하나에 필요한 price items를 앱 안에서 직접 저장하고 세팅 난이도 기록                                                                                    | Claude plan → Codex |
 | P1       | A quote recreation test                  | 최근 quote PDF/email 1개를 Coatly에서 재현하고 total/scope/PDF/email 차이 기록                                                                                                          | Claude plan → Codex |
@@ -124,7 +124,11 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 | P1       | Invoice/schedule conversion verification | approved quote에서 invoice와 schedule/job으로 전환되는 path smoke                                                                                                                       | Codex               |
 | P1       | Google Calendar booking fail-closed      | 연결/표시는 구현, write 실패 정책 보강 필요                                                                                                                                             | Codex               |
 | P1       | Exterior estimate 회귀                   | 기능 존재, edit/PDF/detail 일관성 테스트 강화 필요                                                                                                                                      | Codex               |
-| P1       | Design legacy token cleanup              | 대부분 정리, 일부 badge/detail 컴포넌트 잔여                                                                                                                                            | Codex               |
+| P1       | Design legacy token cleanup              | `pm-*`는 프로덕션 0건 완료. 잔여: `bg-white` 하드코딩 다수, `ui/button.tsx` 44px 위반, input/FormField 이원화 (AUDIT A14)                                                               | Codex               |
+| P1       | Quote follow-up reminder cron            | **미구현** — v1 core flow 명시 요구("send → follow-up reminder")이자 핵심 차별점. `invoice-reminders` 패턴 복제로 sent 후 D+3/D+7 미응답 리마인드 cron 추가 (AUDIT A9)                  | Claude plan → Codex |
+| P1       | plans.ts AI 판매 카피 제거               | Pro features의 "AI Quote Drafting/AI Workspace Assistant" 2줄을 실제 core value(follow-up 등)로 교체 + `AIDraftPanel` gating 정합 (AUDIT A11)                                           | Codex               |
+| P1       | Stripe webhook 하드닝                    | `event.id` 멱등 체크, `payment_failed` past_due 처리, 중복 webhook 라우트 1개 삭제 (AUDIT A10)                                                                                          | Codex               |
+| P1       | 관측성(Sentry) 도입                      | 현재 `console.*`뿐 — 런칭 전 에러 트래킹 필수 (AUDIT A12)                                                                                                                               | Codex               |
 
 ## Current P2 Work
 
@@ -135,6 +139,9 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 | P2       | Dashboard analytics trend charts | KPI/pipeline은 구현, 월별 추이 차트는 미구현                                              | Claude plan → Codex |
 | P2       | Smart pricing suggestions        | rate settings 존재, 히스토리 기반 제안 미구현. core workflow release 전에는 시작하지 않음 | Claude plan → Codex |
 | P2       | Job costing                      | variations/quote 비교 일부 존재, 실비 대비 리포트 미완성                                  | Claude plan → Codex |
+| P2       | 랜딩/메타 카피 wedge 정렬        | 현재 "Job Management" 프레임 — "Excel 대체" wedge 언어로 교체 (마케팅 분석 2026-07-05)     | Claude plan → Codex |
+| P2       | Stripe trial 활성화 검토         | `subscription-sync`가 `trialing`을 이미 active 취급 — checkout `trial_period_days` 설정만으로 무카드 체험 가능. 결제 게이트 soft화 검토 | Claude plan → Codex |
+| P2       | IA 다이어트                      | 최상위 8섹션 → core 흐름(quote/invoice/schedule) 우선 노출, `/jobs` 스텁 직결, `/demo/schedule` gating (AUDIT A15) | Claude plan → Codex |
 
 ## Post-Core AI Backlog
 
@@ -176,6 +183,7 @@ v1 workflow replacement은 아래가 모두 통과해야 release-ready다.
 - [ ] Resend email 발송 smoke 통과
 - [ ] public quote link / approval smoke 통과
 - [ ] follow-up due 상태가 quote list/dashboard에서 확인 가능
+- [ ] quote follow-up reminder cron 동작 (sent 후 미응답 자동 리마인드 — 현재 미구현, AUDIT A9)
 - [ ] approved quote → invoice conversion smoke 통과
 - [ ] approved quote → schedule/job conversion smoke 통과
 - [ ] invalid/expired/revoked public token regression 통과

@@ -1,5 +1,7 @@
 # Feature: Subscription & Billing
 
+> Owner: **Shared** — 기획 판단: Claude(Opus 4.8·extra) · 구현 사실: Codex(high).
+
 ## Plans
 
 2026-06-03 product reframe 기준. v1은 AI Quote Writer가 아니라 **Excel quote workflow replacement**다. 따라서 plan value도 AI 사용량이 아니라 quote workflow 사용량과 운영 자동화 기준으로 본다.
@@ -26,6 +28,13 @@
 
 정의 파일: `config/plans.ts` (현재 구현 단일 소스)
 
+### 정책 모순 — Pro 판매 카피가 보류된 AI 기능을 노출 (AUDIT A11)
+
+`config/plans.ts:50-51`의 Pro `features` 배열에 `AI Quote Drafting`과 `AI Workspace Assistant`가 판매 카피로 들어가 있다. 그러나 AI(Qwen)는 `QWEN_API_KEY` env-gated dormant 상태이고, AI gating은 core workflow release 이후로 보류(dormant)된 항목이다. 즉 **판매 카피와 실제 활성 기능이 불일치**한다. 조치:
+
+- Pro `features`에서 두 AI 항목을 workflow-first 가치 카피(예: 고급 follow-up/workflow automation, 확장 branding, priority support)로 교체
+- `AIDraftPanel` 등 AI 진입점은 gating 처리해 dormant 상태에서 노출되지 않도록 유지
+
 ## Feature Gating Logic
 
 Core workflow gating은 아래 기준을 우선한다.
@@ -51,10 +60,12 @@ AI gating은 core workflow release 이후 새 plan에서 다시 정의한다. �
 1. 사용자 → "Upgrade to Pro" 클릭
 2. POST /api/stripe/checkout → Stripe Checkout 세션 생성
 3. Stripe Checkout에서 subscription 시작
-4. Stripe → POST /api/webhooks/stripe (webhook)
-5. webhook-handler.ts → subscriptions 테이블 upsert
+4. Stripe → webhook POST (아래 라우트 중복 주의)
+5. lib/stripe/webhook-handler.ts → subscriptions 테이블 upsert
 6. 사용자 → 대시보드로 리다이렉트 (구독 활성)
 ```
+
+**webhook 라우트 중복 (AUDIT A10):** 현재 두 라우트가 공존한다 — `app/api/webhooks/stripe/route.ts`와 `app/api/stripe/webhook/route.ts`. 둘 다 `handleStripeWebhook`(`lib/stripe/webhook-handler.ts`)로 위임하는 얇은 wrapper라 동작은 동일하지만, Stripe dashboard endpoint 설정이 어느 쪽을 가리키는지 모호하고 유지보수 표면이 갈린다. 단일 정본 라우트로 통합 필요.
 
 ## Upgrade Flow
 
@@ -83,9 +94,13 @@ Free Pro Trial, AI usage limits, photo AI limits, AI cost view는 post-core AI p
 | `customer.subscription.created` | 상태 동기화 |
 | `customer.subscription.updated` | 플랜/상태/기간 업데이트 |
 | `customer.subscription.deleted` | status = cancelled |
-| `invoice.payment_failed` | status = past_due |
+| `invoice.payment_failed` | **미구현 no-op** — `console.warn`만, `past_due` 미기록 |
 
-**멱등성**: stripe_subscription_id 기준 upsert → 중복 webhook 안전.
+**멱등성 (AUDIT A10 — 현행 실제 상태):**
+
+- **event-level 멱등성 미구현** — 처리한 Stripe event id를 기록·중복 차단하는 저장소가 없다. Stripe가 같은 event를 재전송하면 subscription upsert가 반복 실행된다. subscription upsert 자체는 `stripe_subscription_id` 기준이라 최종 상태는 수렴하지만, `invoice.payment_failed` 같은 부수효과성 event에는 event-level 중복 방어가 없다.
+- **`invoice.payment_failed`는 no-op** — 위 표의 "status = past_due"는 목표 동작이며, 현재 핸들러(`lib/stripe/webhook-handler.ts:83-86`)는 `console.warn`만 하고 `subscriptions.status`를 갱신하지 않는다. past_due grace policy가 실제로 트리거되지 않는다.
+- 조치: 처리된 event id 저장 + `payment_failed` → `past_due` 반영 + 라우트 단일화(위 참조).
 
 ## Subscription States
 

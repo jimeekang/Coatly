@@ -1,5 +1,6 @@
 # Feature: Schedule + Google Calendar
 
+> Owner: **Shared** — 기획 판단: Claude(Opus 4.8·extra) · 구현 사실: Codex(high).
 > 기준: Option B. Google Calendar를 외부 일정 source로 읽고, Coatly jobs/internal events와 통합 표시합니다.
 
 ## Goal

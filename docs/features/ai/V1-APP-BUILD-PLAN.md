@@ -1,6 +1,8 @@
 # Coatly v1 App Build Plan — Core Workflow Before AI
 
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/디자인/QA/분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
 > 2026-06-03 reframe. The previous AI-first build plan is superseded. Do not start Qwen/Gemini, photo analysis, AI usage governance, or AI Quote Writer work until the core quote workflow has been completed, released, and verified with a real painter workflow.
+> DDD module refactor는 완료됨: feature 코드는 `modules/<feature>/{ui,application,domain,infrastructure}`에 있고 라우트는 `modules/`에서 import한다. 아래 Phase 1의 refactor 항목은 완료 기록으로 읽는다.
 
 ## Goal
 
@@ -57,7 +59,7 @@ Current plan:
 
 | Task | Completion |
 |------|------------|
-| Land DDD module refactor | Routes import from `modules/`, tests/build pass, browser smoke confirms no behavior regression |
+| DDD module refactor (완료) | 완료. feature 코드는 `modules/<feature>/{ui,application,domain,infrastructure}`에 있고 라우트가 `modules/`에서 import한다. 남은 일은 회귀 없음 유지 |
 | Reconcile Supabase migrations | Local migration files and live `schema_migrations` are understood and documented |
 | Security gate | Durable public quote rate limit plan, public token regression, env var cleanup |
 | Release baseline | Preview deployment can smoke auth, customers, quotes, PDF, invoice, schedule, public quote |

@@ -1,5 +1,7 @@
 # Coatly — Frontend Patterns
 
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/디자인/QA/분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
+
 ## Server Component Pattern (기본)
 
 모든 보호된 페이지는 Server Component로 작성한다.
@@ -144,18 +146,27 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
 
 ## File Placement Rules
 
+feature 코드는 DDD-lite 모듈 구조(`modules/<feature>/{ui,application,domain,infrastructure}`)를 따른다. 상세 계약은 [`docs/DDD-MODULES.md`](./DDD-MODULES.md) 참조.
+
 | 파일 유형 | 위치 |
 |-----------|------|
 | 페이지 | `app/(dashboard)/{feature}/page.tsx` |
-| 서버 액션 | `app/actions/{feature}.ts` |
-| 도메인 컴포넌트 | `components/{feature}/{Name}.tsx` |
-| UI 프리미티브 | `components/ui/` (수정 금지) |
+| feature 컴포넌트 | `modules/{feature}/ui/{Name}.tsx` |
+| server action | `modules/{feature}/application/actions.ts` (+ `*-service.ts`) |
+| 도메인 로직 (순수 계산) | `modules/{feature}/domain/{name}.ts` |
+| feature 데이터 접근 | `modules/{feature}/infrastructure/` |
+| 공유 UI 프리미티브 | `components/ui/` (수정 금지) |
+| 공유 폼 프리미티브 | `components/forms/` (FormField/FormSection/FormFooter) |
+| 레이아웃/공유 컴포넌트 | `components/layout/` · `components/shared/` |
 | PDF 템플릿 | `lib/pdf/{feature}-template.tsx` |
-| 비즈니스 로직 | `lib/{feature}.ts` |
+| 크로스커팅 server action | `app/actions/{name}.ts` (auth · schedule · ai-drafts · google-calendar · workspace-assistant 만 잔존) |
+| 크로스커팅 비즈니스 로직 | `lib/{feature}.ts` |
 | 타입 | `types/{feature}.ts` |
 | 유틸리티 | `utils/{name}.ts` |
 | 커스텀 훅 | `hooks/use{Name}.ts` |
 | 상수/설정 | `config/{name}.ts` |
+
+> feature-scoped server action은 `modules/{feature}/application/`에 둔다. `app/actions/`에는 단일 feature에 속하지 않는 크로스커팅 action만 남긴다 (auth, schedule, ai-drafts, google-calendar, workspace-assistant).
 
 ## Forbidden Patterns
 

@@ -1,5 +1,7 @@
 # Coatly
 
+> Owner: **Shared** — 프로젝트 소개/셋업. 기획 판단: Claude(Opus 4.8·extra) · 구현 사실: Codex(high).
+
 호주 1–3인 painter/tradie를 위한 모바일 우선 SaaS. v1 wedge = **Excel 기반 quote workflow replacement**: 기존 가격표를 참고해 Coatly 앱 안에서 단순 price book을 세팅하고, 견적 작성 → PDF → 이메일 발송 → follow-up → invoice/schedule 전환까지 한 흐름으로 처리한다.
 
 AI, 사진 분석, 자동 damage 판단은 v1 구매 이유가 아니다. core workflow가 실제 painter의 Excel/PDF/email 업무를 완전히 대체하고 릴리즈된 뒤, AI는 quote 설명과 follow-up 문구를 줄여주는 보조 레이어로만 추가한다.
@@ -114,9 +116,9 @@ v1 core workflow 전에는 arbitrary Excel 자동 import, 복잡한 Excel 템플
 
 ## Tool Routing
 
-| 영역 | 담당 |
-|------|------|
-| 플랜 / 디자인 / progress / QA | Claude Code (`.claude/commands/`, `.claude/skills/`) |
-| 구현 / 버그 / DB / 배포 / git | Codex (`.codex/skills/`, [`docs/ENGINEERING.md`](docs/ENGINEERING.md)) |
+| 영역 | 담당 | 모델 |
+|------|------|------|
+| 플랜 / 디자인 / progress / 분석 / QA | Claude Code (`.claude/commands/`) | Opus 4.8 · extra |
+| 구현 / 버그 / DB / 보안 / 배포 / git | Codex (`.codex/skills/`, [`docs/ENGINEERING.md`](docs/ENGINEERING.md)) | high |
 
 자세한 라우팅 표는 [`AGENTS.md`](AGENTS.md).

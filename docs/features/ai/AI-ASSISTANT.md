@@ -1,5 +1,6 @@
 # AI Assistant — Deferred Post-Core Workflow
 
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/디자인/QA/분석 문서. 구현·DB·git 결정은 Codex(high) 영역.
 > 2026-06-03 update: AI is no longer the v1 wedge. This document records the allowed future AI scope and the gate that must pass before any new AI/photo work starts.
 
 ## Current Status

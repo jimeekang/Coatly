@@ -1,5 +1,6 @@
 # Coatly — Launch Readiness Snapshot
 
+> Owner: **Shared** — 런칭 판정은 Claude(QA/PM), blocker 해소는 Codex(high).
 > 기준일: 2026-07-05. 이 문서는 현재 코드 기준 외부 런칭 가능 여부와 남은 release blockers를 정리합니다.
 
 ## Verdict
@@ -37,7 +38,19 @@
 | P1       | Supabase CLI/local migration bookkeeping remains          | MCP connection works and remote schema is corrected, but local Supabase CLI still needs a valid token/link before using CLI migration repair/lint workflows                                  |
 | P1       | Real v1 workflow fixture not validated                    | Use painter A's actual price book and recent quote/email to confirm Coatly total, PDF, email, public approval, follow-up, invoice, schedule/job conversion                                   |
 | P1       | Resend customer email smoke still needs live verification | Send quote/invoice email using verified sender or sandbox route and confirm delivered payload/link; Preview script now supports quote and invoice email smoke with `--send-email`            |
+| P1       | Quote follow-up reminder cron 미구현                       | v1 core flow 명시 요구("send → follow-up reminder")이자 핵심 차별점. `invoice-reminders` 패턴 복제로 구현 필요 (AUDIT A9)                                                                    |
+| P1       | plans.ts 판매 카피–scope 모순                              | Pro 플랜이 보류된 AI 기능을 판매 feature로 노출 (`config/plans.ts:50-51`) — 신뢰/ACL 리스크, 카피 교체 + AI UI gating (AUDIT A11)                                                            |
+| P1       | Stripe webhook 하드닝                                      | `event.id` 멱등 체크 부재, `payment_failed` no-op(매출 누수), webhook 중복 라우트 정리 (AUDIT A10)                                                                                           |
 | P2       | Design D5 mobile spacing check remains                    | Capture detailed quote/job screens on mobile and fix spacing/overlap if found                                                                                                                |
+
+## Open Decisions (사용자 결정 대기)
+
+| 결정 | 내용 |
+|------|------|
+| Smoke 테스트 계정 | live smoke용 전용 계정 생성/승인 |
+| Live Supabase 태그 fixture | `[LAUNCH_SMOKE]` 태그 레코드를 live DB에 허용할지 |
+| Production Resend sender | 검증 도메인 발신 주소 확정 (`RESEND_FROM_ADDRESS`) |
+| Painter A 자료 | 실제 Excel 가격표 + 최근 quote PDF/email 1건 제공 시점 |
 
 ## Launch Criteria
 

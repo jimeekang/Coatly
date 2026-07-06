@@ -2,7 +2,10 @@
 description: 새 기능 요청을 분석하고 subtask로 분해한 뒤 Codex 엔지니어링 브리프를 출력
 argument-hint: [기능 설명]
 allowed-tools: Read
+model: claude-opus-4-8
 ---
+
+> Owner: **Claude** (Opus 4.8 · extra) — 기획/분해 전용. 구현·DB·git 실행 금지(Codex 도메인).
 
 구현 요청: $ARGUMENTS
 
@@ -13,7 +16,7 @@ allowed-tools: Read
 3. `docs/features/audit/AUDIT.md`에서 활성 audit 항목과 충돌하는지 확인
 4. 요청이 Out of Scope면 거절하고 이유 설명
 5. 요청을 독립적인 subtask로 분해하고 progress 영향 표시
-6. UI/UX 결정이 필요하면 `.claude/skills/ui-spec.md` 호출하여 스펙 작성
+6. UI/UX 결정이 필요하면 `/ui-spec`(`.claude/commands/ui-spec.md`) 호출하여 스펙 작성
 7. subtask별 Codex 구현 브리프 출력 — Codex가 구현·테스트·DB·배포·git을 담당
 
 ## 출력 형식

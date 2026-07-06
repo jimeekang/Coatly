@@ -1,5 +1,6 @@
 # TODOS — Coatly
 
+> Owner: **Claude** (Opus 4.8 · extra) — deferred 우선순위 원장.
 > 2026-06-03 product reframe 기준 deferred 항목. 현재 v1은 AI Quote Writer가 아니라 Excel quote workflow replacement다.
 
 ## Current Deferred Rule

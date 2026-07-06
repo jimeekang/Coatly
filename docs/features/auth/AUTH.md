@@ -1,5 +1,7 @@
 # Feature: Auth & Onboarding
 
+> Owner: **Shared** — 기획 판단: Claude(Opus 4.8·extra) · 구현 사실: Codex(high).
+
 ## User Story
 
 > 호주 페인터로서, 가입 후 사업자 정보를 입력하면 바로 견적서를 만들 수 있도록 안내받고 싶다.

@@ -1,9 +1,12 @@
 ---
 name: resend-document-email
+owner: codex
 description: Use when adding, testing, or modifying Coatly customer document emails through Resend, including quote approval links, invoice emails, PDF attachments, customer recipient selection, and related environment setup.
 ---
 
-# Resend Document Email
+# Resend Document Email (Codex)
+
+> **Codex (high) 전용.** 구현/이메일 연동/env 작업. 기획·디자인 결정은 Claude(Opus 4.8·extra) 영역.
 
 Use this skill for Coatly workflows that email customer-facing documents through Resend.
 
@@ -13,6 +16,7 @@ Use this skill for Coatly workflows that email customer-facing documents through
 - Quote send flows must email the selected customer address, include the public approval link (`/q/{public_share_token}`), and attach the generated quote PDF.
 - Invoice send flows must email the invoice customer's saved email and attach the generated invoice PDF.
 - Use `RESEND_API_KEY` for server-side sending and `RESEND_FROM_ADDRESS` for the verified sender.
+- ⚠️ 검증된 발신자(`RESEND_FROM_ADDRESS`)가 아직 설정되지 않은 상태다 (런칭 P0 blocker — [`docs/LAUNCH-READINESS.md`](../../docs/LAUNCH-READINESS.md)). customer launch 전까지는 `@resend.dev` sandbox + `RESEND_TEST_RECIPIENT` 경로만 사용하고, 검증된 sender domain 확보 후 전제로 삼는다.
 - Do not expose API keys in logs, UI, tests, screenshots, or final responses.
 
 ## Implementation Steps
@@ -27,7 +31,7 @@ Use this skill for Coatly workflows that email customer-facing documents through
 
 ## Verification
 
-- Run focused tests for `app/actions/quotes.test.ts`, `app/actions/invoices.test.ts`, and `lib/email/resend.ts` coverage if present.
+- Run focused tests for `modules/quotes/application/actions.test.ts`, `modules/invoices/application/actions.test.ts`, and `lib/email/resend.test.ts` coverage if present.
 - Run `npm run lint` or a targeted lint pass on touched files.
 - If network access is available, verify Resend credentials with a non-secret API call before sending live mail.
 - Send a live test only to an approved internal/test recipient.

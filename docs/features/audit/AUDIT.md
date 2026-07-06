@@ -1,6 +1,7 @@
 # Audit & Tech Debt
 
-> 활성 리스크와 해결 이력을 한 파일에 압축해 추적합니다. 새 항목은 사용자 영향, 재현 조건, 담당 도구, 수용 기준을 포함해야 합니다.
+> Owner: **Claude** (Opus 4.8 · extra) — 분석/감사 산출물. 항목 실행은 Codex(high)가 담당.
+> 활성 리스크와 해결 이력을 한 파일에 압축해 추적합니다. 새 항목은 사용자 영향, 재현 조건, 담당 도구, 수용 기준을 포함해야 합니다. 2026-07-05 전체 앱 분석(12-agent 교차 검증) 결과 반영.
 
 ## Active Findings
 
@@ -12,8 +13,16 @@
 | A4 | P1 | Invoice reminder cron | 부분 해결 | `invoice_reminder_events` 기반 멱등성 운영 로그 점검 |
 | A5 | P1 | Public quote security/audit | 부분 | token expiry/revoke/error audit 조회와 운영 화면 검토 |
 | A6 | P1 | Exterior estimate | 열림 | edit/PDF/detail/AI draft 회귀 테스트 강화 |
-| A7 | P2 | 문서 drift | 진행 중 | 모든 MD 200줄 이하, PLANS를 단일 progress source로 유지, [/TODOS.md](../../../TODOS.md) 로 v1.1 deferred 추적 |
+| A7 | P2 | 문서 drift | 진행 중 | 모든 MD 300줄 이하, 파일별 Owner(Claude/Codex) 명시, PLANS를 단일 progress source로 유지, [/TODOS.md](../../../TODOS.md) 로 v1.1 deferred 추적 |
 | A8 | P2 | Deferred AI governance | 보류 | AI/photo/Qwen/usage/cost work는 core workflow release 후 별도 plan. stale price_rates race 포함 — [/TODOS.md](../../../TODOS.md) |
+| A9 | P1 | Quote follow-up 리마인더 미구현 | 열림 | v1 core flow 명시 요구("send → follow-up reminder/status")이자 유일한 방어 가능 차별점인데 코드에 없음(`vercel.json` cron은 invoice-reminders 하나). invoice cron 패턴 복제로 `quote-follow-ups` cron 추가 |
+| A10 | P1 | Stripe webhook 하드닝 | 열림 | `event.id` 멱등 체크 부재(039 테이블 미사용), `invoice.payment_failed`가 console.warn no-op(매출 누수), `app/api/stripe/webhook` + `app/api/webhooks/stripe` 중복 라우트 1개 삭제 |
+| A11 | P1 | 판매 카피–scope 모순 | 열림 | `config/plans.ts:50-51` Pro가 보류(dormant)된 "AI Quote Drafting/AI Workspace Assistant"를 판매 feature로 노출 — 신뢰/ACL 리스크. 카피 제거 + `AIDraftPanel` UI gating 정합 |
+| A12 | P1 | 관측성 부재 | 열림 | 로깅이 `console.*`뿐, Sentry 등 에러 트래킹 없음. 1인 운영에서 최우선 인프라 |
+| A13 | P2 | profiles/businesses 이중화 | 열림 | business_name/abn/logo가 양쪽 존재, `access.ts`가 컬럼 부재를 런타임 방어(`hasMissingProfilesColumn`) — 정본 통합 필요 |
+| A14 | P2 | 디자인 토큰 우회 | 열림 | `bg-white` 하드코딩 다수(ScheduleCalendar 28회, QuoteForm 등), `ui/button.tsx` 기본 32px(44px 위반), `ui/input` ↔ `forms/FormField` 프리미티브 이원화 — 회귀 테스트 사각지대 |
+| A15 | P2 | 죽은 라우트/IA 정리 | 열림 | `/demo/schedule` 무인증 프로덕션 노출, `/jobs` UI 없는 리다이렉트 스텁 경유(`QuoteActions`, `JobDetail`), `customers/[id]/edit` 부재 일관성 |
+| A16 | P2 | 동시성/오프라인 | 열림 | `generate_quote_number` RPC 동시 저장 시 번호 충돌 검토, PWA manifest만 있고 service worker/offline draft 보존 부재(현장 약한 네트워크 리스크 — A1과 연관) |
 
 ## Finding Details
 
@@ -90,6 +99,12 @@ Exterior estimate path는 구현되어 있으나 과거 감사에서 편집 시 
 | TD4 | P1 | Exterior estimate regression suite | Codex |
 | TD5 | P2 | Public quote event reporting UI | Claude plan → Codex |
 | TD6 | P2 | Monthly analytics trend charts | Claude plan → Codex |
+| TD7 | P1 | Quote follow-up reminder cron (A9) | Codex |
+| TD8 | P1 | Stripe webhook idempotency + payment_failed + 중복 라우트 정리 (A10) | Codex |
+| TD9 | P1 | plans.ts AI 카피 제거 + AI UI gating (A11) | Claude plan → Codex |
+| TD10 | P1 | Sentry/구조화 로깅 도입 (A12) | Codex |
+| TD11 | P2 | bg-white → surface 토큰 치환 + button.tsx 교정 + 프리미티브 통합 (A14) | Codex |
+| TD12 | P2 | demo route gating, /jobs 스텁 직결, profiles/businesses 정본화 (A13/A15) | Codex |
 
 ## Operational Checklist
 
