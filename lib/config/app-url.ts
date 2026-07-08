@@ -1,5 +1,7 @@
 type AppBaseUrlOptions = {
-  env?: Pick<NodeJS.ProcessEnv, 'NEXT_PUBLIC_APP_URL' | 'NEXT_PUBLIC_SITE_URL' | 'VERCEL_URL'>;
+  env?: Partial<
+    Pick<NodeJS.ProcessEnv, 'NEXT_PUBLIC_APP_URL' | 'NEXT_PUBLIC_SITE_URL' | 'VERCEL_URL'>
+  >;
   fallback?: string;
 };
 

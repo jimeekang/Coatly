@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { getAppBaseUrl } from '@/lib/config/app-url';
 import { resolveSafeInternalPath } from '@/lib/security/paths';
-import { getStripeClient } from '@/lib/stripe/client';
-import { getStripePriceId } from '@/lib/stripe/plans';
+import { getStripeClient } from '@/modules/billing/infrastructure/stripe/client';
+import { getStripePriceId } from '@/modules/billing/infrastructure/stripe/plans';
 import type { PlanId, BillingInterval } from '@/config/plans';
 
 export async function POST(request: NextRequest) {

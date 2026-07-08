@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { getQuotes } from '@/modules/quotes/application/actions';
 import { QuoteTable } from '@/modules/quotes/ui/QuoteTable';
-import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
+import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import {
   PageHeader,
   PrimaryActionLink,
   SecondaryActionLink,
 } from '@/components/layout/PageHeader';
-import { getMonthlyActiveQuoteUsageForCurrentUser } from '@/lib/supabase/request-context';
+import { getMonthlyActiveQuoteUsageForCurrentUser } from '@/modules/billing/application/request-context';
 
 export const metadata: Metadata = { title: 'Quotes' };
 

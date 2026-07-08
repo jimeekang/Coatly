@@ -76,7 +76,7 @@ import type {
   QuoteAiIntakeSnapshotInput,
   QuoteClauseItemInput,
   QuoteScopeSectionInput,
-} from '@/types/quote';
+} from '@/modules/quotes/domain/quote';
 import {
   calculateDayRateQuote,
   calculateRoomRateQuote,
@@ -84,7 +84,7 @@ import {
   calculateQuickEstimate,
   getRoomRateBaseline,
   snapshotQuickEstimateInputs,
-} from '@/utils/calculations';
+} from '@/modules/quotes/domain/quote-calculations';
 import { QuickEstimateBuilder } from '@/modules/quotes/ui/QuickEstimateBuilder';
 import {
   InteriorEstimateBuilder,

@@ -1,9 +1,38 @@
-import {
-  MATERIAL_ITEM_CATEGORIES,
-  type MaterialItem,
-  type MaterialItemCategory,
-  type MaterialItemUpsertInput,
-} from '@/modules/materials/domain/types';
+// Structural copies of the manual price book (material) contract. Price Rates
+// owns its CSV import/export contract, so nothing in price-rates/domain imports
+// materials/domain. These are structurally identical to the canonical material
+// types, keeping real material rows assignable across the boundary.
+const MANUAL_PRICE_BOOK_CATEGORIES = [
+  'paint',
+  'primer',
+  'supply',
+  'service',
+  'other',
+] as const;
+type ManualPriceBookCategory = (typeof MANUAL_PRICE_BOOK_CATEGORIES)[number];
+
+type ManualPriceBookItem = {
+  id: string;
+  user_id: string;
+  name: string;
+  category: ManualPriceBookCategory;
+  unit: string;
+  unit_price_cents: number;
+  notes: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type ManualPriceBookUpsertInput = {
+  name: string;
+  category?: ManualPriceBookCategory;
+  unit?: string;
+  unit_price_cents: number;
+  notes?: string;
+  is_active?: boolean;
+};
 
 const EXPORT_HEADERS = [
   'Service / Item',
@@ -127,15 +156,17 @@ function parsePriceCents(value: string) {
   return Math.round(parsed * 100);
 }
 
-function normalizeCategory(value: string): MaterialItemCategory {
+function normalizeCategory(value: string): ManualPriceBookCategory {
   const normalized = value.trim().toLowerCase();
   if (!normalized) return 'service';
 
-  const category = MATERIAL_ITEM_CATEGORIES.find((item) => item === normalized);
+  const category = MANUAL_PRICE_BOOK_CATEGORIES.find(
+    (item) => item === normalized
+  );
   if (category) return category;
 
   throw new Error(
-    `Category must be blank or one of ${MATERIAL_ITEM_CATEGORIES.join(', ')}`
+    `Category must be blank or one of ${MANUAL_PRICE_BOOK_CATEGORIES.join(', ')}`
   );
 }
 
@@ -162,7 +193,7 @@ function findColumnIndex(headers: string[], key: keyof typeof HEADER_ALIASES) {
   return headers.findIndex((header) => HEADER_ALIASES[key].includes(header));
 }
 
-export function generateManualPriceBookCsv(items: MaterialItem[]) {
+export function generateManualPriceBookCsv(items: ManualPriceBookItem[]) {
   const lines = [
     EXPORT_HEADERS.join(','),
     ...items.map((item) =>
@@ -186,7 +217,7 @@ export function generateManualPriceBookTemplateCsv() {
 }
 
 export function parseManualPriceBookCsv(text: string): {
-  items: MaterialItemUpsertInput[];
+  items: ManualPriceBookUpsertInput[];
   errors: string[];
 } {
   const rows = parseCsv(text);
@@ -213,7 +244,7 @@ export function parseManualPriceBookCsv(text: string): {
     };
   }
 
-  const items: MaterialItemUpsertInput[] = [];
+  const items: ManualPriceBookUpsertInput[] = [];
   const errors: string[] = [];
   const seenKeys = new Set<string>();
 

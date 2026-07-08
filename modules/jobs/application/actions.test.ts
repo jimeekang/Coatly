@@ -47,13 +47,13 @@ vi.mock('@/lib/supabase/request-context', () => ({
   requireCurrentUser: requireCurrentUserMock,
 }));
 
-vi.mock('@/lib/subscription/access', () => ({
+vi.mock('@/modules/billing/application/access', () => ({
   getActiveSubscriptionRequiredMessage:
     getActiveSubscriptionRequiredMessageMock,
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
-vi.mock('@/lib/google-calendar/service', () => ({
+vi.mock('@/modules/schedule/application/job-calendar-sync', () => ({
   deleteGoogleCalendarEventForJob: deleteGoogleCalendarEventForJobMock,
   getGoogleBusyDatesForUser: getGoogleBusyDatesForUserMock,
   syncBookedJobToGoogleCalendar: syncBookedJobToGoogleCalendarMock,

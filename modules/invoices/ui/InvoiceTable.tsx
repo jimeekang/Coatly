@@ -9,7 +9,7 @@ import {
   getSydneyTodayDateString,
   type InvoiceDueTone,
 } from '@/modules/invoices/domain/invoices';
-import type { InvoiceListItem, InvoiceStatus } from '@/types/invoice';
+import type { InvoiceListItem, InvoiceStatus } from '@/modules/invoices/domain/invoice';
 import { formatAUD, formatDate } from '@/utils/format';
 
 const ICON_PROPS = {

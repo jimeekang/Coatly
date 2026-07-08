@@ -2,11 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
-import {
-  disconnectGoogleCalendarAction,
-  updateGoogleCalendarSettingsAction,
-} from '@/app/actions/google-calendar';
-import type { GoogleCalendarIntegrationSummary } from '@/lib/google-calendar/types';
+import type { GoogleCalendarIntegrationSummary } from '@/modules/schedule/infrastructure/google-calendar/types';
+import type { GoogleCalendarSettingsInput } from '@/lib/supabase/validators';
+
+type UpdateGoogleCalendarSettingsAction = (
+  input: GoogleCalendarSettingsInput,
+) => Promise<{ error: string | null; success: string | null }>;
+
+type DisconnectGoogleCalendarAction = () => Promise<{
+  error: string | null;
+  success: string | null;
+}>;
 
 const inputBase =
   'w-full rounded-xl border border-outline bg-white px-4 text-sm text-on-surface transition-colors focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50';
@@ -20,11 +26,15 @@ export default function GoogleCalendarCard({
   canConnectGoogleCalendar,
   errorMessage,
   successMessage,
+  updateGoogleCalendarSettingsAction,
+  disconnectGoogleCalendarAction,
 }: {
   integration: GoogleCalendarIntegrationSummary | null;
   canConnectGoogleCalendar: boolean;
   errorMessage?: string | null;
   successMessage?: string | null;
+  updateGoogleCalendarSettingsAction: UpdateGoogleCalendarSettingsAction;
+  disconnectGoogleCalendarAction: DisconnectGoogleCalendarAction;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

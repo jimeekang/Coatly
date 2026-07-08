@@ -3,11 +3,7 @@ import { redirect } from 'next/navigation';
 import {
   isMissingOnboardingColumnError,
   type OnboardingProfileRecord,
-} from '@/modules/settings/domain/onboarding';
-import {
-  getMonthlyActiveQuoteUsageForUser,
-  getSubscriptionSnapshotForUser,
-} from '@/lib/subscription/access';
+} from '@/lib/supabase/onboarding-errors';
 import { createServerClient } from '@/lib/supabase/server';
 
 type AppSupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
@@ -73,22 +69,3 @@ export const getOnboardingProfileForCurrentUser = cache(
     return getProfileWithOnboardingFallback(supabase, user.id, includeAddressFields);
   }
 );
-
-export const getSubscriptionSnapshotForCurrentUser = cache(async () => {
-  const [supabase, user] = await Promise.all([
-    createServerClient(),
-    requireCurrentUser(),
-  ]);
-
-  return getSubscriptionSnapshotForUser(supabase, user.id);
-});
-
-export const getMonthlyActiveQuoteUsageForCurrentUser = cache(async () => {
-  const [supabase, user, snapshot] = await Promise.all([
-    createServerClient(),
-    requireCurrentUser(),
-    getSubscriptionSnapshotForCurrentUser(),
-  ]);
-
-  return getMonthlyActiveQuoteUsageForUser(supabase, user.id, snapshot);
-});

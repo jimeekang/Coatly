@@ -1,13 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { WorkspaceAssistant } from '@/components/dashboard/WorkspaceAssistant';
-import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
+import { WorkspaceAssistant } from '@/modules/assistant/ui/WorkspaceAssistant';
+import { CustomerForm } from '@/modules/customers/ui/CustomerForm';
+import { QuoteForm } from '@/modules/quotes/ui/QuoteForm';
+import { InvoiceForm } from '@/modules/invoices/ui/InvoiceForm';
+import { createQuote } from '@/modules/quotes/application/actions';
+import { createInvoice } from '@/modules/invoices/application/actions';
+import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
 import { resolveInvoiceStatus } from '@/modules/invoices/domain/invoices';
 import { getInvoiceQuoteOptions } from '@/modules/invoices/infrastructure/invoice-options';
 import { createServerClient } from '@/lib/supabase/server';
-import { getSubscriptionSnapshotForCurrentUser, requireCurrentUser } from '@/lib/supabase/request-context';
+import { requireCurrentUser } from '@/lib/supabase/request-context';
+import { getSubscriptionSnapshotForCurrentUser } from '@/modules/billing/application/request-context';
 import { formatAUD } from '@/utils/format';
-import type { InvoiceStatus } from '@/types/invoice';
+import type { InvoiceStatus } from '@/modules/invoices/domain/invoice';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
@@ -318,7 +324,15 @@ export default async function DashboardPage() {
       {/* Workspace assistant — primary action surface */}
       <div>
         {subscription.features.ai ? (
-          <WorkspaceAssistant customers={customerOptions} quotes={quoteOptions} />
+          <WorkspaceAssistant
+            customers={customerOptions}
+            quotes={quoteOptions}
+            CustomerForm={CustomerForm}
+            QuoteForm={QuoteForm}
+            InvoiceForm={InvoiceForm}
+            createQuote={createQuote}
+            createInvoice={createInvoice}
+          />
         ) : (
           <UpgradePrompt
             badge="Pro Plan"

@@ -3,7 +3,12 @@ import { redirect } from 'next/navigation';
 import { PriceRatesForm } from '@/modules/price-rates/ui/PriceRatesForm';
 import { getBusinessRateSettings } from '@/modules/settings/infrastructure/businesses';
 import { DEFAULT_RATE_SETTINGS } from '@/modules/price-rates/domain/rate-settings';
-import { getMaterialItems } from '@/modules/materials/application/actions';
+import { updateRateSettingsAction } from '@/modules/settings/application/settings-actions';
+import {
+  createMaterialItem,
+  getMaterialItems,
+  importMaterialItems,
+} from '@/modules/materials/application/actions';
 import { createServerClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 
@@ -43,6 +48,9 @@ export default async function PriceRatesPage() {
         defaultRates={rateSettings ?? DEFAULT_RATE_SETTINGS}
         manualItems={manualItems}
         manualItemsError={manualItemsError}
+        updateRateSettingsAction={updateRateSettingsAction}
+        createMaterialItem={createMaterialItem}
+        importMaterialItems={importMaterialItems}
       />
     </div>
   );

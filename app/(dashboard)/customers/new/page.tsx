@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import { CustomerCreateScreen } from '@/modules/customers/ui/CustomerCreateScreen';
+import { AIDraftPanel } from '@/modules/ai/ui/AIDraftPanel';
+import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
+import { generateAIDraft } from '@/modules/ai/application/actions';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { createServerClient } from '@/lib/supabase/server';
-import { getLiveSubscriptionSnapshotForUser } from '@/lib/subscription/server';
+import { getLiveSubscriptionSnapshotForUser } from '@/modules/billing/application/server';
 
 export const metadata: Metadata = { title: 'New Customer' };
 
@@ -24,7 +27,12 @@ export default async function NewCustomerPage() {
         className="mb-6"
       />
 
-      <CustomerCreateScreen canUseAI={subscription?.features.ai ?? false} />
+      <CustomerCreateScreen
+        canUseAI={subscription?.features.ai ?? false}
+        generateAIDraft={generateAIDraft}
+        AIDraftPanel={AIDraftPanel}
+        UpgradePrompt={UpgradePrompt}
+      />
     </div>
   );
 }

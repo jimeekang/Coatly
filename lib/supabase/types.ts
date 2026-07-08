@@ -1,4 +1,3 @@
-import type { RatePreset as UserRatePreset } from '@/modules/price-rates/domain/rate-settings';
 import type { AppDatabase } from '@/types/app-database';
 import type { Json as GeneratedJson } from '@/types/database';
 
@@ -71,5 +70,4 @@ export type PublicQuoteEvent = Tables<'public_quote_events'>;
 export type PublicQuoteEventInsert = Insert<'public_quote_events'>;
 export type PublicQuoteEventUpdate = Update<'public_quote_events'>;
 
-export type RatePreset = UserRatePreset;
 export type RatePresetJson = Database['public']['Tables']['businesses']['Row']['default_rates'];

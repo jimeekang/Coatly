@@ -1,4 +1,4 @@
-import LoginPageClient from '@/components/auth/LoginPageClient';
+import LoginPageClient from '@/modules/auth/ui/LoginPageClient';
 
 type LoginPageProps = {
   searchParams?: Promise<{

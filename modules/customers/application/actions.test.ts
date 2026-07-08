@@ -28,7 +28,7 @@ vi.mock('@/lib/supabase/request-context', () => ({
   requireCurrentUser: requireCurrentUserMock,
 }));
 
-vi.mock('@/lib/subscription/access', () => ({
+vi.mock('@/modules/billing/application/access', () => ({
   getActiveSubscriptionRequiredMessage: getActiveSubscriptionRequiredMessageMock,
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));

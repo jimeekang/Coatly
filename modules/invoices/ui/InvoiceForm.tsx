@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { InvoicePaymentMethod } from '@/types/invoice';
+import type { InvoicePaymentMethod } from '@/modules/invoices/domain/invoice';
 import { cn } from '@/lib/utils';
 import { getGSTFromExAmount } from '@/utils/gst';
 import { formatAUD, formatDate } from '@/utils/format';

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
-} from '@/lib/subscription/access';
+} from '@/modules/billing/application/access';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 

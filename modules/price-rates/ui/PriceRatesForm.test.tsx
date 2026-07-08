@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { updateRateSettingsAction } from '@/modules/settings/application/settings-actions';
 import {
@@ -17,6 +18,25 @@ vi.mock('@/modules/materials/application/actions', () => ({
   createMaterialItem: vi.fn(),
   importMaterialItems: vi.fn(),
 }));
+
+// PriceRatesForm now receives its server actions as props (injected by the
+// price-rates page). This wrapper supplies the mocked actions so each test can
+// keep rendering with just the data props it cares about.
+function TestPriceRatesForm(
+  props: Omit<
+    ComponentProps<typeof PriceRatesForm>,
+    'updateRateSettingsAction' | 'createMaterialItem' | 'importMaterialItems'
+  >
+) {
+  return (
+    <PriceRatesForm
+      {...props}
+      updateRateSettingsAction={updateRateSettingsAction}
+      createMaterialItem={createMaterialItem}
+      importMaterialItems={importMaterialItems}
+    />
+  );
+}
 
 describe('PriceRatesForm pricing setup', () => {
   beforeEach(() => {
@@ -41,7 +61,7 @@ describe('PriceRatesForm pricing setup', () => {
   });
 
   it('opens on Manual price book setup before advanced rate warnings', () => {
-    render(<PriceRatesForm defaultRates={buildDefaultRateSettings()} />);
+    render(<TestPriceRatesForm defaultRates={buildDefaultRateSettings()} />);
 
     expect(screen.getByRole('tab', { name: /Manual/i })).toHaveAttribute(
       'aria-selected',
@@ -64,7 +84,7 @@ describe('PriceRatesForm pricing setup', () => {
     const user = userEvent.setup();
     const rates = buildDefaultRateSettings();
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     await user.click(screen.getByRole('tab', { name: /Quick Estimate/i }));
 
@@ -78,7 +98,7 @@ describe('PriceRatesForm pricing setup', () => {
     const rates = buildDefaultRateSettings();
     rates.pricing.preferred_pricing_method = 'detailed_quick';
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     await user.click(screen.getByRole('tab', { name: /Quick Estimate/i }));
 
@@ -145,7 +165,7 @@ describe('PriceRatesForm pricing setup', () => {
     const rates = buildDefaultRateSettings();
     rates.pricing.preferred_pricing_method = 'detailed_quick';
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     await user.click(screen.getByRole('tab', { name: /Quick Estimate/i }));
 
@@ -196,7 +216,7 @@ describe('PriceRatesForm pricing setup', () => {
     delete (rates.quick_estimate as Partial<typeof rates.quick_estimate>)
       .property_presets;
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     await user.click(screen.getByRole('tab', { name: /Quick Estimate/i }));
 
@@ -215,7 +235,7 @@ describe('PriceRatesForm pricing setup', () => {
   });
 
   it('removes legacy room anchor compatibility from the price rates UI', () => {
-    render(<PriceRatesForm defaultRates={buildDefaultRateSettings()} />);
+    render(<TestPriceRatesForm defaultRates={buildDefaultRateSettings()} />);
 
     expect(
       screen.queryByText('Detailed Estimate Anchors')
@@ -269,7 +289,7 @@ describe('PriceRatesForm pricing setup', () => {
       },
     ];
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     expect(screen.queryByText('Advanced Room Presets')).not.toBeInTheDocument();
     expect(
@@ -285,7 +305,7 @@ describe('PriceRatesForm pricing setup', () => {
     const rates = buildDefaultRateSettings();
     rates.pricing.preferred_pricing_method = 'detailed_quick';
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     await user.click(screen.getByRole('tab', { name: /Quick Estimate/i }));
 
@@ -305,7 +325,7 @@ describe('PriceRatesForm pricing setup', () => {
     const rates = buildDefaultRateSettings();
     rates.pricing.preferred_pricing_method = 'detailed_quick';
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     await user.click(screen.getByRole('tab', { name: /Quick Estimate/i }));
 
@@ -334,7 +354,7 @@ describe('PriceRatesForm pricing setup', () => {
     const rates = buildDefaultRateSettings();
     rates.pricing.preferred_pricing_method = 'detailed_quick';
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     await user.click(screen.getByRole('tab', { name: /Quick Estimate/i }));
 
@@ -408,7 +428,7 @@ describe('PriceRatesForm pricing setup', () => {
     ];
     rates.door_unit_rates.oil_2coat.standard.door_and_frame = 0;
 
-    render(<PriceRatesForm defaultRates={rates} />);
+    render(<TestPriceRatesForm defaultRates={rates} />);
 
     await user.click(screen.getByRole('tab', { name: /Quick Estimate/i }));
 
@@ -430,7 +450,7 @@ describe('PriceRatesForm pricing setup', () => {
     rates.pricing.preferred_pricing_method = 'manual';
 
     render(
-      <PriceRatesForm
+      <TestPriceRatesForm
         defaultRates={rates}
         manualItems={[
           {
@@ -481,7 +501,7 @@ describe('PriceRatesForm pricing setup', () => {
       revokeObjectURL: vi.fn(),
     });
 
-    render(<PriceRatesForm defaultRates={rates} manualItems={[]} />);
+    render(<TestPriceRatesForm defaultRates={rates} manualItems={[]} />);
 
     await user.click(screen.getByRole('tab', { name: /Manual/i }));
     await user.click(
@@ -519,7 +539,7 @@ describe('PriceRatesForm pricing setup', () => {
       ],
     });
 
-    render(<PriceRatesForm defaultRates={rates} manualItems={[]} />);
+    render(<TestPriceRatesForm defaultRates={rates} manualItems={[]} />);
 
     await user.click(screen.getByRole('tab', { name: /Manual/i }));
     const fileInput = document.querySelector(
@@ -567,7 +587,7 @@ describe('PriceRatesForm pricing setup', () => {
     const rates = buildDefaultRateSettings();
     rates.pricing.preferred_pricing_method = 'manual';
 
-    render(<PriceRatesForm defaultRates={rates} manualItems={[]} />);
+    render(<TestPriceRatesForm defaultRates={rates} manualItems={[]} />);
 
     await user.click(screen.getByRole('tab', { name: /Manual/i }));
     const fileInput = document.querySelector(
@@ -600,7 +620,7 @@ describe('PriceRatesForm pricing setup', () => {
     rates.pricing.preferred_pricing_method = 'manual';
 
     render(
-      <PriceRatesForm
+      <TestPriceRatesForm
         defaultRates={rates}
         manualItems={[
           {
@@ -661,7 +681,7 @@ describe('PriceRatesForm pricing setup', () => {
       },
     });
 
-    render(<PriceRatesForm defaultRates={rates} manualItems={[]} />);
+    render(<TestPriceRatesForm defaultRates={rates} manualItems={[]} />);
 
     await user.click(screen.getByRole('tab', { name: /Manual/i }));
     await user.click(screen.getByRole('button', { name: /Add Price Item/i }));

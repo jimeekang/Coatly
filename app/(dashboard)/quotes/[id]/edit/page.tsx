@@ -15,7 +15,7 @@ import type {
   PricingMethod,
   QuoteClauseItemInput,
   QuoteScopeSectionInput,
-} from '@/types/quote';
+} from '@/modules/quotes/domain/quote';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 export const metadata: Metadata = { title: 'Edit Quote' };

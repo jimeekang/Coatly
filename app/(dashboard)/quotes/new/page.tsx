@@ -3,10 +3,13 @@ import { getQuoteFormOptions } from '@/modules/quotes/application/actions';
 import { getMaterialItemsForPicker } from '@/modules/materials/application/actions';
 import { listQuoteTemplates } from '@/modules/quotes/application/template-actions';
 import { QuoteCreateScreen } from '@/modules/quotes/ui/QuoteCreateScreen';
+import { AIDraftPanel } from '@/modules/ai/ui/AIDraftPanel';
+import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
+import { generateAIDraft } from '@/modules/ai/application/actions';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
 import { createServerClient } from '@/lib/supabase/server';
-import { getLiveMonthlyActiveQuoteUsageForUser } from '@/lib/subscription/server';
+import { getLiveMonthlyActiveQuoteUsageForUser } from '@/modules/billing/application/server';
 
 export const metadata: Metadata = { title: 'New Quote' };
 
@@ -88,6 +91,9 @@ export default async function NewQuotePage({
               ? requestedCustomerId
               : undefined
           }
+          generateAIDraft={generateAIDraft}
+          AIDraftPanel={AIDraftPanel}
+          UpgradePrompt={UpgradePrompt}
         />
       )}
     </div>

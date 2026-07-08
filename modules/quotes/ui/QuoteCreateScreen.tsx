@@ -1,29 +1,65 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { generateAIDraft } from '@/app/actions/ai-drafts';
+import { useState, useTransition, type ComponentType } from 'react';
 import { createQuote } from '@/modules/quotes/application/actions';
 import { saveQuoteTemplate } from '@/modules/quotes/application/template-actions';
-import {
-  AIDraftPanel,
-  type AIDraftPhotoAttachment,
-} from '@/components/ai/AIDraftPanel';
 import {
   QuoteForm,
   type QuoteFormDefaultValues,
 } from '@/modules/quotes/ui/QuoteForm';
 import { TemplatePicker } from '@/modules/quotes/ui/TemplatePicker';
-import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
-import type { AIQuoteDraft } from '@/lib/ai/draft-types';
+import type {
+  AIQuoteDraft,
+  WorkspaceDraftEntity,
+  WorkspaceDraftResult,
+} from '@/modules/ai/domain/draft-types';
 import type { QuoteCustomerOption } from '@/modules/quotes/domain/quotes';
 import type { UserRateSettings } from '@/modules/price-rates/domain/rate-settings';
 import type { MaterialItem } from '@/modules/materials/domain/types';
 import type { QuoteCreateInput } from '@/modules/quotes/domain/quote-schema';
-import type { QuoteAiIntakeSnapshotInput } from '@/types/quote';
+import type { QuoteAiIntakeSnapshotInput } from '@/modules/quotes/domain/quote';
 import type {
   QuoteTemplate,
   QuoteTemplatePayload,
 } from '@/modules/quotes/application/template-actions';
+
+/**
+ * AIDraftPanel and UpgradePrompt are injected by the composition layer
+ * (app/(dashboard)/quotes/new/page.tsx) so this screen carries no runtime
+ * coupling to the ai/ui or billing/ui modules. The prop shapes are defined
+ * locally to match exactly what this screen passes to each component.
+ */
+type AIDraftPhotoAttachment = {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  dataUrl: string;
+  description?: string;
+};
+
+type AIDraftPanelComponent = ComponentType<{
+  entityLabel: string;
+  prompt: string;
+  placeholder: string;
+  examples: string[];
+  photos?: AIDraftPhotoAttachment[];
+  maxPhotos?: number;
+  pending: boolean;
+  error: string | null;
+  summary: string | null;
+  warnings: string[];
+  onPromptChange: (value: string) => void;
+  onPhotosChange?: (photos: AIDraftPhotoAttachment[]) => void;
+  onGenerate: () => void;
+  onApply: () => void;
+  canApply: boolean;
+}>;
+
+type UpgradePromptComponent = ComponentType<{
+  title: string;
+  description: string;
+}>;
 
 type QuoteSubmitIntent = 'save' | 'send_email';
 
@@ -91,6 +127,9 @@ export function QuoteCreateScreen({
   libraryItems = [],
   templates = [],
   initialCustomerId,
+  generateAIDraft,
+  AIDraftPanel,
+  UpgradePrompt,
 }: {
   customers: QuoteCustomerOption[];
   canUseAI: boolean;
@@ -99,6 +138,13 @@ export function QuoteCreateScreen({
   libraryItems?: MaterialItem[];
   templates?: QuoteTemplate[];
   initialCustomerId?: string;
+  AIDraftPanel: AIDraftPanelComponent;
+  UpgradePrompt: UpgradePromptComponent;
+  generateAIDraft: (input: {
+    entity: WorkspaceDraftEntity;
+    prompt: string;
+    photo_refs?: Array<{ id?: string; url?: string; description?: string }>;
+  }) => Promise<{ data: WorkspaceDraftResult | null; error: string | null }>;
 }) {
   const [prompt, setPrompt] = useState('');
   const [photos, setPhotos] = useState<AIDraftPhotoAttachment[]>([]);

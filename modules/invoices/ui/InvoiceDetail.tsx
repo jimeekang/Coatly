@@ -7,7 +7,7 @@ import type { InvoiceFormQuoteOption } from '@/modules/invoices/ui/InvoiceForm';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { getSydneyTodayDateString } from '@/modules/invoices/domain/invoices';
-import type { InvoiceStatus, InvoiceWithCustomer } from '@/types/invoice';
+import type { InvoiceStatus, InvoiceWithCustomer } from '@/modules/invoices/domain/invoice';
 import { formatABN, formatAUD, formatDate } from '@/utils/format';
 
 /* ──────────────────────────────────────────────────────────

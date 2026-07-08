@@ -6,20 +6,8 @@ const { invoiceFormSpy } = vi.hoisted(() => ({
   invoiceFormSpy: vi.fn(),
 }));
 
-vi.mock('@/app/actions/ai-drafts', () => ({
-  generateAIDraft: vi.fn(),
-}));
-
 vi.mock('@/modules/invoices/application/actions', () => ({
   createInvoice: vi.fn(),
-}));
-
-vi.mock('@/components/ai/AIDraftPanel', () => ({
-  AIDraftPanel: () => <div>AI Draft Panel</div>,
-}));
-
-vi.mock('@/components/subscription/UpgradePrompt', () => ({
-  UpgradePrompt: () => <div>Upgrade Prompt</div>,
 }));
 
 vi.mock('@/modules/invoices/ui/InvoiceForm', () => ({
@@ -28,6 +16,11 @@ vi.mock('@/modules/invoices/ui/InvoiceForm', () => ({
     return <div data-testid="invoice-form">Invoice Form</div>;
   },
 }));
+
+// AIDraftPanel and UpgradePrompt are injected into the screen as props, so the
+// tests provide lightweight stubs instead of mocking the ai/ui + billing/ui modules.
+const StubAIDraftPanel = () => <div>AI Draft Panel</div>;
+const StubUpgradePrompt = () => <div>Upgrade Prompt</div>;
 
 const CUSTOMERS = [
   {
@@ -57,6 +50,9 @@ describe('InvoiceCreateScreen', () => {
         }}
         initialCustomerId="customer-1"
         canUseAI={false}
+        generateAIDraft={vi.fn()}
+        AIDraftPanel={StubAIDraftPanel}
+        UpgradePrompt={StubUpgradePrompt}
       />
     );
 

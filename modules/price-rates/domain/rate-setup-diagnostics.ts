@@ -1,4 +1,8 @@
-import type { InteriorEstimateInput } from '@/modules/quotes/domain/interior-estimates';
+import type {
+  AdvancedEstimateDiagnosticsInput,
+  QuickInputs,
+  SelectedQuickRoom,
+} from '@/modules/price-rates/domain/pricing-inputs';
 import {
   getRoomTemplateSurfaceSnapshotTotalCents,
   resolveAdvancedRoomPriceSource,
@@ -17,7 +21,6 @@ import {
   WINDOW_TYPES,
   type UserRateSettings,
 } from '@/modules/price-rates/domain/rate-settings';
-import type { QuickInputs, SelectedQuickRoom } from '@/types/quote';
 
 export type RateSetupIssue = {
   area: 'quick' | 'advanced';
@@ -252,7 +255,7 @@ export function getAdvancedEstimateSetupIssues(
 }
 
 export function getSelectedAdvancedEstimateIssues(
-  input: InteriorEstimateInput,
+  input: AdvancedEstimateDiagnosticsInput,
   settings: UserRateSettings
 ): RateSetupIssue[] {
   if (input.estimate_mode !== 'specific_areas') return [];

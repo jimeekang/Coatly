@@ -17,9 +17,6 @@ import {
   MoreHorizontal,
   X,
 } from 'lucide-react';
-import { signOut } from '@/app/actions/auth';
-import type { SubscriptionSnapshot } from '@/lib/subscription/access';
-import { formatPlanName } from '@/lib/subscription/access';
 
 type NavItem = {
   href: string;
@@ -63,16 +60,18 @@ function isActive(href: string, pathname: string) {
 
 export default function DashboardSidebar({
   businessName,
-  subscription,
+  planLabel,
+  isPro,
+  signOut,
 }: {
   businessName: string;
-  subscription: SubscriptionSnapshot;
+  planLabel: string;
+  isPro: boolean;
+  signOut: () => Promise<void>;
 }) {
   const pathname = usePathname();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const hasHydrated = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
-  const planLabel = formatPlanName(subscription.plan);
-  const isPro = subscription.plan === 'pro';
   const activePathname = hasHydrated ? pathname : '';
   const isMoreActive = mobileMoreItems.some(({ href }) => isActive(href, activePathname));
 

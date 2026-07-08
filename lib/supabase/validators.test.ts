@@ -3,9 +3,9 @@ import {
   interiorEstimateSchema,
   quoteCreateSchema,
   quoteLineItemFormSchema,
-  quoteLineItemInsertSchema,
-  ratePresetSchema,
-} from '@/lib/supabase/validators';
+} from '@/modules/quotes/domain/quote-schema';
+import { quoteLineItemInsertSchema } from '@/modules/quotes/domain/quote-validators';
+import { ratePresetSchema } from '@/modules/price-rates/domain/rate-settings';
 
 describe('interiorEstimateSchema', () => {
   it('requires at least one room for specific-area estimates', () => {

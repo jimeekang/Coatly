@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase/server';
 import { saveBusinessProfileForUser } from '@/modules/settings/infrastructure/businesses';
-import { isMissingOnboardingColumnError } from '@/modules/settings/domain/onboarding';
+import { isMissingOnboardingColumnError } from '@/lib/supabase/onboarding-errors';
 
 export async function completeOnboarding(data: {
   businessName: string;

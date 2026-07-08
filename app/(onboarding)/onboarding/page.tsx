@@ -3,7 +3,8 @@ import { BrandLogo } from '@/components/branding/BrandLogo';
 import {
   inferOnboardingCompleted,
 } from '@/modules/settings/domain/onboarding';
-import OnboardingForm from '@/components/onboarding/OnboardingForm';
+import OnboardingForm from '@/modules/onboarding/ui/OnboardingForm';
+import { completeOnboarding } from '@/modules/settings/application/profile-actions';
 import { getOnboardingProfileForCurrentUser, requireCurrentUser } from '@/lib/supabase/request-context';
 
 export const metadata = { title: 'Set up your business' };
@@ -28,6 +29,7 @@ export default async function OnboardingPage() {
         </div>
 
         <OnboardingForm
+          completeOnboarding={completeOnboarding}
           defaultValues={{
             businessName: profile?.business_name ?? '',
             abn: profile?.abn ?? '',

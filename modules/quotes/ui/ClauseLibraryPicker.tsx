@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from 'lucide-react';
 import { QUOTE_FORM_CLAUSE_LIBRARY } from '@/config/quote-form-taxonomy';
-import type { QuoteClauseItemInput } from '@/types/quote';
+import type { QuoteClauseItemInput } from '@/modules/quotes/domain/quote';
 
 type ClauseLibraryPickerProps = {
   value: QuoteClauseItemInput[];

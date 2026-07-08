@@ -38,10 +38,15 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Domain purity (error). The `modules/*/domain/**` glob auto-covers every
+    // current and future feature module — no per-module maintenance needed.
+    // `allowTypeImports` keeps compile-time-only `import type` legal, since the
+    // rule targets runtime IO/coupling — the same principle the vitest boundary
+    // checker (modules/module-boundaries.test.ts) enforces.
     files: ["modules/*/domain/**/*.ts", "modules/*/domain/**/*.tsx"],
     rules: {
       "no-restricted-imports": [
-        "warn",
+        "error",
         {
           patterns: [
             {
@@ -56,9 +61,12 @@ const eslintConfig = defineConfig([
                 "@/lib/stripe/*",
                 "@/modules/*/application",
                 "@/modules/*/application/*",
+                "@/modules/*/infrastructure",
+                "@/modules/*/infrastructure/*",
                 "@/modules/*/ui",
                 "@/modules/*/ui/*",
               ],
+              allowTypeImports: true,
               message:
                 "Domain layer must stay pure. Move DB, Next.js, UI, and external side effects to application or infrastructure.",
             },
@@ -68,10 +76,12 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Shared kernel must not depend on feature application/UI internals (error).
+    // The `lib/**` glob covers all shared library code.
     files: ["lib/**/*.ts", "lib/**/*.tsx"],
     rules: {
       "no-restricted-imports": [
-        "warn",
+        "error",
         {
           patterns: [
             {

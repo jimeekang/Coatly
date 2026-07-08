@@ -7,8 +7,12 @@ import {
   PageHeader,
   PrimaryActionLink,
 } from '@/components/layout/PageHeader';
-import { getGoogleCalendarIntegrationSummary } from '@/lib/google-calendar/service';
-import { canUserConnectGoogleCalendar } from '@/lib/google-calendar/oauth';
+import {
+  disconnectGoogleCalendarAction,
+  updateGoogleCalendarSettingsAction,
+} from '@/modules/schedule/application/google-calendar-actions';
+import { getGoogleCalendarIntegrationSummary } from '@/modules/schedule/infrastructure/google-calendar/service';
+import { canUserConnectGoogleCalendar } from '@/modules/schedule/infrastructure/google-calendar/oauth';
 import { getBusinessProfile } from '@/modules/settings/infrastructure/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -69,6 +73,8 @@ export default async function SettingsPage({
         canConnectGoogleCalendar={canConnectGoogleCalendar}
         errorMessage={calendarError}
         successMessage={calendarSuccess}
+        updateGoogleCalendarSettingsAction={updateGoogleCalendarSettingsAction}
+        disconnectGoogleCalendarAction={disconnectGoogleCalendarAction}
       />
 
       <hr className="border-outline-variant" />

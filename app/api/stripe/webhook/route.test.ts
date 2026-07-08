@@ -4,7 +4,7 @@ const { handleStripeWebhookMock } = vi.hoisted(() => ({
   handleStripeWebhookMock: vi.fn(),
 }));
 
-vi.mock('@/lib/stripe/webhook-handler', () => ({
+vi.mock('@/modules/billing/application/webhook-handler', () => ({
   handleStripeWebhook: handleStripeWebhookMock,
 }));
 

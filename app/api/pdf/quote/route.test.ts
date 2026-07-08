@@ -44,7 +44,7 @@ vi.mock('@react-pdf/renderer', async () => {
   };
 });
 
-vi.mock('@/lib/pdf/quote-template', () => ({
+vi.mock('@/modules/quotes/infrastructure/pdf/quote-template', () => ({
   QuoteTemplate: quoteTemplateMock,
 }));
 

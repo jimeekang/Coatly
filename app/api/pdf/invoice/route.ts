@@ -6,7 +6,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import { getBusinessDocumentBranding } from '@/modules/settings/infrastructure/businesses';
-import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
+import { InvoiceTemplate } from '@/modules/invoices/infrastructure/pdf/invoice-template';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

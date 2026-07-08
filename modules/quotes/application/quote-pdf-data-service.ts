@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
 import type { BusinessDocumentBranding } from '@/modules/settings/domain/businesses';
-import { getBusinessDocumentBranding } from '@/modules/settings/infrastructure/businesses';
+import { getBusinessDocumentBranding } from '@/modules/settings/application/business-branding';
 import type { QuoteDetail } from '@/modules/quotes/domain/quotes';
 import {
   getHydratedQuoteDetailByPublicTokenForPdf,

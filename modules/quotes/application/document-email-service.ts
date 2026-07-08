@@ -3,9 +3,9 @@ import 'server-only';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { getAppBaseUrl } from '@/lib/config/app-url';
 import { sendQuoteEmail } from '@/lib/email/resend';
-import { QuoteTemplate } from '@/lib/pdf/quote-template';
+import { QuoteTemplate } from '@/modules/quotes/infrastructure/pdf/quote-template';
 import { createStorageObjectDataUrl } from '@/lib/supabase/storage';
-import { getBusinessDocumentBranding } from '@/modules/settings/infrastructure/businesses';
+import { getBusinessDocumentBranding } from '@/modules/settings/application/business-branding';
 import {
   getHydratedQuoteDetailForUser,
   type QuoteDataClient,

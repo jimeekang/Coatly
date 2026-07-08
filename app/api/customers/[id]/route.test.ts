@@ -18,7 +18,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerClient: createServerClientMock,
 }));
 
-vi.mock('@/lib/subscription/access', () => ({
+vi.mock('@/modules/billing/application/access', () => ({
   getActiveSubscriptionRequiredMessage: getActiveSubscriptionRequiredMessageMock,
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));

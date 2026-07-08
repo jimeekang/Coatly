@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import PricingSection from '@/modules/settings/ui/PricingSection';
-import { syncSubscriptionCacheForUser } from '@/lib/stripe/subscription-sync';
+import { syncSubscriptionCacheForUser } from '@/modules/billing/application/subscription-sync';
 import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Billing' };

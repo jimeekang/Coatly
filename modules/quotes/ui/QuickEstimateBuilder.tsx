@@ -13,14 +13,14 @@ import type {
   QuickInputs,
   SelectedQuickPropertyPreset,
   SelectedQuickRoom,
-} from '@/types/quote';
+} from '@/modules/quotes/domain/quote';
 import { formatAUD } from '@/utils/format';
 import {
   QUICK_ESTIMATE_RATE_SNAPSHOT_VERSION,
   calculateQuickEstimate,
   calculateQuickEstimateRoomTotal,
   snapshotQuickEstimateInputs,
-} from '@/utils/calculations';
+} from '@/modules/quotes/domain/quote-calculations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

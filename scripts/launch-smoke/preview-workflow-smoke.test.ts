@@ -103,7 +103,7 @@ describe('preview workflow smoke runner', () => {
   });
 
   it('requires approval fixture inputs only for mutating public flow smoke', () => {
-    const env = { ...validEnv };
+    const env: Partial<typeof validEnv> = { ...validEnv };
     delete env.LAUNCH_SMOKE_APPROVAL_QUOTE_TOKEN;
 
     expect(() =>
@@ -131,7 +131,7 @@ describe('preview workflow smoke runner', () => {
   });
 
   it('falls back to the main quote id when no edit quote fixture is provided', () => {
-    const env = { ...validEnv };
+    const env: Partial<typeof validEnv> = { ...validEnv };
     delete env.LAUNCH_SMOKE_EDIT_QUOTE_ID;
 
     expect(

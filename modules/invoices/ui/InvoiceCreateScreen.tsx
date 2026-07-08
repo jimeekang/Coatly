@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, type ComponentType } from 'react';
 import { createInvoice } from '@/modules/invoices/application/actions';
-import { generateAIDraft } from '@/app/actions/ai-drafts';
-import { AIDraftPanel } from '@/components/ai/AIDraftPanel';
 import {
   InvoiceForm,
   type InvoiceBusinessDefaults,
@@ -11,8 +9,37 @@ import {
   type InvoiceFormDefaultValues,
   type InvoiceFormQuoteOption,
 } from '@/modules/invoices/ui/InvoiceForm';
-import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
-import type { AIInvoiceDraft } from '@/lib/ai/draft-types';
+import type {
+  AIInvoiceDraft,
+  WorkspaceDraftEntity,
+  WorkspaceDraftResult,
+} from '@/modules/ai/domain/draft-types';
+
+/**
+ * AIDraftPanel and UpgradePrompt are injected by the composition layer
+ * (app/(dashboard)/invoices/new/page.tsx) so this screen carries no runtime
+ * coupling to the ai/ui or billing/ui modules. The prop shapes are defined
+ * locally to match exactly what this screen passes to each component.
+ */
+type AIDraftPanelComponent = ComponentType<{
+  entityLabel: string;
+  prompt: string;
+  placeholder: string;
+  examples: string[];
+  pending: boolean;
+  error: string | null;
+  summary: string | null;
+  warnings: string[];
+  onPromptChange: (value: string) => void;
+  onGenerate: () => void;
+  onApply: () => void;
+  canApply: boolean;
+}>;
+
+type UpgradePromptComponent = ComponentType<{
+  title: string;
+  description: string;
+}>;
 
 export function InvoiceCreateScreen({
   customers,
@@ -21,6 +48,9 @@ export function InvoiceCreateScreen({
   initialDefaultValues,
   initialCustomerId,
   canUseAI,
+  generateAIDraft,
+  AIDraftPanel,
+  UpgradePrompt,
 }: {
   customers: InvoiceFormCustomerOption[];
   quotes: InvoiceFormQuoteOption[];
@@ -28,6 +58,12 @@ export function InvoiceCreateScreen({
   initialDefaultValues?: InvoiceFormDefaultValues;
   initialCustomerId?: string;
   canUseAI: boolean;
+  AIDraftPanel: AIDraftPanelComponent;
+  UpgradePrompt: UpgradePromptComponent;
+  generateAIDraft: (input: {
+    entity: WorkspaceDraftEntity;
+    prompt: string;
+  }) => Promise<{ data: WorkspaceDraftResult | null; error: string | null }>;
 }) {
   const [prompt, setPrompt] = useState('');
   const [draft, setDraft] = useState<AIInvoiceDraft | null>(null);

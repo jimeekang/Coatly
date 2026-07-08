@@ -1,11 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { buildQuoteCustomerAddress } from '@/modules/quotes/domain/quotes';
+import { buildCustomerAddress } from '@/modules/customers/domain/customer-address';
 import type {
   Customer,
   CustomerCreateInput,
   CustomerUpdateInput,
-} from '@/types/customer';
+} from '@/modules/customers/domain/customer';
 import type { AppDatabase } from '@/types/app-database';
 
 type CustomerRow = AppDatabase['public']['Tables']['customers']['Row'];
@@ -102,7 +102,7 @@ export function serializeCustomer(row: SerializedCustomerRow): Customer {
     name: row.name,
     email: row.email,
     phone: row.phone,
-    address: buildQuoteCustomerAddress(row),
+    address: buildCustomerAddress(row),
     notes: row.notes,
     is_archived: row.is_archived,
     created_at: row.created_at,
@@ -186,7 +186,7 @@ export async function findDuplicateCustomer(
 
     return (
       normalizeComparisonValue(current.name) === normalizedName &&
-      normalizeComparisonValue(buildQuoteCustomerAddress(current)) === normalizedAddress
+      normalizeComparisonValue(buildCustomerAddress(current)) === normalizedAddress
     );
   });
 

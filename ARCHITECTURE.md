@@ -32,6 +32,16 @@ AI Quote Writer, 사진 분석, damage 판별은 현재 핵심 workflow가 아�
 - PDF는 Vercel serverless 제약 때문에 React-PDF만 사용합니다. Puppeteer는 금지입니다.
 - 금액은 항상 정수 cents로 저장하고 표시 시 `formatAUD()`를 사용합니다.
 
+## Error Boundaries
+
+Next.js App Router 세그먼트 에러 경계를 3층으로 둡니다:
+
+- `app/global-error.tsx` — root layout 자체 크래시 fallback. `<html><body>`를 직접 렌더하고 `globals.css` 없이 인라인 스타일만 씁니다.
+- `app/error.tsx` — 최상위 세그먼트 에러 fallback. `components/ui/error-page`의 `ErrorPage`(500)를 렌더합니다.
+- `app/(dashboard)/error.tsx` — dashboard 세그먼트 에러 fallback. 동일 `ErrorPage`를 쓰고 `console.error`로 리포팅 hook을 남깁니다.
+
+모두 `'use client'`이며 `reset()`으로 재시도를 제공합니다. 기능 모듈은 자체 error 경계를 두지 않고 route 세그먼트 경계에 위임합니다.
+
 ## Folder Map
 
 | 경로 | 책임 |
@@ -39,31 +49,59 @@ AI Quote Writer, 사진 분석, damage 판별은 현재 핵심 workflow가 아�
 | `app/(auth)/` | 로그인, 가입, 비밀번호 재설정 |
 | `app/(onboarding)/` | 사업자 프로필/ABN/로고 온보딩 |
 | `app/(dashboard)/` | dashboard, customers, quotes, invoices, schedule, settings |
-| `app/actions/` | 공통 서버 액션: auth, AI, schedule, Google Calendar |
 | `app/api/` | ABN, PDF, Stripe, cron, Google Calendar OAuth |
 | `app/q/[token]/` | 고객용 공개 견적 검토/승인/예약 |
-| `modules/` | DDD-lite 기능 모듈: domain, application, infrastructure, ui |
-| `components/` | 공통/shared React 컴포넌트와 앱 shell |
-| `lib/` | Supabase, Stripe, email, calendar, AI, PDF, validators 등 shared integration |
+| `modules/` | DDD-lite 기능 모듈 13개(domain/application/infrastructure/ui). 서버 액션은 각 모듈 `application`에 위치 (`app/actions/`는 비움) |
+| `components/` | design system과 cross-feature shell(ui/shared/forms/layout/branding/dashboard) — 특정 feature 전용 컴포넌트는 두지 않음 |
+| `lib/` | Supabase, email, config, security, constants, ABN/address helpers, utils 등 shared kernel (Stripe/PDF/AI/Google Calendar adapter는 각 모듈 `infrastructure`로 이동) |
+| `types/` | `database.ts`, `app-database.ts`만 (엔티티 타입은 각 모듈 domain으로 이동) |
 | `supabase/migrations/` | 원격 DB 변경 이력 |
 | `docs/` | 기능/보안/신뢰성/로드맵 문서 |
 
 ## Feature Modules
 
-Coatly uses a DDD-lite module layout for reusable dashboard features:
+Coatly uses a DDD-lite module layout. Each feature owns up to four layers:
 
 ```text
 modules/<feature>/
-  domain/          business rules, calculations, types, pure tests
-  application/     server actions and workflow orchestration
-  infrastructure/  API/repository adapters when a feature needs them
+  domain/          pure business rules, calculations, types, pure tests (no IO)
+  application/     'use server' actions + workflow orchestration
+  infrastructure/  Supabase/Stripe/Resend/Google adapters, PDF templates
   ui/              feature-owned React components and component tests
-  index.ts         feature manifest and public module types
+  index.ts         defineFeatureModule() manifest + public type exports
 ```
 
-Current feature modules are `materials`, `customers`, `quotes`, `invoices`, `jobs`, `price-rates`, and `settings`. Route files in `app/` stay thin and import from modules.
+Modules register in `modules/index.ts` and split by surface:
 
-Detailed DDD-lite dependency rules, file placement guidance, and maintenance checklists live in [`docs/DDD-MODULES.md`](./docs/DDD-MODULES.md).
+- Dashboard features (`DASHBOARD_FEATURE_MODULES`): `materials`, `customers`, `quotes`, `invoices`, `jobs`, `price-rates`, `settings`, `schedule`, `billing`, `ai`, `assistant`
+- Platform features (`PLATFORM_FEATURE_MODULES`): `auth`, `onboarding`
+
+The 2026-07 DDD migration folded former `lib/` and `app/actions/` integration code into its owning module:
+
+| Module | Domain | Application | Infrastructure | UI |
+|--------|--------|-------------|----------------|-----|
+| `schedule` | NSW public-holiday rules | schedule + Google Calendar actions, job-calendar sync | Google Calendar OAuth/crypto/service | `ScheduleCalendar` |
+| `auth` | — | sign-in/up/reset actions | base-url helper | auth shells + page clients |
+| `billing` | — | subscription access policy, Stripe webhook orchestration | Stripe client/plans/portal | `UpgradePrompt` |
+| `ai` | draft-types, validator, deterministic pricing | AI draft actions | Qwen provider | `AIDraftPanel` |
+| `onboarding` | — | — | — | `OnboardingForm` |
+| `assistant` | — | workspace-assistant actions | — | `WorkspaceAssistant` |
+| `quotes` / `invoices` | entity types + calculations | quote/invoice actions | repository + `infrastructure/pdf/*-template.tsx` | forms/tables/public views |
+
+Entity types moved from `types/` into their owning module domain: `types/quote.ts` → `modules/quotes/domain`, `types/invoice.ts` → `modules/invoices/domain`, `types/customer.ts` → `modules/customers/domain`. Address composition lives in each owning domain (`customers/domain/customer-address.ts`, `quotes/domain` own copy) so no cross-feature domain import remains.
+
+Route files in `app/` stay thin: authenticate, call a module `application` loader, compose module `ui`. Cross-feature workflows are assembled in `app/` or an application service — a feature `ui` never imports another feature's runtime (types only, via `import type`; behaviour is injected as props/callbacks).
+
+### Layer import rules (enforced mechanically)
+
+- `domain`: only its own domain, `utils/`, `types/database|app-database`. No Next.js, Supabase, other modules, or UI. Pure types/rules, no IO.
+- `application`: its whole module + other modules' `application`/`domain` + `lib/supabase` and shared `lib` utils. No other module's `ui`/`infrastructure`, no `components/`, no `app/`. `'use server'` actions live here.
+- `infrastructure`: its own `domain` + provider SDKs (`lib/supabase`, Stripe, Resend, Google) + `utils/`. No `application`/`ui`/other modules.
+- `ui`: its whole module + `components/` design system + `utils/`; other modules only via `import type` of domain types. No `app/` import.
+- `app/`: composition layer — imports module `ui`/`application`/`domain`, `components`, `lib`. Wrap module `infrastructure` behind `application`.
+- `components/`, `lib/`, `utils/`, `types/`, `hooks/` are the shared kernel and never import `modules/` or `app/`. No runtime import cycles between modules.
+
+Detailed rationale, layer responsibilities, and maintenance checklists live in [`docs/DDD-MODULES.md`](./docs/DDD-MODULES.md). The dashboard/platform module rosters are pinned by [`modules/module-boundaries.test.ts`](./modules/module-boundaries.test.ts), so adding or renaming a module requires updating its manifest and that test together.
 
 ## Core Data Model
 

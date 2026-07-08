@@ -32,7 +32,7 @@ describe('tablet layout regressions', () => {
   });
 
   it('keeps schedule tablet-first with readable touch targets', () => {
-    const source = readSource('components/schedule/ScheduleCalendar.tsx');
+    const source = readSource('modules/schedule/ui/ScheduleCalendar.tsx');
 
     expect(source).toContain("const TABLET_AGENDA_VIEW_QUERY = '(max-width: 1023px)'");
     expect(source).toContain('useTabletAgendaViewport');

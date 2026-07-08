@@ -18,10 +18,8 @@ import {
   type PublicQuoteDetail,
 } from '@/modules/quotes/domain/quotes';
 import { getFirstBlockingQuotePricingScopeError } from '@/modules/quotes/domain/quote-pricing-scopes';
-import {
-  getBusinessDocumentBranding,
-  getBusinessRateSettings,
-} from '@/modules/settings/infrastructure/businesses';
+import { getBusinessDocumentBranding } from '@/modules/settings/application/business-branding';
+import { getBusinessRateSettings } from '@/modules/settings/infrastructure/businesses';
 import {
   getHydratedPublicQuoteDetailByToken,
   getHydratedQuoteDetailForUser,
@@ -35,7 +33,7 @@ import {
   getActiveSubscriptionRequiredMessage,
   getMonthlyActiveQuoteUsageForUser,
   getSubscriptionSnapshotForUser,
-} from '@/lib/subscription/access';
+} from '@/modules/billing/application/access';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';

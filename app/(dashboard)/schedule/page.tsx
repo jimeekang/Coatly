@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
-import { getJobs } from '@/modules/jobs/application/actions';
-import { getScheduleEvents } from '@/app/actions/schedule';
-import { listGoogleScheduleEventsForUser } from '@/lib/google-calendar/service';
+import {
+  addJobScheduleDay,
+  deleteJobScheduleDay,
+  getJobs,
+  updateJobSchedule,
+  updateJobScheduleDay,
+} from '@/modules/jobs/application/actions';
+import { JOB_STATUS_LABELS } from '@/modules/jobs/domain/jobs';
+import { getScheduleEvents } from '@/modules/schedule/application/actions';
+import { listGoogleScheduleEventsForUser } from '@/modules/schedule/infrastructure/google-calendar/service';
 import { createServerClient } from '@/lib/supabase/server';
 import {
   ScheduleCalendar,
   type CalendarJob,
   type CalendarGoogleEvent,
-} from '@/components/schedule/ScheduleCalendar';
+} from '@/modules/schedule/ui/ScheduleCalendar';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 export const metadata: Metadata = { title: 'Schedule' };
@@ -87,6 +94,11 @@ export default async function SchedulePage({
         nativeEvents={nativeEvents}
         googleConnected={googleSchedule.connected}
         googleError={Boolean(googleSchedule.error)}
+        jobStatusLabels={JOB_STATUS_LABELS}
+        updateJobSchedule={updateJobSchedule}
+        addJobScheduleDay={addJobScheduleDay}
+        deleteJobScheduleDay={deleteJobScheduleDay}
+        updateJobScheduleDay={updateJobScheduleDay}
         today={today}
         initialView={params.view}
         initialSource={params.source}

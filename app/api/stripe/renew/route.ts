@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
-import { getStripeClient } from '@/lib/stripe/client';
+import { getStripeClient } from '@/modules/billing/infrastructure/stripe/client';
 import {
   syncSubscription,
   syncSubscriptionCacheForUser,
-} from '@/lib/stripe/subscription-sync';
+} from '@/modules/billing/application/subscription-sync';
 
 export async function POST() {
   const supabase = await createServerClient();

@@ -20,19 +20,19 @@ vi.mock('@/lib/supabase/server', () => ({
   createServerClient: createServerClientMock,
 }));
 
-vi.mock('@/lib/stripe/client', () => ({
+vi.mock('@/modules/billing/infrastructure/stripe/client', () => ({
   getStripeClient: getStripeClientMock,
 }));
 
-vi.mock('@/lib/stripe/portal', () => ({
+vi.mock('@/modules/billing/infrastructure/stripe/portal', () => ({
   ensureManagedPortalConfiguration: ensureManagedPortalConfigurationMock,
 }));
 
-vi.mock('@/lib/stripe/plans', () => ({
+vi.mock('@/modules/billing/infrastructure/stripe/plans', () => ({
   getStripePriceId: getStripePriceIdMock,
 }));
 
-vi.mock('@/lib/stripe/subscription-sync', () => ({
+vi.mock('@/modules/billing/application/subscription-sync', () => ({
   hasScheduledCancellationAtPeriodEnd: vi.fn(
     (subscription: { cancel_at_period_end?: boolean; cancel_at?: number | null }, periodEnd?: number | null) =>
       Boolean(subscription.cancel_at_period_end || (subscription.cancel_at && periodEnd && subscription.cancel_at === periodEnd))

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
-} from '@/lib/subscription/access';
+} from '@/modules/billing/application/access';
 import {
   buildCreateCustomerPayload,
   CUSTOMER_API_SELECT,

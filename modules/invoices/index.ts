@@ -6,4 +6,4 @@ export const INVOICES_MODULE = defineFeatureModule({
 });
 
 export type { InvoiceSummary } from './domain/invoices';
-export type { InvoiceListItem, InvoiceWithCustomer } from '@/types/invoice';
+export type { InvoiceListItem, InvoiceWithCustomer } from './domain/invoice';

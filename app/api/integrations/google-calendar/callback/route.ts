@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
   completeGoogleCalendarConnection,
-} from '@/lib/google-calendar/service';
+} from '@/modules/schedule/infrastructure/google-calendar/service';
 import {
   GOOGLE_CALENDAR_STATE_COOKIE,
   parseGoogleCalendarOAuthState,
-} from '@/lib/google-calendar/oauth';
+} from '@/modules/schedule/infrastructure/google-calendar/oauth';
 import { resolveSafeInternalPath } from '@/lib/security/paths';
 import { createServerClient } from '@/lib/supabase/server';
 

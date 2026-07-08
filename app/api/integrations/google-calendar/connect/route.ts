@@ -6,7 +6,7 @@ import {
   createGoogleCalendarOAuthState,
   GOOGLE_CALENDAR_STATE_COOKIE,
   isGoogleCalendarOAuthConfigured,
-} from '@/lib/google-calendar/oauth';
+} from '@/modules/schedule/infrastructure/google-calendar/oauth';
 import { resolveSafeInternalPath } from '@/lib/security/paths';
 import { createServerClient } from '@/lib/supabase/server';
 

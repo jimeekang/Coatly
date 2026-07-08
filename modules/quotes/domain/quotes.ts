@@ -26,7 +26,7 @@ import type {
   QuoteClauseItemInput,
   QuoteJobType,
   QuoteScopeSectionInput,
-} from '@/types/quote';
+} from './quote';
 import type {
   QuoteClauseItemView,
   QuoteScopeSectionView,

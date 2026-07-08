@@ -3,14 +3,14 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import PricingSection from '@/modules/settings/ui/PricingSection';
 import { APP_NAME } from '@/config/constants';
-import { buildSubscriptionSnapshot } from '@/lib/subscription/access';
+import { buildSubscriptionSnapshot } from '@/modules/billing/application/access';
 import {
   inferOnboardingCompleted,
 } from '@/modules/settings/domain/onboarding';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getStripeClient } from '@/lib/stripe/client';
-import { syncSubscription } from '@/lib/stripe/subscription-sync';
-import { syncSubscriptionCacheForUser } from '@/lib/stripe/subscription-sync';
+import { getStripeClient } from '@/modules/billing/infrastructure/stripe/client';
+import { syncSubscription } from '@/modules/billing/application/subscription-sync';
+import { syncSubscriptionCacheForUser } from '@/modules/billing/application/subscription-sync';
 import { createServerClient } from '@/lib/supabase/server';
 import {
   getOnboardingProfileForCurrentUser,

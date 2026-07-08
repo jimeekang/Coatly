@@ -11,7 +11,7 @@ import {
   type CustomerProperty,
 } from '@/modules/customers/application/actions';
 import type { QuoteListItem } from '@/modules/quotes/domain/quotes';
-import type { InvoiceListItem } from '@/types/invoice';
+import type { InvoiceListItem } from '@/modules/invoices/domain/invoice';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CustomerForm } from '@/modules/customers/ui/CustomerForm';
 import { formatAUD, formatDate } from '@/utils/format';

@@ -3,15 +3,15 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { resolveSafeInternalPath } from '@/lib/security/paths';
-import { getStripeClient } from '@/lib/stripe/client';
-import { ensureManagedPortalConfiguration } from '@/lib/stripe/portal';
-import { getStripePriceId } from '@/lib/stripe/plans';
+import { getStripeClient } from '@/modules/billing/infrastructure/stripe/client';
+import { ensureManagedPortalConfiguration } from '@/modules/billing/infrastructure/stripe/portal';
+import { getStripePriceId } from '@/modules/billing/infrastructure/stripe/plans';
 import {
   hasScheduledCancellationAtPeriodEnd,
   syncSubscription,
   syncSubscriptionCacheForUser,
   type StripeSubscriptionWithPeriods,
-} from '@/lib/stripe/subscription-sync';
+} from '@/modules/billing/application/subscription-sync';
 import type { BillingInterval, PlanId } from '@/config/plans';
 import type Stripe from 'stripe';
 

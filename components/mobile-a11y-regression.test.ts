@@ -34,7 +34,7 @@ describe('mobile accessibility regressions', () => {
     expect(readSource('modules/quotes/ui/QuoteTable.tsx')).not.toContain('min-h-8');
     expect(readSource('modules/invoices/ui/InvoiceTable.tsx')).not.toContain('min-h-8');
     expect(readSource('modules/customers/ui/CustomerTable.tsx')).not.toContain('min-h-8');
-    expect(readSource('components/ai/AIDraftPanel.tsx')).not.toContain('min-h-9');
+    expect(readSource('modules/ai/ui/AIDraftPanel.tsx')).not.toContain('min-h-9');
   });
 
   it('keeps expanded field-use controls away from 40px min-height utilities', () => {
@@ -46,7 +46,7 @@ describe('mobile accessibility regressions', () => {
       'modules/quotes/ui/QuoteExtraLineItems.tsx',
       'modules/quotes/ui/QuoteForm.tsx',
       'modules/price-rates/ui/PriceRatesForm.tsx',
-      'components/schedule/ScheduleCalendar.tsx',
+      'modules/schedule/ui/ScheduleCalendar.tsx',
     ];
 
     for (const file of files) {

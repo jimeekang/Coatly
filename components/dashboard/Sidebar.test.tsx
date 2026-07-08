@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardSidebar from '@/components/dashboard/Sidebar';
-import { buildSubscriptionSnapshot } from '@/lib/subscription/access';
 
 let mockPathname = '/schedule';
 
@@ -10,9 +9,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
 }));
 
-vi.mock('@/app/actions/auth', () => ({
-  signOut: vi.fn(),
-}));
+const signOut = vi.fn(async () => {});
 
 describe('DashboardSidebar', () => {
   beforeEach(() => {
@@ -23,7 +20,9 @@ describe('DashboardSidebar', () => {
     render(
       <DashboardSidebar
         businessName="Coatly Painting"
-        subscription={buildSubscriptionSnapshot({ plan: 'starter', status: 'active' })}
+        planLabel="Starter"
+        isPro={false}
+        signOut={signOut}
       />,
     );
 
@@ -51,7 +50,9 @@ describe('DashboardSidebar', () => {
     render(
       <DashboardSidebar
         businessName="Coatly Painting"
-        subscription={buildSubscriptionSnapshot({ plan: 'starter', status: 'active' })}
+        planLabel="Starter"
+        isPro={false}
+        signOut={signOut}
       />,
     );
 
@@ -73,7 +74,9 @@ describe('DashboardSidebar', () => {
     render(
       <DashboardSidebar
         businessName="Coatly Painting"
-        subscription={buildSubscriptionSnapshot({ plan: 'starter', status: 'active' })}
+        planLabel="Starter"
+        isPro={false}
+        signOut={signOut}
       />,
     );
 

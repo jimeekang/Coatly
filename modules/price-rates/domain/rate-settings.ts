@@ -40,7 +40,7 @@ import type {
   QuickPropertyWallPaintSystem,
   QuickStoreys,
   QuickTrimPaintSystem,
-} from '@/types/quote';
+} from '@/modules/price-rates/domain/pricing-inputs';
 
 // ─── Surface / coating types ──────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { loadQuotePdfDocumentData } from '@/modules/quotes/application/quote-pdf-data-service';
-import { QuoteTemplate } from '@/lib/pdf/quote-template';
+import { QuoteTemplate } from '@/modules/quotes/infrastructure/pdf/quote-template';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

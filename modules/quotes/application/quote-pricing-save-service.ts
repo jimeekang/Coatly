@@ -27,7 +27,7 @@ import {
   calculateManualQuote,
   calculateQuickEstimate,
   normalizeQuickEstimateInputsForCalculation,
-} from '@/utils/calculations';
+} from '@/modules/quotes/domain/quote-calculations';
 import type {
   DayRateInputs,
   RoomRateInputs,
@@ -37,7 +37,7 @@ import type {
   QuoteAiIntakeSnapshotInput,
   QuoteClauseItemInput,
   QuoteScopeSectionInput,
-} from '@/types/quote';
+} from '@/modules/quotes/domain/quote';
 import type { Json } from '@/lib/supabase/types';
 import {
   MATERIAL_ITEM_CATEGORIES,

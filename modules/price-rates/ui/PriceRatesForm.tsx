@@ -24,7 +24,6 @@ import {
   sanitizeDecimalInput,
   sanitizeIntegerInput,
 } from '@/components/shared/NumericInput';
-import { updateRateSettingsAction } from '@/modules/settings/application/settings-actions';
 import {
   COATING_LABELS,
   DOOR_SCOPE_LABELS,
@@ -78,12 +77,23 @@ import type {
   MaterialItem,
   MaterialItemUpsertInput,
 } from '@/modules/materials/domain/types';
-import {
-  createMaterialItem,
-  importMaterialItems,
-} from '@/modules/materials/application/actions';
-import type { PricingMethod } from '@/types/quote';
+import type { PricingMethod } from '@/modules/quotes/domain/quote';
 import { QuickEstimateTab } from '@/modules/price-rates/ui/QuickEstimateTab';
+
+// ─── Injected server actions ──────────────────────────────────────────────────
+// PriceRatesForm receives its server actions as props (wired in the price-rates
+// page) so the client component never imports the settings/materials
+// application layer directly. This keeps the price-rates ↔ settings module
+// boundary one-way and free of a runtime import cycle.
+type UpdateRateSettingsAction = (
+  rawRates: unknown
+) => Promise<{ error: string | null }>;
+type CreateMaterialItemAction = (
+  input: MaterialItemUpsertInput
+) => Promise<{ data?: MaterialItem; error?: string }>;
+type ImportMaterialItemsAction = (
+  inputs: MaterialItemUpsertInput[]
+) => Promise<{ data?: MaterialItem[]; error?: string }>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1271,9 +1281,13 @@ function RoomRateTab({
 function ManualTab({
   initialItems,
   initialError,
+  createMaterialItem,
+  importMaterialItems,
 }: {
   initialItems: MaterialItem[];
   initialError?: string | null;
+  createMaterialItem: CreateMaterialItemAction;
+  importMaterialItems: ImportMaterialItemsAction;
 }) {
   const [items, setItems] = useState<MaterialItem[]>(initialItems);
   const [csvError, setCsvError] = useState<string | null>(initialError ?? null);
@@ -1996,10 +2010,16 @@ export function PriceRatesForm({
   defaultRates,
   manualItems = [],
   manualItemsError = null,
+  updateRateSettingsAction,
+  createMaterialItem,
+  importMaterialItems,
 }: {
   defaultRates: UserRateSettings;
   manualItems?: MaterialItem[];
   manualItemsError?: string | null;
+  updateRateSettingsAction: UpdateRateSettingsAction;
+  createMaterialItem: CreateMaterialItemAction;
+  importMaterialItems: ImportMaterialItemsAction;
 }) {
   const [rates, setRates] = useState<UserRateSettings>(defaultRates);
   const [activeTab, setActiveTab] = useState<PricingMethod>('manual');
@@ -2398,7 +2418,12 @@ export function PriceRatesForm({
 
       {/* ── Manual: no scope distinction ─────────────────────────────────────── */}
       {activeTab === 'manual' && (
-        <ManualTab initialItems={manualItems} initialError={manualItemsError} />
+        <ManualTab
+          initialItems={manualItems}
+          initialError={manualItemsError}
+          createMaterialItem={createMaterialItem}
+          importMaterialItems={importMaterialItems}
+        />
       )}
 
       {/* ── Detailed Estimate: Interior / Exterior scope toggle ─────────────── */}

@@ -9,10 +9,6 @@ const { generateAIDraftMock, quoteFormSpy } = vi.hoisted(() => ({
   quoteFormSpy: vi.fn(),
 }));
 
-vi.mock('@/app/actions/ai-drafts', () => ({
-  generateAIDraft: generateAIDraftMock,
-}));
-
 vi.mock('@/modules/quotes/application/actions', () => ({
   createQuote: vi.fn(),
 }));
@@ -21,30 +17,28 @@ vi.mock('@/modules/quotes/application/template-actions', () => ({
   saveQuoteTemplate: vi.fn(),
 }));
 
-vi.mock('@/components/ai/AIDraftPanel', () => ({
-  AIDraftPanel: (props: {
-    onGenerate: () => void;
-    onApply: () => void;
-    canApply: boolean;
-  }) => (
-    <div>
-      <button type="button" onClick={props.onGenerate}>
-        Generate Draft
-      </button>
-      <button type="button" onClick={props.onApply} disabled={!props.canApply}>
-        Apply to Form
-      </button>
-    </div>
-  ),
-}));
-
 vi.mock('@/modules/quotes/ui/TemplatePicker', () => ({
   TemplatePicker: () => <div>Template Picker</div>,
 }));
 
-vi.mock('@/components/subscription/UpgradePrompt', () => ({
-  UpgradePrompt: () => <div>Upgrade Prompt</div>,
-}));
+// AIDraftPanel and UpgradePrompt are injected into the screen as props, so the
+// tests provide lightweight stubs instead of mocking the ai/ui + billing/ui modules.
+const StubAIDraftPanel = (props: {
+  onGenerate: () => void;
+  onApply: () => void;
+  canApply: boolean;
+}) => (
+  <div>
+    <button type="button" onClick={props.onGenerate}>
+      Generate Draft
+    </button>
+    <button type="button" onClick={props.onApply} disabled={!props.canApply}>
+      Apply to Form
+    </button>
+  </div>
+);
+
+const StubUpgradePrompt = () => <div>Upgrade Prompt</div>;
 
 vi.mock('@/modules/quotes/ui/QuoteForm', () => ({
   QuoteForm: (props: unknown) => {
@@ -81,6 +75,9 @@ describe('QuoteCreateScreen', () => {
         customers={CUSTOMERS}
         canUseAI={false}
         initialCustomerId="customer-1"
+        generateAIDraft={generateAIDraftMock}
+        AIDraftPanel={StubAIDraftPanel}
+        UpgradePrompt={StubUpgradePrompt}
       />
     );
 
@@ -100,6 +97,9 @@ describe('QuoteCreateScreen', () => {
         customers={CUSTOMERS}
         canUseAI={false}
         initialCustomerId="customer-1"
+        generateAIDraft={generateAIDraftMock}
+        AIDraftPanel={StubAIDraftPanel}
+        UpgradePrompt={StubUpgradePrompt}
       />
     );
 
@@ -121,6 +121,9 @@ describe('QuoteCreateScreen', () => {
         canUseAI={false}
         initialCustomerId="customer-1"
         rateSettings={rateSettings}
+        generateAIDraft={generateAIDraftMock}
+        AIDraftPanel={StubAIDraftPanel}
+        UpgradePrompt={StubUpgradePrompt}
       />
     );
 
@@ -197,6 +200,9 @@ describe('QuoteCreateScreen', () => {
         customers={CUSTOMERS}
         canUseAI
         initialCustomerId="customer-1"
+        generateAIDraft={generateAIDraftMock}
+        AIDraftPanel={StubAIDraftPanel}
+        UpgradePrompt={StubUpgradePrompt}
       />
     );
 

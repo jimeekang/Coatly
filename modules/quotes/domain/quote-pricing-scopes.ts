@@ -1,4 +1,4 @@
-import type { PricingMethodInputs, QuickInputs } from '@/types/quote';
+import type { PricingMethodInputs, QuickInputs } from './quote';
 
 type ScopeSurface = 'walls' | 'ceiling' | 'trim';
 type PricingScopeRole =

@@ -1,13 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import {
-  requireCurrentUser,
-  getSubscriptionSnapshotForCurrentUser,
-} from '@/lib/supabase/request-context';
+import { requireCurrentUser } from '@/lib/supabase/request-context';
+import { getSubscriptionSnapshotForCurrentUser } from '@/modules/billing/application/request-context';
 import { createServerClient } from '@/lib/supabase/server';
 import type { QuoteCreateInput } from '@/modules/quotes/domain/quote-schema';
-import { getActiveSubscriptionRequiredMessage } from '@/lib/subscription/access';
+import { getActiveSubscriptionRequiredMessage } from '@/modules/billing/application/access';
 import { STARTER_TEMPLATE_LIMIT } from '@/config/plans';
 
 export type QuoteTemplatePayload = Pick<

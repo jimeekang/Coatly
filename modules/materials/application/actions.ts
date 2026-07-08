@@ -3,16 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createServerClient } from '@/lib/supabase/server';
-import {
-  requireCurrentUser,
-  getSubscriptionSnapshotForCurrentUser,
-} from '@/lib/supabase/request-context';
+import { requireCurrentUser } from '@/lib/supabase/request-context';
+import { getSubscriptionSnapshotForCurrentUser } from '@/modules/billing/application/request-context';
 import {
   materialItemUpsertSchema,
   type MaterialItem,
   type MaterialItemUpsertInput,
 } from '../domain/types';
-import { getActiveSubscriptionRequiredMessage } from '@/lib/subscription/access';
+import { getActiveSubscriptionRequiredMessage } from '@/modules/billing/application/access';
 
 type MaterialItemIdentity = { name: string; unit?: string | null };
 

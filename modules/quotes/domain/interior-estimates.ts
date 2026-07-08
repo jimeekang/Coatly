@@ -9,7 +9,7 @@ import {
 } from '@/modules/price-rates/domain/room-price-library';
 import type {
   QuickSurfacePriceShare,
-} from '@/types/quote';
+} from './quote';
 import type {
   QuickRoomSize,
   QuickRoomSurfacePriceSnapshot,

@@ -5,7 +5,7 @@ import {
   buildBookingRange,
   getNonWorkingDateReason,
   isNswNonWorkingDate,
-} from '@/lib/calendar/nsw-public-holidays';
+} from '@/modules/schedule/domain/nsw-public-holidays';
 
 export type PublicDateAvailabilityResult = {
   blockedDates: string[];

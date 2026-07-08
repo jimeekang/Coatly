@@ -12,7 +12,7 @@ import {
   type PublicQuoteApprovalRow,
   type QuoteDataClient,
 } from '@/modules/quotes/infrastructure/quote-repository';
-import { getBusinessDocumentBranding } from '@/modules/settings/infrastructure/businesses';
+import { getBusinessDocumentBranding } from '@/modules/settings/application/business-branding';
 import { sendQuoteApprovalNotification } from '@/lib/email/resend';
 import { formatAUD, formatDate } from '@/utils/format';
 

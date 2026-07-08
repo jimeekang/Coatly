@@ -6,11 +6,11 @@ import {
   deleteGoogleCalendarEventForJob,
   getGoogleBusyDatesForUser,
   syncBookedJobToGoogleCalendar,
-} from '@/lib/google-calendar/service';
+} from '@/modules/schedule/application/job-calendar-sync';
 import {
   buildBookingRange,
   isNswNonWorkingDate,
-} from '@/lib/calendar/nsw-public-holidays';
+} from '@/modules/schedule/domain/nsw-public-holidays';
 import {
   buildQuoteCustomerAddress,
   getPublicQuoteShareAccessError,
@@ -24,7 +24,7 @@ import type {
 import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
-} from '@/lib/subscription/access';
+} from '@/modules/billing/application/access';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerClient } from '@/lib/supabase/server';

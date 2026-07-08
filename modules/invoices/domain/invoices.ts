@@ -8,7 +8,7 @@ import type {
   InvoiceStatus,
   InvoicePaymentMethod,
   InvoiceWithCustomer,
-} from '@/types/invoice';
+} from './invoice';
 import { getGSTFromExAmount } from '@/utils/gst';
 import { formatDate } from '@/utils/format';
 

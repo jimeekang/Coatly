@@ -16,12 +16,12 @@ import {
   getInvoiceQuoteOptions,
   getQuoteInvoiceLinkState,
 } from '@/modules/invoices/infrastructure/invoice-options';
-import { getBusinessDocumentBranding, getBusinessInvoiceDefaults } from '@/modules/settings/infrastructure/businesses';
-import { InvoiceTemplate } from '@/lib/pdf/invoice-template';
+import { getBusinessDocumentBranding, getBusinessInvoiceDefaults } from '@/modules/settings/application/business-branding';
+import { InvoiceTemplate } from '@/modules/invoices/infrastructure/pdf/invoice-template';
 import {
   getActiveSubscriptionRequiredMessage,
   getSubscriptionSnapshotForUser,
-} from '@/lib/subscription/access';
+} from '@/modules/billing/application/access';
 import { buildQuoteInvoicePresetLines } from '@/modules/invoices/domain/invoice-quote-presets';
 import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { createServerClient } from '@/lib/supabase/server';
@@ -33,7 +33,7 @@ import type {
   InvoiceListItem,
   InvoicePaymentMethod,
   InvoiceWithCustomer,
-} from '@/types/invoice';
+} from '@/modules/invoices/domain/invoice';
 import type { QuoteInvoiceLinkState } from '@/modules/invoices/domain/invoices';
 
 type InvoiceListRow = {

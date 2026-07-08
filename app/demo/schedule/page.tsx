@@ -2,7 +2,14 @@
  * Demo page for testing ScheduleCalendar → job navigation.
  * Access at /demo/schedule — no auth required.
  */
-import { ScheduleCalendar, type CalendarJob, type CalendarGoogleEvent } from '@/components/schedule/ScheduleCalendar';
+import { ScheduleCalendar, type CalendarJob, type CalendarGoogleEvent } from '@/modules/schedule/ui/ScheduleCalendar';
+import {
+  addJobScheduleDay,
+  deleteJobScheduleDay,
+  updateJobSchedule,
+  updateJobScheduleDay,
+} from '@/modules/jobs/application/actions';
+import { JOB_STATUS_LABELS } from '@/modules/jobs/domain/jobs';
 
 const today = new Date().toISOString().slice(0, 10);
 const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -92,6 +99,11 @@ export default function DemoSchedulePage() {
         nativeEvents={[]}
         googleConnected
         googleError={false}
+        jobStatusLabels={JOB_STATUS_LABELS}
+        updateJobSchedule={updateJobSchedule}
+        addJobScheduleDay={addJobScheduleDay}
+        deleteJobScheduleDay={deleteJobScheduleDay}
+        updateJobScheduleDay={updateJobScheduleDay}
         today={today}
       />
     </div>

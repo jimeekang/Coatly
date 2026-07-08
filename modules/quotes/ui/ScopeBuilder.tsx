@@ -13,7 +13,7 @@ import type {
   QuoteJobType,
   QuoteScopeSectionInput,
   QuoteScopeStepInput,
-} from '@/types/quote';
+} from '@/modules/quotes/domain/quote';
 
 type ScopeBuilderProps = {
   jobType: QuoteJobType;

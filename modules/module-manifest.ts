@@ -5,7 +5,13 @@ export type FeatureModuleName =
   | 'invoices'
   | 'jobs'
   | 'price-rates'
-  | 'settings';
+  | 'settings'
+  | 'schedule'
+  | 'auth'
+  | 'billing'
+  | 'ai'
+  | 'onboarding'
+  | 'assistant';
 
 export interface FeatureModuleManifest {
   readonly name: FeatureModuleName;
