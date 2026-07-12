@@ -248,6 +248,7 @@ export default function DashboardSidebar({
                 active ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
               }`}
               aria-current={active ? 'page' : undefined}
+              onClick={() => setIsMoreOpen(false)}
             >
               <Icon
                 className={`h-[22px] w-[22px] ${active ? 'text-primary' : 'text-on-surface-variant'}`}
