@@ -21,6 +21,12 @@ function getInitialLitres(unit?: string | null) {
   return match?.[1] ?? '';
 }
 
+function getSubmitErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error.trim()) return error;
+  return 'Item could not be saved. Please try again.';
+}
+
 interface MaterialItemFormProps {
   defaultValues?: MaterialItem;
   onSubmit: (data: MaterialItemUpsertInput) => Promise<{ data?: MaterialItem; error?: string }>;
@@ -120,9 +126,14 @@ export function MaterialItemForm({
 
     setIsPending(true);
     setError(null);
-    const result = await onSubmit(payload);
-    setIsPending(false);
-    if (result?.error) setError(result.error);
+    try {
+      const result = await onSubmit(payload);
+      if (result?.error) setError(result.error);
+    } catch (submitError) {
+      setError(getSubmitErrorMessage(submitError));
+    } finally {
+      setIsPending(false);
+    }
   }
 
   return (

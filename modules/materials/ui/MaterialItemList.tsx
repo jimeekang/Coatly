@@ -17,6 +17,12 @@ function formatAUD(cents: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100);
 }
 
+function getActionErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error.trim()) return error;
+  return fallback;
+}
+
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   paint: PaintBucket,
   primer: Droplets,
@@ -68,6 +74,7 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvMessage, setCsvMessage] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<MaterialItemCategory | 'all'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -143,12 +150,22 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
     setDeletingId(id);
     setDeleteError(null);
     resetCsvFeedback();
-    const result = await deleteMaterialItem(id);
-    setDeletingId(null);
-    if (result.error) {
-      setDeleteError(result.error);
-    } else {
-      setItems((prev) => prev.filter((item) => item.id !== id));
+    try {
+      const result = await deleteMaterialItem(id);
+      if (result.error) {
+        setDeleteError(result.error);
+      } else {
+        setItems((prev) => prev.filter((item) => item.id !== id));
+      }
+    } catch (deleteErrorValue) {
+      setDeleteError(
+        getActionErrorMessage(
+          deleteErrorValue,
+          'Item could not be deleted. Please try again.'
+        )
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -178,24 +195,36 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
 
     setDeleteError(null);
     resetCsvFeedback();
+    setIsImporting(true);
 
-    const text = await file.text();
-    const parsed = parseMaterialItemsCsv(text);
+    try {
+      const text = await file.text();
+      const parsed = parseMaterialItemsCsv(text);
 
-    if (parsed.errors.length > 0) {
-      setCsvError(parsed.errors.slice(0, 3).join(' '));
-      return;
+      if (parsed.errors.length > 0) {
+        setCsvError(parsed.errors.slice(0, 3).join(' '));
+        return;
+      }
+
+      const result = await importMaterialItems(parsed.items);
+      if (result.error) {
+        setCsvError(result.error);
+        return;
+      }
+
+      const importedItems = result.data ?? [];
+      setItems((prev) => [...prev, ...importedItems]);
+      setCsvMessage(`Imported ${importedItems.length} item${importedItems.length === 1 ? '' : 's'} from CSV.`);
+    } catch (importError) {
+      setCsvError(
+        getActionErrorMessage(
+          importError,
+          'Items could not be imported. Please try again.'
+        )
+      );
+    } finally {
+      setIsImporting(false);
     }
-
-    const result = await importMaterialItems(parsed.items);
-    if (result.error) {
-      setCsvError(result.error);
-      return;
-    }
-
-    const importedItems = result.data ?? [];
-    setItems((prev) => [...prev, ...importedItems]);
-    setCsvMessage(`Imported ${importedItems.length} item${importedItems.length === 1 ? '' : 's'} from CSV.`);
   }
 
   const csvActions = (
@@ -205,15 +234,17 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
         type="file"
         accept=".csv,text/csv"
         onChange={handleImportChange}
+        disabled={isImporting}
         className="hidden"
       />
       <button
         type="button"
         onClick={() => importInputRef.current?.click()}
+        disabled={isImporting}
         className="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2 text-sm font-medium text-on-surface-variant hover:border-outline hover:text-on-surface"
       >
         <Upload className="h-4 w-4" />
-        Import CSV
+        {isImporting ? 'Importing...' : 'Import CSV'}
       </button>
       <button
         type="button"
