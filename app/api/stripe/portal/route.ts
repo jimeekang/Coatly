@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
 
   const returnPath = resolveSafeInternalPath(body.returnPath, '/settings', [
     '/settings',
+    '/settings/billing',
   ]);
   const targetPlanId = isPlanId(body.planId) ? body.planId : null;
   const targetInterval = isBillingInterval(body.interval) ? body.interval : 'monthly';
