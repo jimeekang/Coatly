@@ -108,6 +108,12 @@ function displayToCents(value: string): number | null {
   return Math.round(parsed * 100);
 }
 
+function getActionErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (typeof error === 'string' && error.trim()) return error;
+  return fallback;
+}
+
 function normalizeStoredPreferredPricingMethod(
   method: PricingMethod
 ): PricingMethod {
@@ -1404,21 +1410,31 @@ function ManualTab({
 
     setIsImporting(true);
     setCsvError(null);
-    const result = await importMaterialItems(pendingImportItems);
-    setIsImporting(false);
-    if (result.error) {
-      setCsvError(result.error);
-      return;
-    }
+    try {
+      const result = await importMaterialItems(pendingImportItems);
+      if (result.error) {
+        setCsvError(result.error);
+        return;
+      }
 
-    const importedItems = result.data ?? [];
-    setItems((prev) => [...prev, ...importedItems]);
-    setPendingImportItems([]);
-    setCsvMessage(
-      `Imported ${importedItems.length} item${
-        importedItems.length === 1 ? '' : 's'
-      } from CSV.`
-    );
+      const importedItems = result.data ?? [];
+      setItems((prev) => [...prev, ...importedItems]);
+      setPendingImportItems([]);
+      setCsvMessage(
+        `Imported ${importedItems.length} item${
+          importedItems.length === 1 ? '' : 's'
+        } from CSV.`
+      );
+    } catch (error) {
+      setCsvError(
+        getActionErrorMessage(
+          error,
+          'Unable to import price items. Please try again.'
+        )
+      );
+    } finally {
+      setIsImporting(false);
+    }
   }
 
   async function handleAddPriceItem(event: React.FormEvent<HTMLFormElement>) {
@@ -1454,19 +1470,29 @@ function ManualTab({
     }
 
     setIsSavingItem(true);
-    const result = await createMaterialItem(input);
-    setIsSavingItem(false);
-    if (result.error) {
-      setCsvError(result.error);
-      return;
-    }
+    try {
+      const result = await createMaterialItem(input);
+      if (result.error) {
+        setCsvError(result.error);
+        return;
+      }
 
-    if (result.data) {
-      setItems((prev) => [...prev, result.data as MaterialItem]);
+      if (result.data) {
+        setItems((prev) => [...prev, result.data as MaterialItem]);
+      }
+      setNewItem({ name: '', unit: 'each', price: '', description: '' });
+      setIsAddingItem(false);
+      setCsvMessage('Saved 1 price item.');
+    } catch (error) {
+      setCsvError(
+        getActionErrorMessage(
+          error,
+          'Unable to save price item. Please try again.'
+        )
+      );
+    } finally {
+      setIsSavingItem(false);
     }
-    setNewItem({ name: '', unit: 'each', price: '', description: '' });
-    setIsAddingItem(false);
-    setCsvMessage('Saved 1 price item.');
   }
 
   const previewItems = items.slice(0, 5);
@@ -1527,7 +1553,10 @@ function ManualTab({
 
       <div className="space-y-4">
         {csvError && (
-          <p className="bg-error-container text-on-error-container border-error rounded-lg border px-4 py-3 text-sm">
+          <p
+            role="alert"
+            className="bg-error-container text-on-error-container border-error rounded-lg border px-4 py-3 text-sm"
+          >
             {csvError}
           </p>
         )}
@@ -2273,9 +2302,18 @@ export function PriceRatesForm({
     setSaved(false);
     setError(null);
     startTransition(async () => {
-      const result = await updateRateSettingsAction(nextRates);
-      if (result.error) setError(result.error);
-      else setSaved(true);
+      try {
+        const result = await updateRateSettingsAction(nextRates);
+        if (result.error) setError(result.error);
+        else setSaved(true);
+      } catch (error) {
+        setError(
+          getActionErrorMessage(
+            error,
+            'Unable to save price rates. Please try again.'
+          )
+        );
+      }
     });
   }
 
@@ -2510,7 +2548,10 @@ export function PriceRatesForm({
         <div className="border-outline-variant sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 flex items-center justify-between gap-4 rounded-2xl border bg-white/92 px-5 py-3.5 shadow-md backdrop-blur-sm md:bottom-4">
           <div className="flex items-center gap-2 text-xs">
             {error && (
-              <span className="text-error flex items-center gap-1.5">
+              <span
+                role="alert"
+                className="text-error flex items-center gap-1.5"
+              >
                 <span className="bg-error h-1.5 w-1.5 rounded-full" />
                 {error}
               </span>
