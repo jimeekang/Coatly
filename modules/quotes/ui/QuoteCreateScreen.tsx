@@ -122,6 +122,7 @@ function buildAiIntakeSnapshot(
 export function QuoteCreateScreen({
   customers,
   canUseAI,
+  showAIUpgrade = true,
   quoteNumberPreview,
   rateSettings,
   libraryItems = [],
@@ -133,6 +134,7 @@ export function QuoteCreateScreen({
 }: {
   customers: QuoteCustomerOption[];
   canUseAI: boolean;
+  showAIUpgrade?: boolean;
   quoteNumberPreview?: string;
   rateSettings?: UserRateSettings | null;
   libraryItems?: MaterialItem[];
@@ -325,35 +327,37 @@ export function QuoteCreateScreen({
         showSendQuoteButton
       />
 
-      <div className="mt-6">
-        {canUseAI ? (
-          <AIDraftPanel
-            entityLabel="Quote"
-            prompt={prompt}
-            placeholder="Example: Create a standard-complexity quote for Sarah Johnson at Harbor Cafe, living room and ceiling repaint, valid for 14 days, include prep notes and internal timing note."
-            examples={[
-              'Standard-complexity quote for Harbor Cafe interior repaint',
-              'Quote for living room walls and ceiling repaint in Bondi',
-            ]}
-            photos={photos}
-            maxPhotos={3}
-            pending={isPending}
-            error={error}
-            summary={summary}
-            warnings={warnings}
-            onPromptChange={setPrompt}
-            onPhotosChange={setPhotos}
-            onGenerate={handleGenerate}
-            onApply={handleApply}
-            canApply={Boolean(draft)}
-          />
-        ) : (
-          <UpgradePrompt
-            title="AI quote drafting is available on Pro"
-            description="Starter keeps manual quote building. Upgrade to Pro to turn a plain-English prompt into a quote draft you can review and save."
-          />
-        )}
-      </div>
+      {(canUseAI || showAIUpgrade) && (
+        <div className="mt-6">
+          {canUseAI ? (
+            <AIDraftPanel
+              entityLabel="Quote"
+              prompt={prompt}
+              placeholder="Example: Create a standard-complexity quote for Sarah Johnson at Harbor Cafe, living room and ceiling repaint, valid for 14 days, include prep notes and internal timing note."
+              examples={[
+                'Standard-complexity quote for Harbor Cafe interior repaint',
+                'Quote for living room walls and ceiling repaint in Bondi',
+              ]}
+              photos={photos}
+              maxPhotos={3}
+              pending={isPending}
+              error={error}
+              summary={summary}
+              warnings={warnings}
+              onPromptChange={setPrompt}
+              onPhotosChange={setPhotos}
+              onGenerate={handleGenerate}
+              onApply={handleApply}
+              canApply={Boolean(draft)}
+            />
+          ) : showAIUpgrade ? (
+            <UpgradePrompt
+              title="AI quote drafting is available on Pro"
+              description="Starter keeps manual quote building. Upgrade to Pro to turn a plain-English prompt into a quote draft you can review and save."
+            />
+          ) : null}
+        </div>
+      )}
 
       {/* Save as Template prompt — shown after a successful quote submission */}
       {pendingSavePayload && (

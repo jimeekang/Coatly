@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { WorkspaceAssistant } from '@/modules/assistant/ui/WorkspaceAssistant';
+import { isAIDraftConfigured } from '@/modules/ai/application/drafts';
 import { CustomerForm } from '@/modules/customers/ui/CustomerForm';
 import { QuoteForm } from '@/modules/quotes/ui/QuoteForm';
 import { InvoiceForm } from '@/modules/invoices/ui/InvoiceForm';
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
     (user.user_metadata?.business_name as string | undefined) ??
     user.email?.split('@')[0] ??
     'there';
+  const aiConfigured = isAIDraftConfigured();
 
   const [{ data: customers }, { data: quotes }, { data: invoices }, quoteOptionsResult] =
     await Promise.all([
@@ -239,7 +241,7 @@ export default async function DashboardPage() {
           G&apos;day, <span className="text-primary">{businessName}</span>
         </h1>
         <p className="mt-2 text-on-surface-variant font-medium">
-          {subscription.plan === 'pro'
+          {subscription.plan === 'pro' && aiConfigured
             ? 'Run your workspace from one place and let AI draft the paperwork first.'
             : 'Run your workspace from one place and keep track of quotes, invoices, and customers.'}
         </p>
@@ -321,26 +323,27 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Workspace assistant — primary action surface */}
-      <div>
-        {subscription.features.ai ? (
-          <WorkspaceAssistant
-            customers={customerOptions}
-            quotes={quoteOptions}
-            CustomerForm={CustomerForm}
-            QuoteForm={QuoteForm}
-            InvoiceForm={InvoiceForm}
-            createQuote={createQuote}
-            createInvoice={createInvoice}
-          />
-        ) : (
-          <UpgradePrompt
-            badge="Pro Plan"
-            title="Dashboard AI is available on Pro"
-            description="Starter keeps the core quoting and invoicing tools. Upgrade to Pro to ask the dashboard AI to search records or prepare customer, quote, and invoice drafts from one prompt."
-          />
-        )}
-      </div>
+      {aiConfigured && (
+        <div>
+          {subscription.features.ai ? (
+            <WorkspaceAssistant
+              customers={customerOptions}
+              quotes={quoteOptions}
+              CustomerForm={CustomerForm}
+              QuoteForm={QuoteForm}
+              InvoiceForm={InvoiceForm}
+              createQuote={createQuote}
+              createInvoice={createInvoice}
+            />
+          ) : (
+            <UpgradePrompt
+              badge="Pro Plan"
+              title="Dashboard AI is available on Pro"
+              description="Starter keeps the core quoting and invoicing tools. Upgrade to Pro to ask the dashboard AI to search records or prepare customer, quote, and invoice drafts from one prompt."
+            />
+          )}
+        </div>
+      )}
 
       {/* Quote pipeline — quotes that need action */}
       <section aria-labelledby="pipeline-heading">

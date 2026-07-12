@@ -6,6 +6,7 @@ import { QuoteCreateScreen } from '@/modules/quotes/ui/QuoteCreateScreen';
 import { AIDraftPanel } from '@/modules/ai/ui/AIDraftPanel';
 import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
 import { generateAIDraft } from '@/modules/ai/application/actions';
+import { isAIDraftConfigured } from '@/modules/ai/application/drafts';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
 import { createServerClient } from '@/lib/supabase/server';
@@ -40,6 +41,7 @@ export default async function NewQuotePage({
     : null;
   const subscription = usageResult?.snapshot ?? null;
   const quoteUsage = usageResult?.usage ?? null;
+  const aiConfigured = isAIDraftConfigured();
 
   return (
     <div className="mx-auto w-full max-w-lg pt-4 pb-32 lg:max-w-6xl">
@@ -81,7 +83,8 @@ export default async function NewQuotePage({
       ) : (
         <QuoteCreateScreen
           customers={customers}
-          canUseAI={subscription?.features.ai ?? false}
+          canUseAI={aiConfigured && (subscription?.features.ai ?? false)}
+          showAIUpgrade={aiConfigured && !(subscription?.features.ai ?? false)}
           quoteNumberPreview={data.nextQuoteNumber ?? undefined}
           rateSettings={data.userRates}
           libraryItems={libraryItems}

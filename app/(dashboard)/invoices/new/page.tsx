@@ -5,6 +5,7 @@ import { InvoiceCreateScreen } from '@/modules/invoices/ui/InvoiceCreateScreen';
 import { AIDraftPanel } from '@/modules/ai/ui/AIDraftPanel';
 import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
 import { generateAIDraft } from '@/modules/ai/application/actions';
+import { isAIDraftConfigured } from '@/modules/ai/application/drafts';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { createServerClient } from '@/lib/supabase/server';
@@ -33,6 +34,7 @@ export default async function NewInvoicePage({
   const subscription = user
     ? await getLiveSubscriptionSnapshotForUser(user.id)
     : null;
+  const aiConfigured = isAIDraftConfigured();
   const { data, error } = await getInvoiceFormOptions();
   const customers = data.customers;
   const quotes = data.quotes;
@@ -76,7 +78,8 @@ export default async function NewInvoicePage({
               ? requestedCustomerId
               : undefined
           }
-          canUseAI={subscription?.features.ai ?? false}
+          canUseAI={aiConfigured && (subscription?.features.ai ?? false)}
+          showAIUpgrade={aiConfigured && !(subscription?.features.ai ?? false)}
           generateAIDraft={generateAIDraft}
           AIDraftPanel={AIDraftPanel}
           UpgradePrompt={UpgradePrompt}
