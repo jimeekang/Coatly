@@ -783,7 +783,14 @@ export async function createInvoice(
     return { error: lineItemsError.message };
   }
 
-  await supabase.rpc('calculate_invoice_totals', { invoice_uuid: invoice.id });
+  const { error: totalsError } = await supabase.rpc('calculate_invoice_totals', {
+    invoice_uuid: invoice.id,
+  });
+
+  if (totalsError) {
+    await supabase.from('invoices').delete().eq('id', invoice.id).eq('user_id', user.id);
+    return { error: totalsError.message };
+  }
 
   revalidatePath('/invoices');
   revalidatePath('/dashboard');
