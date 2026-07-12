@@ -218,6 +218,18 @@ function defaultValidUntil() {
   return date.toISOString().slice(0, 10);
 }
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
+}
+
 function normalizeWorkingDays(value: number | null | undefined) {
   if (!Number.isFinite(value) || value == null) return 1;
   return Math.min(30, Math.max(1, Math.round(value)));
@@ -1665,10 +1677,23 @@ export function QuoteForm({
       return;
     }
 
+    setError(null);
     startTransition(async () => {
       setActiveSubmitIntent(submitIntent);
-      const result = await onSubmit(payload, submitIntent);
-      if (result?.error) setError(result.error);
+      try {
+        const result = await onSubmit(payload, submitIntent);
+        if (result?.error) setError(result.error);
+      } catch (submitError) {
+        if (isNextNavigationSignal(submitError)) {
+          throw submitError;
+        }
+
+        setError(
+          submitError instanceof Error
+            ? submitError.message
+            : 'Quote could not be saved. Please try again.'
+        );
+      }
     });
   }
 
