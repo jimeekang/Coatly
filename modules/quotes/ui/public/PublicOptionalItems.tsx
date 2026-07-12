@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition, useOptimistic, useState } from 'react';
+import { useState, useTransition } from 'react';
 import { setPublicQuoteOptionalLineItemSelection } from '@/modules/quotes/application/actions';
 import { formatAUD } from '@/utils/format';
 import { groupQuoteLineItemsByCategory } from '@/modules/quotes/domain/quotes';
@@ -24,6 +24,11 @@ interface PublicOptionalItemsProps {
   onSelectionsChange: (selectedIds: Set<string>) => void;
 }
 
+interface SelectionOverride {
+  baseIsSelected: boolean;
+  isSelected: boolean;
+}
+
 export function PublicOptionalItems({
   quoteToken,
   items,
@@ -32,22 +37,37 @@ export function PublicOptionalItems({
 }: PublicOptionalItemsProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [selectionOverrides, setSelectionOverrides] = useState<
+    Record<string, SelectionOverride>
+  >({});
 
-  const [optimisticItems, toggleOptimistic] = useOptimistic(
-    items,
-    (current, { id, isSelected }: { id: string; isSelected: boolean }) =>
-      current.map((item) =>
-        item.id === id ? { ...item, is_selected: isSelected } : item
-      )
-  );
+  const displayItems = items.map((item) => {
+    const override = selectionOverrides[item.id];
+    if (!override || item.is_selected !== override.baseIsSelected) {
+      return item;
+    }
+    return { ...item, is_selected: override.isSelected };
+  });
 
   const handleToggle = (item: OptionalItem) => {
     if (!canEdit || isPending) return;
     const next = !item.is_selected;
+    const hadPreviousOverride = Object.prototype.hasOwnProperty.call(
+      selectionOverrides,
+      item.id
+    );
+    const previousOverride = selectionOverrides[item.id];
+
+    setSelectionOverrides((current) => ({
+      ...current,
+      [item.id]: {
+        baseIsSelected: item.is_selected,
+        isSelected: next,
+      },
+    }));
 
     startTransition(async () => {
       setError(null);
-      toggleOptimistic({ id: item.id, isSelected: next });
 
       const fd = new FormData();
       fd.append('quoteToken', quoteToken);
@@ -56,22 +76,48 @@ export function PublicOptionalItems({
       const result = await setPublicQuoteOptionalLineItemSelection(fd);
 
       if (result.error) {
-        toggleOptimistic({ id: item.id, isSelected: item.is_selected });
+        setSelectionOverrides((current) => {
+          const nextOverrides = { ...current };
+          if (hadPreviousOverride && previousOverride) {
+            nextOverrides[item.id] = previousOverride;
+          } else {
+            delete nextOverrides[item.id];
+          }
+          return nextOverrides;
+        });
         setError(result.error);
         return;
       }
 
       const nextSelected = new Set(result.selectedIds);
+      setSelectionOverrides((current) => {
+        const nextOverrides = { ...current };
+
+        for (const currentItem of items) {
+          const isSelected = nextSelected.has(currentItem.id);
+
+          if (isSelected === currentItem.is_selected) {
+            delete nextOverrides[currentItem.id];
+          } else {
+            nextOverrides[currentItem.id] = {
+              baseIsSelected: currentItem.is_selected,
+              isSelected,
+            };
+          }
+        }
+
+        return nextOverrides;
+      });
       onSelectionsChange(nextSelected);
     });
   };
 
-  const selectedTotal = optimisticItems
+  const selectedTotal = displayItems
     .filter((i) => i.is_selected)
     .reduce((sum, i) => sum + i.total_cents, 0);
 
-  const selectedCount = optimisticItems.filter((i) => i.is_selected).length;
-  const groupedItems = groupQuoteLineItemsByCategory(optimisticItems);
+  const selectedCount = displayItems.filter((i) => i.is_selected).length;
+  const groupedItems = groupQuoteLineItemsByCategory(displayItems);
 
   if (!canEdit && selectedCount === 0) {
     return (
