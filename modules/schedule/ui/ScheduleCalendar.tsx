@@ -300,6 +300,24 @@ function formatIsoTime(iso: string): string {
   return SYDNEY_TIME_FORMATTER.format(new Date(iso));
 }
 
+function isNextNavigationSignal(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
+}
+
+function getActionErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error) return error;
+  return fallback;
+}
+
 function getSourceFilterLabel(source: SourceFilter): string {
   if (source === 'all') return 'All sources';
   if (source === 'jobs') return 'Jobs';
@@ -499,8 +517,8 @@ function EventModal({
       notes: form.notes || null,
     };
 
-    startTransition(() => {
-      void (async () => {
+    startTransition(async () => {
+      try {
         const result = editing
           ? await updateScheduleEvent(editing.id, input)
           : await createScheduleEvent(input);
@@ -512,14 +530,22 @@ function EventModal({
         toast.success(editing ? 'Event updated.' : 'Event added.');
         router.refresh();
         onClose();
-      })();
+      } catch (actionError) {
+        if (isNextNavigationSignal(actionError)) throw actionError;
+        const message = getActionErrorMessage(
+          actionError,
+          'Event could not be saved. Please try again.',
+        );
+        setError(message);
+        toast.error(message);
+      }
     });
   }
 
   function handleDelete() {
     if (!editing) return;
-    startDeleteTransition(() => {
-      void (async () => {
+    startDeleteTransition(async () => {
+      try {
         const result = await deleteScheduleEvent(editing.id);
         if (result.error) {
           setError(result.error);
@@ -529,7 +555,15 @@ function EventModal({
         toast.success('Event deleted.');
         router.refresh();
         onClose();
-      })();
+      } catch (actionError) {
+        if (isNextNavigationSignal(actionError)) throw actionError;
+        const message = getActionErrorMessage(
+          actionError,
+          'Event could not be deleted. Please try again.',
+        );
+        setError(message);
+        toast.error(message);
+      }
     });
   }
 
@@ -685,8 +719,8 @@ function JobScheduleModal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    startTransition(() => {
-      void (async () => {
+    startTransition(async () => {
+      try {
         const result = await updateJobSchedule(job.id, { startDate, endDate });
         if (result.error) {
           setError(result.error);
@@ -696,7 +730,15 @@ function JobScheduleModal({
         toast.success(`Saved ${getInclusiveDayCount(startDate, endDate)}-day range for ${job.customerName}.`);
         router.refresh();
         onClose();
-      })();
+      } catch (actionError) {
+        if (isNextNavigationSignal(actionError)) throw actionError;
+        const message = getActionErrorMessage(
+          actionError,
+          'Job schedule could not be saved. Please try again.',
+        );
+        setError(message);
+        toast.error(message);
+      }
     });
   }
 
@@ -708,8 +750,8 @@ function JobScheduleModal({
 
     setError(null);
     setActiveDate(addDate);
-    startManageDaysTransition(() => {
-      void (async () => {
+    startManageDaysTransition(async () => {
+      try {
         const result = await addJobScheduleDay(job.id, { date: addDate });
         if (result.error) {
           setError(result.error);
@@ -725,15 +767,24 @@ function JobScheduleModal({
         setActiveDate(null);
         toast.success(`Added ${formatDate(addDate)} to ${job.customerName}.`);
         router.refresh();
-      })();
+      } catch (actionError) {
+        if (isNextNavigationSignal(actionError)) throw actionError;
+        const message = getActionErrorMessage(
+          actionError,
+          'Job day could not be added. Please try again.',
+        );
+        setError(message);
+        toast.error(message);
+        setActiveDate(null);
+      }
     });
   }
 
   function handleDeleteDay(date: string) {
     setError(null);
     setActiveDate(date);
-    startManageDaysTransition(() => {
-      void (async () => {
+    startManageDaysTransition(async () => {
+      try {
         const result = await deleteJobScheduleDay(job.id, { date });
         if (result.error) {
           setError(result.error);
@@ -751,7 +802,16 @@ function JobScheduleModal({
         setActiveDate(null);
         toast.success(`Removed ${formatDate(date)} from ${job.customerName}.`);
         router.refresh();
-      })();
+      } catch (actionError) {
+        if (isNextNavigationSignal(actionError)) throw actionError;
+        const message = getActionErrorMessage(
+          actionError,
+          'Job day could not be deleted. Please try again.',
+        );
+        setError(message);
+        toast.error(message);
+        setActiveDate(null);
+      }
     });
   }
 
@@ -1238,8 +1298,8 @@ export function ScheduleCalendar({
       }
     }
 
-    startMoveTransition(() => {
-      void (async () => {
+    startMoveTransition(async () => {
+      try {
         const result =
           payload.kind === 'job'
             ? await updateJobScheduleDay(payload.id, {
@@ -1256,7 +1316,15 @@ export function ScheduleCalendar({
         setSelected(date);
         toast.success(getMoveSuccessMessage(payload, date, jobs, nativeEvents));
         router.refresh();
-      })();
+      } catch (actionError) {
+        if (isNextNavigationSignal(actionError)) throw actionError;
+        const message = getActionErrorMessage(
+          actionError,
+          'Schedule could not be moved. Please try again.',
+        );
+        setDragError(message);
+        toast.error(message);
+      }
     });
   }
 
