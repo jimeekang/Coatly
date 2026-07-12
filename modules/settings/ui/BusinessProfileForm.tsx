@@ -40,6 +40,18 @@ function inputClass(hasError: boolean, extra = 'h-12') {
 const labelClass = 'mb-1.5 block text-sm font-medium text-on-surface';
 const errorClass = 'mt-1.5 text-xs text-error';
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
+}
+
 type FormInput = BusinessUpdateInput;
 
 export default function BusinessProfileForm({
@@ -199,16 +211,29 @@ export default function BusinessProfileForm({
     clearErrors('root');
 
     startTransition(async () => {
-      const result = await saveBusinessProfile(data);
+      try {
+        const result = await saveBusinessProfile(data);
 
-      if (result.error) {
-        setError('root', { message: result.error });
-        return;
+        if (result.error) {
+          setError('root', { message: result.error });
+          return;
+        }
+
+        setSuccessMessage(
+          result.success ?? 'Business details saved successfully.'
+        );
+      } catch (submitError) {
+        if (isNextNavigationSignal(submitError)) {
+          throw submitError;
+        }
+
+        setError('root', {
+          message:
+            submitError instanceof Error
+              ? submitError.message
+              : 'Business details could not be saved. Please try again.',
+        });
       }
-
-      setSuccessMessage(
-        result.success ?? 'Business details saved successfully.'
-      );
     });
   }
 
