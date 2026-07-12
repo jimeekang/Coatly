@@ -1,6 +1,6 @@
 # Coatly — Roadmap & Progress
 
-> Owner: **Claude** (Opus 4.8 · extra). Phase/progress의 단일 소스입니다. 기준일: 2026-07-05.
+> Owner: **Claude** (Opus 4.8 · extra). Phase/progress의 단일 소스입니다. 기준일: 2026-07-12.
 
 ## Ownership
 
@@ -20,6 +20,8 @@
 Price book setup의 v1 기준은 **앱 내 직접 추가 우선**이다. 사용자가 가진 아무 Excel 파일을 자동 해석하지 않고, 복잡한 Coatly Excel 템플릿을 시작 조건으로 만들지도 않는다. 기존 Excel은 source document이고, 사용자는 앱 안에서 `Service / Item`, `Unit`, `Price` 중심으로 필요한 price items를 직접 세팅한다. Excel/CSV 템플릿은 선택적 bulk input으로만 다룬다.
 
 AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되고 릴리즈된 뒤에만 진행한다.
+
+2026-07-12 상품화 분석(경쟁 13개사 가격 검증 + 시장/비용/UX 분석)을 반영한다. 포지셔닝은 **"Your Excel price list, now an app"**, 가격 방향은 단일 A$39/월 flat + 30일 무카드 trial(최종 확정은 A workflow 재현 후), 손익분기는 유료 7–10명이다. 전략 정본: [`COMMERCIALIZATION.md`](./COMMERCIALIZATION.md).
 
 ## Phase Overview
 
@@ -125,7 +127,9 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 | P1       | Google Calendar booking fail-closed      | 연결/표시는 구현, write 실패 정책 보강 필요                                                                                                                                             | Codex               |
 | P1       | Exterior estimate 회귀                   | 기능 존재, edit/PDF/detail 일관성 테스트 강화 필요                                                                                                                                      | Codex               |
 | P1       | Design legacy token cleanup              | `pm-*`는 프로덕션 0건 완료. 잔여: `bg-white` 하드코딩 다수, `ui/button.tsx` 44px 위반, input/FormField 이원화 (AUDIT A14)                                                               | Codex               |
-| P1       | Quote follow-up reminder cron            | **미구현** — v1 core flow 명시 요구("send → follow-up reminder")이자 핵심 차별점. `invoice-reminders` 패턴 복제로 sent 후 D+3/D+7 미응답 리마인드 cron 추가 (AUDIT A9)                  | Claude plan → Codex |
+| P1       | Quote follow-up reminder cron            | **미구현** — v1 core flow 명시 요구("send → follow-up reminder")이자 핵심 차별점. `invoice-reminders` 패턴 복제로 sent 후 D+3/D+7(설정 가능) 미응답 리마인드 cron 추가 + 공개 링크 열람을 `public_quote_events`에 기록(테이블 존재, 미사용)해 "viewed but silent" 우선 큐 구성 (AUDIT A9)                  | Claude plan → Codex |
+| P1       | Quote send truth layer                   | 견적 상세에 Send/Resend 액션, 영구 발송 기록("N일 발송/열람"), 수동 "Mark as sent"(직접 전달 견적), `reply_to`=painter 이메일 — 현재는 편집 폼 재제출 없이 재발송 불가, 발송 기록·답장 수신 경로 없음 (AUDIT A17/A18)                  | Claude plan → Codex |
+| P1       | 가격 개편: A$39 단일 flat + trial        | Starter/Pro 2단 폐지(Pro A$59는 post-core AI 헬퍼 준비 후 재도입), 업체당 flat·견적 무제한, checkout `trial_period_days`로 30일 무카드 체험 — 첫 견적 전 결제벽 제거 (AUDIT A19, [COMMERCIALIZATION.md](./COMMERCIALIZATION.md))                  | Claude plan → Codex |
 | P1       | plans.ts AI 판매 카피 제거               | Pro features의 "AI Quote Drafting/AI Workspace Assistant" 2줄을 실제 core value(follow-up 등)로 교체 + `AIDraftPanel` gating 정합 (AUDIT A11)                                           | Codex               |
 | P1       | Stripe webhook 하드닝                    | `event.id` 멱등 체크, `payment_failed` past_due 처리, 중복 webhook 라우트 1개 삭제 (AUDIT A10)                                                                                          | Codex               |
 | P1       | 관측성(Sentry) 도입                      | 현재 `console.*`뿐 — 런칭 전 에러 트래킹 필수 (AUDIT A12)                                                                                                                               | Codex               |
@@ -139,9 +143,13 @@ AI, 사진 분석, damage 판별, AI 가격 산출은 core workflow가 완성되
 | P2       | Dashboard analytics trend charts | KPI/pipeline은 구현, 월별 추이 차트는 미구현                                              | Claude plan → Codex |
 | P2       | Smart pricing suggestions        | rate settings 존재, 히스토리 기반 제안 미구현. core workflow release 전에는 시작하지 않음 | Claude plan → Codex |
 | P2       | Job costing                      | variations/quote 비교 일부 존재, 실비 대비 리포트 미완성                                  | Claude plan → Codex |
-| P2       | 랜딩/메타 카피 wedge 정렬        | 현재 "Job Management" 프레임 — "Excel 대체" wedge 언어로 교체 (마케팅 분석 2026-07-05)     | Claude plan → Codex |
-| P2       | Stripe trial 활성화 검토         | `subscription-sync`가 `trialing`을 이미 active 취급 — checkout `trial_period_days` 설정만으로 무카드 체험 가능. 결제 게이트 soft화 검토 | Claude plan → Codex |
+| P2       | 랜딩/메타 카피 wedge 정렬        | 현재 "Job Management" 프레임 — "Your Excel price list, now an app" 포지셔닝으로 교체 + vs Tradify/vs QuoteMate 비교 페이지 2종 ([COMMERCIALIZATION.md](./COMMERCIALIZATION.md))     | Claude plan → Codex |
 | P2       | IA 다이어트                      | 최상위 8섹션 → core 흐름(quote/invoice/schedule) 우선 노출, `/jobs` 스텁 직결, `/demo/schedule` gating (AUDIT A15) | Claude plan → Codex |
+| P2       | Price Book 단일화 + 붙여넣기 입력 | materials-service와 Price Rates Manual의 두 화면/두 CSV 스키마 분열 해소 — 단일 "Price Book" 목적지, `parseManualPriceBookCsv`에 textarea 붙여넣기 추가(파일 업로드는 보조). 목표: 첫 세션 15분 내 가격표 이전 | Claude plan → Codex |
+| P2       | Quote Kits                       | price book 항목을 "표준 침실" 등 kit로 묶고 견적에서 count 배수 원탭 투입 — Excel 섹션 블록 구조 재현, 단가는 painter 소유 유지 | Claude plan → Codex |
+| P2       | GST 모드 (등록/미등록)           | 사업체 GST 등록 여부 설정 1개로 "Tax Invoice" vs "Invoice" 문서 체계 정리, 미등록 sole trader 경로 지원 | Claude plan → Codex |
+| P2       | Client trust block               | ABN·주 라이선스·배상책임보험·보증 문구를 quote PDF/공개 페이지/invoice에 일관 표기 (설정 1회, 빈 값 미표시) | Claude plan → Codex |
+| P2       | AU 브랜드 price book 스타터 팩   | Dulux/Taubmans/Haymes 항목명·단위·설명만 채우고 가격은 빈칸인 시드 팩 — supplier 연동 아님, painter 단가 입력 원칙 유지 | Claude plan → Codex |
 
 ## Post-Core AI Backlog
 

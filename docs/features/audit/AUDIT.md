@@ -1,7 +1,7 @@
 # Audit & Tech Debt
 
 > Owner: **Claude** (Opus 4.8 · extra) — 분석/감사 산출물. 항목 실행은 Codex(high)가 담당.
-> 활성 리스크와 해결 이력을 한 파일에 압축해 추적합니다. 새 항목은 사용자 영향, 재현 조건, 담당 도구, 수용 기준을 포함해야 합니다. 2026-07-05 전체 앱 분석(12-agent 교차 검증) 결과 반영.
+> 활성 리스크와 해결 이력을 한 파일에 압축해 추적합니다. 새 항목은 사용자 영향, 재현 조건, 담당 도구, 수용 기준을 포함해야 합니다. 2026-07-05 전체 앱 분석(12-agent 교차 검증) 결과 반영. 2026-07-12 상품화/UX 분석(22-agent, [../../COMMERCIALIZATION.md](../../COMMERCIALIZATION.md))으로 A17–A20 추가.
 
 ## Active Findings
 
@@ -23,6 +23,10 @@
 | A14 | P2 | 디자인 토큰 우회 | 열림 | `bg-white` 하드코딩 다수(ScheduleCalendar 28회, QuoteForm 등), `ui/button.tsx` 기본 32px(44px 위반), `ui/input` ↔ `forms/FormField` 프리미티브 이원화 — 회귀 테스트 사각지대 |
 | A15 | P2 | 죽은 라우트/IA 정리 | 열림 | `/demo/schedule` 무인증 프로덕션 노출, `/jobs` UI 없는 리다이렉트 스텁 경유(`QuoteActions`, `JobDetail`), `customers/[id]/edit` 부재 일관성 |
 | A16 | P2 | 동시성/오프라인 | 열림 | `generate_quote_number` RPC 동시 저장 시 번호 충돌 검토, PWA manifest만 있고 service worker/offline draft 보존 부재(현장 약한 네트워크 리스크 — A1과 연관) |
+| A17 | P1 | Quote 발송 진실성 | 열림 | 견적 상세에 Send/Resend 부재(재발송 = 편집 폼 전체 재제출), 영구 발송 기록 없음(`?emailSent=1` 배너뿐), 수동 "Mark as sent" 부재 — 직접/SMS 전달 견적이 Draft로 남아 파이프라인·follow-up 데이터 오염 |
+| A18 | P1 | 고객 이메일 reply_to 부재 | 열림 | 전 고객 메일이 전역 발신 주소로 발송, `reply_to` 사용 0건 — 고객이 답장(견적에 대한 가장 흔한 반응)하면 painter가 못 받음. painter 사업 이메일 reply_to + 발신 표시명 설정 |
+| A19 | P1 | Trial 부재 하드 페이월 | 열림 | 첫 견적 생성 전 결제 요구(checkout `trial_period_days` 미설정, `subscription-sync`는 `trialing`을 이미 active 취급) — Excel 대비 평가 순간의 최대 adoption 장벽. 30일 무카드 trial + A$39 단일 플랜 개편 |
+| A20 | P2 | 확인 없는 파괴적 액션 | 열림 | price item 삭제 즉시 실행(확인/undo 없음, 36px 히트영역에서 Edit 인접), 견적 "Approve Quote" 원탭 즉시 전환(복구 경로 없음) — quote delete의 DeleteModal 패턴으로 통일 |
 
 ## Finding Details
 
@@ -105,6 +109,9 @@ Exterior estimate path는 구현되어 있으나 과거 감사에서 편집 시 
 | TD10 | P1 | Sentry/구조화 로깅 도입 (A12) | Codex |
 | TD11 | P2 | bg-white → surface 토큰 치환 + button.tsx 교정 + 프리미티브 통합 (A14) | Codex |
 | TD12 | P2 | demo route gating, /jobs 스텁 직결, profiles/businesses 정본화 (A13/A15) | Codex |
+| TD13 | P1 | Send/Resend + 발송 기록 + mark-as-sent + reply_to (A17/A18) | Claude plan → Codex |
+| TD14 | P1 | 30일 무카드 trial + A$39 단일 플랜 개편 (A19) | Claude plan → Codex |
+| TD15 | P2 | 파괴적 액션 확인 다이얼로그 통일 (A20) | Codex |
 
 ## Operational Checklist
 

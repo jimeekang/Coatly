@@ -96,14 +96,49 @@ Core workflow release + scoped AI helpers validation.
 **What:**
 실제 workflow replacement가 검증되면 pilot/trial/pay conversion을 productized flow로 만든다.
 
+**Direction (2026-07-12):**
+단일 A$39/월 flat + 30일 무카드 trial + Founding Painter 20명 A$29 종신 — [docs/COMMERCIALIZATION.md](./docs/COMMERCIALIZATION.md). 가격 개편 자체는 PLANS P1로 승격됨.
+
 **Blocked by:**
 A workflow recreation and first release smoke.
+
+### 7A. Driveway Quote wizard (3-step fast path)
+
+**What:**
+현장(고객 집 앞)에서 끝내는 progressive-disclosure 견적 위저드: ① 고객+주소 ② kit/price book 항목 count 탭 ③ 리뷰→PDF→발송. 기존 상세 폼은 detailed mode로 유지. localStorage draft autosave 동반.
+
+**Blocked by:**
+Quote Kits 출시 + A fixture로 detailed path 검증.
+
+### 7B. Pro A$59 재도입 (post-core AI upsell)
+
+**What:**
+Follow-up Writer, quote explanation helper 등 post-core AI 헬퍼가 production-ready일 때 Pro 티어 재도입. AI는 문구만 작성, price/rate/GST/total 산출 금지.
+
+**Blocked by:**
+Core release + 최소 1개 AI 헬퍼 검증 완료 (2단 vapor 재발 방지).
+
+### 7C. Post-job Google review 요청 루프
+
+**What:**
+invoice paid 후 리뷰 요청 이메일 1통(job별 옵트아웃) + 공개 견적 페이지 "What clients say" 블록(painter가 직접 붙여넣는 리뷰 1–2개).
+
+**Blocked by:**
+Follow-up reminder 단계 완성. CRM 확장으로 번지지 않게 이메일 1통 + 설정 1개로 제한.
+
+### 7D. Kit-level win-rate insights
+
+**What:**
+kit/템플릿별 sent→viewed→accepted 성사율 리포트(순수 통계, AI 아님). learning-based pricing(항목 5)의 전 단계 데이터 기반.
+
+**Blocked by:**
+Quote Kits + outcome 데이터 20–30건 (미만이면 노이즈 — 표시 gating).
 
 ## Operational / Continuous
 
 ### 8. Quarterly Australian tradie software monitoring
 
-QuoteMate, Sammy, WonDeal, Let’s Quote, ServiceM8, Tradify, PaintScout, BrushQuote류가 빠르게 움직이고 있다. 분기 1회 경쟁사 포지셔닝, 가격, AI/follow-up 기능을 점검한다.
+QuoteMate, Sammy, WonDeal, Let’s Quote, ServiceM8, Tradify, PaintScout, BrushQuote류가 빠르게 움직이고 있다. 분기 1회 경쟁사 포지셔닝, 가격, AI/follow-up 기능을 점검한다. 2026-07-12 전수 검증 완료(13개사 공식 가격 페이지 교차 확인, 결과: [docs/COMMERCIALIZATION.md](./docs/COMMERCIALIZATION.md)) — 다음 점검 2026-10.
 
 Trigger:
 
