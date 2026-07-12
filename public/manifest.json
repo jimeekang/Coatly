@@ -1,11 +1,11 @@
 {
   "name": "Coatly",
   "short_name": "Coatly",
-  "description": "Job management for Australian painters",
+  "description": "Quotes, invoices and follow-ups for Australian painters",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1e40af",
+  "background_color": "#FAF7F2",
+  "theme_color": "#FAF7F2",
   "icons": [
     {
       "src": "/icons/Coatly_Icon_512.svg",

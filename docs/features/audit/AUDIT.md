@@ -20,8 +20,9 @@
 | A11 | P1 | 판매 카피–scope 모순 | 열림 | `config/plans.ts:50-51` Pro가 보류(dormant)된 "AI Quote Drafting/AI Workspace Assistant"를 판매 feature로 노출 — 신뢰/ACL 리스크. 카피 제거 + `AIDraftPanel` UI gating 정합 |
 | A12 | P1 | 관측성 부재 | 열림 | 로깅이 `console.*`뿐, Sentry 등 에러 트래킹 없음. 1인 운영에서 최우선 인프라 |
 | A13 | P2 | profiles/businesses 이중화 | 열림 | business_name/abn/logo가 양쪽 존재, `access.ts`가 컬럼 부재를 런타임 방어(`hasMissingProfilesColumn`) — 정본 통합 필요 |
-| A14 | P2 | 디자인 토큰 우회 | 열림 | `bg-white` 하드코딩 다수(ScheduleCalendar 28회, QuoteForm 등), `ui/button.tsx` 기본 32px(44px 위반), `ui/input` ↔ `forms/FormField` 프리미티브 이원화 — 회귀 테스트 사각지대 |
-| A15 | P2 | 죽은 라우트/IA 정리 | 열림 | `/demo/schedule` 무인증 프로덕션 노출, `/jobs` UI 없는 리다이렉트 스텁 경유(`QuoteActions`, `JobDetail`), `customers/[id]/edit` 부재 일관성 |
+| A14 | P2 | 디자인 토큰 우회 | 열림 | 실측 갱신: `bg-white` 241회/50파일, `ui/button.tsx`는 import 0건 死코드(32px 이슈 무의미→제거 대상), `ui/input` ↔ `forms/FormField` 이원화 — 전수·우선순위는 [DESIGN-AUDIT-2026-07-12.md](./DESIGN-AUDIT-2026-07-12.md) §3-A/§5 |
+| A15 | P2 | 죽은 라우트/IA 정리 | 열림 | `/demo/schedule` 무인증 프로덕션 노출(+실 mutation 배선 확인됨), `/jobs` UI 없는 리다이렉트 스텁 경유(`QuoteActions`, `JobDetail`), `customers/[id]/edit` 부재 일관성 |
+| A21 | P1 | 전앱 디자인/UX 감사 2026-07-12 | 열림 | 91건(C3·M29·m43·n16) — money screen 발송 액션 부재, 가격북 무확인 삭제, text-outline 대비 1.5:1, ErrorAlert 미채택 29곳, loading.tsx 5 라우트 누락 등. 글로벌 토큰층은 리프레시 v1.1로 해결 완료(uncommitted). 실행 큐: [DESIGN-AUDIT-2026-07-12.md](./DESIGN-AUDIT-2026-07-12.md) §5 |
 | A16 | P2 | 동시성/오프라인 | 열림 | `generate_quote_number` RPC 동시 저장 시 번호 충돌 검토, PWA manifest만 있고 service worker/offline draft 보존 부재(현장 약한 네트워크 리스크 — A1과 연관) |
 
 ## Finding Details
