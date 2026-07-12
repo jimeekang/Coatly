@@ -620,6 +620,7 @@ export const quoteCreateSchema = z
     rooms: z.array(quoteRoomSchema).default([]),
     scope_sections: z.array(quoteScopeSectionSchema).default([]),
     clause_items: z.array(quoteClauseItemSchema).default([]),
+    replace_quote_structure: z.boolean().default(false),
     ai_intake_snapshot: quoteAiIntakeSnapshotSchema.optional(),
     interior_estimate: interiorEstimateSchema.optional(),
     exterior_estimate: z

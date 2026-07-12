@@ -938,6 +938,7 @@ export function QuoteForm({
   quoteNumberPreview = 'Assigned on save',
   submitLabel = 'Save Quote',
   showSendQuoteButton = false,
+  replaceQuoteStructureOnSubmit = false,
   rateSettings,
   libraryItems = [],
 }: {
@@ -952,6 +953,7 @@ export function QuoteForm({
   quoteNumberPreview?: string;
   submitLabel?: string;
   showSendQuoteButton?: boolean;
+  replaceQuoteStructureOnSubmit?: boolean;
   rateSettings?: UserRateSettings | null;
   libraryItems?: MaterialItem[];
 }) {
@@ -1623,6 +1625,7 @@ export function QuoteForm({
     payload.job_type = resolveFormJobType();
     payload.scope_sections = normalizeScopeSectionsForPayload();
     payload.clause_items = normalizeClauseItemsForPayload();
+    payload.replace_quote_structure = replaceQuoteStructureOnSubmit;
     if (defaultValues?.ai_intake_snapshot) {
       payload.ai_intake_snapshot = defaultValues.ai_intake_snapshot;
     }
