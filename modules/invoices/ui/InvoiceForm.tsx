@@ -279,6 +279,18 @@ function buildInvoicePreset(
   };
 }
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
+}
+
 export function InvoiceForm({
   customers,
   quotes,
@@ -538,6 +550,8 @@ export function InvoiceForm({
       return;
     }
 
+    setError(null);
+
     const preparedLineItems = lineItems
       .filter((item) => item.description.trim())
       .map((item) => ({
@@ -547,26 +561,38 @@ export function InvoiceForm({
       }));
 
     startTransition(async () => {
-      const result = await onSubmit({
-        customer_id: form.customer_id,
-        quote_id: form.quote_id || null,
-        invoice_type: form.invoice_type,
-        status: form.status,
-        business_abn: form.business_abn.trim() || null,
-        payment_terms: form.payment_terms.trim() || null,
-        bank_details: form.bank_details.trim() || null,
-        due_date: form.due_date || null,
-        paid_date: form.status === 'paid' ? form.paid_date || null : null,
-        payment_method:
-          form.status === 'paid'
-            ? ((form.payment_method || null) as InvoicePaymentMethod | null)
-            : null,
-        notes: form.notes.trim() || null,
-        line_items: preparedLineItems,
-      });
+      try {
+        const result = await onSubmit({
+          customer_id: form.customer_id,
+          quote_id: form.quote_id || null,
+          invoice_type: form.invoice_type,
+          status: form.status,
+          business_abn: form.business_abn.trim() || null,
+          payment_terms: form.payment_terms.trim() || null,
+          bank_details: form.bank_details.trim() || null,
+          due_date: form.due_date || null,
+          paid_date: form.status === 'paid' ? form.paid_date || null : null,
+          payment_method:
+            form.status === 'paid'
+              ? ((form.payment_method || null) as InvoicePaymentMethod | null)
+              : null,
+          notes: form.notes.trim() || null,
+          line_items: preparedLineItems,
+        });
 
-      if (result?.error) {
-        setError(result.error);
+        if (result?.error) {
+          setError(result.error);
+        }
+      } catch (submitError) {
+        if (isNextNavigationSignal(submitError)) {
+          throw submitError;
+        }
+
+        setError(
+          submitError instanceof Error
+            ? submitError.message
+            : 'Invoice could not be saved. Please try again.'
+        );
       }
     });
   }
