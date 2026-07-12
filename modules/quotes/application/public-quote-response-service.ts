@@ -19,7 +19,11 @@ import { formatAUD, formatDate } from '@/utils/format';
 type PublicQuoteResponseResult = {
   data: { quoteId: string } | null;
   error: string | null;
+  warning?: string;
 };
+
+const QUOTE_APPROVAL_EMAIL_WARNING =
+  'Your quote was approved, but we could not notify the business by email. Your approval was saved.';
 
 export async function approvePublicQuoteResponse({
   supabase,
@@ -107,8 +111,16 @@ export async function approvePublicQuoteResponse({
   );
   const ownerEmail = businessResult.data?.email?.trim() ?? null;
 
-  if (ownerEmail) {
-    await sendQuoteApprovalNotification({
+  if (!ownerEmail) {
+    return {
+      data: { quoteId: quote.id },
+      error: null,
+      warning: QUOTE_APPROVAL_EMAIL_WARNING,
+    };
+  }
+
+  try {
+    const emailResult = await sendQuoteApprovalNotification({
       to: ownerEmail,
       businessName: businessResult.data?.name || 'Coatly',
       quoteNumber: quote.quote_number,
@@ -121,6 +133,20 @@ export async function approvePublicQuoteResponse({
       totalFormatted: formatAUD(quote.total_cents),
       signature: approvalSignature,
     });
+
+    if (emailResult.error) {
+      return {
+        data: { quoteId: quote.id },
+        error: null,
+        warning: QUOTE_APPROVAL_EMAIL_WARNING,
+      };
+    }
+  } catch {
+    return {
+      data: { quoteId: quote.id },
+      error: null,
+      warning: QUOTE_APPROVAL_EMAIL_WARNING,
+    };
   }
 
   return { data: { quoteId: quote.id }, error: null };

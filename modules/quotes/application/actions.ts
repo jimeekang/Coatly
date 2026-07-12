@@ -779,7 +779,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
 
 export async function approvePublicQuote(
   formData: FormData
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; warning?: string }> {
   const quoteToken = parseTrimmedFormValue(formData.get('quoteToken'));
   const approvedByName = parseTrimmedFormValue(formData.get('approvedByName'));
   const approvedByEmail = parseTrimmedFormValue(
@@ -817,7 +817,10 @@ export async function approvePublicQuote(
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${result.data.quoteId}`);
-  return { error: null };
+  return {
+    error: null,
+    ...(result.warning ? { warning: result.warning } : {}),
+  };
 }
 
 export async function rejectPublicQuote(

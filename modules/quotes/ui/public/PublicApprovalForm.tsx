@@ -31,12 +31,17 @@ export function PublicApprovalForm({
 }: PublicApprovalFormProps) {
   const [signature, setSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [approvalSubmitted, setApprovalSubmitted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isRejectPending, startRejectTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
   const isSignatureImage = (sig: string | null) => sig?.startsWith('data:image') ?? false;
+
+  const getSubmissionError = (submitError: unknown, fallback: string) =>
+    submitError instanceof Error ? submitError.message : fallback;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,15 +50,27 @@ export function PublicApprovalForm({
       return;
     }
     setError(null);
+    setWarning(null);
     const fd = new FormData(e.currentTarget);
     fd.set('approvalSignature', signature);
     startTransition(async () => {
-      const result = await approvePublicQuote(fd);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await approvePublicQuote(fd);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setApprovalSubmitted(true);
+        setWarning(result.warning ?? null);
+        router.refresh();
+      } catch (submitError) {
+        setError(
+          getSubmissionError(
+            submitError,
+            'This quote could not be approved. Please try again.'
+          )
+        );
       }
-      router.refresh();
     });
   };
 
@@ -73,14 +90,24 @@ export function PublicApprovalForm({
     fd.set('rejectedByName', rejectedByName);
     fd.set('rejectedByEmail', rejectedByEmail);
     setError(null);
+    setWarning(null);
 
     startRejectTransition(async () => {
-      const result = await rejectPublicQuote(fd);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await rejectPublicQuote(fd);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        router.refresh();
+      } catch (submitError) {
+        setError(
+          getSubmissionError(
+            submitError,
+            'This quote could not be declined. Please try again.'
+          )
+        );
       }
-      router.refresh();
     });
   };
 
@@ -105,6 +132,12 @@ export function PublicApprovalForm({
             )}
           </div>
         </div>
+
+        {warning && (
+          <div className="rounded-xl border border-warning/30 bg-warning-container px-4 py-3">
+            <p className="text-sm text-on-warning-container">{warning}</p>
+          </div>
+        )}
 
         {approvalSignature && (
           <div>
@@ -145,7 +178,7 @@ export function PublicApprovalForm({
             name="approvedByName"
             type="text"
             required
-            disabled={!canApprove || isPending || isRejectPending}
+            disabled={!canApprove || isPending || isRejectPending || approvalSubmitted}
             defaultValue={customerName}
             className="min-h-12 rounded-xl border border-outline bg-white px-4 py-3 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary-container focus:ring-2 focus:ring-primary-fixed/40 disabled:bg-surface-container-low"
             placeholder="Full name"
@@ -160,7 +193,7 @@ export function PublicApprovalForm({
             name="approvedByEmail"
             type="email"
             required
-            disabled={!canApprove || isPending || isRejectPending}
+            disabled={!canApprove || isPending || isRejectPending || approvalSubmitted}
             defaultValue={customerEmail ?? ''}
             className="min-h-12 rounded-xl border border-outline bg-white px-4 py-3 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary-container focus:ring-2 focus:ring-primary-fixed/40 disabled:bg-surface-container-low"
             placeholder="name@example.com"
@@ -175,7 +208,7 @@ export function PublicApprovalForm({
         <SignaturePad
           value={signature}
           onChange={setSignature}
-          disabled={!canApprove || isPending || isRejectPending}
+          disabled={!canApprove || isPending || isRejectPending || approvalSubmitted}
         />
       </div>
 
@@ -188,11 +221,17 @@ export function PublicApprovalForm({
         </div>
       )}
 
+      {warning && (
+        <div className="rounded-xl border border-warning/30 bg-warning-container px-4 py-3">
+          <p className="text-sm text-on-warning-container">{warning}</p>
+        </div>
+      )}
+
       {canApprove ? (
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
           <button
             type="submit"
-            disabled={isPending || isRejectPending}
+            disabled={isPending || isRejectPending || approvalSubmitted}
             className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-base font-bold text-on-primary shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-outline"
           >
             {isPending ? (
@@ -214,7 +253,7 @@ export function PublicApprovalForm({
           </button>
           <button
             type="button"
-            disabled={isPending || isRejectPending}
+            disabled={isPending || isRejectPending || approvalSubmitted}
             onClick={handleReject}
             className="inline-flex min-h-14 w-full items-center justify-center rounded-xl border border-error/40 bg-white px-6 py-4 text-base font-bold text-on-error-container shadow-sm transition-all hover:bg-error-container/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-outline disabled:text-on-surface-variant sm:w-auto"
           >
