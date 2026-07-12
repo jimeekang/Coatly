@@ -22,7 +22,8 @@ function materialItemKey(item: MaterialItemIdentity) {
 async function getDuplicateMaterialItemError(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   userId: string,
-  inputs: MaterialItemIdentity[]
+  inputs: MaterialItemIdentity[],
+  excludeId?: string
 ) {
   const seen = new Set<string>();
   for (const item of inputs) {
@@ -35,15 +36,18 @@ async function getDuplicateMaterialItemError(
 
   const { data, error } = await supabase
     .from('material_items')
-    .select('name, unit')
+    .select('id, name, unit')
     .eq('user_id', userId);
 
   if (error) return error.message;
 
   const existingKeys = new Set(
-    ((data as Array<{ name: string; unit: string }> | null) ?? []).map(
-      materialItemKey
+    (
+      (data as Array<{ id: string; name: string; unit: string }> | null) ??
+      []
     )
+      .filter((item) => item.id !== excludeId)
+      .map(materialItemKey)
   );
   const duplicate = inputs.find((item) =>
     existingKeys.has(materialItemKey(item))
@@ -229,6 +233,14 @@ export async function updateMaterialItem(
       error: parsed.error.issues[0]?.message ?? 'Invalid item details.',
     };
   }
+
+  const duplicateError = await getDuplicateMaterialItemError(
+    supabase,
+    user.id,
+    [parsed.data],
+    id
+  );
+  if (duplicateError) return { error: duplicateError };
 
   const { error } = await supabase
     .from('material_items')
