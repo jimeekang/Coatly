@@ -49,6 +49,24 @@ function parseVariationRow(row: VariationRow) {
   };
 }
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') ||
+      digest.startsWith('NEXT_NOT_FOUND') ||
+      digest.startsWith('NEXT_HTTP_ERROR_FALLBACK'))
+  );
+}
+
+function getActionErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function JobEditForm({
   job,
   customers,
@@ -132,8 +150,8 @@ export function JobEditForm({
 
     const validVariations = variations.filter((row) => row.name.trim().length > 0);
 
-    startTransition(() => {
-      void (async () => {
+    startTransition(async () => {
+      try {
         const [jobResult, variationsResult] = await Promise.all([
           updateJob(job.id, {
             customer_id: form.customer_id,
@@ -152,7 +170,15 @@ export function JobEditForm({
           return;
         }
         router.push(`/jobs/${job.id}`);
-      })();
+      } catch (submitError) {
+        if (isNextNavigationSignal(submitError)) {
+          throw submitError;
+        }
+
+        setFormError(
+          getActionErrorMessage(submitError, 'Job could not be saved. Please try again.'),
+        );
+      }
     });
   }
 

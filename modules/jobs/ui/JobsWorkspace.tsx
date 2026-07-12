@@ -74,6 +74,24 @@ function isPastScheduled(job: JobListItem) {
   return scheduled < today;
 }
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') ||
+      digest.startsWith('NEXT_NOT_FOUND') ||
+      digest.startsWith('NEXT_HTTP_ERROR_FALLBACK'))
+  );
+}
+
+function getActionErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function JobsWorkspace({
   jobs,
   customers,
@@ -142,8 +160,8 @@ export function JobsWorkspace({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
-    startTransition(() => {
-      void (async () => {
+    startTransition(async () => {
+      try {
         const result = await createJob({
           customer_id: form.customer_id,
           quote_id: form.quote_id || null,
@@ -160,7 +178,15 @@ export function JobsWorkspace({
         setFormOpen(false);
         setForm(buildInitialFormState(quotes, null, null));
         router.refresh();
-      })();
+      } catch (submitError) {
+        if (isNextNavigationSignal(submitError)) {
+          throw submitError;
+        }
+
+        setFormError(
+          getActionErrorMessage(submitError, 'Job could not be created. Please try again.'),
+        );
+      }
     });
   }
 

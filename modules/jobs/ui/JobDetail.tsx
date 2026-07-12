@@ -34,6 +34,24 @@ function isPastScheduled(job: JobDetail) {
   return new Date(`${job.scheduled_date}T00:00:00`) < today;
 }
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') ||
+      digest.startsWith('NEXT_NOT_FOUND') ||
+      digest.startsWith('NEXT_HTTP_ERROR_FALLBACK'))
+  );
+}
+
+function getActionErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function CompleteDialog({
   quoteId,
   onClose,
@@ -106,44 +124,75 @@ export function JobDetail({
   function handleDelete() {
     if (!window.confirm(`Delete "${job.title}"? This cannot be undone.`)) return;
     startTransition(async () => {
-      const result = await deleteJob(job.id);
-      if (result.error) {
-        alert(result.error);
-        return;
+      try {
+        const result = await deleteJob(job.id);
+        if (result.error) {
+          alert(result.error);
+          return;
+        }
+        router.push('/jobs');
+      } catch (deleteError) {
+        if (isNextNavigationSignal(deleteError)) {
+          throw deleteError;
+        }
+
+        alert(getActionErrorMessage(deleteError, 'Job could not be deleted. Please try again.'));
       }
-      router.push('/jobs');
     });
   }
 
   function handleMarkComplete() {
     if (job.status === 'completed') return;
     startCompleteTransition(async () => {
-      const result = await updateJob(job.id, {
-        customer_id: job.customer_id,
-        quote_id: job.quote_id ?? undefined,
-        title: job.title,
-        status: 'completed',
-        scheduled_date: job.scheduled_date,
-        notes: job.notes ?? undefined,
-      });
-      if (result.error) {
-        alert(result.error);
-        return;
+      try {
+        const result = await updateJob(job.id, {
+          customer_id: job.customer_id,
+          quote_id: job.quote_id ?? undefined,
+          title: job.title,
+          status: 'completed',
+          scheduled_date: job.scheduled_date,
+          notes: job.notes ?? undefined,
+        });
+        if (result.error) {
+          alert(result.error);
+          return;
+        }
+        setShowCompleteDialog(true);
+        router.refresh();
+      } catch (completeError) {
+        if (isNextNavigationSignal(completeError)) {
+          throw completeError;
+        }
+
+        alert(
+          getActionErrorMessage(
+            completeError,
+            'Job could not be marked complete. Please try again.',
+          ),
+        );
       }
-      setShowCompleteDialog(true);
-      router.refresh();
     });
   }
 
   function handleRetryGoogleSync() {
     setGoogleSyncError(null);
     startGoogleSyncTransition(async () => {
-      const result = await retryJobGoogleCalendarSync(job.id);
-      if (result.error) {
-        setGoogleSyncError(result.error);
-        return;
+      try {
+        const result = await retryJobGoogleCalendarSync(job.id);
+        if (result.error) {
+          setGoogleSyncError(result.error);
+          return;
+        }
+        router.refresh();
+      } catch (syncError) {
+        if (isNextNavigationSignal(syncError)) {
+          throw syncError;
+        }
+
+        setGoogleSyncError(
+          getActionErrorMessage(syncError, 'Google Calendar sync could not be retried. Please try again.'),
+        );
       }
-      router.refresh();
     });
   }
 
