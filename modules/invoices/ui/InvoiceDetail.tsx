@@ -213,6 +213,26 @@ const PRIMARY_BTN =
 const SECONDARY_BTN =
   'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface-container px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high';
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
+}
+
+function getActionError(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return typeof error === 'string' && error ? error : fallback;
+}
+
 /* ──────────────────────────────────────────────────────────
    Payment progress band
    ────────────────────────────────────────────────────────── */
@@ -463,9 +483,18 @@ export function InvoiceDetail({
   async function confirmDelete() {
     setOpenDeleteDialog(false);
     setDeleting(true);
-    const result = await deleteInvoice(invoice.id);
-    if (result?.error) {
-      setError(result.error);
+    try {
+      const result = await deleteInvoice(invoice.id);
+      if (result?.error) {
+        setError(result.error);
+      }
+      setDeleting(false);
+    } catch (deleteError) {
+      if (isNextNavigationSignal(deleteError)) {
+        throw deleteError;
+      }
+
+      setError(getActionError(deleteError, 'Invoice could not be deleted. Please try again.'));
       setDeleting(false);
     }
   }
@@ -473,19 +502,35 @@ export function InvoiceDetail({
   function handleSend() {
     startSendTransition(async () => {
       setError(null);
-      const result = await sendInvoice(invoice.id);
-      if (result?.error) setError(result.error);
+      try {
+        const result = await sendInvoice(invoice.id);
+        if (result?.error) setError(result.error);
+      } catch (sendError) {
+        if (isNextNavigationSignal(sendError)) {
+          throw sendError;
+        }
+
+        setError(getActionError(sendError, 'Invoice could not be sent. Please try again.'));
+      }
     });
   }
 
   function handleMarkPaid() {
     startMarkPaidTransition(async () => {
       setError(null);
-      const result = await markInvoiceAsPaid(invoice.id, {
-        paid_date: paidDate,
-        payment_method: paymentMethod as NonNullable<InvoiceWithCustomer['payment_method']>,
-      });
-      if (result?.error) setError(result.error);
+      try {
+        const result = await markInvoiceAsPaid(invoice.id, {
+          paid_date: paidDate,
+          payment_method: paymentMethod as NonNullable<InvoiceWithCustomer['payment_method']>,
+        });
+        if (result?.error) setError(result.error);
+      } catch (paymentError) {
+        if (isNextNavigationSignal(paymentError)) {
+          throw paymentError;
+        }
+
+        setError(getActionError(paymentError, 'Payment could not be recorded. Please try again.'));
+      }
     });
   }
 

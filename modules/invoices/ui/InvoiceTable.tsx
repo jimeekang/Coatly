@@ -3,6 +3,7 @@
 import { useDeferredValue, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { markInvoiceAsPaid } from '@/modules/invoices/application/actions';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import {
   formatCustomerLocation,
   getInvoiceDueLabel,
@@ -112,6 +113,28 @@ const DATE_FILTER_OPTIONS: Array<{ value: DateFilter; label: string }> = [
   { value: '90d',        label: 'Last 90 days' },
 ];
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
+}
+
+function getActionError(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return typeof error === 'string' && error
+    ? error
+    : 'Payment could not be recorded. Please try again.';
+}
+
 function getDateFilterCutoff(filter: DateFilter): Date | null {
   const now = new Date();
   if (filter === '30d') {
@@ -195,12 +218,21 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
     startSubmitPaymentTransition(async () => {
       setActionError(null);
       setPendingInvoiceId(invoiceId);
-      const result = await markInvoiceAsPaid(invoiceId, {
-        paid_date: paidDate,
-        payment_method: paymentMethod as 'bank_transfer' | 'cash' | 'card' | 'cheque' | 'other',
-      });
-      if (result?.error) {
-        setActionError(result.error);
+      try {
+        const result = await markInvoiceAsPaid(invoiceId, {
+          paid_date: paidDate,
+          payment_method: paymentMethod as 'bank_transfer' | 'cash' | 'card' | 'cheque' | 'other',
+        });
+        if (result?.error) {
+          setActionError(result.error);
+        }
+        setPendingInvoiceId(null);
+      } catch (paymentError) {
+        if (isNextNavigationSignal(paymentError)) {
+          throw paymentError;
+        }
+
+        setActionError(getActionError(paymentError));
         setPendingInvoiceId(null);
       }
     });
@@ -425,7 +457,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                             </label>
                           </div>
                           {actionError && (
-                            <p className="text-sm text-error">{actionError}</p>
+                            <ErrorAlert>{actionError}</ErrorAlert>
                           )}
                           <div className="grid gap-2 sm:flex sm:flex-wrap">
                             <button
