@@ -11,6 +11,7 @@ import {
 } from '@/modules/materials/application/actions';
 import { createServerClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 export const metadata: Metadata = { title: 'Price Rates' };
 
@@ -23,7 +24,7 @@ export default async function PriceRatesPage() {
   if (!user) redirect('/login');
 
   const [
-    { data: rateSettings },
+    { data: rateSettings, error: rateSettingsError },
     { data: manualItems, error: manualItemsError },
   ] = await Promise.all([
     getBusinessRateSettings(supabase, user.id),
@@ -44,14 +45,18 @@ export default async function PriceRatesPage() {
           </div>
         }
       />
-      <PriceRatesForm
-        defaultRates={rateSettings ?? DEFAULT_RATE_SETTINGS}
-        manualItems={manualItems}
-        manualItemsError={manualItemsError}
-        updateRateSettingsAction={updateRateSettingsAction}
-        createMaterialItem={createMaterialItem}
-        importMaterialItems={importMaterialItems}
-      />
+      {rateSettingsError ? (
+        <ErrorAlert>{rateSettingsError}</ErrorAlert>
+      ) : (
+        <PriceRatesForm
+          defaultRates={rateSettings ?? DEFAULT_RATE_SETTINGS}
+          manualItems={manualItems}
+          manualItemsError={manualItemsError}
+          updateRateSettingsAction={updateRateSettingsAction}
+          createMaterialItem={createMaterialItem}
+          importMaterialItems={importMaterialItems}
+        />
+      )}
     </div>
   );
 }
