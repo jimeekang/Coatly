@@ -458,9 +458,9 @@ export default function PricingSection({
       </div>
 
       <p className="text-xs text-on-surface-variant">
-        Starter is built for sole traders. Pro adds AI assistance, deeper job costing,
-        accounting sync, and stronger follow-up tools for small crews. Plan changes and
-        cancellations are handled in Stripe.
+        Starter is built for sole traders. Pro adds unlimited quotes, unlimited templates,
+        and priority support for small crews. Plan changes and cancellations are handled in
+        Stripe.
       </p>
 
       <ConfirmDialog
