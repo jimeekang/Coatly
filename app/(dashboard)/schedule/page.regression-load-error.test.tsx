@@ -6,13 +6,21 @@ const {
   getJobsMock,
   getScheduleEventsMock,
   listGoogleScheduleEventsForUserMock,
+  redirectMock,
   scheduleCalendarMock,
 } = vi.hoisted(() => ({
   createServerClientMock: vi.fn(),
   getJobsMock: vi.fn(),
   getScheduleEventsMock: vi.fn(),
   listGoogleScheduleEventsForUserMock: vi.fn(),
+  redirectMock: vi.fn(() => {
+    throw new Error('NEXT_REDIRECT:/login');
+  }),
   scheduleCalendarMock: vi.fn(() => <div data-testid="schedule-calendar" />),
+}));
+
+vi.mock('next/navigation', () => ({
+  redirect: redirectMock,
 }));
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -62,14 +70,33 @@ describe('SchedulePage load failures', () => {
 
   it.each([
     ['jobs', 'Jobs are temporarily unavailable.', () => getJobsMock],
-    ['native schedule events', 'Schedule events are temporarily unavailable.', () => getScheduleEventsMock],
-  ])('surfaces %s load errors without rendering the editable calendar', async (_, error, queryMock) => {
-    queryMock().mockResolvedValue({ data: [], error });
+    [
+      'native schedule events',
+      'Schedule events are temporarily unavailable.',
+      () => getScheduleEventsMock,
+    ],
+  ])(
+    'surfaces %s load errors without rendering the editable calendar',
+    async (_, error, queryMock) => {
+      queryMock().mockResolvedValue({ data: [], error });
 
-    render(await SchedulePage({}));
+      render(await SchedulePage({}));
 
-    expect(screen.getByRole('alert')).toHaveTextContent(error);
-    expect(screen.queryByTestId('schedule-calendar')).not.toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(error);
+      expect(screen.queryByTestId('schedule-calendar')).not.toBeInTheDocument();
+      expect(scheduleCalendarMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it('redirects unauthenticated users instead of rendering a blank page', async () => {
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+      },
+    });
+
+    await expect(SchedulePage({})).rejects.toThrow('NEXT_REDIRECT:/login');
+    expect(redirectMock).toHaveBeenCalledWith('/login');
     expect(scheduleCalendarMock).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { QuoteTable } from '@/modules/quotes/ui/QuoteTable';
 
 describe('QuoteTable', () => {
+  it('shows the canonical new quote action in the empty state', () => {
+    render(<QuoteTable quotes={[]} />);
+
+    expect(screen.getByRole('link', { name: '+ New Quote' })).toHaveAttribute(
+      'href',
+      '/quotes/new'
+    );
+  });
+
   it('filters quotes by search query and status', () => {
     render(
       <QuoteTable
@@ -73,7 +82,9 @@ describe('QuoteTable', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Approved' }));
 
-    expect(screen.getByText('No quotes match this search.')).toBeInTheDocument();
+    expect(
+      screen.getByText('No quotes match this search.')
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText(/Search quotes/i), {
       target: { value: '' },
@@ -92,7 +103,8 @@ describe('QuoteTable', () => {
             user_id: 'user-1',
             customer_id: 'customer-1',
             quote_number: 'QUO-0012-LONG',
-            title: 'Long living room repaint title that should stay inside the card',
+            title:
+              'Long living room repaint title that should stay inside the card',
             status: 'sent',
             valid_until: '2026-04-10',
             complexity: 'standard',
@@ -120,6 +132,48 @@ describe('QuoteTable', () => {
     const filters = container.querySelectorAll('.flex-wrap');
     expect(filters.length).toBeGreaterThanOrEqual(2);
     expect(container.querySelector('.overflow-x-auto')).not.toBeInTheDocument();
-    expect(screen.getByText('Very Long Painting Company Name')).toHaveClass('truncate');
+    expect(screen.getByText('Very Long Painting Company Name')).toHaveClass(
+      'truncate'
+    );
+  });
+
+  it('uses the centralized info tone for sent quote status', () => {
+    render(
+      <QuoteTable
+        quotes={[
+          {
+            id: 'quote-1',
+            user_id: 'user-1',
+            customer_id: 'customer-1',
+            quote_number: 'QUO-0012',
+            title: 'Living room repaint',
+            status: 'sent',
+            valid_until: '2026-04-10',
+            complexity: 'standard',
+            subtotal_cents: 100000,
+            gst_cents: 10000,
+            total_cents: 110000,
+            estimate_category: 'manual',
+            created_at: '2026-03-01T00:00:00.000Z',
+            updated_at: '2026-03-01T00:00:00.000Z',
+            customer: {
+              id: 'customer-1',
+              name: 'Mark Johnson',
+              company_name: null,
+              email: null,
+              phone: null,
+              address: null,
+            },
+            room_count: 1,
+            surface_count: 2,
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Sent', { selector: 'span' })).toHaveClass(
+      'bg-primary/10',
+      'text-primary'
+    );
   });
 });

@@ -16,8 +16,8 @@ export function BackLink({ href, label, className }: BackLinkProps) {
     <Link
       href={href}
       className={cn(
-        'inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-on-surface-variant transition-colors hover:text-on-surface',
-        className,
+        'text-on-surface-variant hover:text-on-surface focus-visible:ring-primary focus-visible:ring-offset-surface inline-flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+        className
       )}
     >
       <svg

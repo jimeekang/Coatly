@@ -24,6 +24,10 @@ import {
   sanitizeDecimalInput,
   sanitizeIntegerInput,
 } from '@/components/shared/NumericInput';
+import { formControlClassName } from '@/components/forms/FormField';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { cn } from '@/lib/utils';
 import {
   COATING_LABELS,
   DOOR_SCOPE_LABELS,
@@ -169,7 +173,7 @@ function RateSetupSummary({
             type="button"
             onClick={() => setShowWarnings((open) => !open)}
             aria-expanded={showWarnings}
-            className="border-outline-variant bg-warning-container text-warning flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-colors hover:opacity-90"
+            className="border-outline-variant bg-warning-container text-warning focus-visible:ring-primary/20 flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition-colors hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
           >
             <span>
               {issues.length} setup warning{issues.length === 1 ? '' : 's'}
@@ -181,7 +185,7 @@ function RateSetupSummary({
             )}
           </button>
           {showWarnings && (
-            <ul className="border-outline-variant bg-surface-container-low mt-2 space-y-1 rounded-lg border px-3 py-2">
+            <ul className="border-outline-variant bg-surface-container-low mt-2 space-y-1 rounded-xl border px-3 py-2">
               {issues.map((issue) => (
                 <li
                   key={`${issue.code}-${issue.source_id ?? issue.message}`}
@@ -213,21 +217,26 @@ function EditableCell({
   ariaLabel: string;
 }) {
   return (
-    <span className="group/cell border-outline hover:border-on-surface-variant/45 hover:bg-surface-container-low focus-within:border-primary focus-within:ring-primary/20 inline-flex h-11 min-w-[7rem] items-center rounded-lg border bg-white pr-1.5 pl-2.5 transition-colors focus-within:bg-white focus-within:ring-2">
-      <span className="text-on-surface-variant text-xs font-semibold">$</span>
+    <span className="group/cell relative inline-flex min-w-[9rem] items-center">
+      <span className="text-on-surface-variant pointer-events-none absolute left-3 z-10 text-xs font-semibold">
+        $
+      </span>
       <NumericInput
         value={centsToDisplay(value)}
         sanitize={sanitizeDecimalInput}
         onValueChange={onChange}
         aria-label={ariaLabel}
-        className="text-on-surface w-12 min-w-0 flex-1 border-0 bg-transparent px-1 text-right text-sm font-bold tabular-nums outline-none"
+        className={cn(
+          formControlClassName,
+          'min-w-[9rem] pr-20 pl-7 text-right font-bold tabular-nums'
+        )}
       />
-      <span className="text-on-surface-variant pl-0.5 text-[11px] whitespace-nowrap">
+      <span className="text-on-surface-variant pointer-events-none absolute right-7 text-[11px] whitespace-nowrap">
         {unit}
       </span>
       <Pencil
         aria-hidden="true"
-        className="text-on-surface-variant ml-1 h-3 w-3 shrink-0 opacity-0 transition-opacity group-focus-within/cell:opacity-100 group-hover/cell:opacity-100"
+        className="text-on-surface-variant pointer-events-none absolute right-2 h-3 w-3 opacity-0 transition-opacity group-focus-within/cell:opacity-100 group-hover/cell:opacity-100"
       />
     </span>
   );
@@ -246,7 +255,7 @@ function DeleteIconButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="border-error/30 text-error hover:bg-error-container inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-white transition-colors"
+      className="border-error/30 text-error hover:bg-error-container focus-visible:ring-error/20 bg-surface-container-lowest inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
       <Trash2 className="h-4 w-4" />
     </button>
@@ -268,7 +277,7 @@ function RateSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-outline-variant overflow-hidden rounded-2xl border bg-white shadow-sm">
+    <section className="border-outline-variant bg-surface-container-lowest overflow-hidden rounded-2xl border shadow-sm">
       <header className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4 pb-3 sm:px-5 sm:pt-5">
         <SectionHeading eyebrow={eyebrow} title={title} subtitle={subtitle} />
         {actions && (
@@ -402,7 +411,7 @@ function RateMatrix({
         {rows.map((row) => (
           <li
             key={row.key}
-            className="border-outline-variant rounded-xl border bg-white p-3.5 shadow-sm"
+            className="border-outline-variant bg-surface-container-lowest rounded-xl border p-3.5 shadow-sm"
           >
             <div className="flex items-start justify-between gap-3 pb-2.5">
               <div className="min-w-0 flex-1">
@@ -480,9 +489,7 @@ function SectionHeading({
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
       {eyebrow && (
-        <p className="text-primary mb-1 text-[10px] font-bold tracking-[0.14em] uppercase">
-          {eyebrow}
-        </p>
+        <SectionLabel className="text-primary mb-1">{eyebrow}</SectionLabel>
       )}
       <h3 className="text-on-surface text-base leading-snug font-bold">
         {title}
@@ -507,7 +514,7 @@ function AddRateItemButton({
     <button
       type="button"
       onClick={onClick}
-      className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed bg-white px-4 text-sm font-medium"
+      className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 focus-visible:ring-primary/20 bg-surface-container-lowest inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
     >
       <Plus className="h-4 w-4" />
       {label}
@@ -698,9 +705,9 @@ function DoorRatesSection({
       <div className="flex flex-col gap-5">
         {/* Door scope availability */}
         <div>
-          <p className="text-on-surface-variant mb-2 text-[10px] font-bold tracking-[0.12em] uppercase">
+          <SectionLabel className="mb-2">
             Available scopes — applies to all door types
-          </p>
+          </SectionLabel>
           <RateMatrix
             rows={scopeRows}
             cols={paintCols}
@@ -736,7 +743,7 @@ function DoorRatesSection({
         {enabledDoorTypes.map((doorType) => (
           <div
             key={doorType}
-            className="border-outline-variant rounded-xl border"
+            className="border-outline-variant overflow-hidden rounded-2xl border"
           >
             <div className="border-outline-variant bg-surface-container-low flex items-center justify-between gap-3 border-b px-4 py-2.5">
               <span className="text-on-surface text-sm font-bold">
@@ -770,7 +777,7 @@ function DoorRatesSection({
           </div>
         ))}
         {enabledDoorTypes.length === 0 && (
-          <div className="border-outline text-on-surface-variant rounded-xl border border-dashed bg-white p-8 text-center text-sm">
+          <div className="border-outline text-on-surface-variant bg-surface-container-lowest rounded-xl border border-dashed p-8 text-center text-sm">
             No door rates are active. Use Add Door Type to restore one.
           </div>
         )}
@@ -828,7 +835,10 @@ function WindowRatesSection({
     >
       <div className="flex flex-col gap-5">
         {enabledWindowTypes.map((type) => (
-          <div key={type} className="border-outline-variant rounded-xl border">
+          <div
+            key={type}
+            className="border-outline-variant overflow-hidden rounded-2xl border"
+          >
             <div className="border-outline-variant bg-surface-container-low flex items-center justify-between gap-3 border-b px-4 py-2.5">
               <span className="text-on-surface text-sm font-bold">
                 {WINDOW_TYPE_LABELS[type]}
@@ -861,7 +871,7 @@ function WindowRatesSection({
           </div>
         ))}
         {enabledWindowTypes.length === 0 && (
-          <div className="border-outline text-on-surface-variant rounded-xl border border-dashed bg-white p-8 text-center text-sm">
+          <div className="border-outline text-on-surface-variant bg-surface-container-lowest rounded-xl border border-dashed p-8 text-center text-sm">
             No window rates are active. Use Add Window Type to restore one.
           </div>
         )}
@@ -881,7 +891,7 @@ function DayRateTab({
 }) {
   return (
     <div className="space-y-4">
-      <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
         <header className="mb-5">
           <SectionHeading
             title="Day Rate"
@@ -900,6 +910,7 @@ function DayRateTab({
                   $
                 </span>
                 <NumericInput
+                  aria-label="Daily labour rate"
                   inputMode="numeric"
                   value={(pricing.daily_rate_cents / 100).toFixed(0)}
                   sanitize={sanitizeIntegerInput}
@@ -912,7 +923,10 @@ function DayRateTab({
                       });
                     }
                   }}
-                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                  className={cn(
+                    formControlClassName,
+                    'w-32 pr-2 pl-6 text-right'
+                  )}
                 />
                 <span className="text-on-surface-variant ml-1.5 text-xs">
                   /day
@@ -932,6 +946,7 @@ function DayRateTab({
                   $
                 </span>
                 <NumericInput
+                  aria-label="Target daily earnings"
                   inputMode="numeric"
                   value={
                     pricing.target_daily_earnings_cents != null
@@ -955,7 +970,10 @@ function DayRateTab({
                       });
                     }
                   }}
-                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                  className={cn(
+                    formControlClassName,
+                    'w-32 pr-2 pl-6 text-right'
+                  )}
                 />
                 <span className="text-on-surface-variant ml-1.5 text-xs">
                   /day
@@ -1000,6 +1018,7 @@ function DayRateTab({
             {pricing.material_cost_method === 'percentage' && (
               <div className="mt-3 flex items-center gap-2">
                 <NumericInput
+                  aria-label="Material cost percent"
                   inputMode="numeric"
                   value={String(pricing.material_cost_percent)}
                   sanitize={sanitizeIntegerInput}
@@ -1014,7 +1033,7 @@ function DayRateTab({
                       onChange({ material_cost_percent: nextValue });
                     }
                   }}
-                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-20 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
+                  className={cn(formControlClassName, 'w-20 px-3 text-right')}
                 />
                 <span className="text-on-surface-variant text-sm">
                   % of labour cost
@@ -1070,7 +1089,7 @@ function RoomPresetForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Master Bedroom"
-          className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+          className={cn(formControlClassName, 'px-3')}
         />
       </div>
       <div>
@@ -1084,7 +1103,7 @@ function RoomPresetForm({
             sanitize={sanitizeDecimalInput}
             onValueChange={setSqm}
             placeholder="20"
-            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-24 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
+            className={cn(formControlClassName, 'w-24 px-3 text-right')}
           />
           <span className="text-on-surface-variant ml-1.5 text-xs">sqm</span>
         </div>
@@ -1102,7 +1121,7 @@ function RoomPresetForm({
             sanitize={sanitizeDecimalInput}
             onValueChange={setRate}
             placeholder="450"
-            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-28 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+            className={cn(formControlClassName, 'w-28 pr-2 pl-6 text-right')}
           />
         </div>
       </div>
@@ -1110,14 +1129,14 @@ function RoomPresetForm({
         <button
           type="button"
           onClick={handleSave}
-          className="bg-primary hover:bg-primary/90 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold text-on-primary"
+          className="bg-primary hover:bg-primary/90 text-on-primary focus-visible:ring-primary/20 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
         >
           {submitLabel}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="border-outline text-on-surface hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-xl border bg-white px-4 text-sm font-medium"
+          className="border-outline-variant text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/20 bg-surface-container-lowest inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
         >
           Cancel
         </button>
@@ -1145,7 +1164,7 @@ function RoomRateTab({
   const presets = rates.room_rate_presets;
 
   return (
-    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+    <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
           title="Room Rate Presets"
@@ -1206,7 +1225,9 @@ function RoomRateTab({
                     <tr
                       key={preset.id}
                       className={
-                        i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/40'
+                        i % 2 === 0
+                          ? 'bg-surface-container-lowest'
+                          : 'bg-surface-container-low/40'
                       }
                     >
                       <td className="text-on-surface px-4 py-3 font-medium">
@@ -1231,14 +1252,14 @@ function RoomRateTab({
                               setEditingId(preset.id);
                               setIsAdding(false);
                             }}
-                            className="border-outline text-on-surface hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-lg border bg-white px-3 text-xs font-medium"
+                            className="border-outline-variant text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/20 bg-surface-container-lowest inline-flex min-h-11 items-center rounded-xl border px-3 text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => onDelete(preset.id)}
-                            className="border-error/30 text-error hover:bg-error-container inline-flex min-h-11 items-center gap-1.5 rounded-lg border bg-white px-3 text-xs font-medium"
+                            className="border-error/30 text-error hover:bg-error-container focus-visible:ring-error/20 bg-surface-container-lowest inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Delete
@@ -1255,7 +1276,7 @@ function RoomRateTab({
 
         {/* Empty state */}
         {presets.length === 0 && !isAdding && (
-          <div className="border-outline rounded-2xl border bg-white p-8 text-center">
+          <div className="border-outline bg-surface-container-lowest rounded-2xl border p-8 text-center">
             <p className="text-on-surface text-sm font-medium">
               No room presets yet
             </p>
@@ -1498,7 +1519,7 @@ function ManualTab({
   const previewItems = items.slice(0, 5);
 
   return (
-    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+    <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
       <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
           title="Manual Quoting"
@@ -1512,7 +1533,7 @@ function ManualTab({
               setPendingImportItems([]);
               setIsAddingItem((open) => !open);
             }}
-            className="bg-primary text-on-primary hover:bg-primary/90 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold"
+            className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/20 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
           >
             <Plus className="h-4 w-4" />
             Add Price Item
@@ -1527,7 +1548,7 @@ function ManualTab({
           <button
             type="button"
             onClick={() => importInputRef.current?.click()}
-            className="border-outline-variant bg-surface text-on-surface-variant hover:border-outline hover:text-on-surface inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-medium"
+            className="border-outline-variant bg-surface text-on-surface-variant hover:border-outline hover:text-on-surface focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
           >
             <Upload className="h-4 w-4" />
             Import Excel CSV
@@ -1535,7 +1556,7 @@ function ManualTab({
           <button
             type="button"
             onClick={handleTemplateDownload}
-            className="border-outline-variant bg-surface text-on-surface-variant hover:border-outline hover:text-on-surface inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-medium"
+            className="border-outline-variant bg-surface text-on-surface-variant hover:border-outline hover:text-on-surface focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
           >
             <Download className="h-4 w-4" />
             Download Template
@@ -1543,7 +1564,7 @@ function ManualTab({
           <button
             type="button"
             onClick={handleExportCsv}
-            className="border-outline-variant bg-surface text-on-surface-variant hover:border-outline hover:text-on-surface inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-medium"
+            className="border-outline-variant bg-surface text-on-surface-variant hover:border-outline hover:text-on-surface focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
           >
             <Download className="h-4 w-4" />
             Export Excel CSV
@@ -1552,17 +1573,10 @@ function ManualTab({
       </header>
 
       <div className="space-y-4">
-        {csvError && (
-          <p
-            role="alert"
-            className="bg-error-container text-on-error-container border-error rounded-lg border px-4 py-3 text-sm"
-          >
-            {csvError}
-          </p>
-        )}
+        {csvError && <ErrorAlert>{csvError}</ErrorAlert>}
 
         {csvMessage && (
-          <p className="border-outline-variant bg-surface text-on-surface rounded-lg border px-4 py-3 text-sm">
+          <p className="border-outline-variant bg-surface text-on-surface rounded-xl border px-4 py-3 text-sm">
             {csvMessage}
           </p>
         )}
@@ -1588,7 +1602,7 @@ function ManualTab({
                     name: event.target.value,
                   }))
                 }
-                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                className={cn(formControlClassName, 'px-3')}
               />
             </div>
             <div>
@@ -1607,7 +1621,7 @@ function ManualTab({
                     unit: event.target.value,
                   }))
                 }
-                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                className={cn(formControlClassName, 'px-3')}
               >
                 {MANUAL_PRICE_BOOK_UNITS.map((unit) => (
                   <option key={unit} value={unit}>
@@ -1634,7 +1648,7 @@ function ManualTab({
                   onValueChange={(value) =>
                     setNewItem((prev) => ({ ...prev, price: value }))
                   }
-                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                  className={cn(formControlClassName, 'pr-2 pl-6 text-right')}
                 />
               </div>
             </div>
@@ -1654,14 +1668,14 @@ function ManualTab({
                     description: event.target.value,
                   }))
                 }
-                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                className={cn(formControlClassName, 'px-3')}
               />
             </div>
             <div className="flex items-end">
               <button
                 type="submit"
                 disabled={isSavingItem}
-                className="bg-primary text-on-primary hover:bg-primary/90 inline-flex h-11 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold disabled:opacity-60 md:w-auto"
+                className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/20 inline-flex h-11 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60 md:w-auto"
               >
                 {isSavingItem ? 'Saving...' : 'Save Price Item'}
               </button>
@@ -1670,7 +1684,7 @@ function ManualTab({
         )}
 
         {pendingImportItems.length > 0 && (
-          <div className="border-outline-variant rounded-xl border bg-white p-4">
+          <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-on-surface text-sm font-semibold">
                 Review {pendingImportItems.length} item
@@ -1683,7 +1697,7 @@ function ManualTab({
                     setPendingImportItems([]);
                     setCsvMessage(null);
                   }}
-                  className="border-outline text-on-surface hover:bg-surface-container-low inline-flex h-11 items-center rounded-xl border bg-white px-4 text-sm font-medium"
+                  className="border-outline-variant text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/20 bg-surface-container-lowest inline-flex h-11 items-center rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
                 >
                   Cancel
                 </button>
@@ -1691,13 +1705,13 @@ function ManualTab({
                   type="button"
                   onClick={handleConfirmImport}
                   disabled={isImporting}
-                  className="bg-primary text-on-primary hover:bg-primary/90 inline-flex h-11 items-center rounded-xl px-4 text-sm font-semibold disabled:opacity-60"
+                  className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/20 inline-flex h-11 items-center rounded-xl px-4 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
                 >
                   {isImporting ? 'Importing...' : 'Import items'}
                 </button>
               </div>
             </div>
-            <div className="border-outline-variant mt-3 overflow-x-auto rounded-lg border">
+            <div className="border-outline-variant mt-3 overflow-x-auto rounded-xl border">
               <table className="w-full min-w-[520px] text-sm">
                 <thead>
                   <tr className="border-outline-variant bg-surface-container-low border-b">
@@ -1735,7 +1749,7 @@ function ManualTab({
           </div>
         )}
 
-        <div className="border-outline-variant bg-surface-container-low/40 rounded-xl border p-4">
+        <div className="border-outline-variant bg-surface-container-low/40 rounded-2xl border p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-on-surface text-sm font-semibold">
@@ -1746,7 +1760,7 @@ function ManualTab({
                 Description.
               </p>
             </div>
-            <span className="border-outline-variant text-on-surface-variant rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold">
+            <span className="border-outline-variant text-on-surface-variant bg-surface-container-lowest rounded-lg border px-3 py-1.5 text-xs font-semibold">
               {items.length} item{items.length === 1 ? '' : 's'}
             </span>
           </div>
@@ -1869,17 +1883,20 @@ function ExteriorRatesSection({
             }
             placeholder="Surface name"
             aria-label="Custom surface name"
-            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full min-w-[8rem] rounded-lg border bg-white px-2.5 text-sm font-semibold outline-none focus:ring-2"
+            className={cn(
+              formControlClassName,
+              'min-w-[8rem] px-2.5 font-semibold'
+            )}
           />
-          <div className="border-outline bg-surface-container-low inline-flex w-fit rounded-lg border p-0.5">
+          <div className="border-outline-variant bg-surface-container-low inline-flex w-fit rounded-xl border p-0.5">
             {EXTERIOR_RATE_UNITS.map((unit) => (
               <button
                 key={unit}
                 type="button"
                 onClick={() => onCustomUpdate(custom.id, { unit })}
-                className={`min-h-11 rounded-lg px-3 text-xs font-semibold transition-colors ${
+                className={`focus-visible:ring-primary/20 min-h-11 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                   custom.unit === unit
-                    ? 'text-primary bg-white shadow-sm'
+                    ? 'text-primary bg-surface-container-lowest shadow-sm'
                     : 'text-on-surface-variant'
                 }`}
               >
@@ -1971,7 +1988,7 @@ function ExteriorRatesSection({
               key={surface}
               type="button"
               onClick={() => onSurfaceToggle(surface, true)}
-              className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-11 items-center gap-1.5 rounded-xl border border-dashed bg-white px-4 text-xs font-medium"
+              className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 focus-visible:ring-primary/20 bg-surface-container-lowest inline-flex h-11 items-center gap-1.5 rounded-xl border border-dashed px-4 text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
             >
               <Plus className="h-3.5 w-3.5" />
               Restore {EXTERIOR_SURFACE_LABELS[surface]}
@@ -2030,7 +2047,8 @@ const METHOD_DESCRIPTIONS: Record<PricingMethod, string> = {
   sqm_rate: 'Detailed estimate anchors and rates',
   day_rate: 'Labour days × daily rate',
   room_rate: 'Flat rate per room',
-  manual: 'Add service prices directly, or import/export a simple CSV price book.',
+  manual:
+    'Add service prices directly, or import/export a simple CSV price book.',
 };
 
 // ─── Main form ────────────────────────────────────────────────────────────────
@@ -2384,7 +2402,7 @@ export function PriceRatesForm({
       {/* ── Method bar ──────────────────────────────────────────────────────── */}
       <div>
         <div
-          className="border-outline-variant no-scrollbar flex gap-1 overflow-x-auto rounded-xl border bg-white p-1 shadow-sm"
+          className="border-outline-variant no-scrollbar bg-surface-container-lowest flex gap-1 overflow-x-auto rounded-xl border p-1 shadow-sm"
           role="tablist"
           aria-label="Pricing method"
         >
@@ -2399,14 +2417,14 @@ export function PriceRatesForm({
                 aria-selected={isActive}
                 type="button"
                 onClick={() => handleTabChange(m)}
-                className={`inline-flex h-11 min-w-fit flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`focus-visible:ring-primary/20 inline-flex h-11 min-w-fit flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                   isActive
                     ? 'bg-primary text-on-primary shadow-sm'
                     : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
                 }`}
-                >
-                  <MethodIcon className="h-4 w-4 shrink-0" />
-                  {PRICING_METHOD_LABELS[m]}
+              >
+                <MethodIcon className="h-4 w-4 shrink-0" />
+                {PRICING_METHOD_LABELS[m]}
                 {isStartMethod && (
                   <span
                     className={`inline-flex min-h-5 items-center rounded-full px-2 text-[10px] font-extrabold tracking-wider uppercase ${
@@ -2483,9 +2501,9 @@ export function PriceRatesForm({
                     aria-selected={isActive}
                     type="button"
                     onClick={() => setActiveScope(scope)}
-                    className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
+                    className={`focus-visible:ring-primary/20 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:outline-none ${
                       isActive
-                        ? 'text-on-surface bg-white shadow-sm'
+                        ? 'text-on-surface bg-surface-container-lowest shadow-sm'
                         : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
@@ -2545,7 +2563,7 @@ export function PriceRatesForm({
 
       {/* ── Sticky save bar ─────────────────────────────────────────────────── */}
       {activeTab !== 'manual' && (
-        <div className="border-outline-variant sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 flex items-center justify-between gap-4 rounded-2xl border bg-white/92 px-5 py-3.5 shadow-md backdrop-blur-sm md:bottom-4">
+        <div className="border-outline-variant bg-surface-container-lowest/92 sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-4 rounded-2xl border px-5 py-3.5 shadow-md backdrop-blur-sm md:bottom-4">
           <div className="flex items-center gap-2 text-xs">
             {error && (
               <span
@@ -2571,7 +2589,7 @@ export function PriceRatesForm({
           <button
             type="submit"
             disabled={isPending}
-            className="bg-primary text-on-primary hover:bg-primary/90 disabled:bg-surface-container-high disabled:text-outline disabled:hover:bg-surface-container-high inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
+            className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/20 disabled:bg-surface-container-high disabled:text-on-surface-variant disabled:hover:bg-surface-container-high inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed"
           >
             <Save className="h-4 w-4" />
             {isPending ? 'Saving…' : 'Save Rates'}

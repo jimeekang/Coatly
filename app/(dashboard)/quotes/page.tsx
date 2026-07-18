@@ -3,6 +3,7 @@ import { getQuotes } from '@/modules/quotes/application/actions';
 import { QuoteTable } from '@/modules/quotes/ui/QuoteTable';
 import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import {
   PageHeader,
   PrimaryActionLink,
@@ -23,42 +24,40 @@ export default async function QuotesPage() {
         subtitle="Save and review customer quotes from your workspace."
         action={
           quoteUsage?.reached ? (
-            <SecondaryActionLink href="/quotes/new">View Starter Limit</SecondaryActionLink>
+            <SecondaryActionLink href="/quotes/new">
+              View Starter Limit
+            </SecondaryActionLink>
           ) : (
-            <PrimaryActionLink href="/quotes/new">+ New Quote</PrimaryActionLink>
+            <PrimaryActionLink href="/quotes/new">
+              + New Quote
+            </PrimaryActionLink>
           )
         }
       />
 
-      {quoteUsage && quoteUsage.limit !== null && (
-        quoteUsage.reached ? (
+      {quoteUsage &&
+        quoteUsage.limit !== null &&
+        (quoteUsage.reached ? (
           <UpgradePrompt
             badge="Starter Limit Reached"
             title={`You've used all ${quoteUsage.limit} active Starter quote slots this month`}
             description="Starter includes up to 10 active draft, sent, or approved quotes each month. Upgrade to Pro to keep creating quotes without a monthly cap."
           />
         ) : (
-          <div className="rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3 sm:px-5 sm:py-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-              Starter Usage
+          <div className="border-outline-variant bg-surface-container-low rounded-xl border px-4 py-3 sm:px-5 sm:py-4">
+            <SectionLabel>Starter Usage</SectionLabel>
+            <p className="text-on-surface mt-1 text-base font-semibold">
+              {quoteUsage.remaining} of {quoteUsage.limit} active quote slots
+              remaining this month
             </p>
-            <p className="mt-1 text-base font-semibold text-on-surface">
-              {quoteUsage.remaining} of {quoteUsage.limit} active quote slots remaining this
-              month
-            </p>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Active quotes include draft, sent, and approved quotes created this Sydney
-              month.
+            <p className="text-on-surface-variant mt-1 text-sm">
+              Active quotes include draft, sent, and approved quotes created
+              this Sydney month.
             </p>
           </div>
-        )
-      )}
+        ))}
 
-      {error ? (
-        <ErrorAlert>{error}</ErrorAlert>
-      ) : (
-        <QuoteTable quotes={data} />
-      )}
+      {error ? <ErrorAlert>{error}</ErrorAlert> : <QuoteTable quotes={data} />}
     </div>
   );
 }

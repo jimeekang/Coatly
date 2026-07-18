@@ -91,11 +91,13 @@ function Toast({ toast }: { toast: ToastItem }) {
       role="alert"
     >
       <Icon className={['mt-0.5 h-5 w-5 shrink-0', iconClass].join(' ')} />
-      <p className="flex-1 text-sm font-medium text-on-surface">{toast.message}</p>
+      <p className="text-on-surface flex-1 text-sm font-medium">
+        {toast.message}
+      </p>
       <button
         type="button"
         onClick={() => remove(toast.id)}
-        className="shrink-0 p-0.5 text-on-surface-variant transition-colors hover:text-on-surface"
+        className="text-on-surface-variant hover:bg-surface-container-low/70 hover:text-on-surface focus-visible:ring-primary/30 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
         aria-label="Dismiss"
       >
         <X className="h-4 w-4" />
@@ -113,9 +115,9 @@ export function ToastProvider() {
       aria-live="polite"
       aria-atomic="false"
       className={[
-        'pointer-events-none fixed bottom-24 left-0 right-0 z-[100]',
+        'pointer-events-none fixed right-0 bottom-24 left-0 z-[100]',
         'flex flex-col items-center gap-2 px-4',
-        'sm:bottom-6 sm:right-6 sm:left-auto sm:items-end',
+        'sm:right-6 sm:bottom-6 sm:left-auto sm:items-end',
       ].join(' ')}
     >
       {toasts.map((toast) => (

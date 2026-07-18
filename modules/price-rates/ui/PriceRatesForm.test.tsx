@@ -73,11 +73,80 @@ describe('PriceRatesForm pricing setup', () => {
     expect(
       screen.getByRole('button', { name: /Download Template/i })
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Room Price Library setup/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Room Price Library setup/i)
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/Detailed setup/i)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /Save Rates/i })
     ).not.toBeInTheDocument();
+  });
+
+  it('uses canonical controls, actions, and card radii across pricing modes', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TestPriceRatesForm
+        defaultRates={buildDefaultRateSettings()}
+        manualItems={[]}
+      />
+    );
+
+    const manualTab = screen.getByRole('tab', { name: /Manual/i });
+    expect(manualTab).toHaveClass(
+      'h-11',
+      'rounded-xl',
+      'focus-visible:ring-primary/20'
+    );
+
+    const addPriceItem = screen.getByRole('button', {
+      name: /Add Price Item/i,
+    });
+    expect(addPriceItem).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-primary/20'
+    );
+    await user.click(addPriceItem);
+
+    for (const control of [
+      screen.getByLabelText('Service / Item'),
+      screen.getByLabelText('Unit'),
+      screen.getByLabelText('Price'),
+      screen.getByLabelText('Customer Description'),
+    ]) {
+      expect(control).toHaveClass(
+        'h-12',
+        'text-base',
+        'rounded-xl',
+        'border-outline-variant',
+        'focus:border-primary',
+        'focus:ring-primary/20'
+      );
+    }
+
+    await user.click(screen.getByRole('tab', { name: /Day Rate/i }));
+    expect(screen.getByLabelText('Daily labour rate')).toHaveClass(
+      'h-12',
+      'text-base',
+      'rounded-xl',
+      'border-outline-variant',
+      'focus:border-primary'
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Day Rate' }).closest('section')
+    ).toHaveClass('rounded-2xl');
+
+    await user.click(screen.getByRole('tab', { name: /Detailed Estimate/i }));
+    expect(
+      screen.getAllByLabelText('Walls Refresh (1 coat) rate')[0]
+    ).toHaveClass(
+      'h-12',
+      'text-base',
+      'rounded-xl',
+      'border-outline-variant',
+      'focus:border-primary'
+    );
   });
 
   it('shows advanced setup warnings only after opening an advanced rate tab', async () => {
@@ -90,7 +159,12 @@ describe('PriceRatesForm pricing setup', () => {
 
     expect(screen.getByText(/Room Price Library setup/i)).toBeInTheDocument();
     expect(screen.getByText(/Detailed setup/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Save Rates/i })).toBeInTheDocument();
+    const saveButton = screen.getByRole('button', { name: /Save Rates/i });
+    expect(saveButton).toBeInTheDocument();
+    expect(saveButton.parentElement).toHaveClass(
+      'z-30',
+      'bg-surface-container-lowest/92'
+    );
   });
 
   it('lets painters configure whole-property quick presets with bed bath and sqm anchors', async () => {
@@ -110,22 +184,22 @@ describe('PriceRatesForm pricing setup', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByLabelText('Bedrooms for 2 Bed 2 Bath Apartment')
-    ).toHaveValue(2);
+    ).toHaveValue('2');
     expect(
       screen.getByLabelText('Bathrooms for 2 Bed 2 Bath Apartment')
-    ).toHaveValue(2);
+    ).toHaveValue('2');
     expect(screen.getByLabelText('Sqm for 2 Bed 2 Bath Apartment')).toHaveValue(
-      89
+      '89'
     );
     expect(
       screen.getByLabelText('Wall price share for 2 Bed 2 Bath Apartment')
-    ).toHaveValue(55);
+    ).toHaveValue('55');
     expect(
       screen.getByLabelText('Ceiling price share for 2 Bed 2 Bath Apartment')
-    ).toHaveValue(25);
+    ).toHaveValue('25');
     expect(
       screen.getByLabelText('Trim price share for 2 Bed 2 Bath Apartment')
-    ).toHaveValue(20);
+    ).toHaveValue('20');
     expect(screen.getByText('100% total')).toBeInTheDocument();
     expect(
       screen.getByText('How this price is calculated')
@@ -150,7 +224,7 @@ describe('PriceRatesForm pricing setup', () => {
     );
 
     expect(screen.getByLabelText('Sqm for 2 Bed 2 Bath Apartment')).toHaveValue(
-      94
+      '94'
     );
     expect(
       screen.getByLabelText('Storeys for 2 Bed 2 Bath Apartment')
@@ -345,8 +419,8 @@ describe('PriceRatesForm pricing setup', () => {
     await user.type(waterInput, '420.00');
     await user.tab();
 
-    expect(oilInput).toHaveValue(200);
-    expect(waterInput).toHaveValue(420);
+    expect(oilInput).toHaveValue('200.00');
+    expect(waterInput).toHaveValue('420.00');
   });
 
   it('lets painters set measured defaults for Room Price Library sizes', async () => {
@@ -378,9 +452,9 @@ describe('PriceRatesForm pricing setup', () => {
     await user.type(trimLength, '18');
     await user.tab();
 
-    expect(wallArea).toHaveValue(40);
-    expect(ceilingArea).toHaveValue(12);
-    expect(trimLength).toHaveValue(18);
+    expect(wallArea).toHaveValue('40');
+    expect(ceilingArea).toHaveValue('12');
+    expect(trimLength).toHaveValue('18');
   });
 
   it('shows quick and advanced setup warnings for zero or missing required rates', async () => {

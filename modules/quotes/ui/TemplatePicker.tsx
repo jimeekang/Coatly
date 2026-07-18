@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { deleteQuoteTemplate } from '@/modules/quotes/application/template-actions';
-import type { QuoteTemplate, QuoteTemplatePayload } from '@/modules/quotes/application/template-actions';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import type {
+  QuoteTemplate,
+  QuoteTemplatePayload,
+} from '@/modules/quotes/application/template-actions';
 
 interface TemplatePickerProps {
   templates: QuoteTemplate[];
@@ -17,9 +21,10 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
 
   if (templates.length === 0) {
     return (
-      <div className="mb-6 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3">
-        <p className="text-sm text-on-surface-variant">
-          No saved templates yet. After submitting a quote, you can save it as a template to reuse next time.
+      <div className="border-outline-variant bg-surface-container-lowest mb-6 rounded-2xl border px-4 py-3">
+        <p className="text-on-surface-variant text-sm">
+          No saved templates yet. After submitting a quote, you can save it as a
+          template to reuse next time.
         </p>
       </div>
     );
@@ -52,7 +57,7 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-12 w-full items-center justify-between rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-sm font-medium text-on-surface transition-colors active:bg-surface-container"
+        className="border-outline-variant bg-surface-container-lowest text-on-surface active:bg-surface-container focus-visible:ring-primary/30 flex h-12 w-full items-center justify-between rounded-xl border px-4 text-base font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         <span>Start from a saved template</span>
         <svg
@@ -72,11 +77,11 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
       </button>
 
       {open && (
-        <div className="mt-2 rounded-xl border border-outline-variant bg-surface-container-lowest shadow-sm">
+        <div className="border-outline-variant bg-surface-container-lowest mt-2 rounded-2xl border shadow-sm">
           {deleteError && (
-            <p className="px-4 pt-3 text-sm text-error">{deleteError}</p>
+            <ErrorAlert className="m-3">{deleteError}</ErrorAlert>
           )}
-          <ul className="divide-y divide-outline-variant">
+          <ul className="divide-outline-variant divide-y">
             {templates.map((template) => (
               <li
                 key={template.id}
@@ -85,7 +90,7 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
                 <button
                   type="button"
                   onClick={() => handleApply(template)}
-                  className="flex-1 text-left text-sm font-medium text-on-surface hover:text-primary"
+                  className="text-on-surface hover:text-primary focus-visible:ring-primary/30 min-h-11 flex-1 rounded-xl px-2 text-left text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
                 >
                   {template.name}
                 </button>
@@ -95,14 +100,14 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
                       type="button"
                       onClick={() => handleDeleteConfirm(template.id)}
                       disabled={isPending}
-                      className="min-h-11 rounded-lg bg-error px-3 text-xs font-medium text-on-error transition-colors disabled:opacity-50"
+                      className="bg-error text-on-error focus-visible:ring-error/30 min-h-11 rounded-xl px-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
                     >
                       Delete
                     </button>
                     <button
                       type="button"
                       onClick={handleDeleteCancel}
-                      className="min-h-11 rounded-lg border border-outline-variant px-3 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container"
+                      className="border-outline-variant text-on-surface-variant hover:bg-surface-container focus-visible:ring-primary/30 min-h-11 rounded-xl border px-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
                       Cancel
                     </button>
@@ -113,7 +118,7 @@ export function TemplatePicker({ templates, onApply }: TemplatePickerProps) {
                     onClick={() => handleDeleteRequest(template.id)}
                     disabled={isPending}
                     aria-label={`Delete template ${template.name}`}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container hover:text-error disabled:opacity-50"
+                    className="text-on-surface-variant hover:bg-surface-container hover:text-error focus-visible:ring-error/30 flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"

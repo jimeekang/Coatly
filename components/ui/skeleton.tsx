@@ -2,10 +2,15 @@ import { type HTMLAttributes } from 'react';
 
 // ── Base ─────────────────────────────────────────────────────────────
 
-export function Skeleton({ className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
+export function Skeleton({
+  className = '',
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={['animate-pulse rounded-md bg-outline/60', className].filter(Boolean).join(' ')}
+      className={['bg-outline/60 animate-pulse rounded-md', className]
+        .filter(Boolean)
+        .join(' ')}
       aria-hidden="true"
       {...props}
     />
@@ -23,11 +28,16 @@ export function SkeletonText({
   className?: string;
 }) {
   return (
-    <div className={['flex flex-col gap-2', className].filter(Boolean).join(' ')}>
+    <div
+      className={['flex flex-col gap-2', className].filter(Boolean).join(' ')}
+    >
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton
           key={i}
-          className={['h-4', i === lines - 1 && lines > 1 ? 'w-3/4' : 'w-full'].join(' ')}
+          className={[
+            'h-4',
+            i === lines - 1 && lines > 1 ? 'w-3/4' : 'w-full',
+          ].join(' ')}
         />
       ))}
     </div>
@@ -37,7 +47,7 @@ export function SkeletonText({
 /** 통계 카드 1개 */
 export function SkeletonStat() {
   return (
-    <div className="rounded-lg bg-surface-container-low p-5">
+    <div className="bg-surface-container-low rounded-2xl p-5">
       <Skeleton className="mb-2 h-3 w-24" />
       <Skeleton className="mb-2 h-7 w-16" />
       <Skeleton className="h-3 w-32" />
@@ -48,7 +58,7 @@ export function SkeletonStat() {
 /** 카드 블록 */
 export function SkeletonCard({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="rounded-xl border border-outline bg-white p-4">
+    <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
       <Skeleton className="mb-4 h-5 w-40" />
       <div className="flex flex-col gap-3">
         {Array.from({ length: rows }).map((_, i) => (
@@ -76,11 +86,17 @@ export function SkeletonTableRow({ cols = 5 }: { cols?: number }) {
 }
 
 /** 전체 테이블 스켈레톤 */
-export function SkeletonTable({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
+export function SkeletonTable({
+  rows = 5,
+  cols = 5,
+}: {
+  rows?: number;
+  cols?: number;
+}) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-outline bg-white">
+    <div className="border-outline-variant bg-surface-container-lowest overflow-x-auto rounded-2xl border">
       <table className="w-full text-sm">
-        <thead className="border-b border-outline bg-surface-container-low">
+        <thead className="border-outline-variant bg-surface-container-low border-b">
           <tr>
             {Array.from({ length: cols }).map((_, i) => (
               <th key={i} className="px-5 py-3">
@@ -89,7 +105,7 @@ export function SkeletonTable({ rows = 5, cols = 5 }: { rows?: number; cols?: nu
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-outline">
+        <tbody className="divide-outline-variant divide-y">
           {Array.from({ length: rows }).map((_, i) => (
             <SkeletonTableRow key={i} cols={cols} />
           ))}
@@ -104,9 +120,12 @@ export function SkeletonListCard({ count = 5 }: { count?: number }) {
   return (
     <ul className="flex flex-col gap-3">
       {Array.from({ length: count }).map((_, i) => (
-        <li key={i} className="rounded-xl border border-outline bg-white px-4 py-4">
+        <li
+          key={i}
+          className="border-outline-variant bg-surface-container-lowest rounded-2xl border px-4 py-4"
+        >
           <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-2 flex-1">
+            <div className="flex flex-1 flex-col gap-2">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-48" />
               <Skeleton className="mt-1 h-5 w-16 rounded" />
@@ -147,8 +166,8 @@ export function ListPageSkeleton({ cols = 5 }: { cols?: number }) {
     <div className="flex flex-col gap-4">
       {/* 검색 + 필터 영역 */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_200px]">
-        <Skeleton className="h-12 w-full rounded-lg" />
-        <Skeleton className="h-12 w-full rounded-lg" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
       </div>
 
       {/* 모바일 리스트 */}
@@ -170,7 +189,7 @@ export function DetailPageSkeleton() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-10 w-24 rounded-xl" />
+        <Skeleton className="h-11 w-24 rounded-xl" />
       </div>
       <SkeletonCard rows={5} />
       <SkeletonCard rows={3} />

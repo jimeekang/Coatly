@@ -42,14 +42,15 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 vi.mock('@/modules/billing/application/access', () => ({
-  getActiveSubscriptionRequiredMessage: getActiveSubscriptionRequiredMessageMock,
+  getActiveSubscriptionRequiredMessage:
+    getActiveSubscriptionRequiredMessageMock,
   getSubscriptionSnapshotForUser: getSubscriptionSnapshotForUserMock,
 }));
 
 vi.mock('@/modules/settings/infrastructure/businesses', async () => {
-  const actual = await vi.importActual<typeof import('@/modules/settings/infrastructure/businesses')>(
-    '@/modules/settings/infrastructure/businesses'
-  );
+  const actual = await vi.importActual<
+    typeof import('@/modules/settings/infrastructure/businesses')
+  >('@/modules/settings/infrastructure/businesses');
 
   return {
     ...actual,
@@ -78,6 +79,7 @@ vi.mock('@react-pdf/renderer', async () => {
 
 import {
   createInvoice,
+  getInvoice,
   getInvoiceDraftFromQuote,
   markInvoiceAsPaid,
   sendInvoice,
@@ -141,6 +143,37 @@ const DRAFT_INVOICE_ROW = {
     },
   ],
 };
+
+describe('getInvoice', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns a true missing invoice without converting it into a query error', async () => {
+    const invoiceQuery = createFilterQuery({ data: null, error: null });
+
+    createServerClientMock.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: { id: 'user-1', email: 'owner@example.com' } },
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'invoices') {
+          return { select: vi.fn().mockReturnValue(invoiceQuery) };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    await expect(getInvoice('missing-invoice')).resolves.toEqual({
+      data: null,
+      error: null,
+    });
+    expect(invoiceQuery.maybeSingle).toHaveBeenCalledOnce();
+  });
+});
 
 describe('createInvoice', () => {
   beforeEach(() => {
@@ -491,7 +524,11 @@ describe('createInvoice', () => {
     });
 
     const quotesQuery = createFilterQuery({
-      data: { id: 'quote-1', customer_id: 'different-customer', status: 'approved' },
+      data: {
+        id: 'quote-1',
+        customer_id: 'different-customer',
+        status: 'approved',
+      },
       error: null,
     });
 

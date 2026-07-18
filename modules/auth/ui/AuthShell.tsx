@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { BrandLogo } from '@/components/branding/BrandLogo';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 
 type AuthShellProps = {
   eyebrow?: string;
@@ -13,7 +14,7 @@ type AuthShellProps = {
 };
 
 const cardClassName =
-  'w-full rounded-[28px] border border-white/80 bg-white/92 p-6 shadow-[0_24px_60px_rgba(22,42,42,0.08)] backdrop-blur sm:p-8';
+  'w-full rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-lg sm:p-8';
 
 export function AuthShell({
   eyebrow = 'Painter workspace',
@@ -25,32 +26,30 @@ export function AuthShell({
   sideDescription = 'Keep quotes, invoices, and customer follow-up moving without losing the grounded, professional feel your clients expect.',
   sideHighlights = [
     'Mobile-first forms sized for job sites and one-handed use.',
-    'Warm, professional documents that match the Coatly brand language.',
-    'A consistent surface system so every screen feels like the same app.',
+    'Professional quotes and invoices ready to send to your clients.',
+    'Keep every job organised from the first quote to final payment.',
   ],
 }: AuthShellProps) {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(139,94,60,0.12),_transparent_28%),linear-gradient(180deg,_#fcf9f4_0%,_#f2eee9_45%,_#ebe6df_100%)] px-4 py-6 sm:px-6 sm:py-8">
+    <main className="bg-surface min-h-screen px-4 py-6 sm:px-6 sm:py-8">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center">
         <div className="grid w-full items-center gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,430px)] lg:gap-10">
-          <section className="hidden lg:block rounded-[32px] border border-white/70 bg-white/50 p-6 shadow-[0_24px_60px_rgba(22,42,42,0.06)] backdrop-blur sm:p-8 lg:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary/80">
-              {eyebrow}
-            </p>
+          <section className="border-outline-variant bg-surface-container-low hidden rounded-2xl border p-6 shadow-sm sm:p-8 lg:block lg:p-10">
+            <SectionLabel className="text-primary">{eyebrow}</SectionLabel>
             <div className="mt-4">
               <BrandLogo width={220} height={50} priority />
             </div>
-            <h1 className="mt-8 max-w-xl text-4xl font-semibold leading-tight text-on-surface sm:text-[44px]">
+            <h1 className="text-on-surface mt-8 max-w-xl text-4xl leading-tight font-semibold">
               {sideTitle}
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-on-surface-variant sm:text-lg">
+            <p className="text-on-surface-variant mt-4 max-w-2xl text-base leading-7 sm:text-lg">
               {sideDescription}
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
               {sideHighlights.map((highlight) => (
                 <div
                   key={highlight}
-                  className="rounded-2xl border border-outline/70 bg-white/80 px-4 py-4 text-sm leading-6 text-on-surface shadow-sm"
+                  className="border-outline-variant bg-surface-container-lowest text-on-surface rounded-2xl border px-4 py-4 text-sm leading-6 shadow-sm"
                 >
                   {highlight}
                 </div>
@@ -64,13 +63,11 @@ export function AuthShell({
                 <div className="mb-5 lg:hidden">
                   <BrandLogo width={176} height={40} priority />
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/70">
-                  {eyebrow}
-                </p>
-                <h2 className="mt-3 text-[30px] font-semibold leading-tight text-on-surface sm:text-[34px]">
+                <SectionLabel className="text-primary">{eyebrow}</SectionLabel>
+                <h2 className="text-on-surface mt-3 text-2xl leading-tight font-semibold sm:text-3xl">
                   {title}
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
+                <p className="text-on-surface-variant mt-3 text-sm leading-6 sm:text-base">
                   {description}
                 </p>
               </div>
@@ -79,7 +76,9 @@ export function AuthShell({
             </div>
 
             {footer ? (
-              <div className="mt-5 text-center text-sm leading-6 text-on-surface-variant">{footer}</div>
+              <div className="text-on-surface-variant mt-5 text-center text-sm leading-6">
+                {footer}
+              </div>
             ) : null}
           </section>
         </div>

@@ -5,9 +5,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState, useTransition } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { CheckCircle2, ImagePlus, Loader2, Upload } from 'lucide-react';
+import {
+  formControlClassName,
+  formLabelClassName,
+  formTextareaClassName,
+} from '@/components/forms/FormField';
 import { saveBusinessProfile } from '@/modules/settings/application/business-actions';
 import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { normalizeAbn } from '@/lib/abn-lookup';
+import { cn } from '@/lib/utils';
 import { useAbnLookup } from '@/hooks/useAbnLookup';
 import type { BusinessFormValues } from '@/modules/settings/domain/businesses';
 import {
@@ -30,14 +37,24 @@ const AU_STATES = [
   'WA',
 ] as const;
 
-const inputBase =
-  'w-full rounded-xl border border-outline bg-white px-4 text-sm text-on-surface transition-colors focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50';
-
-function inputClass(hasError: boolean, extra = 'h-12') {
-  return `${inputBase} ${extra} ${hasError ? 'border-error' : ''}`;
+function inputClass(hasError: boolean, extra?: string) {
+  return cn(
+    formControlClassName,
+    'disabled:opacity-50',
+    hasError && 'border-error',
+    extra
+  );
 }
 
-const labelClass = 'mb-1.5 block text-sm font-medium text-on-surface';
+function textareaClass(hasError: boolean) {
+  return cn(
+    formTextareaClassName,
+    'min-h-[132px] disabled:opacity-50',
+    hasError && 'border-error'
+  );
+}
+
+const labelClass = formLabelClassName;
 const errorClass = 'mt-1.5 text-xs text-error';
 
 function isNextNavigationSignal(error: unknown) {
@@ -246,14 +263,9 @@ export default function BusinessProfileForm({
   }
 
   return (
-    <div className="border-outline rounded-3xl border bg-white p-5 md:p-6">
+    <div className="border-outline bg-surface-container-lowest rounded-2xl border p-5 md:p-6">
       {errors.root?.message && (
-        <div
-          role="alert"
-          className="border-error bg-error-container text-on-error-container mb-5 rounded-xl border px-4 py-3 text-sm"
-        >
-          {errors.root.message}
-        </div>
+        <ErrorAlert className="mb-5">{errors.root.message}</ErrorAlert>
       )}
 
       {successMessage && (
@@ -462,10 +474,7 @@ export default function BusinessProfileForm({
               rows={5}
               disabled={isPending}
               placeholder="Example: Payment due within 7 days from invoice date."
-              className={inputClass(
-                !!errors.paymentTerms,
-                'min-h-[132px] py-3'
-              )}
+              className={textareaClass(!!errors.paymentTerms)}
               {...register('paymentTerms')}
             />
             {errors.paymentTerms && (
@@ -484,7 +493,7 @@ export default function BusinessProfileForm({
               placeholder={
                 'Example: Account Name: Coatly Pty Ltd\nBSB: 123-456\nAccount Number: 12345678'
               }
-              className={inputClass(!!errors.bankDetails, 'min-h-[132px] py-3')}
+              className={textareaClass(!!errors.bankDetails)}
               {...register('bankDetails')}
             />
             {errors.bankDetails && (
@@ -511,7 +520,7 @@ export default function BusinessProfileForm({
 
             <label
               htmlFor="logo-upload"
-              className={`border-outline text-on-surface hover:bg-surface-container-low inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-semibold transition-colors ${
+              className={`border-outline text-on-surface hover:bg-surface-container-low focus-within:ring-primary/30 bg-surface-container-lowest inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors focus-within:ring-2 focus-within:outline-none ${
                 isPending || isUploadingLogo
                   ? 'pointer-events-none opacity-60'
                   : ''
@@ -538,7 +547,7 @@ export default function BusinessProfileForm({
           <input type="hidden" {...register('logo_url')} />
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="border-outline flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border bg-white">
+            <div className="border-outline bg-surface-container-lowest flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border">
               {logoPreviewUrl ? (
                 <img
                   src={logoPreviewUrl}
@@ -573,7 +582,7 @@ export default function BusinessProfileForm({
                       shouldValidate: true,
                     });
                   }}
-                  className="text-primary hover:text-primary/90 text-xs font-semibold transition-colors"
+                  className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   Remove logo
                 </button>
@@ -591,7 +600,7 @@ export default function BusinessProfileForm({
         <button
           type="submit"
           disabled={isPending || isUploadingLogo}
-          className="bg-primary hover:bg-primary/90 focus:ring-primary-container flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-on-primary transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
+          className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
         >
           {isPending && (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -23,7 +29,17 @@ import {
   type ScheduleEvent,
   type ScheduleEventInput,
 } from '@/modules/schedule/application/actions';
+import { Modal } from '@/components/ui/modal';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useToast } from '@/components/ui/toast';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import {
+  formControlClassName,
+  formTextareaClassName,
+} from '@/components/forms/FormField';
+import { JOB_STATUS_TONE } from '@/lib/constants/status-colors';
+import { cn } from '@/lib/utils';
 import type { JobStatus } from '@/modules/jobs/domain/jobs';
 
 export type CalendarJob = {
@@ -94,22 +110,22 @@ type JobStatusLabels = Record<JobStatus, string>;
 // schedule UI never imports another module's runtime code (DDD boundary).
 type UpdateJobScheduleAction = (
   id: string,
-  input: { startDate: string; endDate: string },
+  input: { startDate: string; endDate: string }
 ) => Promise<{ error: string | null }>;
 
 type AddJobScheduleDayAction = (
   id: string,
-  input: { date: string },
+  input: { date: string }
 ) => Promise<{ error: string | null }>;
 
 type DeleteJobScheduleDayAction = (
   id: string,
-  input: { date: string },
+  input: { date: string }
 ) => Promise<{ error: string | null }>;
 
 type UpdateJobScheduleDayAction = (
   id: string,
-  input: { fromDate: string; toDate: string },
+  input: { fromDate: string; toDate: string }
 ) => Promise<{ error: string | null }>;
 
 function isViewMode(value: string | undefined): value is ViewMode {
@@ -117,7 +133,12 @@ function isViewMode(value: string | undefined): value is ViewMode {
 }
 
 function isSourceFilter(value: string | undefined): value is SourceFilter {
-  return value === 'all' || value === 'jobs' || value === 'schedule' || value === 'google';
+  return (
+    value === 'all' ||
+    value === 'jobs' ||
+    value === 'schedule' ||
+    value === 'google'
+  );
 }
 
 function isStatusFilter(value: string | undefined): value is StatusFilter {
@@ -156,18 +177,16 @@ const SYDNEY_TIME_FORMATTER = new Intl.DateTimeFormat('en-AU', {
   hour12: true,
 });
 
-const STATUS_BADGE: Record<JobStatus, string> = {
-  scheduled: 'border-primary/20 bg-primary/10 text-primary',
-  in_progress: 'border-warning/30 bg-warning-container text-warning',
-  completed: 'border-success/30 bg-success-container text-success',
-  cancelled: 'border-error/30 bg-error-container text-error',
-};
-
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const TABLET_AGENDA_VIEW_QUERY = '(max-width: 1023px)';
 
-function subscribeToTabletAgendaViewport(onStoreChange: () => void): () => void {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+function subscribeToTabletAgendaViewport(
+  onStoreChange: () => void
+): () => void {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.matchMedia !== 'function'
+  ) {
     return () => {};
   }
 
@@ -182,7 +201,10 @@ function subscribeToTabletAgendaViewport(onStoreChange: () => void): () => void 
 }
 
 function getTabletAgendaViewportSnapshot(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.matchMedia !== 'function'
+  ) {
     return false;
   }
 
@@ -197,7 +219,7 @@ function useTabletAgendaViewport(): boolean {
   return useSyncExternalStore(
     subscribeToTabletAgendaViewport,
     getTabletAgendaViewportSnapshot,
-    getServerScheduleViewportSnapshot,
+    getServerScheduleViewportSnapshot
   );
 }
 
@@ -206,12 +228,22 @@ function ymd(year: number, month: number, day: number): string {
 }
 
 function addDays(dateValue: string, days: number): string {
-  const [year, month, day] = dateValue.split('-').map(Number) as [number, number, number];
-  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+  const [year, month, day] = dateValue.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
 }
 
 function parseYmdUtc(date: string): Date {
-  const [year, month, day] = date.split('-').map(Number) as [number, number, number];
+  const [year, month, day] = date.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
   return new Date(Date.UTC(year, month - 1, day));
 }
 
@@ -232,7 +264,9 @@ function getDateRange(start: string, end: string): string[] {
 }
 
 function sortUniqueDates(dates: string[]): string[] {
-  return [...new Set(dates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort();
+  return [
+    ...new Set(dates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))),
+  ].sort();
 }
 
 function formatDate(date: string): string {
@@ -240,7 +274,9 @@ function formatDate(date: string): string {
 }
 
 function formatDateRange(start: string, end: string): string {
-  return start === end ? formatDate(start) : `${formatDate(start)} - ${formatDate(end)}`;
+  return start === end
+    ? formatDate(start)
+    : `${formatDate(start)} - ${formatDate(end)}`;
 }
 
 function isContinuousDateRange(dates: string[]): boolean {
@@ -256,7 +292,10 @@ function isContinuousDateRange(dates: string[]): boolean {
   return true;
 }
 
-function describeScheduleDates(dates: string[]): { dateLabel: string; countLabel: string } {
+function describeScheduleDates(dates: string[]): {
+  dateLabel: string;
+  countLabel: string;
+} {
   const sorted = sortUniqueDates(dates);
   const count = sorted.length;
   const countLabel = `${count} scheduled day${count === 1 ? '' : 's'}`;
@@ -327,12 +366,14 @@ function getSourceFilterLabel(source: SourceFilter): string {
 
 function getStatusFilterLabel(
   status: StatusFilter,
-  jobStatusLabels: JobStatusLabels,
+  jobStatusLabels: JobStatusLabels
 ): string {
   return status === 'all' ? 'All job status' : jobStatusLabels[status];
 }
 
-function googleEventRange(ev: CalendarGoogleEvent): { start: string; end: string } | null {
+function googleEventRange(
+  ev: CalendarGoogleEvent
+): { start: string; end: string } | null {
   if (ev.isAllDay && ev.startDate) {
     let end = ev.endDate ?? ev.startDate;
     end = addDays(end, -1);
@@ -352,12 +393,19 @@ function buildUnifiedEvents(
   jobs: CalendarJob[],
   googleEvents: CalendarGoogleEvent[],
   nativeEvents: ScheduleEvent[],
-  jobStatusLabels: JobStatusLabels,
+  jobStatusLabels: JobStatusLabels
 ): UnifiedEvent[] {
   const jobEvents = jobs.map((job): UnifiedEvent => {
-    const dates = sortUniqueDates(job.scheduleDates.length > 0 ? job.scheduleDates : [
-      ...getDateRange(job.startDate ?? job.scheduledDate, job.endDate ?? job.startDate ?? job.scheduledDate),
-    ]);
+    const dates = sortUniqueDates(
+      job.scheduleDates.length > 0
+        ? job.scheduleDates
+        : [
+            ...getDateRange(
+              job.startDate ?? job.scheduledDate,
+              job.endDate ?? job.startDate ?? job.scheduledDate
+            ),
+          ]
+    );
     const start = dates[0] ?? job.startDate ?? job.scheduledDate;
     const end = dates[dates.length - 1] ?? job.endDate ?? start;
     return {
@@ -365,7 +413,9 @@ function buildUnifiedEvents(
       job,
       id: `job-${job.id}`,
       title: job.customerName,
-      subtitle: [job.title, job.quoteNumber, job.address].filter(Boolean).join(' '),
+      subtitle: [job.title, job.quoteNumber, job.address]
+        .filter(Boolean)
+        .join(' '),
       start,
       end,
       searchable: [
@@ -394,21 +444,29 @@ function buildUnifiedEvents(
         subtitle: event.location ?? 'Google Calendar',
         start: range.start,
         end: range.end,
-        searchable: [event.title, event.location, 'google calendar'].filter(Boolean).join(' ').toLowerCase(),
+        searchable: [event.title, event.location, 'google calendar']
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase(),
       },
     ];
   });
 
-  const scheduleEvents = nativeEvents.map((event): UnifiedEvent => ({
-    kind: 'native',
-    event,
-    id: `schedule-${event.id}`,
-    title: event.title,
-    subtitle: event.location ?? event.notes ?? 'My Schedule',
-    start: event.date,
-    end: event.date,
-    searchable: [event.title, event.location, event.notes, 'my schedule'].filter(Boolean).join(' ').toLowerCase(),
-  }));
+  const scheduleEvents = nativeEvents.map(
+    (event): UnifiedEvent => ({
+      kind: 'native',
+      event,
+      id: `schedule-${event.id}`,
+      title: event.title,
+      subtitle: event.location ?? event.notes ?? 'My Schedule',
+      start: event.date,
+      end: event.date,
+      searchable: [event.title, event.location, event.notes, 'my schedule']
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase(),
+    })
+  );
 
   return [...jobEvents, ...scheduleEvents, ...calendarEvents].sort((a, b) => {
     if (a.start !== b.start) return a.start.localeCompare(b.start);
@@ -429,7 +487,7 @@ function buildEventMap(events: UnifiedEvent[]): Map<string, DayEvent[]> {
         ? sortUniqueDates(
             ev.job.scheduleDates.length > 0
               ? ev.job.scheduleDates
-              : getDateRange(ev.start, ev.end),
+              : getDateRange(ev.start, ev.end)
           )
         : getDateRange(ev.start, ev.end);
 
@@ -491,7 +549,7 @@ function EventModal({
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [form, setForm] = useState<EventFormState>(
-    editing ? eventToForm(editing) : emptyForm(defaultDate),
+    editing ? eventToForm(editing) : emptyForm(defaultDate)
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -534,7 +592,7 @@ function EventModal({
         if (isNextNavigationSignal(actionError)) throw actionError;
         const message = getActionErrorMessage(
           actionError,
-          'Event could not be saved. Please try again.',
+          'Event could not be saved. Please try again.'
         );
         setError(message);
         toast.error(message);
@@ -559,7 +617,7 @@ function EventModal({
         if (isNextNavigationSignal(actionError)) throw actionError;
         const message = getActionErrorMessage(
           actionError,
-          'Event could not be deleted. Please try again.',
+          'Event could not be deleted. Please try again.'
         );
         setError(message);
         toast.error(message);
@@ -568,112 +626,116 @@ function EventModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      open
+      onClose={onClose}
+      title={editing ? 'Edit Event' : 'Add Event'}
+      size="md"
     >
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-2xl">
-        <ModalHeader title={editing ? 'Edit Event' : 'Add Event'} onClose={onClose} />
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Field label="Title">
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
-              placeholder="e.g. Site inspection"
-              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-              autoFocus
-            />
-          </Field>
-          <Field label="Date">
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm((c) => ({ ...c, date: e.target.value }))}
-              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-            />
-          </Field>
-          <label className="flex min-h-11 items-center gap-3 text-sm font-medium text-on-surface">
-            <input
-              type="checkbox"
-              checked={form.isAllDay}
-              onChange={(e) => setForm((c) => ({ ...c, isAllDay: e.target.checked }))}
-              className="h-5 w-5 rounded border-outline accent-primary"
-            />
-            All day
-          </label>
-          {!form.isAllDay && (
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Start time">
-                <input
-                  type="time"
-                  value={form.startTime}
-                  onChange={(e) => setForm((c) => ({ ...c, startTime: e.target.value }))}
-                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </Field>
-              <Field label="End time">
-                <input
-                  type="time"
-                  value={form.endTime}
-                  onChange={(e) => setForm((c) => ({ ...c, endTime: e.target.value }))}
-                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </Field>
-            </div>
-          )}
-          <Field label="Location">
-            <input
-              type="text"
-              value={form.location}
-              onChange={(e) => setForm((c) => ({ ...c, location: e.target.value }))}
-              placeholder="Optional"
-              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-            />
-          </Field>
-          <Field label="Notes">
-            <textarea
-              value={form.notes}
-              onChange={(e) => setForm((c) => ({ ...c, notes: e.target.value }))}
-              rows={3}
-              placeholder="Optional"
-              className="rounded-xl border border-outline bg-white px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-            />
-          </Field>
-          {error && <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-error">{error}</p>}
-          <div className="flex items-center gap-3 pt-1">
-            {editing && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="flex h-11 w-11 items-center justify-center rounded-xl border border-error/30 text-error transition-colors hover:bg-error-container disabled:opacity-50"
-                aria-label="Delete event"
-                title="Delete event"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="Title">
+          <input
+            type="text"
+            value={form.title}
+            onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
+            placeholder="e.g. Site inspection"
+            className={formControlClassName}
+          />
+        </Field>
+        <Field label="Date">
+          <input
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm((c) => ({ ...c, date: e.target.value }))}
+            className={formControlClassName}
+          />
+        </Field>
+        <label className="text-on-surface flex min-h-11 items-center gap-3 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={form.isAllDay}
+            onChange={(e) =>
+              setForm((c) => ({ ...c, isAllDay: e.target.checked }))
+            }
+            className="border-outline accent-primary h-5 w-5 rounded"
+          />
+          All day
+        </label>
+        {!form.isAllDay && (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Start time">
+              <input
+                type="time"
+                value={form.startTime}
+                onChange={(e) =>
+                  setForm((c) => ({ ...c, startTime: e.target.value }))
+                }
+                className={formControlClassName}
+              />
+            </Field>
+            <Field label="End time">
+              <input
+                type="time"
+                value={form.endTime}
+                onChange={(e) =>
+                  setForm((c) => ({ ...c, endTime: e.target.value }))
+                }
+                className={formControlClassName}
+              />
+            </Field>
+          </div>
+        )}
+        <Field label="Location">
+          <input
+            type="text"
+            value={form.location}
+            onChange={(e) =>
+              setForm((c) => ({ ...c, location: e.target.value }))
+            }
+            placeholder="Optional"
+            className={formControlClassName}
+          />
+        </Field>
+        <Field label="Notes">
+          <textarea
+            value={form.notes}
+            onChange={(e) => setForm((c) => ({ ...c, notes: e.target.value }))}
+            rows={3}
+            placeholder="Optional"
+            className={formTextareaClassName}
+          />
+        </Field>
+        {error && <ErrorAlert>{error}</ErrorAlert>}
+        <div className="flex items-center gap-3 pt-1">
+          {editing && (
             <button
               type="button"
-              onClick={onClose}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-outline text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="focus-visible:ring-error/20 border-error/30 text-error hover:bg-error-container flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+              aria-label="Delete event"
+              title="Delete event"
             >
-              Cancel
+              <Trash2 className="h-4 w-4" />
             </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {isPending ? 'Saving...' : editing ? 'Save' : 'Add'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="border-outline-variant focus-visible:ring-primary/20 text-on-surface hover:bg-surface-container-low flex h-11 flex-1 items-center justify-center rounded-xl border text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="focus-visible:ring-primary/20 bg-primary text-on-primary flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          >
+            {isPending ? 'Saving...' : editing ? 'Save' : 'Add'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -697,13 +759,15 @@ function JobScheduleModal({
   const initialStart = job.startDate ?? job.scheduledDate;
   const initialEnd = job.endDate ?? initialStart;
   const initialDates = sortUniqueDates(
-    job.scheduleDates.length > 0 ? job.scheduleDates : getDateRange(initialStart, initialEnd),
+    job.scheduleDates.length > 0
+      ? job.scheduleDates
+      : getDateRange(initialStart, initialEnd)
   );
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(initialEnd);
   const [scheduledDates, setScheduledDates] = useState<string[]>(initialDates);
   const [addDate, setAddDate] = useState(
-    addDays(initialDates[initialDates.length - 1] ?? initialEnd, 1),
+    addDays(initialDates[initialDates.length - 1] ?? initialEnd, 1)
   );
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -727,14 +791,16 @@ function JobScheduleModal({
           toast.error(result.error);
           return;
         }
-        toast.success(`Saved ${getInclusiveDayCount(startDate, endDate)}-day range for ${job.customerName}.`);
+        toast.success(
+          `Saved ${getInclusiveDayCount(startDate, endDate)}-day range for ${job.customerName}.`
+        );
         router.refresh();
         onClose();
       } catch (actionError) {
         if (isNextNavigationSignal(actionError)) throw actionError;
         const message = getActionErrorMessage(
           actionError,
-          'Job schedule could not be saved. Please try again.',
+          'Job schedule could not be saved. Please try again.'
         );
         setError(message);
         toast.error(message);
@@ -771,7 +837,7 @@ function JobScheduleModal({
         if (isNextNavigationSignal(actionError)) throw actionError;
         const message = getActionErrorMessage(
           actionError,
-          'Job day could not be added. Please try again.',
+          'Job day could not be added. Please try again.'
         );
         setError(message);
         toast.error(message);
@@ -793,7 +859,9 @@ function JobScheduleModal({
           return;
         }
 
-        const nextDates = scheduledDates.filter((scheduledDate) => scheduledDate !== date);
+        const nextDates = scheduledDates.filter(
+          (scheduledDate) => scheduledDate !== date
+        );
         setScheduledDates(nextDates);
         syncRangeFromDates(nextDates);
         if (addDate === date) {
@@ -806,7 +874,7 @@ function JobScheduleModal({
         if (isNextNavigationSignal(actionError)) throw actionError;
         const message = getActionErrorMessage(
           actionError,
-          'Job day could not be deleted. Please try again.',
+          'Job day could not be deleted. Please try again.'
         );
         setError(message);
         toast.error(message);
@@ -816,149 +884,143 @@ function JobScheduleModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-2xl">
-        <ModalHeader title="Edit Job Schedule" onClose={onClose} />
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="rounded-xl border border-outline bg-surface-container-low/40 p-4">
-            <p className="text-sm font-semibold text-on-surface">{job.customerName}</p>
-            <p className="mt-1 text-xs text-on-surface-variant">{job.title}</p>
-          </div>
-          <div className="rounded-xl border border-outline bg-white p-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-on-surface">Scheduled days</p>
-              <p className="text-xs text-on-surface-variant">
-                Drag on the calendar to move one day, or manage the exact dates here.
-              </p>
-            </div>
-            <div className="mt-3 flex flex-col gap-2">
-              {scheduledDates.map((date) => (
-                <div
-                  key={date}
-                  className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-outline bg-surface-container-low/30 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-on-surface">{formatDate(date)}</p>
-                    <p className="text-xs text-on-surface-variant">{date}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteDay(date)}
-                    disabled={isManagingDays}
-                    className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-error/30 px-3 text-xs font-semibold text-error transition-colors hover:bg-error-container disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {activeDate === date ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-xl border border-outline bg-white p-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-on-surface">Add a day</p>
-              <p className="text-xs text-on-surface-variant">
-                Pick one extra date to add to this job.
-              </p>
-            </div>
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-              <input
-                type="date"
-                value={addDate}
-                onChange={(e) => setAddDate(e.target.value)}
-                className="h-11 flex-1 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-              />
-              <button
-                type="button"
-                onClick={handleAddDay}
-                disabled={isManagingDays}
-                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" />
-                {activeDate === addDate ? 'Adding...' : 'Add day'}
-              </button>
-            </div>
-          </div>
-          <div className="rounded-xl border border-outline bg-white p-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-semibold text-on-surface">Reset as date range</p>
-              <p className="text-xs text-on-surface-variant">
-                Save a continuous range if you want to rebuild the schedule from start to end.
-              </p>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <Field label="Start date">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    const nextStart = e.target.value;
-                    setStartDate(nextStart);
-                    if (endDate < nextStart) setEndDate(nextStart);
-                  }}
-                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </Field>
-              <Field label="End date">
-                <input
-                  type="date"
-                  value={endDate}
-                  min={startDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                />
-              </Field>
-            </div>
-            <p className="mt-3 text-xs text-on-surface-variant">
-              {getInclusiveDayCount(startDate, endDate)} day range
+    <Modal open onClose={onClose} title="Edit Job Schedule" size="md">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="border-outline-variant bg-surface-container-low/40 rounded-2xl border p-4">
+          <p className="text-on-surface text-sm font-semibold">
+            {job.customerName}
+          </p>
+          <p className="text-on-surface-variant mt-1 text-xs">{job.title}</p>
+        </div>
+        <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-on-surface text-sm font-semibold">
+              Scheduled days
+            </p>
+            <p className="text-on-surface-variant text-xs">
+              Drag on the calendar to move one day, or manage the exact dates
+              here.
             </p>
           </div>
-          {error && <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-error">{error}</p>}
-          <div className="flex gap-3 pt-1">
+          <div className="mt-3 flex flex-col gap-2">
+            {scheduledDates.map((date) => (
+              <div
+                key={date}
+                className="border-outline-variant bg-surface-container-low/30 flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-on-surface text-sm font-medium">
+                    {formatDate(date)}
+                  </p>
+                  <p className="text-on-surface-variant text-xs">{date}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteDay(date)}
+                  disabled={isManagingDays}
+                  className="focus-visible:ring-error/20 border-error/30 text-error hover:bg-error-container inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {activeDate === date ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-on-surface text-sm font-semibold">Add a day</p>
+            <p className="text-on-surface-variant text-xs">
+              Pick one extra date to add to this job.
+            </p>
+          </div>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <input
+              type="date"
+              aria-label="Date to add"
+              value={addDate}
+              onChange={(e) => setAddDate(e.target.value)}
+              className={cn(formControlClassName, 'flex-1')}
+            />
             <button
               type="button"
-              onClick={onClose}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-outline text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+              onClick={handleAddDay}
+              disabled={isManagingDays}
+              className="focus-visible:ring-primary/20 bg-primary text-on-primary inline-flex h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {isPending ? 'Saving...' : 'Save range'}
+              <Plus className="h-4 w-4" />
+              {activeDate === addDate ? 'Adding...' : 'Add day'}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-on-surface text-sm font-semibold">
+              Reset as date range
+            </p>
+            <p className="text-on-surface-variant text-xs">
+              Save a continuous range if you want to rebuild the schedule from
+              start to end.
+            </p>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Field label="Start date">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const nextStart = e.target.value;
+                  setStartDate(nextStart);
+                  if (endDate < nextStart) setEndDate(nextStart);
+                }}
+                className={formControlClassName}
+              />
+            </Field>
+            <Field label="End date">
+              <input
+                type="date"
+                value={endDate}
+                min={startDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className={formControlClassName}
+              />
+            </Field>
+          </div>
+          <p className="text-on-surface-variant mt-3 text-xs">
+            {getInclusiveDayCount(startDate, endDate)} day range
+          </p>
+        </div>
+        {error && <ErrorAlert>{error}</ErrorAlert>}
+        <div className="flex gap-3 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="border-outline-variant focus-visible:ring-primary/20 text-on-surface hover:bg-surface-container-low flex h-11 flex-1 items-center justify-center rounded-xl border text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="focus-visible:ring-primary/20 bg-primary text-on-primary flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-semibold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          >
+            {isPending ? 'Saving...' : 'Save range'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
-function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="mb-5 flex items-center justify-between">
-      <h2 className="text-lg font-bold text-on-surface">{title}</h2>
-      <button
-        onClick={onClose}
-        className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-low"
-        aria-label="Close"
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5 text-sm font-medium text-on-surface">
+    <label className="text-on-surface flex flex-col gap-1.5 text-sm font-medium">
       {label}
       {children}
     </label>
@@ -979,9 +1041,14 @@ function JobEventCard({
   const scheduleDates = sortUniqueDates(
     job.scheduleDates.length > 0
       ? job.scheduleDates
-      : getDateRange(job.startDate ?? job.scheduledDate, job.endDate ?? job.startDate ?? job.scheduledDate),
+      : getDateRange(
+          job.startDate ?? job.scheduledDate,
+          job.endDate ?? job.startDate ?? job.scheduledDate
+        )
   );
-  const dragPayload = dragDate ? ({ kind: 'job', id: job.id, date: dragDate } satisfies DragPayload) : null;
+  const dragPayload = dragDate
+    ? ({ kind: 'job', id: job.id, date: dragDate } satisfies DragPayload)
+    : null;
   const scheduleSummary = describeScheduleDates(scheduleDates);
 
   return (
@@ -992,54 +1059,67 @@ function JobEventCard({
         e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className={`flex flex-col gap-2 rounded-xl border border-outline bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:gap-3 sm:rounded-2xl sm:p-4 ${
+      className={`border-outline-variant bg-surface-container-lowest flex flex-col gap-2 rounded-2xl border p-3 shadow-sm transition-shadow hover:shadow-md sm:gap-3 sm:p-4 ${
         dragPayload ? 'cursor-grab active:cursor-grabbing' : ''
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           {job.quoteNumber && (
-            <p className="text-[10px] font-semibold uppercase text-on-surface-variant">
+            <p className="text-on-surface-variant text-[10px] font-semibold uppercase">
               {job.quoteNumber}
             </p>
           )}
-          <p className="truncate text-sm font-semibold text-on-surface">{job.customerName}</p>
-          {job.title && <p className="line-clamp-1 text-xs text-on-surface-variant">{job.title}</p>}
-          {job.address && <p className="line-clamp-1 text-xs text-on-surface-variant">{job.address}</p>}
+          <p className="text-on-surface truncate text-sm font-semibold">
+            {job.customerName}
+          </p>
+          {job.title && (
+            <p className="text-on-surface-variant line-clamp-1 text-xs">
+              {job.title}
+            </p>
+          )}
+          {job.address && (
+            <p className="text-on-surface-variant line-clamp-1 text-xs">
+              {job.address}
+            </p>
+          )}
         </div>
-        <span
-          className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_BADGE[job.status]}`}
-        >
-          {jobStatusLabels[job.status]}
-        </span>
+        <StatusBadge
+          tone={JOB_STATUS_TONE[job.status]}
+          label={jobStatusLabels[job.status]}
+        />
       </div>
       <div className="flex flex-wrap gap-2">
-        <span className="max-w-full truncate rounded-full bg-surface-container-low px-2.5 py-1 text-[11px] font-medium text-on-surface-variant sm:text-xs">
+        <span className="bg-surface-container-low text-on-surface-variant max-w-full truncate rounded-full px-2.5 py-1 text-[11px] font-medium sm:text-xs">
           {scheduleSummary.dateLabel}
         </span>
-        <span className="rounded-full bg-surface-container-low px-2.5 py-1 text-[11px] font-medium text-on-surface-variant sm:text-xs">
+        <span className="bg-surface-container-low text-on-surface-variant rounded-full px-2.5 py-1 text-[11px] font-medium sm:text-xs">
           {scheduleSummary.countLabel}
         </span>
       </div>
-      {job.notes && <p className="line-clamp-2 text-xs text-on-surface-variant">{job.notes}</p>}
+      {job.notes && (
+        <p className="text-on-surface-variant line-clamp-2 text-xs">
+          {job.notes}
+        </p>
+      )}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => onEditSchedule(job)}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-outline px-3 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
+          className="border-outline-variant focus-visible:ring-primary/20 text-on-surface hover:bg-surface-container-low flex h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit dates
         </button>
         <Link
           href={`/jobs/${job.id}`}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-primary/15 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/5"
+          className="focus-visible:ring-primary/20 border-primary/15 text-primary hover:bg-primary/5 flex h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           View job
           <ExternalLink className="h-3.5 w-3.5" />
         </Link>
         {dragPayload && (
-          <span className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-surface-container-low px-3 py-2 text-[11px] font-medium text-on-surface-variant sm:ml-auto sm:bg-transparent sm:px-0 sm:py-0">
+          <span className="bg-surface-container-low text-on-surface-variant inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-medium sm:ml-auto sm:bg-transparent sm:px-0 sm:py-0">
             <GripHorizontal className="h-4 w-4" aria-label="Drag to move" />
             Drag day
           </span>
@@ -1051,18 +1131,26 @@ function JobEventCard({
 
 function GoogleEventCard({ event }: { event: CalendarGoogleEvent }) {
   return (
-    <div className="border-secondary/20 bg-secondary-container/30 flex flex-col gap-2 rounded-xl border p-3 shadow-sm sm:rounded-2xl sm:p-4">
+    <div className="border-secondary/20 bg-secondary-container/30 flex flex-col gap-2 rounded-2xl border p-3 shadow-sm sm:p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-secondary text-[10px] font-semibold uppercase">
             Google Calendar
           </p>
-          <p className="truncate text-sm font-semibold text-on-surface">{event.title}</p>
-          {event.location && <p className="line-clamp-1 text-xs text-on-surface-variant">{event.location}</p>}
+          <p className="text-on-surface truncate text-sm font-semibold">
+            {event.title}
+          </p>
+          {event.location && (
+            <p className="text-on-surface-variant line-clamp-1 text-xs">
+              {event.location}
+            </p>
+          )}
           {!event.isAllDay && event.startDateTime && (
-            <p className="text-xs text-on-surface-variant">
+            <p className="text-on-surface-variant text-xs">
               {formatIsoTime(event.startDateTime)}
-              {event.endDateTime ? ` - ${formatIsoTime(event.endDateTime)}` : ''}
+              {event.endDateTime
+                ? ` - ${formatIsoTime(event.endDateTime)}`
+                : ''}
             </p>
           )}
         </div>
@@ -1075,7 +1163,7 @@ function GoogleEventCard({ event }: { event: CalendarGoogleEvent }) {
           href={event.htmlLink}
           target="_blank"
           rel="noreferrer"
-          className="text-secondary flex min-h-11 items-center gap-1.5 text-xs font-medium hover:underline"
+          className="text-secondary focus-visible:ring-primary/20 flex min-h-11 items-center gap-1.5 rounded-xl text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
         >
           Open in Google Calendar
           <ExternalLink className="h-3.5 w-3.5" />
@@ -1102,22 +1190,32 @@ function NativeEventCard({
         e.dataTransfer.effectAllowed = 'move';
       }}
       onClick={() => onEdit(event)}
-      className="border-tertiary/20 bg-tertiary/10 flex w-full flex-col gap-2 rounded-xl border p-3 text-left shadow-sm transition-shadow hover:shadow-md active:scale-[0.99] sm:rounded-2xl sm:p-4"
+      className="border-tertiary/20 bg-tertiary/10 focus-visible:ring-primary/20 flex min-h-11 w-full flex-col gap-2 rounded-2xl border p-3 text-left shadow-sm transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:outline-none active:scale-[0.99] sm:p-4"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-tertiary text-[10px] font-semibold uppercase">
             Event
           </p>
-          <p className="truncate text-sm font-semibold text-on-surface">{event.title}</p>
-          {event.location && <p className="line-clamp-1 text-xs text-on-surface-variant">{event.location}</p>}
+          <p className="text-on-surface truncate text-sm font-semibold">
+            {event.title}
+          </p>
+          {event.location && (
+            <p className="text-on-surface-variant line-clamp-1 text-xs">
+              {event.location}
+            </p>
+          )}
           {!event.isAllDay && event.startTime && (
-            <p className="text-xs text-on-surface-variant">
+            <p className="text-on-surface-variant text-xs">
               {formatTime(event.startTime)}
               {event.endTime ? ` - ${formatTime(event.endTime)}` : ''}
             </p>
           )}
-          {event.notes && <p className="mt-1 line-clamp-2 text-xs text-on-surface-variant">{event.notes}</p>}
+          {event.notes && (
+            <p className="text-on-surface-variant mt-1 line-clamp-2 text-xs">
+              {event.notes}
+            </p>
+          )}
         </div>
         <span className="border-tertiary/20 bg-tertiary/10 text-tertiary inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase">
           {event.isAllDay ? 'All Day' : 'Timed'}
@@ -1170,17 +1268,21 @@ export function ScheduleCalendar({
   const toast = useToast();
   const resolvedToday = today ?? new Date().toISOString().slice(0, 10);
   const [year, setYear] = useState(() => Number(resolvedToday.slice(0, 4)));
-  const [month, setMonth] = useState(() => Number(resolvedToday.slice(5, 7)) - 1);
+  const [month, setMonth] = useState(
+    () => Number(resolvedToday.slice(5, 7)) - 1
+  );
   const [selected, setSelected] = useState<string | null>(resolvedToday);
   const initialViewMode = isViewMode(initialView) ? initialView : null;
   const isTabletAgendaViewport = useTabletAgendaViewport();
-  const [view, setView] = useState<ViewMode>(() => initialViewMode ?? 'calendar');
+  const [view, setView] = useState<ViewMode>(
+    () => initialViewMode ?? 'calendar'
+  );
   const [hasSelectedView, setHasSelectedView] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
-    isSourceFilter(initialSource) ? initialSource : 'all',
+    isSourceFilter(initialSource) ? initialSource : 'all'
   );
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
-    isStatusFilter(initialStatus) ? initialStatus : 'all',
+    isStatusFilter(initialStatus) ? initialStatus : 'all'
   );
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? '');
   const [modalOpen, setModalOpen] = useState(false);
@@ -1191,7 +1293,7 @@ export function ScheduleCalendar({
 
   const unifiedEvents = useMemo(
     () => buildUnifiedEvents(jobs, googleEvents, nativeEvents, jobStatusLabels),
-    [jobs, googleEvents, nativeEvents, jobStatusLabels],
+    [jobs, googleEvents, nativeEvents, jobStatusLabels]
   );
 
   const filteredEvents = useMemo(() => {
@@ -1200,7 +1302,10 @@ export function ScheduleCalendar({
       if (sourceFilter === 'jobs' && event.kind !== 'job') return false;
       if (sourceFilter === 'schedule' && event.kind !== 'native') return false;
       if (sourceFilter === 'google' && event.kind !== 'google') return false;
-      if (statusFilter !== 'all' && (event.kind !== 'job' || event.job.status !== statusFilter)) {
+      if (
+        statusFilter !== 'all' &&
+        (event.kind !== 'job' || event.job.status !== statusFilter)
+      ) {
         return false;
       }
       if (query && !event.searchable.includes(query)) return false;
@@ -1208,7 +1313,10 @@ export function ScheduleCalendar({
     });
   }, [searchQuery, sourceFilter, statusFilter, unifiedEvents]);
 
-  const eventMap = useMemo(() => buildEventMap(filteredEvents), [filteredEvents]);
+  const eventMap = useMemo(
+    () => buildEventMap(filteredEvents),
+    [filteredEvents]
+  );
 
   const calendarDays = useMemo(() => {
     const firstDow = new Date(year, month, 1).getDay();
@@ -1220,14 +1328,18 @@ export function ScheduleCalendar({
     return slots;
   }, [year, month]);
 
-  const monthLabel = MONTH_YEAR_FORMATTER.format(new Date(Date.UTC(year, month, 1)));
+  const monthLabel = MONTH_YEAR_FORMATTER.format(
+    new Date(Date.UTC(year, month, 1))
+  );
 
   const selectedEvents = selected ? (eventMap.get(selected) ?? []) : [];
   const selectedLabel = selected
     ? DATE_LONG_FORMATTER.format(parseYmdUtc(selected))
     : null;
   const activeFilterCount =
-    Number(sourceFilter !== 'all') + Number(statusFilter !== 'all') + Number(searchQuery.trim().length > 0);
+    Number(sourceFilter !== 'all') +
+    Number(statusFilter !== 'all') +
+    Number(searchQuery.trim().length > 0);
 
   useEffect(() => {
     if (initialViewMode || hasSelectedView) return;
@@ -1320,7 +1432,7 @@ export function ScheduleCalendar({
         if (isNextNavigationSignal(actionError)) throw actionError;
         const message = getActionErrorMessage(
           actionError,
-          'Schedule could not be moved. Please try again.',
+          'Schedule could not be moved. Please try again.'
         );
         setDragError(message);
         toast.error(message);
@@ -1330,22 +1442,22 @@ export function ScheduleCalendar({
 
   return (
     <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
-      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-outline bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
+      <div className="border-outline-variant bg-surface-container-lowest flex min-w-0 flex-col gap-3 rounded-2xl border p-2.5 shadow-sm sm:p-3">
         <div className="flex flex-col gap-3">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+            <Search className="text-on-surface-variant pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search jobs, quotes, addresses..."
-              className="h-11 w-full rounded-xl border border-outline bg-white pl-9 pr-10 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className={cn(formControlClassName, 'pr-10 pl-9')}
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
+                className="focus-visible:ring-primary/20 text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface absolute top-1/2 right-0 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 aria-label="Clear search"
               >
                 <X className="h-4 w-4" />
@@ -1353,57 +1465,84 @@ export function ScheduleCalendar({
             )}
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-            <SegmentButton active={view === 'calendar'} onClick={() => selectView('calendar')}>
+            <SegmentButton
+              active={view === 'calendar'}
+              onClick={() => selectView('calendar')}
+            >
               <CalendarDays className="h-4 w-4" />
               Calendar
             </SegmentButton>
-            <SegmentButton active={view === 'list'} onClick={() => selectView('list')}>
+            <SegmentButton
+              active={view === 'list'}
+              onClick={() => selectView('list')}
+            >
               <List className="h-4 w-4" />
               List
             </SegmentButton>
           </div>
         </div>
 
-        <div className="rounded-xl border border-outline bg-surface-container-low/30 p-2.5 sm:hidden">
+        <div className="border-outline-variant bg-surface-container-low/30 rounded-2xl border p-2.5 sm:hidden">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase text-on-surface-variant">Now showing</p>
-              <p className="mt-1 text-sm font-semibold text-on-surface">
-                {filteredEvents.length} result{filteredEvents.length === 1 ? '' : 's'}
+              <SectionLabel>Now showing</SectionLabel>
+              <p className="text-on-surface mt-1 text-sm font-semibold">
+                {filteredEvents.length} result
+                {filteredEvents.length === 1 ? '' : 's'}
               </p>
             </div>
             {activeFilterCount > 0 && (
-              <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+              <span className="border-primary/20 bg-primary/10 text-primary rounded-full border px-2.5 py-1 text-xs font-semibold">
                 {activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'}
               </span>
             )}
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <SummaryChip>{view === 'calendar' ? 'Calendar view' : 'List view'}</SummaryChip>
+            <SummaryChip>
+              {view === 'calendar' ? 'Calendar view' : 'List view'}
+            </SummaryChip>
             <SummaryChip>{getSourceFilterLabel(sourceFilter)}</SummaryChip>
-            <SummaryChip>{getStatusFilterLabel(statusFilter, jobStatusLabels)}</SummaryChip>
+            <SummaryChip>
+              {getStatusFilterLabel(statusFilter, jobStatusLabels)}
+            </SummaryChip>
           </div>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <p className="px-1 text-xs font-semibold uppercase text-on-surface-variant">Show</p>
+            <SectionLabel className="px-1">Show</SectionLabel>
             <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
-              {(['all', 'jobs', 'schedule', 'google'] as SourceFilter[]).map((source) => (
-                <FilterButton
-                  key={source}
-                  active={sourceFilter === source}
-                  onClick={() => setSourceFilter(source)}
-                >
-                  {source === 'all' ? 'All' : source === 'jobs' ? 'Jobs' : source === 'schedule' ? 'Event' : 'Google'}
-                </FilterButton>
-              ))}
+              {(['all', 'jobs', 'schedule', 'google'] as SourceFilter[]).map(
+                (source) => (
+                  <FilterButton
+                    key={source}
+                    active={sourceFilter === source}
+                    onClick={() => setSourceFilter(source)}
+                  >
+                    {source === 'all'
+                      ? 'All'
+                      : source === 'jobs'
+                        ? 'Jobs'
+                        : source === 'schedule'
+                          ? 'Event'
+                          : 'Google'}
+                  </FilterButton>
+                )
+              )}
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <p className="px-1 text-xs font-semibold uppercase text-on-surface-variant">Job status</p>
+            <SectionLabel className="px-1">Job status</SectionLabel>
             <div className="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
-              {(['all', 'scheduled', 'in_progress', 'completed', 'cancelled'] as StatusFilter[]).map((status) => (
+              {(
+                [
+                  'all',
+                  'scheduled',
+                  'in_progress',
+                  'completed',
+                  'cancelled',
+                ] as StatusFilter[]
+              ).map((status) => (
                 <FilterButton
                   key={status}
                   active={statusFilter === status}
@@ -1418,15 +1557,17 @@ export function ScheduleCalendar({
       </div>
 
       {view === 'calendar' ? (
-        <div className="rounded-xl border border-outline bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
+        <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-2.5 shadow-sm sm:p-3">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase text-on-surface-variant">Calendar month</p>
-              <h2 className="mt-1 text-lg font-bold text-on-surface">{monthLabel}</h2>
+              <SectionLabel>Calendar month</SectionLabel>
+              <h2 className="text-on-surface mt-1 text-lg font-bold">
+                {monthLabel}
+              </h2>
             </div>
             <button
               onClick={goToToday}
-              className="flex h-11 shrink-0 items-center justify-center rounded-xl border border-outline px-3 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
+              className="border-outline-variant focus-visible:ring-primary/20 text-on-surface hover:bg-surface-container-low flex h-11 shrink-0 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               Today
             </button>
@@ -1435,59 +1576,57 @@ export function ScheduleCalendar({
             <button
               onClick={prevMonth}
               aria-label="Previous month"
-              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-surface-container-low"
+              className="focus-visible:ring-primary/20 hover:bg-surface-container-low flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <ChevronLeft className="h-5 w-5 text-on-surface-variant" />
+              <ChevronLeft className="text-on-surface-variant h-5 w-5" />
             </button>
             <button
               onClick={() => openAddEvent()}
-              className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 sm:min-w-[140px] sm:px-4"
+              className="focus-visible:ring-primary/20 bg-primary text-on-primary flex h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none sm:min-w-[140px] sm:px-4"
             >
-              <Plus className="h-4 w-4" />
-              Add event
+              + New Event
             </button>
             <button
               onClick={nextMonth}
               aria-label="Next month"
-              className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-surface-container-low"
+              className="focus-visible:ring-primary/20 hover:bg-surface-container-low flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <ChevronRight className="h-5 w-5 text-on-surface-variant" />
+              <ChevronRight className="text-on-surface-variant h-5 w-5" />
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 rounded-xl border border-outline bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:rounded-2xl sm:p-4">
+        <div className="border-outline-variant bg-surface-container-lowest flex flex-col gap-3 rounded-2xl border p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
           <div>
-            <p className="text-xs font-semibold uppercase text-on-surface-variant">Job list</p>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Search past work, check status, and jump into each job without leaving schedule.
+            <SectionLabel>Job list</SectionLabel>
+            <p className="text-on-surface-variant mt-1 text-sm">
+              Search past work, check status, and jump into each job without
+              leaving schedule.
             </p>
           </div>
           <button
             onClick={() => openAddEvent()}
-            className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
+            className="focus-visible:ring-primary/20 bg-primary text-on-primary flex h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
           >
-            <Plus className="h-4 w-4" />
-            Add event
+            + New Event
           </button>
         </div>
       )}
 
       {googleError && (
-        <div className="rounded-xl border border-warning/30 bg-warning-container px-4 py-3">
-          <p className="text-sm text-on-warning-container">
-            Google Calendar could not be loaded. Showing Coatly jobs and events only.
+        <div className="border-warning/30 bg-warning-container rounded-xl border px-4 py-3">
+          <p className="text-on-warning-container text-sm">
+            Google Calendar could not be loaded. Showing Coatly jobs and events
+            only.
           </p>
         </div>
       )}
-      {dragError && (
-        <div className="rounded-xl border border-error/30 bg-error-container px-4 py-3">
-          <p className="text-sm text-error">{dragError}</p>
-        </div>
-      )}
+      {dragError && <ErrorAlert>{dragError}</ErrorAlert>}
       {isMoving && (
-        <div className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
-          <p className="text-sm text-on-surface-variant">Updating schedule...</p>
+        <div className="border-outline bg-surface-container-low rounded-xl border px-4 py-3">
+          <p className="text-on-surface-variant text-sm">
+            Updating schedule...
+          </p>
         </div>
       )}
 
@@ -1505,19 +1644,22 @@ export function ScheduleCalendar({
           <Legend googleConnected={googleConnected} />
           {selected && (
             <section className="flex flex-col gap-3">
-              <div className="rounded-xl border border-outline bg-white p-3 shadow-sm sm:rounded-2xl sm:p-4">
+              <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-3 shadow-sm sm:p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase text-on-surface-variant">Selected day</p>
-                    <h3 className="mt-1 text-base font-bold text-on-surface">{selectedLabel}</h3>
+                    <SectionLabel>Selected day</SectionLabel>
+                    <h3 className="text-on-surface mt-1 text-base font-bold">
+                      {selectedLabel}
+                    </h3>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full border border-outline bg-surface-container-low px-2.5 py-1 text-xs font-semibold text-on-surface-variant">
-                      {selectedEvents.length} item{selectedEvents.length === 1 ? '' : 's'}
+                    <span className="border-outline bg-surface-container-low text-on-surface-variant rounded-full border px-2.5 py-1 text-xs font-semibold">
+                      {selectedEvents.length} item
+                      {selectedEvents.length === 1 ? '' : 's'}
                     </span>
                     <button
                       onClick={() => openAddEvent(selected)}
-                      className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-outline px-4 text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low"
+                      className="border-outline-variant focus-visible:ring-primary/20 text-on-surface-variant hover:bg-surface-container-low inline-flex h-11 items-center gap-1.5 rounded-xl border px-4 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Add
@@ -1537,8 +1679,9 @@ export function ScheduleCalendar({
         </>
       ) : (
         <section className="flex flex-col gap-3">
-          <p className="text-sm text-on-surface-variant">
-            {filteredEvents.length} result{filteredEvents.length === 1 ? '' : 's'}
+          <p className="text-on-surface-variant text-sm">
+            {filteredEvents.length} result
+            {filteredEvents.length === 1 ? '' : 's'}
             {sourceFilter === 'jobs' ? ' in jobs' : ''}
           </p>
           {filteredEvents.length === 0 ? (
@@ -1547,7 +1690,7 @@ export function ScheduleCalendar({
             <ul className="flex flex-col gap-3">
               {filteredEvents.map((event) => (
                 <li key={event.id}>
-                  <div className="mb-2 text-xs font-medium text-on-surface-variant">
+                  <div className="text-on-surface-variant mb-2 text-xs font-medium">
                     {formatDateRange(event.start, event.end)}
                   </div>
                   {event.kind === 'job' ? (
@@ -1559,7 +1702,10 @@ export function ScheduleCalendar({
                   ) : event.kind === 'google' ? (
                     <GoogleEventCard event={event.event} />
                   ) : (
-                    <NativeEventCard event={event.event} onEdit={openEditEvent} />
+                    <NativeEventCard
+                      event={event.event}
+                      onEdit={openEditEvent}
+                    />
                   )}
                 </li>
               ))}
@@ -1591,7 +1737,7 @@ export function ScheduleCalendar({
 async function moveNativeEvent(
   id: string,
   date: string,
-  nativeEvents: ScheduleEvent[],
+  nativeEvents: ScheduleEvent[]
 ): Promise<{ error: string | null }> {
   const event = nativeEvents.find((item) => item.id === id);
   if (!event) return { error: 'Event not found.' };
@@ -1610,7 +1756,7 @@ function getMoveSuccessMessage(
   payload: DragPayload,
   date: string,
   jobs: CalendarJob[],
-  nativeEvents: ScheduleEvent[],
+  nativeEvents: ScheduleEvent[]
 ): string {
   if (payload.kind === 'job') {
     const job = jobs.find((item) => item.id === payload.id);
@@ -1687,8 +1833,8 @@ function CalendarEventChip({
         e.dataTransfer.effectAllowed = 'move';
       }}
       title={getChipLabel(event)}
-      className={`flex min-h-11 w-full min-w-0 cursor-grab items-center rounded border px-2 text-left text-xs font-semibold leading-tight shadow-sm active:cursor-grabbing xl:min-h-6 xl:px-1 xl:text-[10px] ${getChipClassName(
-        event,
+      className={`focus-visible:ring-primary/20 flex min-h-11 w-full min-w-0 cursor-grab items-center rounded-xl border px-2 text-left text-xs leading-tight font-semibold shadow-sm focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing ${getChipClassName(
+        event
       )} ${draggable ? '' : 'cursor-default'}`}
     >
       <span className="truncate">{getChipLabel(event)}</span>
@@ -1718,11 +1864,14 @@ function CalendarGrid({
       <div className="min-w-0 pb-1">
         <div
           aria-label="Schedule calendar month"
-          className="w-full min-w-0 overflow-hidden rounded-xl border border-outline bg-white shadow-sm sm:rounded-2xl"
+          className="border-outline-variant bg-surface-container-lowest w-full min-w-0 overflow-hidden rounded-2xl border shadow-sm"
         >
-          <div className="grid grid-cols-7 border-b border-outline bg-surface-container-low">
+          <div className="border-outline bg-surface-container-low grid grid-cols-7 border-b">
             {DAY_HEADERS.map((d) => (
-              <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase text-on-surface-variant sm:text-[11px]">
+              <div
+                key={d}
+                className="text-on-surface-variant py-2 text-center text-[10px] font-semibold uppercase sm:text-[11px]"
+              >
                 {d}
               </div>
             ))}
@@ -1733,7 +1882,7 @@ function CalendarGrid({
                 return (
                   <div
                     key={`pad-${i}`}
-                    className="min-h-[96px] border-b border-r border-outline/40 bg-surface-container-low/20 last:border-r-0 xl:min-h-[64px]"
+                    className="border-outline/40 bg-surface-container-low/20 min-h-[96px] border-r border-b last:border-r-0 xl:min-h-[64px]"
                   />
                 );
               }
@@ -1742,7 +1891,10 @@ function CalendarGrid({
               const isToday = dateStr === todayStr;
               const isSelected = dateStr === selected;
               const visibleEvents = dayEvents.slice(0, 3);
-              const hiddenCount = Math.max(0, dayEvents.length - visibleEvents.length);
+              const hiddenCount = Math.max(
+                0,
+                dayEvents.length - visibleEvents.length
+              );
               const dayNum = parseInt(dateStr.slice(8), 10);
 
               return (
@@ -1753,24 +1905,30 @@ function CalendarGrid({
                     e.preventDefault();
                     onDrop(dateStr, e.dataTransfer.getData('application/json'));
                   }}
-                  className={`group relative min-h-[190px] border-b border-r border-outline/40 last:border-r-0 xl:min-h-[118px] ${
-                    isSelected ? 'bg-primary/5 ring-1 ring-inset ring-primary/30' : 'hover:bg-surface-container-low/50'
+                  className={`group border-outline/40 relative min-h-[190px] border-r border-b last:border-r-0 xl:min-h-[118px] ${
+                    isSelected
+                      ? 'bg-primary/5 ring-primary/30 ring-1 ring-inset'
+                      : 'hover:bg-surface-container-low/50'
                   }`}
                 >
                   <button
                     onClick={() => onSelect(dateStr)}
                     aria-label={`Select ${DATE_LONG_FORMATTER.format(parseYmdUtc(dateStr))}`}
-                    className="flex min-h-11 w-full items-center justify-center px-0.5 pt-1 xl:min-h-[32px] xl:px-1 xl:pt-1.5"
+                    className="focus-visible:ring-primary/20 flex min-h-11 w-full items-center justify-center rounded-xl px-0.5 pt-1 focus-visible:ring-2 focus-visible:outline-none xl:px-1 xl:pt-1.5"
                   >
                     <span
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold xl:h-7 xl:w-7 ${
-                        isToday ? 'bg-primary text-on-primary' : isSelected ? 'text-primary' : 'text-on-surface'
+                        isToday
+                          ? 'bg-primary text-on-primary'
+                          : isSelected
+                            ? 'text-primary'
+                            : 'text-on-surface'
                       }`}
                     >
                       {dayNum}
                     </span>
                   </button>
-                  <div className="flex flex-col gap-1 px-1 pb-12 pt-1 xl:pb-8">
+                  <div className="flex flex-col gap-1 px-1 pt-1 pb-12 xl:pb-8">
                     {visibleEvents.map((event, index) => (
                       <CalendarEventChip
                         key={`${event.kind}-${getChipLabel(event)}-${index}`}
@@ -1782,7 +1940,7 @@ function CalendarGrid({
                       <button
                         type="button"
                         onClick={() => onSelect(dateStr)}
-                        className="min-h-11 rounded border border-outline bg-white px-2 text-left text-xs font-semibold leading-tight text-on-surface-variant xl:min-h-6 xl:px-1 xl:text-[10px]"
+                        className="border-outline-variant focus-visible:ring-primary/20 bg-surface-container-lowest text-on-surface-variant min-h-11 rounded-xl border px-2 text-left text-xs leading-tight font-semibold focus-visible:ring-2 focus-visible:outline-none"
                       >
                         +{hiddenCount} more
                       </button>
@@ -1790,7 +1948,7 @@ function CalendarGrid({
                   </div>
                   <button
                     onClick={() => onAdd(dateStr)}
-                    className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-white text-on-surface-variant shadow-sm ring-1 ring-outline transition-colors hover:text-primary xl:hidden xl:group-hover:flex"
+                    className="focus-visible:ring-primary/20 bg-surface-container-lowest text-on-surface-variant ring-outline-variant hover:text-primary absolute right-1 bottom-1 flex h-11 w-11 items-center justify-center rounded-xl shadow-sm ring-1 transition-colors focus-visible:ring-2 focus-visible:outline-none xl:hidden xl:group-hover:flex"
                     aria-label="Add schedule on this day"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -1820,8 +1978,8 @@ function EventStack({
 }) {
   if (events.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-outline bg-white px-6 py-8 text-center">
-        <p className="text-sm text-on-surface-variant">{emptyText}</p>
+      <div className="border-outline bg-surface-container-lowest rounded-2xl border border-dashed px-6 py-8 text-center">
+        <p className="text-on-surface-variant text-sm">{emptyText}</p>
       </div>
     );
   }
@@ -1846,7 +2004,7 @@ function EventStack({
           <li key={`n-${e.event.id}-${i}`}>
             <NativeEventCard event={e.event} onEdit={onEditEvent} />
           </li>
-        ),
+        )
       )}
     </ul>
   );
@@ -1854,11 +2012,13 @@ function EventStack({
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="rounded-2xl border border-dashed border-outline bg-white px-6 py-8 text-center">
-      <p className="text-sm text-on-surface-variant">No matching jobs or events.</p>
+    <div className="border-outline bg-surface-container-lowest rounded-2xl border border-dashed px-6 py-8 text-center">
+      <p className="text-on-surface-variant text-sm">
+        No matching jobs or events.
+      </p>
       <button
         onClick={onAdd}
-        className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-primary hover:bg-primary/5"
+        className="focus-visible:ring-primary/20 text-primary hover:bg-primary/5 mt-3 inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
       >
         Add an event
       </button>
@@ -1868,7 +2028,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 function SummaryChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full border border-outline bg-white px-2 py-0.5 text-[11px] font-medium text-on-surface-variant sm:px-2.5 sm:py-1 sm:text-xs">
+    <span className="border-outline bg-surface-container-lowest text-on-surface-variant rounded-full border px-2 py-0.5 text-[11px] font-medium sm:px-2.5 sm:py-1 sm:text-xs">
       {children}
     </span>
   );
@@ -1888,10 +2048,10 @@ function SegmentButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors sm:gap-2 sm:px-3 sm:text-sm ${
+      className={`focus-visible:ring-primary/20 flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:gap-2 sm:px-3 sm:text-sm ${
         active
           ? 'border-primary bg-primary/10 text-primary'
-          : 'border-outline bg-white text-on-surface-variant hover:bg-surface-container-low'
+          : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
       }`}
     >
       {children}
@@ -1912,10 +2072,10 @@ function FilterButton({
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-11 min-w-0 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
+      className={`focus-visible:ring-primary/20 min-h-11 min-w-0 rounded-xl border px-3 text-xs font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none ${
         active
           ? 'border-primary bg-primary/10 text-primary'
-          : 'border-outline bg-white text-on-surface-variant hover:bg-surface-container-low'
+          : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
       }`}
     >
       {children}
@@ -1931,7 +2091,9 @@ function Legend({ googleConnected }: { googleConnected: boolean }) {
       <LegendDot color="bg-success" label="Completed" />
       <LegendDot color="bg-error" label="Cancelled" />
       <LegendDot color="bg-tertiary" label="Event" />
-      {googleConnected && <LegendDot color="bg-secondary" label="Google Calendar" />}
+      {googleConnected && (
+        <LegendDot color="bg-secondary" label="Google Calendar" />
+      )}
     </div>
   );
 }
@@ -1940,7 +2102,7 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className={`h-2 w-2 rounded-full ${color}`} />
-      <span className="text-xs text-on-surface-variant">{label}</span>
+      <span className="text-on-surface-variant text-xs">{label}</span>
     </div>
   );
 }

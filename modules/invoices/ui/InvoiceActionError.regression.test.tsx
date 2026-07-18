@@ -2,13 +2,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InvoiceDetail } from '@/modules/invoices/ui/InvoiceDetail';
 import { InvoiceTable } from '@/modules/invoices/ui/InvoiceTable';
-import type { InvoiceListItem, InvoiceWithCustomer } from '@/modules/invoices/domain/invoice';
+import type {
+  InvoiceListItem,
+  InvoiceWithCustomer,
+} from '@/modules/invoices/domain/invoice';
 
-const { deleteInvoiceMock, markInvoiceAsPaidMock, sendInvoiceMock } = vi.hoisted(() => ({
-  deleteInvoiceMock: vi.fn(),
-  markInvoiceAsPaidMock: vi.fn(),
-  sendInvoiceMock: vi.fn(),
-}));
+const { deleteInvoiceMock, markInvoiceAsPaidMock, sendInvoiceMock } =
+  vi.hoisted(() => ({
+    deleteInvoiceMock: vi.fn(),
+    markInvoiceAsPaidMock: vi.fn(),
+    sendInvoiceMock: vi.fn(),
+  }));
 
 vi.mock('@/modules/invoices/application/actions', () => ({
   deleteInvoice: deleteInvoiceMock,
@@ -76,6 +80,17 @@ describe('invoice action error recovery', () => {
     sendInvoiceMock.mockResolvedValue(undefined);
   });
 
+  it('uses the canonical invoice status tone on the detail badge', () => {
+    render(<InvoiceDetail invoice={{ ...INVOICE, status: 'overdue' }} />);
+
+    expect(screen.getByText('Overdue', { selector: 'span' })).toHaveClass(
+      'bg-error-container',
+      'text-error',
+      'font-bold',
+      'uppercase'
+    );
+  });
+
   it('shows returned send errors and re-enables the send action', async () => {
     sendInvoiceMock.mockResolvedValue({ error: 'Customer email is required.' });
 
@@ -83,69 +98,127 @@ describe('invoice action error recovery', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Send invoice' }));
 
-    expect(await screen.findByText('Customer email is required.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Customer email is required.')
+    ).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Send invoice' })).not.toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Send invoice' })
+      ).not.toBeDisabled();
     });
   });
 
   it('shows thrown payment errors while keeping the detail payment form usable', async () => {
-    markInvoiceAsPaidMock.mockRejectedValue(new Error('Payment service unavailable.'));
+    markInvoiceAsPaidMock.mockRejectedValue(
+      new Error('Payment service unavailable.')
+    );
     const invoice = { ...INVOICE, status: 'overdue' as const };
 
     render(<InvoiceDetail invoice={invoice} />);
 
-    fireEvent.change(screen.getByLabelText('Payment method'), { target: { value: 'card' } });
+    expect(screen.getByLabelText('Paid date')).toHaveClass(
+      'h-12',
+      'text-base',
+      'rounded-xl',
+      'focus:ring-2'
+    );
+    expect(screen.getByLabelText('Payment method')).toHaveClass(
+      'h-12',
+      'text-base',
+      'rounded-xl',
+      'focus:ring-2'
+    );
+    expect(screen.getByRole('button', { name: 'Save payment' })).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+
+    fireEvent.change(screen.getByLabelText('Payment method'), {
+      target: { value: 'card' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save payment' }));
 
-    expect(await screen.findByText('Payment service unavailable.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Payment service unavailable.')
+    ).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Save payment' })).not.toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Save payment' })
+      ).not.toBeDisabled();
     });
   });
 
   it('shows thrown delete errors and closes the confirmation dialog', async () => {
-    deleteInvoiceMock.mockRejectedValue(new Error('Invoice could not be deleted.'));
+    deleteInvoiceMock.mockRejectedValue(
+      new Error('Invoice could not be deleted.')
+    );
 
     render(<InvoiceDetail invoice={INVOICE} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Delete invoice' }));
+    const deleteButton = screen.getByRole('button', { name: 'Delete invoice' });
+    expect(deleteButton).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+    fireEvent.click(deleteButton);
     fireEvent.click(screen.getByRole('button', { name: /^Delete$/ }));
 
-    expect(await screen.findByText('Invoice could not be deleted.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Invoice could not be deleted.')
+    ).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Delete invoice' })).not.toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Delete invoice' })
+      ).not.toBeDisabled();
     });
   });
 
   it('shows returned payment errors and clears the table pending state', async () => {
-    markInvoiceAsPaidMock.mockResolvedValue({ error: 'Payment method is required.' });
+    markInvoiceAsPaidMock.mockResolvedValue({
+      error: 'Payment method is required.',
+    });
 
     render(<InvoiceTable invoices={[TABLE_INVOICE]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Mark as Paid' }));
-    fireEvent.change(screen.getByLabelText('Payment method'), { target: { value: 'card' } });
+    fireEvent.change(screen.getByLabelText('Payment method'), {
+      target: { value: 'card' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save Payment' }));
 
-    expect(await screen.findByText('Payment method is required.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Payment method is required.')
+    ).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Save Payment' })).not.toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Save Payment' })
+      ).not.toBeDisabled();
     });
   });
 
   it('shows thrown table payment errors and clears the table pending state', async () => {
-    markInvoiceAsPaidMock.mockRejectedValue(new Error('Payment gateway timed out.'));
+    markInvoiceAsPaidMock.mockRejectedValue(
+      new Error('Payment gateway timed out.')
+    );
 
     render(<InvoiceTable invoices={[TABLE_INVOICE]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Mark as Paid' }));
-    fireEvent.change(screen.getByLabelText('Payment method'), { target: { value: 'card' } });
+    fireEvent.change(screen.getByLabelText('Payment method'), {
+      target: { value: 'card' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save Payment' }));
 
-    expect(await screen.findByText('Payment gateway timed out.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Payment gateway timed out.')
+    ).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Save Payment' })).not.toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Save Payment' })
+      ).not.toBeDisabled();
     });
   });
 });

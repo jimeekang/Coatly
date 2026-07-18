@@ -301,7 +301,7 @@ export function GoogleAddressAutocomplete({
         onBlur={handleBlur}
       />
       {suggestions.length > 0 && (
-        <div className="border-outline-variant absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-lg border bg-surface-container-lowest shadow-lg">
+        <div className="border-outline-variant bg-surface-container-lowest absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-xl border shadow-lg">
           <ul
             id={listboxId}
             role="listbox"
@@ -313,7 +313,7 @@ export function GoogleAddressAutocomplete({
                   type="button"
                   role="option"
                   aria-selected={false}
-                  className="text-on-surface hover:bg-surface-container-low focus:bg-surface-container-low w-full px-4 py-3 text-left text-sm focus:outline-none"
+                  className="text-on-surface hover:bg-surface-container-low focus-visible:bg-surface-container-low focus-visible:ring-primary/30 min-h-11 w-full px-4 py-3 text-left text-sm focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                   onPointerDown={(event) =>
                     handleSuggestionPointerDown(event, suggestion)
                   }

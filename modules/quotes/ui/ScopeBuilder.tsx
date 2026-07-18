@@ -1,6 +1,10 @@
 'use client';
 
 import { Plus, Trash2 } from 'lucide-react';
+import {
+  formControlClassName,
+  formTextareaClassName,
+} from '@/components/forms/FormField';
 import { MAINTENANCE_JOB_PACKS } from '@/config/maintenance-job-packs';
 import {
   QUOTE_SCOPE_MEASUREMENT_STATUSES,
@@ -213,7 +217,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
         <button
           type="button"
           onClick={addSection}
-          className="border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary hover:text-primary inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold"
+          className="border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary hover:text-primary focus-visible:ring-primary/30 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
         >
           <Plus className="h-3.5 w-3.5" />
           Add scope section
@@ -230,7 +234,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
           {value.map((section, sectionIndex) => (
             <div
               key={section.client_id ?? sectionIndex}
-              className="border-outline-variant rounded-xl border bg-white p-4"
+              className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4"
             >
               <div className="mb-4 flex items-start justify-between gap-3">
                 <p className="text-on-surface text-sm font-semibold">
@@ -239,7 +243,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                 <button
                   type="button"
                   onClick={() => removeSection(sectionIndex)}
-                  className="text-error hover:bg-error/10 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold"
+                  className="text-error hover:bg-error/10 focus-visible:ring-error/30 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Remove
@@ -259,7 +263,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                           .value as QuoteScopeSectionInput['section_kind'],
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className={formControlClassName}
                   >
                     {QUOTE_SCOPE_SECTION_KINDS.map((kind) => (
                       <option key={kind} value={kind}>
@@ -280,7 +284,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                       onChange={(event) =>
                         applyMaintenancePack(sectionIndex, event.target.value)
                       }
-                      className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                      className={formControlClassName}
                     >
                       <option value="">Select a supported pack</option>
                       {MAINTENANCE_JOB_PACKS.map((pack) => (
@@ -302,7 +306,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                     onChange={(event) =>
                       updateSection(sectionIndex, { title: event.target.value })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className={formControlClassName}
                   />
                 </div>
 
@@ -318,7 +322,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                         area_label: event.target.value,
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className={formControlClassName}
                   />
                 </div>
 
@@ -333,7 +337,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                         surface_category: event.target.value,
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className={formControlClassName}
                   />
                 </div>
 
@@ -350,7 +354,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                           .value as QuoteScopeSectionInput['pricing_status'],
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className={formControlClassName}
                   >
                     {QUOTE_SCOPE_PRICING_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -372,7 +376,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                           .value as QuoteScopeSectionInput['measurement_status'],
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className={formControlClassName}
                   >
                     {QUOTE_SCOPE_MEASUREMENT_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -396,7 +400,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                       description: event.target.value,
                     })
                   }
-                  className="border-outline-variant bg-surface-container-lowest text-on-surface w-full rounded-lg border px-3 py-2 text-sm"
+                  className={formTextareaClassName}
                 />
               </div>
 
@@ -426,7 +430,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                           visible_defects: normalizeDefects(event.target.value),
                         })
                       }
-                      className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                      className={formControlClassName}
                     />
                   </div>
                 </div>
@@ -440,7 +444,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                   <button
                     type="button"
                     onClick={() => addStep(sectionIndex)}
-                    className="text-primary hover:bg-primary/10 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold"
+                    className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Add step
@@ -457,7 +461,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                     {(section.steps ?? []).map((step, stepIndex) => (
                       <div
                         key={step.client_id ?? stepIndex}
-                        className="border-outline-variant bg-surface-container rounded-lg border p-3"
+                        className="border-outline-variant bg-surface-container rounded-xl border p-3"
                       >
                         <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto]">
                           <select
@@ -468,7 +472,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                                   .value as QuoteScopeStepInput['step_type'],
                               })
                             }
-                            className="border-outline-variant text-on-surface h-11 rounded-lg border bg-white px-3 text-sm"
+                            className={formControlClassName}
                           >
                             {QUOTE_SCOPE_STEP_TYPES.map((type) => (
                               <option key={type} value={type}>
@@ -484,12 +488,12 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                                 description: event.target.value,
                               })
                             }
-                            className="border-outline-variant text-on-surface h-11 rounded-lg border bg-white px-3 text-sm"
+                            className={formControlClassName}
                           />
                           <button
                             type="button"
                             onClick={() => removeStep(sectionIndex, stepIndex)}
-                            className="text-error hover:bg-error/10 inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold"
+                            className="text-error hover:bg-error/10 focus-visible:ring-error/30 inline-flex min-h-11 items-center rounded-xl px-2 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
                           >
                             Remove
                           </button>

@@ -46,9 +46,10 @@ describe('PublicOptionalItems regressions', () => {
   });
 
   it('keeps a successful toggle selected after the transition settles', async () => {
-    let resolveAction: (
-      result: { error: string | null; selectedIds: string[] }
-    ) => void;
+    let resolveAction: (result: {
+      error: string | null;
+      selectedIds: string[];
+    }) => void;
     setPublicQuoteOptionalLineItemSelectionMock.mockReturnValue(
       new Promise((resolve) => {
         resolveAction = resolve;
@@ -59,7 +60,15 @@ describe('PublicOptionalItems regressions', () => {
 
     renderItems(onSelectionsChange);
 
-    await user.click(screen.getByRole('button', { name: /fence repaint/i }));
+    const optionButton = screen.getByRole('button', { name: /fence repaint/i });
+    expect(optionButton).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+    expect(screen.getByText('Other')).toHaveClass('font-bold', 'uppercase');
+
+    await user.click(optionButton);
     expect(screen.getByText('Added')).toBeInTheDocument();
 
     resolveAction!({ error: null, selectedIds: ['line-1'] });
@@ -80,7 +89,7 @@ describe('PublicOptionalItems regressions', () => {
     await user.click(screen.getByRole('button', { name: /fence repaint/i }));
 
     await waitFor(() =>
-      expect(screen.getByText('Selection failed')).toBeInTheDocument()
+      expect(screen.getByRole('alert')).toHaveTextContent('Selection failed')
     );
     expect(screen.getByText('Optional')).toBeInTheDocument();
     expect(screen.queryByText('Added')).not.toBeInTheDocument();
@@ -108,7 +117,9 @@ describe('PublicOptionalItems regressions', () => {
     await user.click(screen.getByRole('button', { name: /fence repaint/i }));
 
     await waitFor(() =>
-      expect(setPublicQuoteOptionalLineItemSelectionMock).toHaveBeenCalledTimes(2)
+      expect(setPublicQuoteOptionalLineItemSelectionMock).toHaveBeenCalledTimes(
+        2
+      )
     );
     expect(screen.getByText('Optional')).toBeInTheDocument();
     expect(screen.queryByText('Added')).not.toBeInTheDocument();

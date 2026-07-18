@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import {
   addJobScheduleDay,
   deleteJobScheduleDay,
@@ -38,7 +39,7 @@ export default async function SchedulePage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return null;
+  if (!user) redirect('/login');
 
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
@@ -56,7 +57,12 @@ export default async function SchedulePage({
     { data: allJobs, error: jobsError },
     { data: nativeEvents, error: nativeEventsError },
   ] = await Promise.all([
-    listGoogleScheduleEventsForUser({ supabase, userId: user.id, timeMin, timeMax }),
+    listGoogleScheduleEventsForUser({
+      supabase,
+      userId: user.id,
+      timeMin,
+      timeMax,
+    }),
     getJobs(),
     getScheduleEvents(dateFrom, dateTo),
   ]);
@@ -88,17 +94,19 @@ export default async function SchedulePage({
     quoteNumber: job.quote?.quote_number ?? null,
   }));
 
-  const calendarGoogleEvents: CalendarGoogleEvent[] = googleSchedule.events.map((ev) => ({
-    id: ev.id,
-    title: ev.title,
-    startDate: ev.startDate,
-    endDate: ev.endDate,
-    startDateTime: ev.startDateTime,
-    endDateTime: ev.endDateTime,
-    isAllDay: ev.isAllDay,
-    location: ev.location,
-    htmlLink: ev.htmlLink,
-  }));
+  const calendarGoogleEvents: CalendarGoogleEvent[] = googleSchedule.events.map(
+    (ev) => ({
+      id: ev.id,
+      title: ev.title,
+      startDate: ev.startDate,
+      endDate: ev.endDate,
+      startDateTime: ev.startDateTime,
+      endDateTime: ev.endDateTime,
+      isAllDay: ev.isAllDay,
+      location: ev.location,
+      htmlLink: ev.htmlLink,
+    })
+  );
 
   return (
     <div className="flex min-w-0 flex-col gap-4 sm:gap-6">

@@ -7,9 +7,7 @@ import { PriceRatesForm } from '@/modules/price-rates/ui/PriceRatesForm';
 
 type PriceRatesFormProps = ComponentProps<typeof PriceRatesForm>;
 
-function renderPriceRatesForm(
-  overrides: Partial<PriceRatesFormProps> = {}
-) {
+function renderPriceRatesForm(overrides: Partial<PriceRatesFormProps> = {}) {
   const props: PriceRatesFormProps = {
     defaultRates: buildDefaultRateSettings(),
     updateRateSettingsAction: vi.fn().mockResolvedValue({ error: null }),
@@ -51,7 +49,9 @@ describe('PriceRatesForm rejected action regressions', () => {
         screen.getByRole('button', { name: /Save Price Item/i })
       ).not.toBeDisabled()
     );
-    expect(screen.getByLabelText('Service / Item')).toHaveValue('Wall painting');
+    expect(screen.getByLabelText('Service / Item')).toHaveValue(
+      'Wall painting'
+    );
   });
 
   it('keeps returned manual save errors visible and recovers the pending flag', async () => {
@@ -104,6 +104,13 @@ describe('PriceRatesForm rejected action regressions', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Price book service unavailable.'
     );
+    expect(screen.getByRole('alert')).toHaveClass(
+      'rounded-xl',
+      'border-error/20'
+    );
+    expect(
+      screen.getByRole('button', { name: /Download Template/i })
+    ).toHaveClass('rounded-xl', 'focus-visible:ring-2');
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /Import items/i })
@@ -159,5 +166,4 @@ describe('PriceRatesForm rejected action regressions', () => {
       screen.getByRole('button', { name: /Save Rates/i })
     ).not.toBeDisabled();
   });
-
 });

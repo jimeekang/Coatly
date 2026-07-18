@@ -12,7 +12,10 @@ import {
   UserRound,
 } from 'lucide-react';
 import { runWorkspaceAssistant } from '@/modules/assistant/application/actions';
-import type { WorkspaceAssistantMatch, WorkspaceAssistantResult } from '@/modules/ai/domain/draft-types';
+import type {
+  WorkspaceAssistantMatch,
+  WorkspaceAssistantResult,
+} from '@/modules/ai/domain/draft-types';
 import type { QuoteCustomerOption } from '@/modules/quotes/domain/quotes';
 import type { QuoteCreateInput } from '@/modules/quotes/domain/quote-schema';
 import type { QuoteFormDefaultValues } from '@/modules/quotes/ui/QuoteForm';
@@ -22,6 +25,8 @@ import type {
   InvoiceFormQuoteOption,
   InvoiceFormSubmitPayload,
 } from '@/modules/invoices/ui/InvoiceForm';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { formatAUD, formatDate } from '@/utils/format';
 
 /**
@@ -48,7 +53,9 @@ export type WorkspaceAssistantInvoiceForm = ComponentType<{
   customers: InvoiceFormCustomerOption[];
   quotes: InvoiceFormQuoteOption[];
   defaultValues?: InvoiceFormDefaultValues;
-  onSubmit?: (data: InvoiceFormSubmitPayload) => Promise<{ error?: string } | void>;
+  onSubmit?: (
+    data: InvoiceFormSubmitPayload
+  ) => Promise<{ error?: string } | void>;
   onCancel?: () => void;
   cancelLabel?: string;
 }>;
@@ -60,7 +67,9 @@ export type WorkspaceAssistantProps = {
   QuoteForm: WorkspaceAssistantQuoteForm;
   InvoiceForm: WorkspaceAssistantInvoiceForm;
   createQuote: (data: QuoteCreateInput) => Promise<{ error: string } | void>;
-  createInvoice: (data: InvoiceFormSubmitPayload) => Promise<{ error: string } | void>;
+  createInvoice: (
+    data: InvoiceFormSubmitPayload
+  ) => Promise<{ error: string } | void>;
 };
 
 const EXAMPLES = [
@@ -145,7 +154,9 @@ export function WorkspaceAssistant({
       const response = await runWorkspaceAssistant({ prompt });
       if (response.error || !response.data) {
         setResult(null);
-        setError(response.error ?? 'The assistant could not complete that request.');
+        setError(
+          response.error ?? 'The assistant could not complete that request.'
+        );
         return;
       }
 
@@ -154,7 +165,9 @@ export function WorkspaceAssistant({
     });
   }
 
-  function handlePromptKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function handlePromptKeyDown(
+    event: React.KeyboardEvent<HTMLTextAreaElement>
+  ) {
     if (event.key !== 'Enter' || event.shiftKey) {
       return;
     }
@@ -169,30 +182,29 @@ export function WorkspaceAssistant({
   }
 
   return (
-    <section className="mb-10 overflow-hidden rounded-2xl border border-outline bg-white shadow-sm">
-      <div className="border-b border-outline bg-gradient-to-br from-success-container via-white to-error-container px-4 py-5 md:px-5">
+    <section className="border-outline bg-surface-container-lowest mb-10 overflow-hidden rounded-2xl border shadow-sm">
+      <div className="border-outline from-success-container via-surface-container-lowest to-error-container border-b bg-gradient-to-br px-4 py-5 md:px-5">
         <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-white p-2.5 shadow-sm">
-            <Sparkles className="h-5 w-5 text-primary" />
+          <div className="bg-surface-container-lowest rounded-2xl p-2.5 shadow-sm">
+            <Sparkles className="text-primary h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              Dashboard AI
-            </p>
-            <h2 className="mt-1 text-xl font-bold text-on-surface">
+            <SectionLabel className="text-primary">Dashboard AI</SectionLabel>
+            <h2 className="text-on-surface mt-1 text-xl font-bold">
               Ask once. Search records or draft the next job.
             </h2>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              One prompt can find customers, quotes, and invoices or prepare a form draft
-              for review before saving.
+            <p className="text-on-surface-variant mt-1 text-sm">
+              One prompt can find customers, quotes, and invoices or prepare a
+              form draft for review before saving.
             </p>
-            <p className="mt-2 rounded-xl border border-white/70 bg-white/75 px-3 py-2 text-xs text-on-surface-variant">
-              AI may use business, customer, quote, and invoice context. Review drafts before saving or sending.
+            <p className="border-outline-variant bg-surface-container-lowest/75 text-on-surface-variant mt-2 rounded-xl border px-3 py-2 text-xs">
+              AI may use business, customer, quote, and invoice context. Review
+              drafts before saving or sending.
             </p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-outline bg-white p-3 shadow-sm">
+        <div className="border-outline bg-surface-container-lowest mt-4 rounded-2xl border p-3 shadow-sm">
           <label htmlFor="workspace-ai-prompt" className="sr-only">
             Dashboard AI prompt
           </label>
@@ -203,7 +215,7 @@ export function WorkspaceAssistant({
             onKeyDown={handlePromptKeyDown}
             rows={4}
             placeholder="Example: Find Mark's latest quote, or create a deposit invoice for Shara due next Friday."
-            className="w-full resize-none border-0 bg-transparent px-1 py-1 text-base text-on-surface placeholder:text-on-surface-variant focus:outline-none"
+            className="text-on-surface placeholder:text-on-surface-variant w-full resize-none border-0 bg-transparent px-1 py-1 text-base focus:outline-none"
           />
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -212,7 +224,7 @@ export function WorkspaceAssistant({
                 key={example}
                 type="button"
                 onClick={() => setPrompt(example)}
-                className="rounded-full border border-outline bg-surface-container-low px-3 py-1.5 text-xs font-medium text-on-surface transition-colors hover:bg-white"
+                className="border-outline bg-surface-container-low text-on-surface hover:bg-surface-container-lowest focus-visible:ring-primary/30 min-h-11 rounded-full border px-3 py-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 {example}
               </button>
@@ -224,7 +236,7 @@ export function WorkspaceAssistant({
               type="button"
               onClick={handleRunPrompt}
               disabled={isPending || !prompt.trim()}
-              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
               <Search className="h-4 w-4" />
               {isPending ? 'Working...' : 'Run Prompt'}
@@ -233,7 +245,7 @@ export function WorkspaceAssistant({
               type="button"
               onClick={clearAssistant}
               disabled={isPending && !result}
-              className="min-h-11 rounded-2xl border border-outline bg-white px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low disabled:opacity-50"
+              className="border-outline bg-surface-container-lowest text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 min-h-12 rounded-xl border px-4 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
             >
               Clear
             </button>
@@ -243,25 +255,25 @@ export function WorkspaceAssistant({
 
       {(error || result) && (
         <div className="px-4 py-5 md:px-5">
-          <div className="rounded-2xl border border-outline bg-surface-container-low p-4">
+          <div className="border-outline bg-surface-container-low rounded-2xl border p-4">
             {result && (
               <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-white p-2 shadow-sm">
-                  <MessageSquareText className="h-4 w-4 text-primary" />
+                <div className="bg-surface-container-lowest rounded-2xl p-2 shadow-sm">
+                  <MessageSquareText className="text-primary h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
-                    {getIntentLabel(result.intent)}
+                  <SectionLabel>{getIntentLabel(result.intent)}</SectionLabel>
+                  <p className="text-on-surface mt-1 text-sm font-semibold">
+                    {result.summary}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-on-surface">{result.summary}</p>
                   {result.answer && (
-                    <p className="mt-3 rounded-2xl border border-outline bg-white px-4 py-3 text-sm text-on-surface">
+                    <p className="border-outline bg-surface-container-lowest text-on-surface mt-3 rounded-2xl border px-4 py-3 text-sm">
                       {result.answer}
                     </p>
                   )}
                   {result.warnings.length > 0 && (
-                    <div className="mt-3 rounded-2xl border border-warning/30 bg-warning-container px-4 py-3">
-                      <ul className="space-y-1 text-sm text-on-warning-container">
+                    <div className="border-warning/30 bg-warning-container mt-3 rounded-2xl border px-4 py-3">
+                      <ul className="text-on-warning-container space-y-1 text-sm">
                         {result.warnings.map((warning) => (
                           <li key={warning}>{warning}</li>
                         ))}
@@ -272,11 +284,7 @@ export function WorkspaceAssistant({
               </div>
             )}
 
-            {error && (
-              <div className="rounded-2xl border border-error bg-error-container px-4 py-3">
-                <p className="text-sm text-on-error-container">{error}</p>
-              </div>
-            )}
+            {error && <ErrorAlert>{error}</ErrorAlert>}
           </div>
 
           {result?.matches.length ? (
@@ -287,45 +295,51 @@ export function WorkspaceAssistant({
                   <Link
                     key={`${match.type}-${match.id}`}
                     href={match.href}
-                    className="rounded-2xl border border-outline bg-white p-4 shadow-sm transition-colors hover:bg-surface-container-low"
+                    className="border-outline bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/30 rounded-2xl border p-4 shadow-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="rounded-2xl bg-success-container p-2.5">
-                          <Icon className="h-4 w-4 text-primary" />
+                        <div className="bg-success-container rounded-2xl p-2.5">
+                          <Icon className="text-primary h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-on-surface">
+                          <p className="text-on-surface truncate text-sm font-semibold">
                             {match.title}
                           </p>
-                          <p className="mt-0.5 text-sm text-on-surface-variant">{match.subtitle}</p>
+                          <p className="text-on-surface-variant mt-0.5 text-sm">
+                            {match.subtitle}
+                          </p>
                           {match.description && (
-                            <p className="mt-1 text-sm text-on-surface-variant">{match.description}</p>
+                            <p className="text-on-surface-variant mt-1 text-sm">
+                              {match.description}
+                            </p>
                           )}
                         </div>
                       </div>
-                      <ArrowUpRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-on-surface-variant" />
+                      <ArrowUpRight className="text-on-surface-variant mt-0.5 h-4 w-4 flex-shrink-0" />
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
                       {match.badge && (
-                        <span className="rounded-full bg-success-container px-2.5 py-1 font-medium text-primary">
+                        <span className="bg-success-container text-primary rounded-full px-2.5 py-1 font-medium">
                           {match.badge}
                         </span>
                       )}
                       {match.amount_cents != null && (
-                        <span className="rounded-full bg-white px-2.5 py-1 font-medium text-on-surface ring-1 ring-outline">
+                        <span className="bg-surface-container-lowest text-on-surface ring-outline rounded-full px-2.5 py-1 font-medium ring-1">
                           {formatAUD(match.amount_cents)}
                         </span>
                       )}
                       {match.date_label && (
-                        <span className="rounded-full bg-white px-2.5 py-1 font-medium text-on-surface ring-1 ring-outline">
+                        <span className="bg-surface-container-lowest text-on-surface ring-outline rounded-full px-2.5 py-1 font-medium ring-1">
                           {formatMatchDate(match.date_label)}
                         </span>
                       )}
                     </div>
 
-                    <p className="mt-3 text-sm text-on-surface-variant">{match.reason}</p>
+                    <p className="text-on-surface-variant mt-3 text-sm">
+                      {match.reason}
+                    </p>
                   </Link>
                 );
               })}
@@ -333,17 +347,15 @@ export function WorkspaceAssistant({
           ) : null}
 
           {isCreateIntent && (
-            <div className="mt-5 rounded-2xl border border-outline bg-white p-4 shadow-sm">
+            <div className="border-outline bg-surface-container-lowest mt-5 rounded-2xl border p-4 shadow-sm">
               <div className="mb-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
-                  Review Before Save
-                </p>
-                <h3 className="mt-1 text-lg font-bold text-on-surface">
+                <SectionLabel>Review Before Save</SectionLabel>
+                <h3 className="text-on-surface mt-1 text-lg font-bold">
                   {getIntentLabel(result.intent)}
                 </h3>
-                <p className="mt-1 text-sm text-on-surface-variant">
-                  AI filled the draft. Check the form, adjust anything missing, then save
-                  through the normal validated action.
+                <p className="text-on-surface-variant mt-1 text-sm">
+                  AI filled the draft. Check the form, adjust anything missing,
+                  then save through the normal validated action.
                 </p>
               </div>
 
@@ -368,8 +380,10 @@ export function WorkspaceAssistant({
                           status: result.quote.status,
                           valid_until: result.quote.valid_until,
                           complexity: result.quote.complexity,
-                          labour_margin_percent: result.quote.labour_margin_percent,
-                          material_margin_percent: result.quote.material_margin_percent,
+                          labour_margin_percent:
+                            result.quote.labour_margin_percent,
+                          material_margin_percent:
+                            result.quote.material_margin_percent,
                           notes: result.quote.notes,
                           internal_notes: result.quote.internal_notes,
                           rooms: result.quote.rooms,

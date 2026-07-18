@@ -180,6 +180,7 @@ describe('lib/quotes', () => {
         exterior_estimate: null,
         scope_sections: [],
         clause_items: [],
+        replace_quote_structure: false,
         ai_intake_snapshot: null,
         line_items: [],
         rooms: [
@@ -468,6 +469,7 @@ describe('lib/quotes', () => {
         exterior_estimate: null,
         scope_sections: [],
         clause_items: [],
+        replace_quote_structure: false,
         ai_intake_snapshot: null,
         line_items: [],
         rooms: [],

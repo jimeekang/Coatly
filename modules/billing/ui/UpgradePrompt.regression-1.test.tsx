@@ -8,7 +8,7 @@ import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
 // Found by /qa on 2026-07-12
 // Report: .gstack/qa-reports/qa-report-localhost-3000-2026-07-12.md
 describe('UpgradePrompt client boundary', () => {
-  it('stays a client component and renders its plan links', () => {
+  it('stays a client component and renders one clear plan action', () => {
     const source = fs.readFileSync(
       path.join(process.cwd(), 'modules/billing/ui/UpgradePrompt.tsx'),
       'utf8'
@@ -25,11 +25,10 @@ describe('UpgradePrompt client boundary', () => {
 
     expect(screen.getByRole('link', { name: 'View Plans' })).toHaveAttribute(
       'href',
-      '/settings'
+      '/settings/billing'
     );
-    expect(screen.getByRole('link', { name: 'Compare Plans' })).toHaveAttribute(
-      'href',
-      '/settings'
-    );
+    expect(
+      screen.queryByRole('link', { name: 'Compare Plans' })
+    ).not.toBeInTheDocument();
   });
 });

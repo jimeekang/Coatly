@@ -12,6 +12,48 @@ vi.mock('@/modules/settings/application/business-actions', () => ({
 }));
 
 describe('BusinessProfileForm submission exception handling', () => {
+  it('uses canonical input and textarea styling', () => {
+    const { container } = render(
+      <BusinessProfileForm
+        defaultValues={{
+          name: 'Harbor Cafe',
+          abn: '12345678901',
+          addressLine1: '128 Beach Street',
+          city: 'Manly',
+          state: 'NSW',
+          postcode: '2095',
+          phone: '0412 555 012',
+          email: 'sarah@example.com',
+          paymentTerms: 'Payment due within 7 days',
+          bankDetails: 'BSB: 123-456\nAccount: 12345678',
+          logoUrl: '',
+          logoPreviewUrl: '',
+        }}
+      />
+    );
+
+    expect(screen.getByLabelText('Business Name')).toHaveClass(
+      'h-12',
+      'text-base',
+      'rounded-xl',
+      'border-outline-variant',
+      'focus:border-primary',
+      'focus:ring-primary/20'
+    );
+    expect(screen.getByLabelText('Default Payment Terms')).toHaveClass(
+      'text-base',
+      'rounded-xl',
+      'border-outline-variant',
+      'focus:border-primary',
+      'focus:ring-primary/20',
+      'min-h-[132px]'
+    );
+    expect(
+      screen.getByRole('button', { name: 'Save Business Details' })
+    ).toHaveClass('h-12', 'text-base', 'rounded-xl', 'focus-visible:ring-2');
+    expect(container.firstElementChild).toHaveClass('rounded-2xl');
+  });
+
   it('shows a rejected save error and exits the saving state', async () => {
     const user = userEvent.setup();
     saveBusinessProfileMock.mockRejectedValue(

@@ -22,6 +22,7 @@ import type {
   QuoteTemplate,
   QuoteTemplatePayload,
 } from '@/modules/quotes/application/template-actions';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 /**
  * AIDraftPanel and UpgradePrompt are injected by the composition layer
@@ -194,7 +195,9 @@ export function QuoteCreateScreen({
       setSummary(result.data.summary);
       setWarnings([
         ...result.data.warnings,
-        ...result.data.quote.questions_for_user.map((question) => question.question),
+        ...result.data.quote.questions_for_user.map(
+          (question) => question.question
+        ),
       ]);
     });
   }
@@ -361,7 +364,7 @@ export function QuoteCreateScreen({
 
       {/* Save as Template prompt — shown after a successful quote submission */}
       {pendingSavePayload && (
-        <div className="border-outline-variant bg-surface-container-lowest mt-6 rounded-xl border p-5">
+        <div className="border-outline-variant bg-surface-container-lowest mt-6 rounded-2xl border p-5">
           <p className="text-on-surface text-sm font-semibold">
             Save this quote as a template?
           </p>
@@ -374,28 +377,28 @@ export function QuoteCreateScreen({
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder="Template name (e.g. 2-bed interior standard)"
-              className="border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant focus:ring-primary/30 min-h-11 flex-1 rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
+              className="border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 flex-1 rounded-xl border px-4 text-base focus:ring-2 focus:outline-none"
             />
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleSaveTemplate}
                 disabled={isSavingTemplate || !templateName.trim()}
-                className="bg-primary text-on-primary inline-flex min-h-11 flex-1 items-center justify-center rounded-lg px-4 text-sm font-semibold shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-5"
+                className="bg-primary text-on-primary focus-visible:ring-primary/30 inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold shadow-sm transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-5"
               >
                 {isSavingTemplate ? 'Saving…' : 'Save Template'}
               </button>
               <button
                 type="button"
                 onClick={() => setPendingSavePayload(null)}
-                className="border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high active:bg-outline-variant inline-flex min-h-11 items-center justify-center rounded-lg border px-4 text-sm font-semibold transition-colors sm:px-5"
+                className="border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high active:bg-outline-variant focus-visible:ring-primary/30 inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-5"
               >
                 Skip
               </button>
             </div>
           </div>
           {saveTemplateError && (
-            <p className="text-error mt-2 text-xs">{saveTemplateError}</p>
+            <ErrorAlert className="mt-3">{saveTemplateError}</ErrorAlert>
           )}
         </div>
       )}

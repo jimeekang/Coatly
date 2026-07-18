@@ -1,6 +1,9 @@
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getQuote, getQuoteFormOptions } from '@/modules/quotes/application/actions';
+import {
+  getQuote,
+  getQuoteFormOptions,
+} from '@/modules/quotes/application/actions';
 import { getMaterialItemsForPicker } from '@/modules/materials/application/actions';
 import { type QuoteFormDefaultValues } from '@/modules/quotes/ui/QuoteForm';
 import { QuoteEditScreen } from '@/modules/quotes/ui/QuoteEditScreen';
@@ -196,7 +199,7 @@ export default async function EditQuotePage({
   };
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-7xl">
+    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
       <PageHeader
         title="Edit Quote"
         subtitle={`${quote.quote_number}${quote.title ? ` · ${quote.title}` : ''}`}

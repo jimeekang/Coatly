@@ -4,11 +4,9 @@ import { Component, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JobDetail } from '@/modules/jobs/ui/JobDetail';
 import { JobEditForm } from '@/modules/jobs/ui/JobEditForm';
-import { JobsWorkspace } from '@/modules/jobs/ui/JobsWorkspace';
 import type { JobDetail as JobDetailData } from '@/modules/jobs/domain/jobs';
 
 const {
-  createJobMock,
   deleteJobMock,
   pushMock,
   refreshMock,
@@ -16,7 +14,6 @@ const {
   saveJobVariationsMock,
   updateJobMock,
 } = vi.hoisted(() => ({
-  createJobMock: vi.fn(),
   deleteJobMock: vi.fn(),
   pushMock: vi.fn(),
   refreshMock: vi.fn(),
@@ -34,7 +31,6 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/modules/jobs/application/actions', () => ({
-  createJob: createJobMock,
   deleteJob: deleteJobMock,
   retryJobGoogleCalendarSync: retryJobGoogleCalendarSyncMock,
   saveJobVariations: saveJobVariationsMock,
@@ -64,8 +60,14 @@ class TestErrorBoundary extends Component<
   }
 
   render() {
-    if (this.state.error && typeof this.state.error === 'object' && 'digest' in this.state.error) {
-      return <div>{String((this.state.error as { digest: unknown }).digest)}</div>;
+    if (
+      this.state.error &&
+      typeof this.state.error === 'object' &&
+      'digest' in this.state.error
+    ) {
+      return (
+        <div>{String((this.state.error as { digest: unknown }).digest)}</div>
+      );
     }
 
     return this.props.children;
@@ -110,13 +112,13 @@ const job: JobDetailData = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  createJobMock.mockResolvedValue({ error: null });
   deleteJobMock.mockResolvedValue({ error: null });
-  retryJobGoogleCalendarSyncMock.mockResolvedValue({ error: null, synced: true });
+  retryJobGoogleCalendarSyncMock.mockResolvedValue({
+    error: null,
+    synced: true,
+  });
   saveJobVariationsMock.mockResolvedValue({ error: null });
   updateJobMock.mockResolvedValue({ error: null });
-  vi.spyOn(window, 'alert').mockImplementation(() => undefined);
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 
 describe('jobs action rejection handling', () => {
@@ -131,7 +133,7 @@ describe('jobs action rejection handling', () => {
         customers={[]}
         quotes={[]}
         initialVariations={[]}
-      />,
+      />
     );
 
     const submit = screen.getByRole('button', { name: 'Save Changes' });
@@ -147,27 +149,7 @@ describe('jobs action rejection handling', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('keeps New Job pending until the action settles and surfaces a rejection', async () => {
-    const user = userEvent.setup();
-    const create = createDeferred<ActionResult>();
-    createJobMock.mockReturnValue(create.promise);
-
-    render(<JobsWorkspace jobs={[]} customers={[]} quotes={[]} />);
-
-    const submit = screen.getByRole('button', { name: 'Save Job' });
-    await user.click(submit);
-    expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
-
-    create.reject(new Error('New Job failed'));
-
-    await waitFor(() => {
-      expect(screen.getByText('New Job failed')).toBeInTheDocument();
-    });
-    expect(screen.getByRole('button', { name: 'Save Job' })).toBeEnabled();
-    expect(refreshMock).not.toHaveBeenCalled();
-  });
-
-  it('re-enables Delete Job and alerts when the action rejects', async () => {
+  it('re-enables Delete Job and shows an inline error when the action rejects', async () => {
     const user = userEvent.setup();
     const deletion = createDeferred<ActionResult>();
     deleteJobMock.mockReturnValue(deletion.promise);
@@ -176,34 +158,41 @@ describe('jobs action rejection handling', () => {
 
     const deleteButton = screen.getByRole('button', { name: 'Delete Job' });
     await user.click(deleteButton);
+    await user.click(screen.getByRole('button', { name: 'Delete job' }));
     expect(screen.getByRole('button', { name: 'Deleting...' })).toBeDisabled();
 
     deletion.reject(new Error('Delete Job failed'));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Delete Job failed');
+      expect(screen.getByText('Delete Job failed')).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: 'Delete Job' })).toBeEnabled();
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('re-enables Mark as complete and alerts when the action rejects', async () => {
+  it('re-enables Mark as complete and shows an inline error when the action rejects', async () => {
     const user = userEvent.setup();
     const completion = createDeferred<ActionResult>();
     updateJobMock.mockReturnValue(completion.promise);
 
     render(<JobDetail job={job} />);
 
-    const completeButton = screen.getByRole('button', { name: 'Mark as complete' });
+    const completeButton = screen.getByRole('button', {
+      name: 'Mark as complete',
+    });
     await user.click(completeButton);
-    expect(screen.getByRole('button', { name: 'Marking complete...' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Marking complete...' })
+    ).toBeDisabled();
 
     completion.reject(new Error('Mark Complete failed'));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Mark Complete failed');
+      expect(screen.getByText('Mark Complete failed')).toBeInTheDocument();
     });
-    expect(screen.getByRole('button', { name: 'Mark as complete' })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Mark as complete' })
+    ).toBeEnabled();
     expect(screen.queryByText('Job marked complete!')).not.toBeInTheDocument();
   });
 
@@ -233,16 +222,19 @@ describe('jobs action rejection handling', () => {
 
     render(<JobDetail job={job} />);
     await user.click(screen.getByRole('button', { name: 'Delete Job' }));
+    await user.click(screen.getByRole('button', { name: 'Delete job' }));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Job cannot be deleted');
+      expect(screen.getByText('Job cannot be deleted')).toBeInTheDocument();
     });
     expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('rethrows Next navigation signals instead of surfacing them as form errors', async () => {
     const user = userEvent.setup();
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
     const redirectError = Object.assign(new Error('NEXT_REDIRECT'), {
       digest: 'NEXT_REDIRECT;push;/login;307;',
     });
@@ -256,15 +248,19 @@ describe('jobs action rejection handling', () => {
           quotes={[]}
           initialVariations={[]}
         />
-      </TestErrorBoundary>,
+      </TestErrorBoundary>
     );
 
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     await waitFor(() => {
-      expect(screen.getByText('NEXT_REDIRECT;push;/login;307;')).toBeInTheDocument();
+      expect(
+        screen.getByText('NEXT_REDIRECT;push;/login;307;')
+      ).toBeInTheDocument();
     });
-    expect(screen.queryByText('Job could not be saved. Please try again.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Job could not be saved. Please try again.')
+    ).not.toBeInTheDocument();
     consoleError.mockRestore();
   });
 });

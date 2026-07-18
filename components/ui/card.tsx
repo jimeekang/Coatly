@@ -13,11 +13,16 @@ const PADDING: Record<CardPadding, string> = {
   lg: 'p-6',
 };
 
-export function Card({ padding = 'md', className = '', children, ...props }: CardProps) {
+export function Card({
+  padding = 'md',
+  className = '',
+  children,
+  ...props
+}: CardProps) {
   return (
     <div
       className={[
-        'rounded-xl border border-outline bg-white',
+        'border-outline-variant bg-surface-container-lowest rounded-2xl border',
         PADDING[padding],
         className,
       ]
@@ -38,7 +43,7 @@ export function CardHeader({
   return (
     <div
       className={[
-        'flex items-center justify-between border-b border-outline pb-3',
+        'border-outline-variant flex items-center justify-between border-b pb-3',
         className,
       ]
         .filter(Boolean)
@@ -57,7 +62,9 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={['text-base font-semibold text-on-surface', className].filter(Boolean).join(' ')}
+      className={['text-on-surface text-base font-semibold', className]
+        .filter(Boolean)
+        .join(' ')}
       {...props}
     >
       {children}
@@ -65,7 +72,11 @@ export function CardTitle({
   );
 }
 
-export function CardBody({ className = '', children, ...props }: HTMLAttributes<HTMLDivElement>) {
+export function CardBody({
+  className = '',
+  children,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={['pt-3', className].filter(Boolean).join(' ')} {...props}>
       {children}

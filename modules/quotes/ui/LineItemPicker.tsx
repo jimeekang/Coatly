@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, X, Plus, Package } from 'lucide-react';
 import {
   NumericInput,
@@ -14,10 +14,13 @@ import {
   type MaterialItemCategory,
 } from '@/modules/materials/domain/types';
 import type { QuoteLineItemFormInput } from '@/modules/quotes/domain/quote-schema';
-
-function formatAUD(cents: number) {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100);
-}
+import {
+  formControlClassName,
+  formLabelClassName,
+} from '@/components/forms/FormField';
+import { cn } from '@/lib/utils';
+import { formatAUD } from '@/utils/format';
+import { Modal } from '@/components/ui/modal';
 
 interface LineItemPickerProps {
   libraryItems: MaterialItem[];
@@ -52,26 +55,37 @@ function parseQuantityDraft(category: MaterialItemCategory, draft: string) {
   return parsed;
 }
 
-export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerProps) {
+export function LineItemPicker({
+  libraryItems,
+  onAdd,
+  onClose,
+}: LineItemPickerProps) {
   const [mode, setMode] = useState<PickerMode>('browse');
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<MaterialItemCategory | 'all'>('all');
-  // Lock body scroll while open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
+  const [categoryFilter, setCategoryFilter] = useState<
+    MaterialItemCategory | 'all'
+  >('all');
+  const [restoreFocusElement] = useState<HTMLElement | null>(() =>
+    typeof document !== 'undefined' &&
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+  );
   const filtered = libraryItems.filter((item) => {
     const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = categoryFilter === 'all' || item.category === categoryFilter;
+    const matchCat =
+      categoryFilter === 'all' || item.category === categoryFilter;
     return matchSearch && matchCat;
   });
 
   // ── Configure quantity for a library item ─────────────────────────────────
   if (typeof mode === 'object' && 'configure' in mode) {
     return (
-      <PickerOverlay onClose={onClose}>
+      <PickerOverlay
+        ariaLabel={`Configure ${mode.configure.name}`}
+        restoreFocusElement={restoreFocusElement}
+        onClose={onClose}
+      >
         <ConfigureItem
           item={mode.configure}
           onAdd={(qty) => {
@@ -96,9 +110,16 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
   // ── Custom item entry ──────────────────────────────────────────────────────
   if (mode === 'custom') {
     return (
-      <PickerOverlay onClose={onClose}>
+      <PickerOverlay
+        ariaLabel="Create custom quote item"
+        restoreFocusElement={restoreFocusElement}
+        onClose={onClose}
+      >
         <CustomItemForm
-          onAdd={(item) => { onAdd(item); onClose(); }}
+          onAdd={(item) => {
+            onAdd(item);
+            onClose();
+          }}
           onBack={() => setMode('browse')}
         />
       </PickerOverlay>
@@ -107,38 +128,47 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
 
   // ── Browse library ─────────────────────────────────────────────────────────
   return (
-    <PickerOverlay onClose={onClose}>
-      <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
-        <h2 className="text-base font-semibold text-on-surface">Add Item</h2>
-        <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+    <PickerOverlay
+      ariaLabel="Add quote item"
+      restoreFocusElement={restoreFocusElement}
+      onClose={onClose}
+    >
+      <div className="border-outline-variant flex items-center justify-between border-b pb-3">
+        <h2 className="text-on-surface text-base font-semibold">Add Item</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close item picker"
+          className="text-on-surface-variant hover:bg-surface-container focus-visible:ring-primary/30 flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
           <X className="h-5 w-5" />
         </button>
       </div>
 
       {/* Search */}
       <div className="relative mt-3">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+        <Search className="text-on-surface-variant pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search items..."
-          className="h-11 w-full rounded-xl border border-outline-variant bg-surface-container pl-9 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border pr-4 pl-9 text-base focus:ring-2 focus:outline-none"
           autoFocus
         />
       </div>
 
       {/* Category filter */}
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto pb-1">
         {(['all', ...MATERIAL_ITEM_CATEGORIES] as const).map((cat) => (
           <button
             key={cat}
             type="button"
             onClick={() => setCategoryFilter(cat)}
-            className={`min-h-11 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors ${
+            className={`focus-visible:ring-primary/30 min-h-11 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
               categoryFilter === cat
                 ? 'border-primary bg-primary text-on-primary'
-                : 'border-outline-variant bg-white text-on-surface-variant hover:border-primary'
+                : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-primary'
             }`}
           >
             {cat === 'all' ? 'All' : MATERIAL_ITEM_CATEGORY_LABELS[cat]}
@@ -147,12 +177,17 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
       </div>
 
       {/* Items list */}
-      <div className="mt-3 flex-1 overflow-y-auto space-y-1 max-h-64">
+      <div className="mt-3 max-h-64 flex-1 space-y-1 overflow-y-auto">
         {filtered.length === 0 ? (
           <div className="py-8 text-center">
-            <Package className="mx-auto h-8 w-8 text-on-surface-variant/40" strokeWidth={1.5} />
-            <p className="mt-2 text-sm text-on-surface-variant">
-              {libraryItems.length === 0 ? 'No saved items yet.' : 'No items match your search.'}
+            <Package
+              className="text-on-surface-variant/40 mx-auto h-8 w-8"
+              strokeWidth={1.5}
+            />
+            <p className="text-on-surface-variant mt-2 text-sm">
+              {libraryItems.length === 0
+                ? 'No saved items yet.'
+                : 'No items match your search.'}
             </p>
           </div>
         ) : (
@@ -161,29 +196,31 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
               key={item.id}
               type="button"
               onClick={() => setMode({ configure: item })}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-surface-container"
+              className="hover:bg-surface-container focus-visible:ring-primary/30 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-on-surface">{item.name}</p>
-                <p className="text-xs text-on-surface-variant">
-                  {MATERIAL_ITEM_CATEGORY_LABELS[item.category]} · {formatAUD(item.unit_price_cents)} / {item.unit}
+                <p className="text-on-surface truncate text-sm font-medium">
+                  {item.name}
+                </p>
+                <p className="text-on-surface-variant text-xs">
+                  {MATERIAL_ITEM_CATEGORY_LABELS[item.category]} ·{' '}
+                  {formatAUD(item.unit_price_cents)} / {item.unit}
                 </p>
               </div>
-              <Plus className="h-4 w-4 shrink-0 text-primary" />
+              <Plus className="text-primary h-4 w-4 shrink-0" />
             </button>
           ))
         )}
       </div>
 
       {/* Custom item CTA */}
-      <div className="mt-3 pt-3 border-t border-outline-variant">
+      <div className="border-outline-variant mt-3 border-t pt-3">
         <button
           type="button"
           onClick={() => setMode('custom')}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant py-3 text-sm font-medium text-on-surface-variant hover:border-primary hover:text-primary"
+          className="border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary focus-visible:ring-primary/30 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
-          <Plus className="h-4 w-4" />
-          Add Custom Item
+          <Plus className="h-4 w-4" />+ New Custom Item
         </button>
       </div>
     </PickerOverlay>
@@ -194,19 +231,24 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
 
 const PickerOverlay = ({
   children,
+  ariaLabel,
+  restoreFocusElement,
   onClose,
 }: {
   children: React.ReactNode;
+  ariaLabel: string;
+  restoreFocusElement: HTMLElement | null;
   onClose: () => void;
 }) => (
-  <div
-    className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center"
-    onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+  <Modal
+    open
+    onClose={onClose}
+    ariaLabel={ariaLabel}
+    size="md"
+    restoreFocusElement={restoreFocusElement}
   >
-    <div className="w-full max-w-md rounded-t-2xl bg-white p-5 shadow-xl md:rounded-2xl flex flex-col max-h-[90dvh]">
-      {children}
-    </div>
-  </div>
+    {children}
+  </Modal>
 );
 
 function ConfigureItem({
@@ -224,37 +266,50 @@ function ConfigureItem({
 
   return (
     <>
-      <div className="flex items-center gap-2 pb-3 border-b border-outline-variant">
-        <button type="button" onClick={onBack} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+      <div className="border-outline-variant flex items-center gap-2 border-b pb-3">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back to item library"
+          className="text-on-surface-variant hover:bg-surface-container focus-visible:ring-primary/30 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
           <X className="h-5 w-5" />
         </button>
-        <h2 className="text-base font-semibold text-on-surface truncate">{item.name}</h2>
+        <h2 className="text-on-surface truncate text-base font-semibold">
+          {item.name}
+        </h2>
       </div>
 
-      <div className="mt-4 rounded-xl bg-surface-container px-4 py-3">
-        <p className="text-xs text-on-surface-variant">{MATERIAL_ITEM_CATEGORY_LABELS[item.category]}</p>
-        <p className="mt-0.5 text-sm font-medium text-on-surface">
+      <div className="bg-surface-container mt-4 rounded-xl px-4 py-3">
+        <p className="text-on-surface-variant text-xs">
+          {MATERIAL_ITEM_CATEGORY_LABELS[item.category]}
+        </p>
+        <p className="text-on-surface mt-0.5 text-sm font-medium">
           {formatAUD(item.unit_price_cents)} / {item.unit}
         </p>
       </div>
 
       <div className="mt-4">
-        <label className="block text-sm font-medium text-on-surface mb-1.5">
-          Quantity ({item.unit})
-        </label>
+        <label className={formLabelClassName}>Quantity ({item.unit})</label>
         <NumericInput
           value={qtyDraft}
-          inputMode={requiresWholeNumberQuantity(item.category) ? 'numeric' : 'decimal'}
-          sanitize={requiresWholeNumberQuantity(item.category) ? sanitizeWholeNumberQuantityInput : sanitizeDecimalInput}
+          inputMode={
+            requiresWholeNumberQuantity(item.category) ? 'numeric' : 'decimal'
+          }
+          sanitize={
+            requiresWholeNumberQuantity(item.category)
+              ? sanitizeWholeNumberQuantityInput
+              : sanitizeDecimalInput
+          }
           onValueChange={setQtyDraft}
-          className="h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className={formControlClassName}
           aria-label={`${item.name} quantity`}
         />
       </div>
 
-      <div className="mt-3 rounded-xl bg-primary/15 px-4 py-3 flex justify-between items-center">
-        <span className="text-sm text-on-surface-variant">Subtotal</span>
-        <span className="text-base font-semibold text-primary">
+      <div className="bg-primary/15 mt-3 flex items-center justify-between rounded-xl px-4 py-3">
+        <span className="text-on-surface-variant text-sm">Subtotal</span>
+        <span className="text-primary text-base font-semibold">
           {formatAUD(Math.round(qty * item.unit_price_cents))}
         </span>
       </div>
@@ -263,7 +318,7 @@ function ConfigureItem({
         type="button"
         onClick={() => onAdd(qty)}
         disabled={!canAdd}
-        className="mt-4 h-12 w-full rounded-xl bg-primary text-base font-semibold text-on-primary disabled:opacity-50"
+        className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 mt-4 h-12 w-full rounded-xl text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
       >
         Add to Quote
       </button>
@@ -294,9 +349,9 @@ function CustomItemForm({
     notes: '',
   });
 
-  const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) {
     const { name, value } = e.target;
     setForm((prev) => {
       if (name === 'category') {
@@ -313,9 +368,10 @@ function CustomItemForm({
 
       return {
         ...prev,
-        [name]: name === 'quantity' && requiresWholeNumberQuantity(prev.category)
-          ? sanitizeWholeNumberQuantityInput(value)
-          : value,
+        [name]:
+          name === 'quantity' && requiresWholeNumberQuantity(prev.category)
+            ? sanitizeWholeNumberQuantityInput(value)
+            : value,
       };
     });
   }
@@ -344,49 +400,88 @@ function CustomItemForm({
 
   return (
     <>
-      <div className="flex items-center gap-2 pb-3 border-b border-outline-variant">
-        <button type="button" onClick={onBack} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+      <div className="border-outline-variant flex items-center gap-2 border-b pb-3">
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back to item library"
+          className="text-on-surface-variant hover:bg-surface-container focus-visible:ring-primary/30 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
           <X className="h-5 w-5" />
         </button>
-        <h2 className="text-base font-semibold text-on-surface">Custom Item</h2>
+        <h2 className="text-on-surface text-base font-semibold">Custom Item</h2>
       </div>
 
-      <div className="mt-4 space-y-3 overflow-y-auto flex-1">
+      <div className="mt-4 flex-1 space-y-3 overflow-y-auto">
         <div>
-          <label className="block text-sm font-medium text-on-surface mb-1.5">Item Name</label>
-          <input name="name" type="text" value={form.name} onChange={handleChange} placeholder="e.g. Sugar soap, filler" className={FIELD} autoFocus />
+          <label className={formLabelClassName}>Item Name</label>
+          <input
+            name="name"
+            type="text"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="e.g. Sugar soap, filler"
+            className={formControlClassName}
+            autoFocus
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-on-surface mb-1.5">Category</label>
-            <select name="category" value={form.category} onChange={handleChange} className={`${FIELD} cursor-pointer`}>
+            <label className={formLabelClassName}>Category</label>
+            <select
+              name="category"
+              value={form.category}
+              onChange={handleChange}
+              className={cn(formControlClassName, 'cursor-pointer')}
+            >
               {MATERIAL_ITEM_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{MATERIAL_ITEM_CATEGORY_LABELS[cat]}</option>
+                <option key={cat} value={cat}>
+                  {MATERIAL_ITEM_CATEGORY_LABELS[cat]}
+                </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-on-surface mb-1.5">Unit</label>
-            <input name="unit" type="text" value={form.unit} onChange={handleChange} placeholder="item, L, hr" className={FIELD} />
+            <label className={formLabelClassName}>Unit</label>
+            <input
+              name="unit"
+              type="text"
+              value={form.unit}
+              onChange={handleChange}
+              placeholder="item, L, hr"
+              className={formControlClassName}
+            />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-on-surface mb-1.5">Quantity</label>
+            <label className={formLabelClassName}>Quantity</label>
             <NumericInput
               name="quantity"
               value={form.quantity}
-              inputMode={requiresWholeNumberQuantity(form.category) ? 'numeric' : 'decimal'}
-              sanitize={requiresWholeNumberQuantity(form.category) ? sanitizeWholeNumberQuantityInput : sanitizeDecimalInput}
-              onValueChange={(value) => setForm((prev) => ({ ...prev, quantity: value }))}
-              className={FIELD}
+              inputMode={
+                requiresWholeNumberQuantity(form.category)
+                  ? 'numeric'
+                  : 'decimal'
+              }
+              sanitize={
+                requiresWholeNumberQuantity(form.category)
+                  ? sanitizeWholeNumberQuantityInput
+                  : sanitizeDecimalInput
+              }
+              onValueChange={(value) =>
+                setForm((prev) => ({ ...prev, quantity: value }))
+              }
+              className={formControlClassName}
               aria-label="Custom item quantity"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-on-surface mb-1.5">Unit Price</label>
+            <label className={formLabelClassName}>Unit Price</label>
             <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-on-surface-variant">$</span>
+              <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 left-4 flex items-center">
+                $
+              </span>
               <NumericInput
                 value={(form.unit_price_cents / 100).toFixed(2)}
                 sanitize={sanitizeDecimalInput}
@@ -401,16 +496,18 @@ function CustomItemForm({
                     unit_price_cents: Math.round(parsed * 100),
                   }));
                 }}
-                className={`${FIELD} pl-8`}
+                className={cn(formControlClassName, 'pl-8')}
               />
             </div>
           </div>
         </div>
 
         {total > 0 && (
-          <div className="rounded-xl bg-primary/15 px-4 py-3 flex justify-between items-center">
-            <span className="text-sm text-on-surface-variant">Subtotal</span>
-            <span className="text-base font-semibold text-primary">{formatAUD(total)}</span>
+          <div className="bg-primary/15 flex items-center justify-between rounded-xl px-4 py-3">
+            <span className="text-on-surface-variant text-sm">Subtotal</span>
+            <span className="text-primary text-base font-semibold">
+              {formatAUD(total)}
+            </span>
           </div>
         )}
       </div>
@@ -419,7 +516,7 @@ function CustomItemForm({
         type="button"
         onClick={handleSubmit}
         disabled={!canSubmit}
-        className="mt-4 h-12 w-full rounded-xl bg-primary text-base font-semibold text-on-primary disabled:opacity-50"
+        className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 mt-4 h-12 w-full rounded-xl text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
       >
         Add to Quote
       </button>

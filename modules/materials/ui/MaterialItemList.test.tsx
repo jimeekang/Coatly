@@ -81,7 +81,7 @@ describe('MaterialItemList', () => {
 
     render(<MaterialItemList initialItems={[]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Add First Item' }));
+    await user.click(screen.getByRole('button', { name: '+ New Item' }));
     await user.type(screen.getByLabelText('Item Name'), CREATED_ITEM.name);
     await user.click(screen.getByRole('button', { name: 'Add Item' }));
 
@@ -92,12 +92,17 @@ describe('MaterialItemList', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getAllByLabelText(`Edit ${CREATED_ITEM.name}`).length).toBeGreaterThan(0)
+      expect(
+        screen.getAllByLabelText(`Edit ${CREATED_ITEM.name}`).length
+      ).toBeGreaterThan(0)
     );
 
     await user.click(screen.getAllByLabelText(`Edit ${CREATED_ITEM.name}`)[0]);
     await user.clear(screen.getByLabelText('Item Name'));
-    await user.type(screen.getByLabelText('Item Name'), 'Ceiling Paint Updated');
+    await user.type(
+      screen.getByLabelText('Item Name'),
+      'Ceiling Paint Updated'
+    );
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     await waitFor(() =>
@@ -108,11 +113,44 @@ describe('MaterialItemList', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getAllByLabelText('Delete Ceiling Paint Updated').length).toBeGreaterThan(0)
+      expect(
+        screen.getAllByLabelText('Delete Ceiling Paint Updated').length
+      ).toBeGreaterThan(0)
     );
-    await user.click(screen.getAllByLabelText('Delete Ceiling Paint Updated')[0]);
+    await user.click(
+      screen.getAllByLabelText('Delete Ceiling Paint Updated')[0]
+    );
 
-    await waitFor(() => expect(deleteMaterialItemMock).toHaveBeenCalledWith('db-item-1'));
+    expect(deleteMaterialItemMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('dialog', { name: 'Delete item?' })
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Delete item' }));
+
+    await waitFor(() =>
+      expect(deleteMaterialItemMock).toHaveBeenCalledWith('db-item-1')
+    );
+  });
+
+  it('keeps an item when destructive deletion is cancelled', async () => {
+    const user = userEvent.setup();
+
+    render(<MaterialItemList initialItems={[CREATED_ITEM]} />);
+
+    await user.click(
+      screen.getAllByLabelText(`Delete ${CREATED_ITEM.name}`)[0]
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Delete item?' })
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(deleteMaterialItemMock).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('dialog', { name: 'Delete item?' })
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText(CREATED_ITEM.name).length).toBeGreaterThan(0);
   });
 
   it('combines brand and litres into saved paint items', async () => {
@@ -120,7 +158,7 @@ describe('MaterialItemList', () => {
 
     render(<MaterialItemList initialItems={[]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Add First Item' }));
+    await user.click(screen.getByRole('button', { name: '+ New Item' }));
     await user.selectOptions(screen.getByLabelText('Category'), 'paint');
     await user.type(screen.getByLabelText('Brand (optional)'), 'Dulux');
     await user.type(screen.getByLabelText('Item Name'), 'Wash & Wear');
@@ -147,14 +185,19 @@ describe('MaterialItemList', () => {
 
     render(<MaterialItemList initialItems={[]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Add First Item' }));
+    await user.click(screen.getByRole('button', { name: '+ New Item' }));
     await user.selectOptions(screen.getByLabelText('Category'), 'service');
 
     expect(screen.getByLabelText('Service Title')).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Brand \(optional\)/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/Brand \(optional\)/i)
+    ).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Service Title'), 'Ceiling repaint');
-    await user.type(screen.getByLabelText('Notes (optional)'), 'Two-coat ceiling repaint service');
+    await user.type(
+      screen.getByLabelText('Notes (optional)'),
+      'Two-coat ceiling repaint service'
+    );
     await user.clear(screen.getByLabelText('Price (AUD)'));
     await user.type(screen.getByLabelText('Price (AUD)'), '225');
     await user.click(screen.getByRole('button', { name: 'Add Item' }));
@@ -178,6 +221,17 @@ describe('MaterialItemList', () => {
     render(<MaterialItemList initialItems={FILTER_ITEMS} />);
 
     expect(screen.getByText('3 of 3 items')).toBeInTheDocument();
+    expect(screen.getByLabelText('Search items')).toHaveClass(
+      'h-12',
+      'text-base',
+      'rounded-xl',
+      'focus:ring-2'
+    );
+    expect(screen.getByRole('button', { name: 'All · 3' })).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
 
     await user.click(screen.getByRole('button', { name: 'Service · 1' }));
 

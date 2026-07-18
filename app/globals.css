@@ -1,76 +1,86 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-sans: var(--font-sans);
 
-  /* ── Material Design 3 Color Tokens — Coatly navy + teal ── */
-  --color-primary: #0D8068;
+  /*
+   * ── Coatly Design Language 1.1 — "Warm Paper & Eucalyptus" ──
+   * Material Design 3 token slots. Values refined 2026-07-12:
+   *  · one warm-neutral world (paper surfaces + stone outlines) — no more
+   *    cool-slate borders clashing with warm backgrounds
+   *  · a real 5-step surface-container elevation ladder (was 3× #FFFFFF)
+   *  · deeper eucalyptus primary for AA contrast in sunlight
+   *  · primary-container stays a strong accent (this codebase uses it as
+   *    deep chip bg / focus border / accent text — NOT the pale MD3 tint)
+   */
+
+  --color-primary: #0b7a64;
   --color-on-primary: #ffffff;
-  --color-primary-container: #0B9E80;
-  --color-on-primary-container: #E6F4F0;
-  --color-primary-fixed: #B2DDD6;
-  --color-primary-fixed-dim: #85C8BC;
-  --color-on-primary-fixed: #002218;
-  --color-on-primary-fixed-variant: #0B6E5A;
-  --color-inverse-primary: #0AAE8F;
+  --color-primary-container: #095f4e;
+  --color-on-primary-container: #e9fbf4;
+  --color-primary-fixed: #bfe8de;
+  --color-primary-fixed-dim: #8fd3c3;
+  --color-on-primary-fixed: #00281d;
+  --color-on-primary-fixed-variant: #0a5d4c;
+  --color-inverse-primary: #7cd6bd;
 
-  --color-secondary: #3B5068;
+  --color-secondary: #3e5266;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #D1DCE8;
-  --color-on-secondary-container: #3B5068;
-  --color-secondary-fixed: #D1DCE8;
-  --color-secondary-fixed-dim: #A3BACE;
-  --color-on-secondary-fixed: #0A1929;
-  --color-on-secondary-fixed-variant: #2D4057;
+  --color-secondary-container: #d9e2ec;
+  --color-on-secondary-container: #24384e;
+  --color-secondary-fixed: #d9e2ec;
+  --color-secondary-fixed-dim: #aabfd2;
+  --color-on-secondary-fixed: #0a1929;
+  --color-on-secondary-fixed-variant: #2d4257;
 
-  --color-tertiary: #0F2943;
+  --color-tertiary: #102b47;
   --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #1A3A5C;
-  --color-on-tertiary-container: #C5D8F0;
-  --color-tertiary-fixed: #C5D8F0;
-  --color-tertiary-fixed-dim: #9ABED9;
-  --color-on-tertiary-fixed: #050F1C;
-  --color-on-tertiary-fixed-variant: #0D2238;
+  --color-tertiary-container: #1b3d60;
+  --color-on-tertiary-container: #d3e2f5;
+  --color-tertiary-fixed: #d3e2f5;
+  --color-tertiary-fixed-dim: #a3c3e0;
+  --color-on-tertiary-fixed: #050f1c;
+  --color-on-tertiary-fixed-variant: #0e2440;
 
-  --color-surface: #FBFAF7;
-  --color-surface-dim: #DCD8CF;
-  --color-surface-bright: #FBFAF7;
-  --color-surface-container-lowest: #FFFFFF;
-  --color-surface-container-low: #F4F2ED;
-  --color-surface-container: #FFFFFF;
-  --color-surface-container-high: #FFFFFF;
-  --color-surface-container-highest: #EAE7E0;
-  --color-surface-variant: #EAE7E0;
-  --color-surface-tint: #0D8068;
+  --color-surface: #faf7f2;
+  --color-surface-dim: #e7e1d6;
+  --color-surface-bright: #fdfbf8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f0e9;
+  --color-surface-container: #eee9e0;
+  --color-surface-container-high: #e8e2d7;
+  --color-surface-container-highest: #e1dacd;
+  --color-surface-variant: #e6e0d4;
+  --color-surface-tint: #0b7a64;
 
-  --color-on-surface: #0F1620;
-  --color-on-surface-variant: #475569;
-  --color-on-background: #0F1620;
-  --color-background: #FBFAF7;
+  --color-on-surface: #101828;
+  --color-on-surface-variant: #4c5665;
+  --color-on-background: #101828;
+  --color-background: #faf7f2;
 
-  --color-outline: #CBD5E1;
-  --color-outline-variant: #E2E8F0;
-  --color-inverse-surface: #1F2A37;
-  --color-inverse-on-surface: #F1F5F9;
+  --color-outline: #c9c1b2;
+  --color-outline-variant: #e5dfd3;
+  --color-inverse-surface: #212b38;
+  --color-inverse-on-surface: #f4f1ea;
 
-  --color-error: #B91C1C;
+  --color-error: #b3261e;
   --color-on-error: #ffffff;
-  --color-error-container: #FEE2E2;
-  --color-on-error-container: #7F1D1D;
+  --color-error-container: #f9dedc;
+  --color-on-error-container: #7a1714;
 
-  --color-warning: #B45309;
+  --color-warning: #b45309;
   --color-on-warning: #ffffff;
-  --color-warning-container: #FEF3C7;
-  --color-on-warning-container: #78350F;
+  --color-warning-container: #fbefc9;
+  --color-on-warning-container: #78350f;
 
-  --color-success: #0B6E5A;
+  --color-success: #177d53;
   --color-on-success: #ffffff;
-  --color-success-container: #E6F4F0;
-  --color-on-success-container: #064E3B;
+  --color-success-container: #ddf3e4;
+  --color-on-success-container: #0c5132;
 
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -101,6 +111,11 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-foreground: var(--foreground);
+
+  /* Type scale: page titles cap at 32px — utility-app scale, not marketing */
+  --text-4xl: 2rem;
+  --text-4xl--line-height: 2.4rem;
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -111,8 +126,14 @@
 }
 
 body {
-  font-family: "Manrope", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Quoting app: digits align in tables, totals, and date columns */
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2 {
+  text-wrap: balance;
 }
 
 /* ── Hidden scrollbar utility (horizontal segmented controls) ── */
@@ -124,86 +145,88 @@ body {
   display: none;
 }
 
-/* ── Scrollbar ── */
+/* ── Scrollbar (matches surface-container-low / outline) ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F4F2ED;
+  background: #f4f0e9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #c9c1b2;
   border-radius: 3px;
 }
 
 :root {
-  --background: oklch(0.99 0.004 80);
-  --foreground: oklch(0.12 0.015 248);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.12 0.015 248);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.12 0.015 248);
-  --primary: oklch(0.51 0.10 168);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.96 0.005 80);
-  --secondary-foreground: oklch(0.30 0.04 230);
-  --muted: oklch(0.96 0.005 80);
-  --muted-foreground: oklch(0.45 0.03 240);
-  --accent: oklch(0.96 0.005 80);
-  --accent-foreground: oklch(0.30 0.04 230);
-  --destructive: oklch(0.44 0.18 27);
-  --border: oklch(0.90 0.01 220);
-  --input: oklch(0.90 0.01 220);
-  --ring: oklch(0.51 0.10 168);
-  --chart-1: oklch(0.51 0.10 168);
-  --chart-2: oklch(0.38 0.06 230);
-  --chart-3: oklch(0.30 0.04 248);
-  --chart-4: oklch(0.64 0.08 168);
-  --chart-5: oklch(0.44 0.18 27);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.96 0.005 80);
-  --sidebar-foreground: oklch(0.12 0.015 248);
-  --sidebar-primary: oklch(0.51 0.10 168);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(1 0 0);
-  --sidebar-accent-foreground: oklch(0.12 0.015 248);
-  --sidebar-border: oklch(0.90 0.01 220);
-  --sidebar-ring: oklch(0.51 0.10 168);
+  --background: #faf7f2;
+  --foreground: #101828;
+  --card: #ffffff;
+  --card-foreground: #101828;
+  --popover: #ffffff;
+  --popover-foreground: #101828;
+  --primary: #0b7a64;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f0e9;
+  --secondary-foreground: #24384e;
+  --muted: #f4f0e9;
+  --muted-foreground: #4c5665;
+  --accent: #f4f0e9;
+  --accent-foreground: #24384e;
+  --destructive: #b3261e;
+  --border: #e5dfd3;
+  --input: #e5dfd3;
+  --ring: #0b7a64;
+  --chart-1: #0b7a64;
+  --chart-2: #3e5266;
+  --chart-3: #102b47;
+  --chart-4: #8fd3c3;
+  --chart-5: #b45309;
+  --radius: 0.75rem;
+  --sidebar: #f4f0e9;
+  --sidebar-foreground: #101828;
+  --sidebar-primary: #0b7a64;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: #101828;
+  --sidebar-border: #e5dfd3;
+  --sidebar-ring: #0b7a64;
 }
 
+/* Dark theme is not user-reachable yet (no toggle). Values kept on-brand so
+   any future `.dark` opt-in doesn't fall back to stock shadcn gray. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #14161a;
+  --foreground: #f4f1ea;
+  --card: #1c1f24;
+  --card-foreground: #f4f1ea;
+  --popover: #1c1f24;
+  --popover-foreground: #f4f1ea;
+  --primary: #7cd6bd;
+  --primary-foreground: #00281d;
+  --secondary: #262a31;
+  --secondary-foreground: #f4f1ea;
+  --muted: #262a31;
+  --muted-foreground: #a8b0bc;
+  --accent: #262a31;
+  --accent-foreground: #f4f1ea;
+  --destructive: #f2b8b5;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #7cd6bd;
+  --chart-1: #7cd6bd;
+  --chart-2: #aabfd2;
+  --chart-3: #a3c3e0;
+  --chart-4: #8fd3c3;
+  --chart-5: #f5c97b;
+  --sidebar: #1c1f24;
+  --sidebar-foreground: #f4f1ea;
+  --sidebar-primary: #7cd6bd;
+  --sidebar-primary-foreground: #00281d;
+  --sidebar-accent: #262a31;
+  --sidebar-accent-foreground: #f4f1ea;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #7cd6bd;
 }
 
 @layer base {

@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { setPublicQuoteOptionalLineItemSelection } from '@/modules/quotes/application/actions';
 import { formatAUD } from '@/utils/format';
 import { groupQuoteLineItemsByCategory } from '@/modules/quotes/domain/quotes';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 
 interface OptionalItem {
   id: string;
@@ -129,18 +131,14 @@ export function PublicOptionalItems({
 
   return (
     <div className="space-y-3">
-      {error && (
-        <div className="rounded-xl border border-error/30 bg-error-container/50 px-4 py-3 text-sm text-on-error-container">
-          {error}
-        </div>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
 
       {/* Running total pill */}
       {selectedTotal > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-success/30 bg-success-container px-4 py-2.5">
+        <div className="border-success/30 bg-success-container flex items-center justify-between rounded-2xl border px-4 py-2.5">
           <div className="flex items-center gap-2">
             <svg
-              className="h-4 w-4 text-on-success-container"
+              className="text-on-success-container h-4 w-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -152,11 +150,11 @@ export function PublicOptionalItems({
                 d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span className="text-sm font-medium text-on-success-container">
+            <span className="text-on-success-container text-sm font-medium">
               {selectedCount} add-on{selectedCount !== 1 ? 's' : ''} selected
             </span>
           </div>
-          <span className="text-sm font-bold text-on-success-container">
+          <span className="text-on-success-container text-sm font-bold">
             +{formatAUD(selectedTotal)}
           </span>
         </div>
@@ -166,9 +164,7 @@ export function PublicOptionalItems({
       <div className="space-y-4">
         {groupedItems.map((group) => (
           <div key={group.category} className="space-y-2">
-            <p className="text-on-surface-variant text-[10px] font-bold tracking-widest uppercase">
-              {group.label}
-            </p>
+            <SectionLabel>{group.label}</SectionLabel>
             {group.items.map((item) => {
               const selected = item.is_selected;
               return (
@@ -178,13 +174,13 @@ export function PublicOptionalItems({
                   disabled={!canEdit || isPending}
                   onClick={() => handleToggle(item)}
                   className={[
-                    'group w-full rounded-xl border-2 text-left transition-all duration-150',
+                    'group focus-visible:ring-primary/30 min-h-11 w-full rounded-xl border-2 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
                     canEdit
                       ? 'cursor-pointer active:scale-[0.99]'
                       : 'cursor-default',
                     selected
                       ? 'border-primary bg-success-container shadow-sm'
-                      : 'border-outline hover:border-primary-container/50 bg-white',
+                      : 'border-outline hover:border-primary-container/50 bg-surface-container-lowest',
                     !canEdit || isPending ? 'opacity-60' : '',
                   ].join(' ')}
                 >
@@ -194,12 +190,12 @@ export function PublicOptionalItems({
                         'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150',
                         selected
                           ? 'border-primary bg-primary'
-                          : 'border-outline group-hover:border-primary-container bg-white',
+                          : 'border-outline group-hover:border-primary-container bg-surface-container-lowest',
                       ].join(' ')}
                     >
                       {selected && (
                         <svg
-                          className="h-3 w-3 text-white"
+                          className="text-on-primary h-3 w-3"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"

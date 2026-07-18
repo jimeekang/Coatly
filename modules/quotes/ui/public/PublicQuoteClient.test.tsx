@@ -145,6 +145,26 @@ async function bookJobFromPublicQuoteAction() {
 }
 
 describe('PublicQuoteClient', () => {
+  it('uses the centralized status tone on a readable hero surface', () => {
+    render(
+      <PublicQuoteClient
+        token="11111111-1111-1111-1111-111111111111"
+        quote={buildQuote()}
+        business={null}
+        getAvailableDatesAction={getAvailableDatesAction}
+        bookJobFromPublicQuoteAction={bookJobFromPublicQuoteAction}
+      />
+    );
+
+    const [status] = screen.getAllByText('Approved');
+    expect(status).toHaveClass('bg-success-container', 'text-success');
+    expect(status.parentElement).toHaveClass('bg-surface-container-lowest');
+    expect(screen.getByText('Prepared For')).toHaveClass(
+      'font-bold',
+      'uppercase'
+    );
+  });
+
   it('shows canonical public totals with discount, adjustment, and selected add-ons', () => {
     render(
       <PublicQuoteClient

@@ -2,10 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  deleteMaterialItemMock,
-  importMaterialItemsMock,
-} = vi.hoisted(() => ({
+const { deleteMaterialItemMock, importMaterialItemsMock } = vi.hoisted(() => ({
   deleteMaterialItemMock: vi.fn(),
   importMaterialItemsMock: vi.fn(),
 }));
@@ -53,12 +50,17 @@ describe('MaterialItemList action exception handling', () => {
 
     const deleteButtons = screen.getAllByLabelText('Delete Ceiling Paint');
     await user.click(deleteButtons[0]);
-    await waitFor(() => expect(deleteMaterialItemMock).toHaveBeenCalledWith('item-1'));
+    await user.click(screen.getByRole('button', { name: 'Delete item' }));
+    await waitFor(() =>
+      expect(deleteMaterialItemMock).toHaveBeenCalledWith('item-1')
+    );
     await waitFor(() => expect(deleteButtons[0]).toBeDisabled());
 
     rejectDelete(new Error('Delete service unavailable.'));
 
-    expect(await screen.findByText('Delete service unavailable.')).toBeVisible();
+    expect(
+      await screen.findByText('Delete service unavailable.')
+    ).toBeVisible();
     await waitFor(() => expect(deleteButtons[0]).toBeEnabled());
     expect(screen.getAllByText('Ceiling Paint').length).toBeGreaterThan(0);
   });
@@ -79,19 +81,29 @@ describe('MaterialItemList action exception handling', () => {
     await user.upload(
       fileInput as HTMLInputElement,
       new File(
-        ['category,brand,title,size_l,price_aud,notes,is_active\npaint,,Ceiling Paint,,25.00,,true'],
+        [
+          'category,brand,title,size_l,price_aud,notes,is_active\npaint,,Ceiling Paint,,25.00,,true',
+        ],
         'materials.csv',
         { type: 'text/csv' }
       )
     );
 
-    await waitFor(() => expect(importMaterialItemsMock).toHaveBeenCalledTimes(1));
-    const importingButton = screen.getByRole('button', { name: 'Importing...' });
+    await waitFor(() =>
+      expect(importMaterialItemsMock).toHaveBeenCalledTimes(1)
+    );
+    const importingButton = screen.getByRole('button', {
+      name: 'Importing...',
+    });
     expect(importingButton).toBeDisabled();
 
     rejectImport(new Error('Import service unavailable.'));
 
-    expect(await screen.findByText('Import service unavailable.')).toBeVisible();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Import CSV' })).toBeEnabled());
+    expect(
+      await screen.findByText('Import service unavailable.')
+    ).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Import CSV' })).toBeEnabled()
+    );
   });
 });

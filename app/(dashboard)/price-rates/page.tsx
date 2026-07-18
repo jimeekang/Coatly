@@ -37,7 +37,7 @@ export default async function PriceRatesPage() {
         title="Price Rates"
         subtitle="Set the default rates used by new quotes and choose which detailed estimate options your quoting workflow offers."
         action={
-          <div className="border-outline-variant bg-surface-container inline-flex shrink-0 items-baseline gap-1.5 self-start rounded-lg border px-3 py-2 sm:self-center">
+          <div className="border-outline-variant bg-surface-container inline-flex shrink-0 items-baseline gap-1.5 self-start rounded-xl border px-3 py-2 sm:self-center">
             <span className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Currency
             </span>

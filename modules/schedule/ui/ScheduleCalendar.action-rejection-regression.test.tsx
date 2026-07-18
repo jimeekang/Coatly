@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -93,15 +99,24 @@ function renderCalendar({
         today="2026-05-02"
         initialView={initialView}
       />
-    </>,
+    </>
   );
 }
 
 function getDropZone(dateLabel: string): HTMLElement {
-  const dateButton = screen.getByRole('button', { name: `Select ${dateLabel}` });
+  const dateButton = screen.getByRole('button', {
+    name: `Select ${dateLabel}`,
+  });
   const dropZone = dateButton.parentElement;
   if (!dropZone) throw new Error(`Drop zone not found for ${dateLabel}`);
   return dropZone;
+}
+
+async function expectAlertMessage(message: string) {
+  const alerts = await screen.findAllByRole('alert');
+  expect(alerts.some((alert) => alert.textContent?.includes(message))).toBe(
+    true
+  );
 }
 
 describe('ScheduleCalendar action rejection regressions', () => {
@@ -119,138 +134,185 @@ describe('ScheduleCalendar action rejection regressions', () => {
 
   it('shows a rejected native event add and restores the modal controls', async () => {
     const user = userEvent.setup();
-    createScheduleEventMock.mockRejectedValue(new Error('Event service unavailable.'));
+    createScheduleEventMock.mockRejectedValue(
+      new Error('Event service unavailable.')
+    );
 
     renderCalendar();
-    await user.click(screen.getByRole('button', { name: 'Add event' }));
+    await user.click(screen.getByRole('button', { name: '+ New Event' }));
     await user.type(screen.getByLabelText('Title'), 'Site inspection');
-    const addEventModal = screen.getByRole('heading', { name: 'Add Event' }).parentElement?.parentElement;
-    if (!addEventModal) throw new Error('Add event modal not found');
-    await user.click(within(addEventModal).getByRole('button', { name: 'Add' }));
+    const addEventModal = screen.getByRole('dialog', { name: 'Add Event' });
+    await user.click(
+      within(addEventModal).getByRole('button', { name: 'Add' })
+    );
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Event service unavailable.');
-    expect(screen.getByRole('heading', { name: 'Add Event' })).toBeInTheDocument();
+    await expectAlertMessage('Event service unavailable.');
+    expect(
+      screen.getByRole('heading', { name: 'Add Event' })
+    ).toBeInTheDocument();
     await waitFor(() =>
-      expect(within(addEventModal).getByRole('button', { name: 'Add' })).toBeEnabled(),
+      expect(
+        within(addEventModal).getByRole('button', { name: 'Add' })
+      ).toBeEnabled()
     );
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('shows a rejected native event edit and keeps the modal open', async () => {
     const user = userEvent.setup();
-    updateScheduleEventMock.mockRejectedValue(new Error('Event update unavailable.'));
+    updateScheduleEventMock.mockRejectedValue(
+      new Error('Event update unavailable.')
+    );
 
     renderCalendar({ nativeEvents: [NATIVE_EVENT] });
-    await user.click(screen.getByRole('button', { name: /Event Site visit All Day Tap to edit/i }));
+    await user.click(
+      screen.getByRole('button', {
+        name: /Event Site visit All Day Tap to edit/i,
+      })
+    );
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Event update unavailable.');
-    expect(screen.getByRole('heading', { name: 'Edit Event' })).toBeInTheDocument();
+    await expectAlertMessage('Event update unavailable.');
+    expect(
+      screen.getByRole('heading', { name: 'Edit Event' })
+    ).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
     );
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('shows a rejected native event delete and restores the delete control', async () => {
     const user = userEvent.setup();
-    deleteScheduleEventMock.mockRejectedValue(new Error('Event delete unavailable.'));
+    deleteScheduleEventMock.mockRejectedValue(
+      new Error('Event delete unavailable.')
+    );
 
     renderCalendar({ nativeEvents: [NATIVE_EVENT] });
-    await user.click(screen.getByRole('button', { name: /Event Site visit All Day Tap to edit/i }));
+    await user.click(
+      screen.getByRole('button', {
+        name: /Event Site visit All Day Tap to edit/i,
+      })
+    );
     await user.click(screen.getByRole('button', { name: 'Delete event' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Event delete unavailable.');
-    expect(screen.getByRole('heading', { name: 'Edit Event' })).toBeInTheDocument();
+    await expectAlertMessage('Event delete unavailable.');
+    expect(
+      screen.getByRole('heading', { name: 'Edit Event' })
+    ).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Delete event' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: 'Delete event' })).toBeEnabled()
     );
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('shows a rejected job range save and restores the modal controls', async () => {
     const user = userEvent.setup();
-    updateJobScheduleMock.mockRejectedValue(new Error('Schedule range unavailable.'));
+    updateJobScheduleMock.mockRejectedValue(
+      new Error('Schedule range unavailable.')
+    );
 
     renderCalendar({ initialView: 'list' });
     await user.click(screen.getByRole('button', { name: 'Edit dates' }));
     await user.click(screen.getByRole('button', { name: 'Save range' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Schedule range unavailable.');
-    expect(screen.getByRole('heading', { name: 'Edit Job Schedule' })).toBeInTheDocument();
+    await expectAlertMessage('Schedule range unavailable.');
+    expect(
+      screen.getByRole('heading', { name: 'Edit Job Schedule' })
+    ).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Save range' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: 'Save range' })).toBeEnabled()
     );
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('shows a rejected job day add and restores the add control', async () => {
     const user = userEvent.setup();
-    addJobScheduleDayMock.mockRejectedValue(new Error('Schedule day add unavailable.'));
+    addJobScheduleDayMock.mockRejectedValue(
+      new Error('Schedule day add unavailable.')
+    );
 
     renderCalendar({ initialView: 'list' });
     await user.click(screen.getByRole('button', { name: 'Edit dates' }));
     await user.click(screen.getByRole('button', { name: 'Add day' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Schedule day add unavailable.');
+    await expectAlertMessage('Schedule day add unavailable.');
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Add day' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: 'Add day' })).toBeEnabled()
     );
-    expect(screen.getByRole('heading', { name: 'Edit Job Schedule' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Edit Job Schedule' })
+    ).toBeInTheDocument();
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('shows a rejected job day delete and restores the delete control', async () => {
     const user = userEvent.setup();
-    deleteJobScheduleDayMock.mockRejectedValue(new Error('Schedule day delete unavailable.'));
+    deleteJobScheduleDayMock.mockRejectedValue(
+      new Error('Schedule day delete unavailable.')
+    );
 
     renderCalendar({ initialView: 'list' });
     await user.click(screen.getByRole('button', { name: 'Edit dates' }));
-    const scheduledDaysSection = screen.getByText('Scheduled days').closest('div');
-    if (!scheduledDaysSection) throw new Error('Scheduled days section not found');
-    const deleteButton = within(scheduledDaysSection.parentElement ?? scheduledDaysSection).getAllByRole(
-      'button',
-      { name: 'Delete' },
-    )[0];
+    const scheduledDaysSection = screen
+      .getByText('Scheduled days')
+      .closest('div');
+    if (!scheduledDaysSection)
+      throw new Error('Scheduled days section not found');
+    const deleteButton = within(
+      scheduledDaysSection.parentElement ?? scheduledDaysSection
+    ).getAllByRole('button', { name: 'Delete' })[0];
     await user.click(deleteButton);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Schedule day delete unavailable.');
+    await expectAlertMessage('Schedule day delete unavailable.');
     await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'Delete' })[0]).toBeEnabled(),
+      expect(screen.getAllByRole('button', { name: 'Delete' })[0]).toBeEnabled()
     );
-    expect(screen.getByRole('heading', { name: 'Edit Job Schedule' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Edit Job Schedule' })
+    ).toBeInTheDocument();
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('shows a rejected job drag move and clears the pending state', async () => {
-    updateJobScheduleDayMock.mockRejectedValue(new Error('Job move unavailable.'));
+    updateJobScheduleDayMock.mockRejectedValue(
+      new Error('Job move unavailable.')
+    );
 
     renderCalendar();
     const dataTransfer = {
-      getData: vi.fn().mockReturnValue(
-        JSON.stringify({ kind: 'job', id: 'job-1', date: '2026-05-02' }),
-      ),
+      getData: vi
+        .fn()
+        .mockReturnValue(
+          JSON.stringify({ kind: 'job', id: 'job-1', date: '2026-05-02' })
+        ),
     };
     fireEvent.drop(getDropZone('Sunday 3 May'), { dataTransfer });
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Job move unavailable.');
-    await waitFor(() => expect(screen.queryByText('Updating schedule...')).not.toBeInTheDocument());
+    await expectAlertMessage('Job move unavailable.');
+    await waitFor(() =>
+      expect(screen.queryByText('Updating schedule...')).not.toBeInTheDocument()
+    );
     expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it('shows a rejected native event drag move and clears the pending state', async () => {
-    updateScheduleEventMock.mockRejectedValue(new Error('Event move unavailable.'));
+    updateScheduleEventMock.mockRejectedValue(
+      new Error('Event move unavailable.')
+    );
 
     renderCalendar({ nativeEvents: [NATIVE_EVENT] });
     const dataTransfer = {
-      getData: vi.fn().mockReturnValue(
-        JSON.stringify({ kind: 'native', id: 'event-1' }),
-      ),
+      getData: vi
+        .fn()
+        .mockReturnValue(JSON.stringify({ kind: 'native', id: 'event-1' })),
     };
     fireEvent.drop(getDropZone('Sunday 3 May'), { dataTransfer });
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Event move unavailable.');
-    await waitFor(() => expect(screen.queryByText('Updating schedule...')).not.toBeInTheDocument());
+    await expectAlertMessage('Event move unavailable.');
+    await waitFor(() =>
+      expect(screen.queryByText('Updating schedule...')).not.toBeInTheDocument()
+    );
     expect(refreshMock).not.toHaveBeenCalled();
   });
 });

@@ -6,17 +6,12 @@ import { getJobDetail } from '@/modules/jobs/application/actions';
 import { JOB_STATUS_LABELS } from '@/modules/jobs/domain/jobs';
 import { JobDetail } from '@/modules/jobs/ui/JobDetail';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { JOB_STATUS_TONE } from '@/lib/constants/status-colors';
 
 interface Props {
   params: Promise<{ id: string }>;
 }
-
-const JOB_STATUS_BADGE: Record<string, string> = {
-  scheduled: 'bg-primary/10 text-primary',
-  in_progress: 'bg-warning-container text-warning',
-  completed: 'bg-success-container text-success',
-  cancelled: 'bg-error-container text-error',
-};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -39,16 +34,13 @@ export default async function JobDetailPage({ params }: Props) {
         backLabel="All jobs"
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center rounded px-2.5 py-1 text-[10.5px] font-bold tracking-[0.14em] uppercase ${
-                JOB_STATUS_BADGE[job.status] ?? 'bg-surface-container text-on-surface-variant'
-              }`}
-            >
-              {JOB_STATUS_LABELS[job.status]}
-            </span>
+            <StatusBadge
+              tone={JOB_STATUS_TONE[job.status]}
+              label={JOB_STATUS_LABELS[job.status]}
+            />
             <Link
               href={`/jobs/${job.id}/edit`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-on-primary transition-opacity hover:opacity-90"
+              className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />
               Edit

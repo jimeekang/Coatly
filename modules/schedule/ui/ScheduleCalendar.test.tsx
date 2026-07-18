@@ -1,7 +1,11 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ScheduleCalendar, type CalendarGoogleEvent, type CalendarJob } from '@/modules/schedule/ui/ScheduleCalendar';
+import {
+  ScheduleCalendar,
+  type CalendarGoogleEvent,
+  type CalendarJob,
+} from '@/modules/schedule/ui/ScheduleCalendar';
 import { ToastProvider, useToastStore } from '@/components/ui/toast';
 import { JOB_STATUS_LABELS } from '@/modules/jobs/domain/jobs';
 import type { ScheduleEvent } from '@/modules/schedule/application/actions';
@@ -77,7 +81,7 @@ function renderCalendar({
         initialStatus={initialStatus}
         initialSearch={initialSearch}
       />
-    </>,
+    </>
   );
 }
 
@@ -130,6 +134,77 @@ describe('ScheduleCalendar', () => {
     updateScheduleEventMock.mockResolvedValue({ error: null });
   });
 
+  it('uses canonical schedule controls, cards, and click targets', async () => {
+    const user = userEvent.setup();
+    renderCalendar({ initialView: 'calendar' });
+
+    expect(
+      screen.getByPlaceholderText('Search jobs, quotes, addresses...')
+    ).toHaveClass(
+      'h-12',
+      'text-base',
+      'rounded-xl',
+      'border-outline-variant',
+      'focus:border-primary',
+      'focus:ring-primary/20'
+    );
+    expect(screen.getByLabelText('Schedule calendar month')).toHaveClass(
+      'rounded-2xl',
+      'border-outline-variant'
+    );
+    expect(screen.getAllByTitle('Sarah Mitchell')[0]).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-primary/20'
+    );
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveClass(
+      'h-11',
+      'rounded-xl',
+      'focus-visible:ring-primary/20'
+    );
+
+    await user.click(screen.getByRole('button', { name: '+ New Event' }));
+
+    for (const control of [
+      screen.getByLabelText('Title'),
+      screen.getByLabelText('Date'),
+      screen.getByLabelText('Location'),
+    ]) {
+      expect(control).toHaveClass(
+        'h-12',
+        'text-base',
+        'rounded-xl',
+        'border-outline-variant',
+        'focus:border-primary'
+      );
+    }
+    expect(screen.getByLabelText('Notes')).toHaveClass(
+      'text-base',
+      'rounded-xl',
+      'border-outline-variant',
+      'focus:ring-primary/20'
+    );
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveClass(
+      'h-11',
+      'rounded-xl',
+      'focus-visible:ring-primary/20'
+    );
+  });
+
+  it('uses the canonical job status tone on agenda cards', () => {
+    renderCalendar({
+      jobs: [{ ...JOB, status: 'in_progress' }],
+      initialView: 'list',
+    });
+
+    expect(screen.getByText('In Progress', { selector: 'span' })).toHaveClass(
+      'bg-warning-container',
+      'text-on-warning-container',
+      'font-bold',
+      'uppercase'
+    );
+  });
+
   it('shows a success toast after adding a scheduled day', async () => {
     const user = userEvent.setup();
 
@@ -140,10 +215,14 @@ describe('ScheduleCalendar', () => {
     await user.click(screen.getByRole('button', { name: 'Add day' }));
 
     await waitFor(() => {
-      expect(addJobScheduleDayMock).toHaveBeenCalledWith('job-1', { date: '2026-05-05' });
+      expect(addJobScheduleDayMock).toHaveBeenCalledWith('job-1', {
+        date: '2026-05-05',
+      });
     });
 
-    expect(await screen.findByText('Added 5 May to Sarah Mitchell.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Added 5 May to Sarah Mitchell.')
+    ).toBeInTheDocument();
   });
 
   it('shows a success toast after deleting a scheduled day', async () => {
@@ -154,27 +233,37 @@ describe('ScheduleCalendar', () => {
     await user.click(screen.getByRole('button', { name: 'List' }));
     await user.click(screen.getByRole('button', { name: 'Edit dates' }));
 
-    const scheduledDaysSection = screen.getByText('Scheduled days').closest('div');
+    const scheduledDaysSection = screen
+      .getByText('Scheduled days')
+      .closest('div');
     if (!scheduledDaysSection) {
       throw new Error('Scheduled days section not found');
     }
 
     await user.click(
-      within(scheduledDaysSection.parentElement ?? scheduledDaysSection).getAllByRole('button', {
+      within(
+        scheduledDaysSection.parentElement ?? scheduledDaysSection
+      ).getAllByRole('button', {
         name: 'Delete',
-      })[0],
+      })[0]
     );
 
     await waitFor(() => {
-      expect(deleteJobScheduleDayMock).toHaveBeenCalledWith('job-1', { date: '2026-05-02' });
+      expect(deleteJobScheduleDayMock).toHaveBeenCalledWith('job-1', {
+        date: '2026-05-02',
+      });
     });
 
-    expect(await screen.findByText('Removed 2 May from Sarah Mitchell.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Removed 2 May from Sarah Mitchell.')
+    ).toBeInTheDocument();
   });
 
   it('shows an error toast when saving a range fails', async () => {
     const user = userEvent.setup();
-    updateJobScheduleMock.mockResolvedValue({ error: 'Date range overlaps another job.' });
+    updateJobScheduleMock.mockResolvedValue({
+      error: 'Date range overlaps another job.',
+    });
 
     renderCalendar();
 
@@ -182,7 +271,9 @@ describe('ScheduleCalendar', () => {
     await user.click(screen.getByRole('button', { name: 'Edit dates' }));
     await user.click(screen.getByRole('button', { name: 'Save range' }));
 
-    expect(await screen.findAllByText('Date range overlaps another job.')).toHaveLength(2);
+    expect(
+      await screen.findAllByText('Date range overlaps another job.')
+    ).toHaveLength(2);
   });
 
   it('uses Event label for native schedule items', () => {
@@ -203,14 +294,18 @@ describe('ScheduleCalendar', () => {
 
     expect(screen.getByRole('button', { name: 'Event' })).toBeInTheDocument();
 
-    const eventCard = screen.getByRole('button', { name: /Event Site visit All Day Tap to edit/i });
+    const eventCard = screen.getByRole('button', {
+      name: /Event Site visit All Day Tap to edit/i,
+    });
     expect(within(eventCard).getByText('Event')).toBeInTheDocument();
   });
 
   it('uses the provided today value for the initial month', () => {
     renderCalendar({ today: '2026-05-02' });
 
-    expect(screen.getByRole('heading', { name: 'May 2026' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'May 2026' })
+    ).toBeInTheDocument();
   });
 
   it('defaults to the agenda list on mobile when no view is requested', async () => {
@@ -219,10 +314,15 @@ describe('ScheduleCalendar', () => {
     renderCalendar({ today: '2026-05-02' });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
     });
     expect(screen.getByText('Job list')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Schedule calendar month')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Schedule calendar month')
+    ).not.toBeInTheDocument();
   });
 
   it('keeps the month grid as the wide desktop default', () => {
@@ -230,8 +330,13 @@ describe('ScheduleCalendar', () => {
 
     renderCalendar({ today: '2026-05-02' });
 
-    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByLabelText('Schedule calendar month')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(
+      screen.getByLabelText('Schedule calendar month')
+    ).toBeInTheDocument();
   });
 
   it('honours an explicit calendar view on mobile', () => {
@@ -239,8 +344,13 @@ describe('ScheduleCalendar', () => {
 
     renderCalendar({ today: '2026-05-02', initialView: 'calendar' });
 
-    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByLabelText('Schedule calendar month')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(
+      screen.getByLabelText('Schedule calendar month')
+    ).toBeInTheDocument();
   });
 
   it('returns to today from another month', async () => {
@@ -249,10 +359,14 @@ describe('ScheduleCalendar', () => {
     renderCalendar({ today: '2026-05-02' });
 
     await user.click(screen.getByRole('button', { name: 'Next month' }));
-    expect(screen.getByRole('heading', { name: 'June 2026' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'June 2026' })
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Today' }));
-    expect(screen.getByRole('heading', { name: 'May 2026' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'May 2026' })
+    ).toBeInTheDocument();
   });
 
   it('uses a fluid calendar grid for small mobile screens', () => {
@@ -263,7 +377,9 @@ describe('ScheduleCalendar', () => {
     expect(calendarGrid).toHaveClass('w-full');
     expect(calendarGrid).toHaveClass('min-w-0');
     expect(calendarGrid).not.toHaveClass('min-w-[700px]');
-    expect(screen.queryByText('Swipe sideways if you need a wider calendar view.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Swipe sideways if you need a wider calendar view.')
+    ).not.toBeInTheDocument();
   });
 
   it('wraps schedule filters instead of forcing horizontal mobile overflow', () => {
@@ -286,12 +402,73 @@ describe('ScheduleCalendar', () => {
     renderCalendar({ today: '2026-05-02', initialView: 'calendar' });
 
     expect(screen.getByRole('button', { name: 'All' })).toHaveClass('min-h-11');
-    expect(screen.getByRole('button', { name: /Select Saturday 2 May/i })).toHaveClass('min-h-11');
-    expect(screen.getAllByRole('button', { name: 'Sarah Mitchell' })[0]).toHaveClass('min-h-11');
-    expect(screen.getAllByRole('button', { name: 'Add schedule on this day' })[0]).toHaveClass(
-      'h-11',
-      'w-11',
+    expect(
+      screen.getByRole('button', { name: /Select Saturday 2 May/i })
+    ).toHaveClass('min-h-11');
+    expect(
+      screen.getAllByRole('button', { name: 'Sarah Mitchell' })[0]
+    ).toHaveClass('min-h-11');
+    expect(
+      screen.getAllByRole('button', { name: 'Add schedule on this day' })[0]
+    ).toHaveClass('h-11', 'w-11');
+  });
+
+  it('opens the shared event dialog with 44px controls and restores focus on Escape', async () => {
+    const user = userEvent.setup();
+
+    renderCalendar({ today: '2026-05-02' });
+
+    const trigger = screen.getByRole('button', { name: '+ New Event' });
+    await user.click(trigger);
+
+    const dialog = screen.getByRole('dialog', { name: 'Add Event' });
+    const closeButton = within(dialog).getByRole('button', { name: 'Close' });
+
+    expect(dialog).toHaveClass('bg-surface-container-lowest');
+    expect(closeButton).toHaveClass('h-11', 'w-11');
+    expect(closeButton).toHaveFocus();
+    expect(within(dialog).getByLabelText('Title')).toHaveClass(
+      'h-12',
+      'text-base'
     );
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveClass(
+      'h-11'
+    );
+    expect(within(dialog).getByRole('button', { name: 'Add' })).toHaveClass(
+      'h-11'
+    );
+
+    await user.keyboard('{Escape}');
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Add Event' })
+    ).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('opens job schedule editing in the shared accessible dialog', async () => {
+    const user = userEvent.setup();
+
+    renderCalendar({ initialView: 'list' });
+
+    const trigger = screen.getByRole('button', { name: 'Edit dates' });
+    await user.click(trigger);
+
+    const dialog = screen.getByRole('dialog', { name: 'Edit Job Schedule' });
+    const closeButton = within(dialog).getByRole('button', { name: 'Close' });
+
+    expect(closeButton).toHaveClass('h-11', 'w-11');
+    expect(closeButton).toHaveFocus();
+    expect(
+      within(dialog).getByRole('button', { name: 'Save range' })
+    ).toHaveClass('h-11');
+
+    await user.keyboard('{Escape}');
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Edit Job Schedule' })
+    ).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 
   it('can open as a jobs list and search completed historical jobs', () => {

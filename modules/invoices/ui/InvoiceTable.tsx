@@ -4,13 +4,22 @@ import { useDeferredValue, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { markInvoiceAsPaid } from '@/modules/invoices/application/actions';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import {
+  INVOICE_STATUS_TONE,
+  STATUS_TONE_BORDER,
+} from '@/lib/constants/status-colors';
 import {
   formatCustomerLocation,
   getInvoiceDueLabel,
   getSydneyTodayDateString,
   type InvoiceDueTone,
 } from '@/modules/invoices/domain/invoices';
-import type { InvoiceListItem, InvoiceStatus } from '@/modules/invoices/domain/invoice';
+import type {
+  InvoiceListItem,
+  InvoiceStatus,
+} from '@/modules/invoices/domain/invoice';
 import { formatAUD, formatDate } from '@/utils/format';
 
 const ICON_PROPS = {
@@ -67,50 +76,34 @@ function WalletIcon() {
 const DUE_TONE_CLASS: Record<InvoiceDueTone, string> = {
   overdue: 'text-warning font-semibold',
   'due-soon': 'text-warning font-semibold',
-  due: 'text-outline font-medium',
-  paid: 'text-outline font-medium',
-};
-
-const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
-  draft:     'bg-surface-container-highest text-on-surface-variant',
-  sent:      'bg-primary/10 text-primary',
-  paid:      'bg-success-container text-success',
-  overdue:   'bg-warning-container text-warning',
-  cancelled: 'bg-surface-container-highest text-on-surface-variant',
-};
-
-const INVOICE_LEFT_BORDER: Record<InvoiceStatus, string> = {
-  draft:     'border-l-outline',
-  sent:      'border-l-primary',
-  paid:      'border-l-success',
-  overdue:   'border-l-warning',
-  cancelled: 'border-l-outline',
+  due: 'text-on-surface-variant font-medium',
+  paid: 'text-on-surface-variant font-medium',
 };
 
 const STATUS_LABELS: Record<InvoiceStatus, string> = {
-  draft:     'Draft',
-  sent:      'Sent',
-  paid:      'Paid',
-  overdue:   'Overdue',
+  draft: 'Draft',
+  sent: 'Sent',
+  paid: 'Paid',
+  overdue: 'Overdue',
   cancelled: 'Cancelled',
 };
 
 const STATUS_OPTIONS: Array<{ value: 'all' | InvoiceStatus; label: string }> = [
-  { value: 'all',       label: 'All' },
-  { value: 'draft',     label: 'Draft' },
-  { value: 'sent',      label: 'Sent' },
-  { value: 'paid',      label: 'Paid' },
-  { value: 'overdue',   label: 'Overdue' },
+  { value: 'all', label: 'All' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'sent', label: 'Sent' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'overdue', label: 'Overdue' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
 type DateFilter = 'all' | '30d' | '90d' | 'this_month';
 
 const DATE_FILTER_OPTIONS: Array<{ value: DateFilter; label: string }> = [
-  { value: 'all',        label: 'All time' },
+  { value: 'all', label: 'All time' },
   { value: 'this_month', label: 'This month' },
-  { value: '30d',        label: 'Last 30 days' },
-  { value: '90d',        label: 'Last 90 days' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: '90d', label: 'Last 90 days' },
 ];
 
 function isNextNavigationSignal(error: unknown) {
@@ -153,15 +146,6 @@ function getDateFilterCutoff(filter: DateFilter): Date | null {
   return null;
 }
 
-function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
-  const style = INVOICE_STATUS_STYLES[status] ?? 'bg-surface-container-high text-on-surface-variant';
-  return (
-    <span className={`inline-flex max-w-full rounded px-2.5 py-1 text-[10px] font-bold uppercase ${style}`}>
-      {STATUS_LABELS[status]}
-    </span>
-  );
-}
-
 function matchesQuery(invoice: InvoiceListItem, query: string) {
   const value = query.toLowerCase();
   const location = formatCustomerLocation(invoice.customer).toLowerCase();
@@ -178,7 +162,9 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | InvoiceStatus>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
-  const [activePaymentInvoiceId, setActivePaymentInvoiceId] = useState<string | null>(null);
+  const [activePaymentInvoiceId, setActivePaymentInvoiceId] = useState<
+    string | null
+  >(null);
   const [paidDate, setPaidDate] = useState(getSydneyTodayDateString());
   const [paymentMethod, setPaymentMethod] = useState<
     'bank_transfer' | 'cash' | 'card' | 'cheque' | 'other' | ''
@@ -193,12 +179,15 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
 
   const filtered = invoices.filter((invoice) => {
     const matchesStatus = status === 'all' ? true : invoice.status === status;
-    const matchesSearch = normalizedQuery ? matchesQuery(invoice, normalizedQuery) : true;
+    const matchesSearch = normalizedQuery
+      ? matchesQuery(invoice, normalizedQuery)
+      : true;
     const matchesDate = cutoff ? new Date(invoice.created_at) >= cutoff : true;
     return matchesStatus && matchesSearch && matchesDate;
   });
 
-  const hasActiveFilters = normalizedQuery || status !== 'all' || dateFilter !== 'all';
+  const hasActiveFilters =
+    normalizedQuery || status !== 'all' || dateFilter !== 'all';
 
   function openMarkPaidForm(invoice: InvoiceListItem) {
     setActionError(null);
@@ -221,7 +210,12 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
       try {
         const result = await markInvoiceAsPaid(invoiceId, {
           paid_date: paidDate,
-          payment_method: paymentMethod as 'bank_transfer' | 'cash' | 'card' | 'cheque' | 'other',
+          payment_method: paymentMethod as
+            | 'bank_transfer'
+            | 'cash'
+            | 'card'
+            | 'cheque'
+            | 'other',
         });
         if (result?.error) {
           setActionError(result.error);
@@ -242,8 +236,18 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
     <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
       {/* Search */}
       <div className="relative min-w-0">
-        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 left-4 flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
@@ -253,16 +257,26 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by invoice, customer, or type..."
-          className="w-full rounded-lg border-none bg-surface-container py-3.5 pl-11 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary/20 sm:py-4 sm:pl-12"
+          className="border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border pr-12 pl-11 text-base transition-colors outline-none focus:ring-2"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="absolute inset-y-0 right-4 flex items-center text-outline hover:text-on-surface"
+            className="text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface focus-visible:ring-primary/30 absolute top-0.5 right-0.5 flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
             aria-label="Clear search"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -279,7 +293,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               key={option.value}
               type="button"
               onClick={() => setStatus(option.value)}
-              className={`min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors sm:px-4 ${
+              className={`focus-visible:ring-primary/30 min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-4 ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
@@ -300,7 +314,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               key={option.value}
               type="button"
               onClick={() => setDateFilter(option.value)}
-              className={`min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors sm:px-4 ${
+              className={`focus-visible:ring-primary/30 min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-4 ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
@@ -314,19 +328,31 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
 
       {/* Empty states */}
       {invoices.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-16 text-center">
-          <p className="text-base text-on-surface-variant">No invoices yet.</p>
-          <p className="mt-1 text-sm text-on-surface-variant opacity-70">
+        <div className="border-outline-variant bg-surface-container-low rounded-2xl border border-dashed px-5 py-16 text-center">
+          <p className="text-on-surface-variant text-base">No invoices yet.</p>
+          <p className="text-on-surface-variant mt-1 text-sm opacity-70">
             Create your first invoice to start tracking payments.
           </p>
+          <Link
+            href="/invoices/new"
+            className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 active:bg-primary/90 mt-5 inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            + New Invoice
+          </Link>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-12 text-center">
-          <p className="text-base text-on-surface-variant">No invoices match this search.</p>
+        <div className="border-outline-variant bg-surface-container-low rounded-2xl border border-dashed py-12 text-center">
+          <p className="text-on-surface-variant text-base">
+            No invoices match this search.
+          </p>
           <button
             type="button"
-            onClick={() => { setQuery(''); setStatus('all'); setDateFilter('all'); }}
-            className="mt-2 text-sm text-primary hover:underline"
+            onClick={() => {
+              setQuery('');
+              setStatus('all');
+              setDateFilter('all');
+            }}
+            className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 mt-2 inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             Clear search and filters
           </button>
@@ -336,8 +362,11 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
           {/* Card list */}
           <ul className="flex min-w-0 flex-col gap-3">
             {filtered.map((invoice) => {
-              const borderClass = INVOICE_LEFT_BORDER[invoice.status] ?? 'border-l-outline';
-              const canQuickMarkPaid = invoice.status === 'sent' || invoice.status === 'overdue';
+              const statusTone =
+                INVOICE_STATUS_TONE[invoice.status] ?? 'neutral';
+              const borderClass = STATUS_TONE_BORDER[statusTone];
+              const canQuickMarkPaid =
+                invoice.status === 'sent' || invoice.status === 'overdue';
               const isPaymentFormOpen = activePaymentInvoiceId === invoice.id;
               const dueLabel = getInvoiceDueLabel(invoice);
               const isPaid = invoice.status === 'paid';
@@ -347,89 +376,106 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               return (
                 <li
                   key={invoice.id}
-                  className={`relative min-w-0 rounded-lg border border-l-4 border-outline-variant/60 bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
+                  className={`border-outline-variant/60 bg-surface-container-lowest relative min-w-0 rounded-2xl border border-l-4 shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
                 >
-                  <Link href={`/invoices/${invoice.id}`} className="block min-w-0 p-3 sm:p-5">
+                  <Link
+                    href={`/invoices/${invoice.id}`}
+                    className="focus-visible:ring-primary/30 block min-w-0 rounded-2xl p-3 focus-visible:ring-2 focus-visible:outline-none sm:p-5"
+                  >
                     <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <p className="truncate text-[10px] font-bold uppercase text-outline sm:text-[11px]">
+                        <p className="text-on-surface-variant truncate text-[10px] font-bold uppercase sm:text-[11px]">
                           {invoice.invoice_number}
                         </p>
-                        <h3 className="truncate text-base font-bold leading-tight text-on-surface">
+                        <h3 className="text-on-surface truncate text-base leading-tight font-bold">
                           {invoice.customer.name}
                         </h3>
                         <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-medium capitalize text-on-surface-variant">
+                          <p className="text-on-surface-variant truncate text-sm font-medium capitalize">
                             {invoice.invoice_type} invoice
                           </p>
                           {invoice.quote_stage_label && (
-                            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase text-primary">
+                            <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase">
                               {invoice.quote_stage_label}
                             </span>
                           )}
                         </div>
                       </div>
-                      <InvoiceStatusBadge status={invoice.status} />
+                      <StatusBadge
+                        tone={statusTone}
+                        label={STATUS_LABELS[invoice.status]}
+                      />
                     </div>
                     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-1">
-                        <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
+                        <div className="text-on-surface-variant flex min-w-0 items-center gap-1.5 text-xs font-medium">
                           <CalendarIcon />
                           Created {formatDate(invoice.created_at)}
                         </div>
                         {dueLabel && (
-                          <div className={`flex min-w-0 items-center gap-1.5 text-xs ${DUE_TONE_CLASS[dueLabel.tone]}`}>
-                            {dueLabel.tone === 'overdue' ? <AlertTriangleIcon /> : <ClockIcon />}
+                          <div
+                            className={`flex min-w-0 items-center gap-1.5 text-xs ${DUE_TONE_CLASS[dueLabel.tone]}`}
+                          >
+                            {dueLabel.tone === 'overdue' ? (
+                              <AlertTriangleIcon />
+                            ) : (
+                              <ClockIcon />
+                            )}
                             {dueLabel.text}
                           </div>
                         )}
                         {isPartiallyPaid && (
-                          <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-on-surface-variant">
+                          <div className="text-on-surface-variant flex min-w-0 items-center gap-1.5 text-xs font-medium">
                             <WalletIcon />
-                            {formatAUD(invoice.amount_paid_cents)} of {formatAUD(invoice.total_cents)} received
+                            {formatAUD(invoice.amount_paid_cents)} of{' '}
+                            {formatAUD(invoice.total_cents)} received
                           </div>
                         )}
                       </div>
                       <div className="min-w-0 sm:text-right">
-                        <p className="text-[10px] text-outline font-bold uppercase tracking-wider">
+                        <p className="text-on-surface-variant text-[10px] font-bold tracking-wider uppercase">
                           {isPaid ? 'Paid' : 'Balance'}
                         </p>
-                        <p className="text-base font-extrabold tabular-nums text-on-surface sm:text-lg">
-                          {formatAUD(isPaid ? invoice.total_cents : invoice.balance_cents)}{' '}
-                          <span className="text-[10px] font-bold text-outline">AUD</span>
+                        <p className="text-on-surface text-base font-extrabold tabular-nums sm:text-lg">
+                          {formatAUD(
+                            isPaid ? invoice.total_cents : invoice.balance_cents
+                          )}{' '}
+                          <span className="text-on-surface-variant text-[10px] font-bold">
+                            AUD
+                          </span>
                         </p>
                       </div>
                     </div>
                   </Link>
                   {canQuickMarkPaid && (
-                    <div className="border-t border-outline-variant/40 px-3 py-3 sm:px-5 sm:py-4">
+                    <div className="border-outline-variant/40 border-t px-3 py-3 sm:px-5 sm:py-4">
                       {!isPaymentFormOpen ? (
                         <button
                           type="button"
                           onClick={() => openMarkPaidForm(invoice)}
-                          className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 sm:w-auto"
+                          className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:w-auto"
                         >
                           Mark as Paid
                         </button>
                       ) : (
                         <div className="space-y-3">
-                          <p className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
-                            Record Payment
-                          </p>
+                          <SectionLabel>Record Payment</SectionLabel>
                           <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                             <label className="space-y-1.5">
-                              <span className="text-xs font-medium text-on-surface-variant">
+                              <span className="text-on-surface-variant text-xs font-medium">
                                 Paid date
                               </span>
                               <input
                                 type="date"
                                 value={paidDate}
-                                onChange={(event) => setPaidDate(event.target.value)}
-                                className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                                onChange={(event) =>
+                                  setPaidDate(event.target.value)
+                                }
+                                className="border-outline-variant bg-surface-container-lowest text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border px-4 text-base transition-colors outline-none focus:ring-2"
                               />
                             </label>
                             <label className="space-y-1.5">
-                              <span className="text-xs font-medium text-on-surface-variant">
+                              <span className="text-on-surface-variant text-xs font-medium">
                                 Payment method
                               </span>
                               <select
@@ -445,10 +491,12 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                                       | ''
                                   )
                                 }
-                                className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                                className="border-outline-variant bg-surface-container-lowest text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border px-4 text-base transition-colors outline-none focus:ring-2"
                               >
                                 <option value="">Select method</option>
-                                <option value="bank_transfer">Bank transfer</option>
+                                <option value="bank_transfer">
+                                  Bank transfer
+                                </option>
                                 <option value="cash">Cash</option>
                                 <option value="card">Card</option>
                                 <option value="cheque">Cheque</option>
@@ -469,16 +517,17 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                                 !paidDate ||
                                 !paymentMethod
                               }
-                              className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-60"
+                              className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
                             >
-                              {isSubmittingPayment && pendingInvoiceId === invoice.id
+                              {isSubmittingPayment &&
+                              pendingInvoiceId === invoice.id
                                 ? 'Saving...'
                                 : 'Save Payment'}
                             </button>
                             <button
                               type="button"
                               onClick={closeMarkPaidForm}
-                              className="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
+                              className="border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                             >
                               Cancel
                             </button>
@@ -493,7 +542,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
           </ul>
 
           {hasActiveFilters && (
-            <p className="text-xs text-on-surface-variant text-right">
+            <p className="text-on-surface-variant text-right text-xs">
               {filtered.length} of {invoices.length} invoices
             </p>
           )}

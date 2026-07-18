@@ -28,29 +28,33 @@ export function PageHeader({
     <header
       className={cn(
         'flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between',
-        className,
+        className
       )}
     >
       <div className="min-w-0 flex-1">
         {backHref && (
           <Link
             href={backHref}
-            className="mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-on-surface-variant transition-colors hover:text-on-surface"
+            className="text-on-surface-variant hover:text-on-surface focus-visible:ring-primary focus-visible:ring-offset-surface mb-2 inline-flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
             {backLabel}
           </Link>
         )}
-        <h1 className="text-2xl font-extrabold tracking-tight text-on-surface sm:text-4xl">
+        <h1 className="text-on-surface text-2xl font-extrabold tracking-tight sm:text-4xl">
           {title}
         </h1>
         {supportingText && (
-          <p className="mt-1 text-sm font-medium text-on-surface-variant sm:text-base">
+          <p className="text-on-surface-variant mt-1 text-sm font-medium sm:text-base">
             {supportingText}
           </p>
         )}
       </div>
-      {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
+      {action && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {action}
+        </div>
+      )}
     </header>
   );
 }
@@ -61,13 +65,17 @@ type PrimaryActionLinkProps = {
   className?: string;
 };
 
-export function PrimaryActionLink({ href, children, className }: PrimaryActionLinkProps) {
+export function PrimaryActionLink({
+  href,
+  children,
+  className,
+}: PrimaryActionLinkProps) {
   return (
     <Link
       href={href}
       className={cn(
-        'inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 sm:px-5',
-        className,
+        'bg-primary text-on-primary focus-visible:ring-primary focus-visible:ring-offset-surface inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:px-5',
+        className
       )}
     >
       {children}
@@ -86,8 +94,8 @@ export function SecondaryActionLink({
     <Link
       href={href}
       className={cn(
-        'inline-flex min-h-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high sm:px-5',
-        className,
+        'border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high focus-visible:ring-primary focus-visible:ring-offset-surface inline-flex min-h-11 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:px-5',
+        className
       )}
     >
       {children}

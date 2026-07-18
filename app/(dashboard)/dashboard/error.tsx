@@ -16,12 +16,13 @@ export default function DashboardHomeError({ error, reset }: ErrorProps) {
   return (
     <div className="flex min-h-[60dvh] flex-col items-center justify-center gap-4 px-6 text-center">
       <ErrorAlert className="max-w-md">
-        Something went wrong loading your dashboard. Your data is safe — please try again.
+        Something went wrong loading your dashboard. Your data is safe — please
+        try again.
       </ErrorAlert>
       <button
         type="button"
         onClick={reset}
-        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-6 text-base font-semibold text-on-primary transition-colors hover:bg-primary/90 active:bg-primary/90"
+        className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 active:bg-primary/90 inline-flex min-h-11 items-center justify-center rounded-xl px-6 text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         Try again
       </button>

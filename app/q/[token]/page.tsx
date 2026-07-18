@@ -5,6 +5,7 @@ import {
 } from '@/modules/jobs/application/actions';
 import { getPublicQuoteByToken } from '@/modules/quotes/application/actions';
 import { PublicQuoteClient } from '@/modules/quotes/ui/public/PublicQuoteClient';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 export const metadata: Metadata = { title: 'Quote' };
 
@@ -18,18 +19,9 @@ export default async function PublicQuotePage({
 
   if (error || !data) {
     return (
-      <main className="min-h-screen bg-[#fcf9f4] px-4 py-12">
+      <main className="bg-surface min-h-screen px-4 py-12">
         <div className="mx-auto max-w-lg">
-          <div className="overflow-hidden rounded-2xl border border-error/30 bg-white shadow-sm">
-            <div className="border-b border-error/20 bg-error-container/40 px-5 py-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-on-error-container">
-                Error
-              </p>
-            </div>
-            <div className="px-5 py-4">
-              <p className="text-sm text-on-error-container">{error ?? 'Quote not found.'}</p>
-            </div>
-          </div>
+          <ErrorAlert>{error ?? 'Quote not found.'}</ErrorAlert>
         </div>
       </main>
     );
@@ -40,7 +32,7 @@ export default async function PublicQuotePage({
     : null;
 
   return (
-    <main className="min-h-screen bg-[#f6f3ee]">
+    <main className="bg-surface min-h-screen">
       <PublicQuoteClient
         token={token}
         quote={data.quote}

@@ -8,6 +8,7 @@ import { InvoiceForm } from '@/modules/invoices/ui/InvoiceForm';
 import { createQuote } from '@/modules/quotes/application/actions';
 import { createInvoice } from '@/modules/invoices/application/actions';
 import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { resolveInvoiceStatus } from '@/modules/invoices/domain/invoices';
 import { getInvoiceQuoteOptions } from '@/modules/invoices/infrastructure/invoice-options';
 import { createServerClient } from '@/lib/supabase/server';
@@ -15,6 +16,10 @@ import { requireCurrentUser } from '@/lib/supabase/request-context';
 import { getSubscriptionSnapshotForCurrentUser } from '@/modules/billing/application/request-context';
 import { formatAUD } from '@/utils/format';
 import type { InvoiceStatus } from '@/modules/invoices/domain/invoice';
+import {
+  getDashboardPaidThisMonthCents,
+  getStalestSentQuoteActivityAgeDays,
+} from './dashboard-metrics';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
@@ -39,22 +44,30 @@ export default async function DashboardPage() {
     'there';
   const aiConfigured = isAIDraftConfigured();
 
-  const [{ data: customers }, { data: quotes }, { data: invoices }, quoteOptionsResult] =
-    await Promise.all([
+  const [
+    { data: customers },
+    { data: quotes },
+    { data: invoices },
+    quoteOptionsResult,
+  ] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, name, company_name, email, phone, address_line1, city, state, postcode')
+      .select(
+        'id, name, company_name, email, phone, address_line1, city, state, postcode'
+      )
       .eq('user_id', user.id)
       .eq('is_archived', false)
       .order('name', { ascending: true }),
     supabase
       .from('quotes')
-      .select('id, quote_number, title, customer_id, total_cents, status, valid_until, created_at')
+      .select(
+        'id, quote_number, title, customer_id, total_cents, status, valid_until, created_at, updated_at'
+      )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
     supabase
       .from('invoices')
-      .select('id, status, total_cents, amount_paid_cents, paid_at, due_date, paid_date')
+      .select('id, status, total_cents, amount_paid_cents, due_date, paid_date')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
     getInvoiceQuoteOptions(supabase, user.id),
@@ -67,9 +80,15 @@ export default async function DashboardPage() {
       company_name: customer.company_name,
       email: customer.email,
       phone: customer.phone,
-      address: [customer.address_line1, customer.city, customer.state, customer.postcode]
-        .filter(Boolean)
-        .join(', ') || null,
+      address:
+        [
+          customer.address_line1,
+          customer.city,
+          customer.state,
+          customer.postcode,
+        ]
+          .filter(Boolean)
+          .join(', ') || null,
     })) ?? [];
 
   const quoteOptions = quoteOptionsResult.data;
@@ -85,7 +104,9 @@ export default async function DashboardPage() {
 
   const currentSydneyMonth = getSydneyYearMonth(new Date());
   const activeQuoteCount =
-    quotes?.filter((quote) => ['draft', 'sent', 'approved'].includes(quote.status)).length ?? 0;
+    quotes?.filter((quote) =>
+      ['draft', 'sent', 'approved'].includes(quote.status)
+    ).length ?? 0;
   const starterQuoteUsageThisMonth =
     quotes?.filter(
       (quote) =>
@@ -94,52 +115,61 @@ export default async function DashboardPage() {
     ).length ?? 0;
   const quoteLimit = subscription.features.activeQuoteLimit;
   const quoteSlotsRemaining =
-    quoteLimit === null ? null : Math.max(quoteLimit - starterQuoteUsageThisMonth, 0);
+    quoteLimit === null
+      ? null
+      : Math.max(quoteLimit - starterQuoteUsageThisMonth, 0);
 
-  const pendingInvoiceCount =
-    invoiceSummaries.filter((invoice) =>
-      ['draft', 'sent', 'overdue'].includes(invoice.effective_status)
-    ).length;
+  const pendingInvoiceCount = invoiceSummaries.filter((invoice) =>
+    ['draft', 'sent', 'overdue'].includes(invoice.effective_status)
+  ).length;
   const overdueInvoiceCount = invoiceSummaries.filter(
     (invoice) => invoice.effective_status === 'overdue'
   ).length;
-  const draftQuoteCount = quotes?.filter((quote) => quote.status === 'draft').length ?? 0;
-  const sentQuoteCount = quotes?.filter((quote) => quote.status === 'sent').length ?? 0;
+  const draftQuoteCount =
+    quotes?.filter((quote) => quote.status === 'draft').length ?? 0;
+  const sentQuoteCount =
+    quotes?.filter((quote) => quote.status === 'sent').length ?? 0;
   const approvedQuoteCount =
     quotes?.filter((quote) => quote.status === 'approved').length ?? 0;
+  const stalestSentQuoteAgeDays = getStalestSentQuoteActivityAgeDays(
+    quotes ?? []
+  );
 
   const customerCount = customers?.length ?? 0;
 
   const revenueThisMonthCents =
-    invoiceSummaries.reduce((sum, invoice) => {
-      if (!invoice.paid_at) return sum;
-      if (getSydneyYearMonth(invoice.paid_at) !== currentSydneyMonth) return sum;
-      return sum + (invoice.amount_paid_cents ?? invoice.total_cents ?? 0);
-    }, 0);
+    getDashboardPaidThisMonthCents(invoiceSummaries);
 
   // KPI: Quote approval rate this month
   const quotesThisMonth =
-    quotes?.filter((q) => getSydneyYearMonth(q.created_at) === currentSydneyMonth) ?? [];
-  const approvedThisMonth = quotesThisMonth.filter((q) => q.status === 'approved').length;
+    quotes?.filter(
+      (q) => getSydneyYearMonth(q.created_at) === currentSydneyMonth
+    ) ?? [];
+  const approvedThisMonth = quotesThisMonth.filter(
+    (q) => q.status === 'approved'
+  ).length;
   const quoteApprovalRate =
     quotesThisMonth.length > 0
       ? Math.round((approvedThisMonth / quotesThisMonth.length) * 100)
       : null;
 
   // KPI: Outstanding (unpaid) invoice amount
-  const outstandingCents =
-    invoiceSummaries.reduce((sum, invoice) => {
-      if (!['sent', 'overdue'].includes(invoice.effective_status)) return sum;
-      const remaining = (invoice.total_cents ?? 0) - (invoice.amount_paid_cents ?? 0);
-      return sum + Math.max(remaining, 0);
-    }, 0);
+  const outstandingCents = invoiceSummaries.reduce((sum, invoice) => {
+    if (!['sent', 'overdue'].includes(invoice.effective_status)) return sum;
+    const remaining =
+      (invoice.total_cents ?? 0) - (invoice.amount_paid_cents ?? 0);
+    return sum + Math.max(remaining, 0);
+  }, 0);
 
   const kpiStats = [
     {
       label: 'Revenue this month',
       value: formatAUD(revenueThisMonthCents),
       hint: 'Paid invoices in Sydney time',
-      variant: revenueThisMonthCents > 0 ? ('positive' as const) : ('neutral' as const),
+      variant:
+        revenueThisMonthCents > 0
+          ? ('positive' as const)
+          : ('neutral' as const),
     },
     {
       label: 'Quote approval rate',
@@ -157,7 +187,8 @@ export default async function DashboardPage() {
       label: 'Outstanding',
       value: formatAUD(outstandingCents),
       hint: 'Sent & overdue invoices awaiting payment',
-      variant: outstandingCents > 0 ? ('warning' as const) : ('neutral' as const),
+      variant:
+        outstandingCents > 0 ? ('warning' as const) : ('neutral' as const),
     },
   ];
 
@@ -168,11 +199,15 @@ export default async function DashboardPage() {
     { label: 'Rejected', status: 'rejected' },
     { label: 'Expired', status: 'expired' },
   ].map((item) => {
-    const matchingQuotes = quotes?.filter((quote) => quote.status === item.status) ?? [];
+    const matchingQuotes =
+      quotes?.filter((quote) => quote.status === item.status) ?? [];
     return {
       label: item.label,
       count: matchingQuotes.length,
-      totalCents: matchingQuotes.reduce((sum, quote) => sum + (quote.total_cents ?? 0), 0),
+      totalCents: matchingQuotes.reduce(
+        (sum, quote) => sum + (quote.total_cents ?? 0),
+        0
+      ),
     };
   });
 
@@ -211,7 +246,9 @@ export default async function DashboardPage() {
       title: `${sentQuoteCount} sent quote${sentQuoteCount === 1 ? '' : 's'}`,
       body:
         sentQuoteCount > 0
-          ? 'Check sent quotes and move accepted work forward.'
+          ? `Oldest sent quote activity was ${stalestSentQuoteAgeDays ?? 0} ${
+              stalestSentQuoteAgeDays === 1 ? 'day' : 'days'
+            } ago.`
           : `${draftQuoteCount} draft quote${draftQuoteCount === 1 ? '' : 's'} waiting in the pipeline.`,
       href: '/quotes',
       cta: 'Review Quotes',
@@ -228,19 +265,19 @@ export default async function DashboardPage() {
           ? `${approvedQuoteCount} approved quote${approvedQuoteCount === 1 ? '' : 's'} can become invoices.`
           : 'Keep sent and overdue invoices visible before they slip.',
       href: pendingInvoiceCount > 0 ? '/invoices' : '/invoices/new',
-      cta: pendingInvoiceCount > 0 ? 'Open Invoices' : 'New Invoice',
+      cta: pendingInvoiceCount > 0 ? 'Open Invoices' : '+ New Invoice',
       variant: overdueInvoiceCount > 0 ? 'warning' : 'secondary',
     },
   ] as const;
 
   return (
-    <div className="min-w-0 space-y-5 sm:space-y-8">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
       {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-on-surface leading-tight sm:text-4xl">
+        <h1 className="text-on-surface text-2xl leading-tight font-extrabold tracking-tight sm:text-4xl">
           G&apos;day, <span className="text-primary">{businessName}</span>
         </h1>
-        <p className="mt-2 text-on-surface-variant font-medium">
+        <p className="text-on-surface-variant mt-2 font-medium">
           {subscription.plan === 'pro' && aiConfigured
             ? 'Run your workspace from one place and let AI draft the paperwork first.'
             : 'Run your workspace from one place and keep track of quotes, invoices, and customers.'}
@@ -249,10 +286,11 @@ export default async function DashboardPage() {
 
       <section aria-labelledby="next-actions-heading" className="space-y-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
-            Today
-          </p>
-          <h2 id="next-actions-heading" className="mt-1 text-lg font-bold text-on-surface">
+          <SectionLabel>Today</SectionLabel>
+          <h2
+            id="next-actions-heading"
+            className="text-on-surface mt-1 text-lg font-bold"
+          >
             Next actions
           </h2>
         </div>
@@ -262,7 +300,7 @@ export default async function DashboardPage() {
               key={item.label}
               href={item.href}
               className={[
-                'group flex min-h-36 min-w-0 flex-col justify-between rounded-2xl border p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
+                'group focus-visible:ring-primary/30 flex min-h-36 min-w-0 flex-col justify-between rounded-2xl border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none',
                 item.variant === 'primary'
                   ? 'border-primary/25 bg-primary text-on-primary hover:bg-primary/90'
                   : item.variant === 'warning'
@@ -271,17 +309,18 @@ export default async function DashboardPage() {
               ].join(' ')}
             >
               <div>
-                <p
-                  className={[
-                    'text-[10px] font-bold uppercase tracking-widest',
+                <SectionLabel
+                  className={
                     item.variant === 'primary'
                       ? 'text-on-primary/75'
-                      : 'text-on-surface-variant',
-                  ].join(' ')}
+                      : undefined
+                  }
                 >
                   {item.label}
+                </SectionLabel>
+                <p className="mt-2 text-base leading-snug font-bold">
+                  {item.title}
                 </p>
-                <p className="mt-2 text-base font-bold leading-snug">{item.title}</p>
                 <p
                   className={[
                     'mt-1 text-sm leading-relaxed',
@@ -298,7 +337,7 @@ export default async function DashboardPage() {
                   'mt-4 inline-flex min-h-11 w-fit items-center rounded-xl px-4 text-sm font-semibold transition-colors',
                   item.variant === 'primary'
                     ? 'bg-on-primary text-primary group-hover:bg-on-primary/90'
-                    : 'border border-outline-variant bg-surface-container-lowest text-on-surface group-hover:border-primary/40 group-hover:text-primary',
+                    : 'border-outline-variant bg-surface-container-lowest text-on-surface group-hover:border-primary/40 group-hover:text-primary border',
                 ].join(' ')}
               >
                 {item.cta}
@@ -309,19 +348,56 @@ export default async function DashboardPage() {
       </section>
 
       {quoteSlotsRemaining !== null && (
-        <div className="rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3 sm:px-5 sm:py-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
-            Starter Usage
+        <div className="border-outline-variant bg-surface-container-low rounded-2xl border px-4 py-3 sm:px-5 sm:py-4">
+          <SectionLabel>Starter Usage</SectionLabel>
+          <p className="text-on-surface mt-1 text-base font-semibold">
+            {quoteSlotsRemaining} of {quoteLimit} active quote slots remaining
+            this month
           </p>
-          <p className="mt-1 text-base font-semibold text-on-surface">
-            {quoteSlotsRemaining} of {quoteLimit} active quote slots remaining this month
-          </p>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Starter includes up to {quoteLimit} draft, sent, or approved quotes each Sydney
-            month. Upgrade to Pro for unlimited quoting and AI tools.
+          <p className="text-on-surface-variant mt-1 text-sm">
+            Starter includes up to {quoteLimit} draft, sent, or approved quotes
+            each Sydney month. Upgrade to Pro for unlimited quoting and AI
+            tools.
           </p>
         </div>
       )}
+
+      {/* KPI cards — daily receivables stay ahead of the AI upsell. */}
+      <section aria-labelledby="kpi-heading">
+        <h2 id="kpi-heading" className="mb-4">
+          <SectionLabel as="span">This Month</SectionLabel>
+        </h2>
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3 sm:gap-4">
+          {kpiStats.map((stat) => (
+            <div
+              key={stat.label}
+              className={`rounded-2xl p-4 transition-colors sm:p-6 ${
+                stat.variant === 'positive'
+                  ? 'bg-success-container border-success/20 border'
+                  : stat.variant === 'warning'
+                    ? 'bg-warning-container border-warning/20 border'
+                    : 'bg-surface-container-low hover:bg-surface-container'
+              }`}
+            >
+              <SectionLabel className="mb-3">{stat.label}</SectionLabel>
+              <div
+                className={`text-2xl font-extrabold break-words sm:text-3xl ${
+                  stat.variant === 'positive'
+                    ? 'text-success'
+                    : stat.variant === 'warning'
+                      ? 'text-warning'
+                      : 'text-on-surface'
+                }`}
+              >
+                {stat.value}
+              </div>
+              <p className="text-on-surface-variant mt-1.5 text-[11px]">
+                {stat.hint}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {aiConfigured && (
         <div>
@@ -347,22 +423,20 @@ export default async function DashboardPage() {
 
       {/* Quote pipeline — quotes that need action */}
       <section aria-labelledby="pipeline-heading">
-        <h2
-          id="pipeline-heading"
-          className="mb-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant"
-        >
-          Quote Pipeline
+        <h2 id="pipeline-heading" className="mb-4">
+          <SectionLabel as="span">Quote Pipeline</SectionLabel>
         </h2>
         <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2 sm:gap-3">
           {quotePipelineStats.map((stat) => (
-            <div key={stat.label} className="min-w-0 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 sm:rounded-2xl sm:p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                {stat.label}
-              </p>
-              <p className="mt-2 text-xl font-extrabold tracking-tight text-on-surface sm:text-2xl">
+            <div
+              key={stat.label}
+              className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border p-3 sm:p-4"
+            >
+              <SectionLabel>{stat.label}</SectionLabel>
+              <p className="text-on-surface mt-2 text-xl font-extrabold tracking-tight sm:text-2xl">
                 {stat.count}
               </p>
-              <p className="mt-1 truncate text-xs text-on-surface-variant">
+              <p className="text-on-surface-variant mt-1 truncate text-xs">
                 {formatAUD(stat.totalCents)}
               </p>
             </div>
@@ -370,74 +444,32 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* KPI cards */}
-      <section aria-labelledby="kpi-heading">
-        <h2
-          id="kpi-heading"
-          className="mb-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant"
-        >
-          This Month
-        </h2>
-        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3 sm:gap-4">
-          {kpiStats.map((stat) => (
-            <div
-              key={stat.label}
-              className={`rounded-xl p-4 transition-colors sm:rounded-2xl sm:p-6 ${
-                stat.variant === 'positive'
-                  ? 'bg-success-container border border-success/20'
-                  : stat.variant === 'warning'
-                    ? 'bg-warning-container border border-warning/20'
-                    : 'bg-surface-container-low hover:bg-surface-container'
-              }`}
-            >
-              <p className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
-                {stat.label}
-              </p>
-              <div
-                className={`break-words text-2xl font-extrabold sm:text-3xl ${
-                  stat.variant === 'positive'
-                    ? 'text-success'
-                    : stat.variant === 'warning'
-                      ? 'text-warning'
-                      : 'text-on-surface'
-                }`}
-              >
-                {stat.value}
-              </div>
-              <p className="mt-1.5 text-[11px] text-on-surface-variant">{stat.hint}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Overview stats */}
       <section aria-labelledby="overview-heading">
-        <h2
-          id="overview-heading"
-          className="mb-4 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant"
-        >
-          Overview
+        <h2 id="overview-heading" className="mb-4">
+          <SectionLabel as="span">Overview</SectionLabel>
         </h2>
         <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3 sm:gap-4">
           {overviewStats.map((stat) => (
             <div
               key={stat.label}
-              className="min-w-0 rounded-xl bg-surface-container-low p-4 transition-colors hover:bg-surface-container sm:rounded-2xl sm:p-6"
+              className="bg-surface-container-low hover:bg-surface-container min-w-0 rounded-2xl p-4 transition-colors sm:p-6"
             >
-              <p className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase mb-3">
-                {stat.label}
-              </p>
+              <SectionLabel className="mb-3">{stat.label}</SectionLabel>
               <div className="flex items-start justify-between gap-3">
-                <div className="text-2xl font-extrabold text-on-surface sm:text-3xl">
+                <div className="text-on-surface text-2xl font-extrabold sm:text-3xl">
                   {stat.value}
                 </div>
-                {stat.label === 'Pending Invoices' && overdueInvoiceCount > 0 && (
-                  <span className="inline-flex min-h-7 items-center rounded-full bg-error/12 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-error">
-                    {overdueInvoiceCount} overdue
-                  </span>
-                )}
+                {stat.label === 'Pending Invoices' &&
+                  overdueInvoiceCount > 0 && (
+                    <span className="bg-error/12 text-error inline-flex min-h-7 items-center rounded-full px-3 py-1 text-[11px] font-bold tracking-wide uppercase">
+                      {overdueInvoiceCount} overdue
+                    </span>
+                  )}
               </div>
-              <p className="mt-1.5 text-[11px] text-on-surface-variant">{stat.hint}</p>
+              <p className="text-on-surface-variant mt-1.5 text-[11px]">
+                {stat.hint}
+              </p>
             </div>
           ))}
         </div>

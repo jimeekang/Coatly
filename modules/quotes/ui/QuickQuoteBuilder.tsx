@@ -30,6 +30,8 @@ import {
   type WindowType,
 } from '@/modules/price-rates/domain/rate-settings';
 import { formatAUD } from '@/utils/format';
+import { formControlClassName } from '@/components/forms/FormField';
+import { cn } from '@/lib/utils';
 
 // ─── Room type presets ────────────────────────────────────────────────────────
 
@@ -43,23 +45,105 @@ type RoomPreset = {
 };
 
 const ROOM_PRESETS: RoomPreset[] = [
-  { anchor: 'Master Bedroom',  label: 'Master Bed',   emoji: '🛏️', defaultCeiling: true,  defaultDoors: 1, defaultWindows: 1 },
-  { anchor: 'Bedroom 1',       label: 'Bedroom',      emoji: '🛏️', defaultCeiling: true,  defaultDoors: 1, defaultWindows: 1 },
-  { anchor: 'Living Room',     label: 'Living Room',  emoji: '🛋️', defaultCeiling: true,  defaultDoors: 1, defaultWindows: 2 },
-  { anchor: 'Dining',          label: 'Dining',       emoji: '🍽️', defaultCeiling: true,  defaultDoors: 0, defaultWindows: 1 },
-  { anchor: 'Kitchen',         label: 'Kitchen',      emoji: '🍳', defaultCeiling: false, defaultDoors: 0, defaultWindows: 1 },
-  { anchor: 'Bathroom',        label: 'Bathroom',     emoji: '🚿', defaultCeiling: false, defaultDoors: 1, defaultWindows: 0 },
-  { anchor: 'Laundry',         label: 'Laundry',      emoji: '🫧', defaultCeiling: false, defaultDoors: 1, defaultWindows: 0 },
-  { anchor: 'Hallway',         label: 'Hallway',      emoji: '🚪', defaultCeiling: true,  defaultDoors: 0, defaultWindows: 0 },
-  { anchor: 'Study / Office',  label: 'Study',        emoji: '💼', defaultCeiling: true,  defaultDoors: 1, defaultWindows: 1 },
-  { anchor: 'Stairwell',       label: 'Stairwell',    emoji: '🪜', defaultCeiling: true,  defaultDoors: 0, defaultWindows: 0 },
-  { anchor: 'Other',           label: 'Other',        emoji: '🏠', defaultCeiling: true,  defaultDoors: 1, defaultWindows: 1 },
+  {
+    anchor: 'Master Bedroom',
+    label: 'Master Bed',
+    emoji: '🛏️',
+    defaultCeiling: true,
+    defaultDoors: 1,
+    defaultWindows: 1,
+  },
+  {
+    anchor: 'Bedroom 1',
+    label: 'Bedroom',
+    emoji: '🛏️',
+    defaultCeiling: true,
+    defaultDoors: 1,
+    defaultWindows: 1,
+  },
+  {
+    anchor: 'Living Room',
+    label: 'Living Room',
+    emoji: '🛋️',
+    defaultCeiling: true,
+    defaultDoors: 1,
+    defaultWindows: 2,
+  },
+  {
+    anchor: 'Dining',
+    label: 'Dining',
+    emoji: '🍽️',
+    defaultCeiling: true,
+    defaultDoors: 0,
+    defaultWindows: 1,
+  },
+  {
+    anchor: 'Kitchen',
+    label: 'Kitchen',
+    emoji: '🍳',
+    defaultCeiling: false,
+    defaultDoors: 0,
+    defaultWindows: 1,
+  },
+  {
+    anchor: 'Bathroom',
+    label: 'Bathroom',
+    emoji: '🚿',
+    defaultCeiling: false,
+    defaultDoors: 1,
+    defaultWindows: 0,
+  },
+  {
+    anchor: 'Laundry',
+    label: 'Laundry',
+    emoji: '🫧',
+    defaultCeiling: false,
+    defaultDoors: 1,
+    defaultWindows: 0,
+  },
+  {
+    anchor: 'Hallway',
+    label: 'Hallway',
+    emoji: '🚪',
+    defaultCeiling: true,
+    defaultDoors: 0,
+    defaultWindows: 0,
+  },
+  {
+    anchor: 'Study / Office',
+    label: 'Study',
+    emoji: '💼',
+    defaultCeiling: true,
+    defaultDoors: 1,
+    defaultWindows: 1,
+  },
+  {
+    anchor: 'Stairwell',
+    label: 'Stairwell',
+    emoji: '🪜',
+    defaultCeiling: true,
+    defaultDoors: 0,
+    defaultWindows: 0,
+  },
+  {
+    anchor: 'Other',
+    label: 'Other',
+    emoji: '🏠',
+    defaultCeiling: true,
+    defaultDoors: 1,
+    defaultWindows: 1,
+  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeRoom(preset: RoomPreset, index: number, existingCount: number): QuickRoom {
-  const label = existingCount > 0 ? `${preset.label} ${existingCount + 1}` : preset.label;
+function makeRoom(
+  preset: RoomPreset,
+  index: number,
+  existingCount: number
+): QuickRoom {
+  const label =
+    existingCount > 0 ? `${preset.label} ${existingCount + 1}` : preset.label;
   const hasTrim = preset.defaultDoors > 0 || preset.defaultWindows > 0;
   return {
     name: index === 0 ? preset.label : label,
@@ -103,11 +187,11 @@ function ToggleGroup<T extends string>({
           type="button"
           onClick={() => onChange(opt)}
           className={[
-            'flex-1 rounded-xl border font-medium transition-colors',
+            'focus-visible:ring-primary/30 flex-1 rounded-xl border font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
             size === 'sm' ? 'min-h-11 text-xs' : 'h-11 text-sm',
             value === opt
               ? 'border-primary bg-primary text-on-primary'
-              : 'border-outline-variant bg-white text-on-surface hover:border-primary hover:bg-primary/15',
+              : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary hover:bg-primary/15',
           ].join(' ')}
         >
           {labels?.[opt] ?? opt}
@@ -134,17 +218,19 @@ function Counter({
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
-        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
+        className="border-outline-variant bg-surface-container-lowest text-on-surface focus-visible:ring-primary/30 flex h-11 w-11 items-center justify-center rounded-xl border text-lg font-bold focus-visible:ring-2 focus-visible:outline-none disabled:opacity-30"
         aria-label="Decrease"
       >
         −
       </button>
-      <span className="w-6 text-center text-sm font-semibold text-on-surface">{value}</span>
+      <span className="text-on-surface w-6 text-center text-sm font-semibold">
+        {value}
+      </span>
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
-        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
+        className="border-outline-variant bg-surface-container-lowest text-on-surface focus-visible:ring-primary/30 flex h-11 w-11 items-center justify-center rounded-xl border text-lg font-bold focus-visible:ring-2 focus-visible:outline-none disabled:opacity-30"
         aria-label="Increase"
       >
         +
@@ -167,16 +253,18 @@ function Toggle({
       type="button"
       onClick={() => onChange(!checked)}
       className={[
-        'flex h-11 items-center gap-3 rounded-xl border px-4 text-sm font-medium transition-colors',
+        'focus-visible:ring-primary/30 flex h-11 items-center gap-3 rounded-xl border px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
         checked
           ? 'border-primary bg-primary-container text-on-primary-container'
-          : 'border-outline-variant bg-white text-on-surface-variant',
+          : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant',
       ].join(' ')}
     >
       <span
         className={[
           'flex h-5 w-5 items-center justify-center rounded border-2 text-xs transition-colors',
-          checked ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant bg-white',
+          checked
+            ? 'border-primary bg-primary text-on-primary'
+            : 'border-outline-variant bg-surface-container-lowest',
         ].join(' ')}
       >
         {checked ? '✓' : ''}
@@ -204,8 +292,16 @@ function RoomCard({
   const set = <K extends keyof QuickRoom>(key: K, value: QuickRoom[K]) =>
     onChange({ ...room, [key]: value });
 
-  const SIZE_LABELS: Record<QuickRoomSize, string> = { small: 'Small', medium: 'Medium', large: 'Large' };
-  const CONDITION_LABELS: Record<QuickRoomCondition, string> = { good: 'Good', normal: 'Normal', poor: 'Poor' };
+  const SIZE_LABELS: Record<QuickRoomSize, string> = {
+    small: 'Small',
+    medium: 'Medium',
+    large: 'Large',
+  };
+  const CONDITION_LABELS: Record<QuickRoomCondition, string> = {
+    good: 'Good',
+    normal: 'Normal',
+    poor: 'Poor',
+  };
   const PAINT_SYSTEM_LABELS = INTERIOR_PAINT_SYSTEM_LABELS;
   const DOOR_SCOPE_LABELS: Record<QuickDoorScope, string> = {
     door_and_frame: 'Door & Frame',
@@ -225,40 +321,51 @@ function RoomCard({
   };
 
   // Filter available door scopes / window types based on rate settings
-  const availableDoorScopes = (
-    rateSettings?.enabled_door_scopes?.length
-      ? (DOOR_SCOPES.filter((s) => rateSettings.enabled_door_scopes.includes(s as DoorScope)) as QuickDoorScope[])
-      : [...DOOR_SCOPES] as QuickDoorScope[]
-  );
-  const availableWindowTypes = (
-    rateSettings?.enabled_window_types?.length
-      ? (WINDOW_TYPES.filter((t) => rateSettings.enabled_window_types.includes(t as WindowType)) as QuickWindowType[])
-      : [...WINDOW_TYPES] as QuickWindowType[]
-  );
+  const availableDoorScopes = rateSettings?.enabled_door_scopes?.length
+    ? (DOOR_SCOPES.filter((s) =>
+        rateSettings.enabled_door_scopes.includes(s as DoorScope)
+      ) as QuickDoorScope[])
+    : ([...DOOR_SCOPES] as QuickDoorScope[]);
+  const availableWindowTypes = rateSettings?.enabled_window_types?.length
+    ? (WINDOW_TYPES.filter((t) =>
+        rateSettings.enabled_window_types.includes(t as WindowType)
+      ) as QuickWindowType[])
+    : ([...WINDOW_TYPES] as QuickWindowType[]);
   // If current room value is not in the available list, use the first available
-  const activeDoorScope: QuickDoorScope =
-    availableDoorScopes.includes(room.door_scope) ? room.door_scope : availableDoorScopes[0];
-  const activeWindowType: QuickWindowType =
-    availableWindowTypes.includes(room.window_type) ? room.window_type : availableWindowTypes[0];
+  const activeDoorScope: QuickDoorScope = availableDoorScopes.includes(
+    room.door_scope
+  )
+    ? room.door_scope
+    : availableDoorScopes[0];
+  const activeWindowType: QuickWindowType = availableWindowTypes.includes(
+    room.window_type
+  )
+    ? room.window_type
+    : availableWindowTypes[0];
 
   return (
-    <div className="rounded-2xl border border-outline-variant bg-white">
+    <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-4 py-3">
+      <div className="border-outline-variant flex items-center justify-between gap-3 border-b px-4 py-3">
         <input
           type="text"
           value={room.name}
           onChange={(e) => set('name', e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-base font-semibold text-on-surface outline-none placeholder:text-on-surface-variant"
+          className={cn(
+            formControlClassName,
+            'w-auto min-w-0 flex-1 font-semibold'
+          )}
           placeholder="Room name"
           maxLength={40}
         />
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-primary">{formatAUD(estimatedPrice)}</span>
+          <span className="text-primary text-sm font-semibold">
+            {formatAUD(estimatedPrice)}
+          </span>
           <button
             type="button"
             onClick={onRemove}
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error"
+            className="text-on-surface-variant hover:bg-error-container hover:text-error focus-visible:ring-error/30 flex h-11 w-11 items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none"
             aria-label="Remove room"
           >
             ×
@@ -269,7 +376,7 @@ function RoomCard({
       <div className="space-y-4 p-4">
         {/* Size */}
         <div>
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
+          <p className="text-on-surface-variant mb-1.5 text-xs font-medium tracking-wide uppercase">
             Size
           </p>
           <ToggleGroup
@@ -282,7 +389,7 @@ function RoomCard({
 
         {/* Condition */}
         <div>
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
+          <p className="text-on-surface-variant mb-1.5 text-xs font-medium tracking-wide uppercase">
             Condition
           </p>
           <ToggleGroup
@@ -295,7 +402,7 @@ function RoomCard({
 
         {/* Scope — Walls / Ceiling / Trim */}
         <div>
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
+          <p className="text-on-surface-variant mb-1.5 text-xs font-medium tracking-wide uppercase">
             Scope
           </p>
           <div className="flex flex-wrap gap-2">
@@ -319,14 +426,14 @@ function RoomCard({
 
         {/* Trim options — only shown when include_trim is checked */}
         {room.include_trim && (
-          <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-low p-3">
+          <div className="border-outline-variant bg-surface-container-low space-y-3 rounded-xl border p-3">
             {/* Paint base for trim */}
             <div>
-              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
+              <p className="text-on-surface-variant mb-1.5 text-xs font-medium tracking-wide uppercase">
                 Paint Base (Trim)
               </p>
               <ToggleGroup
-                options={(['oil_2coat', 'water_3coat_white_finish'] as const)}
+                options={['oil_2coat', 'water_3coat_white_finish'] as const}
                 value={room.trim_paint_system}
                 onChange={(v) => set('trim_paint_system', v)}
                 labels={PAINT_SYSTEM_LABELS}
@@ -342,9 +449,9 @@ function RoomCard({
             />
 
             {/* Doors */}
-            <div className="rounded-xl border border-outline-variant bg-white p-3">
+            <div className="border-outline-variant bg-surface-container-lowest rounded-xl border p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-medium text-on-surface">Doors</p>
+                <p className="text-on-surface text-sm font-medium">Doors</p>
                 <Counter
                   value={room.door_count}
                   onChange={(v) => set('door_count', v)}
@@ -362,9 +469,9 @@ function RoomCard({
             </div>
 
             {/* Windows */}
-            <div className="rounded-xl border border-outline-variant bg-white p-3">
+            <div className="border-outline-variant bg-surface-container-lowest rounded-xl border p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-medium text-on-surface">Windows</p>
+                <p className="text-on-surface text-sm font-medium">Windows</p>
                 <Counter
                   value={room.window_count}
                   onChange={(v) => set('window_count', v)}
@@ -380,7 +487,9 @@ function RoomCard({
                     size="sm"
                   />
                   <ToggleGroup
-                    options={['window_and_frame', 'window_only', 'frame_only'] as const}
+                    options={
+                      ['window_and_frame', 'window_only', 'frame_only'] as const
+                    }
                     value={room.window_scope}
                     onChange={(v) => set('window_scope', v)}
                     labels={WINDOW_SCOPE_LABELS}
@@ -425,12 +534,24 @@ export function calculateQuickQuotePreview(
   rateSettings?: UserRateSettings | null
 ): QuickQuotePreview {
   if (state.rooms.length === 0) {
-    return { subtotal_cents: 0, gst_cents: 0, adjustment_cents: state.manual_adjustment_cents, total_cents: 0, per_room_cents: [] };
+    return {
+      subtotal_cents: 0,
+      gst_cents: 0,
+      adjustment_cents: state.manual_adjustment_cents,
+      total_cents: 0,
+      per_room_cents: [],
+    };
   }
 
-  const mapped = mapQuickQuoteToInteriorEstimate({ wall_paint_system: state.wall_paint_system, rooms: state.rooms });
+  const mapped = mapQuickQuoteToInteriorEstimate({
+    wall_paint_system: state.wall_paint_system,
+    rooms: state.rooms,
+  });
   const raw = calculateInteriorEstimate(mapped, rateSettings);
-  const adjusted = applyRoomSizeMultipliers(raw.pricing_items, mapped._size_multipliers);
+  const adjusted = applyRoomSizeMultipliers(
+    raw.pricing_items,
+    mapped._size_multipliers
+  );
   const totals = recalculateTotals(adjusted, state.manual_adjustment_cents);
 
   // Per-room estimated cost for display in RoomCard header
@@ -439,7 +560,9 @@ export function calculateQuickQuotePreview(
       (item) => item.category === 'room_anchor' && item.room_index === idx
     );
     const trimItems = adjusted.filter(
-      (item) => item.category !== 'room_anchor' && (item as { room_index?: number | null }).room_index === idx
+      (item) =>
+        item.category !== 'room_anchor' &&
+        (item as { room_index?: number | null }).room_index === idx
     );
     return [...roomItems, ...trimItems].reduce((s, i) => s + i.total_cents, 0);
   });
@@ -460,7 +583,10 @@ export function QuickQuoteBuilder({
   onChange: (next: QuickQuoteBuilderState) => void;
   rateSettings?: UserRateSettings | null;
 }) {
-  const preview = useMemo(() => calculateQuickQuotePreview(value, rateSettings), [value, rateSettings]);
+  const preview = useMemo(
+    () => calculateQuickQuotePreview(value, rateSettings),
+    [value, rateSettings]
+  );
 
   function setField<K extends keyof QuickQuoteBuilderState>(
     key: K,
@@ -498,8 +624,8 @@ export function QuickQuoteBuilder({
   return (
     <div className="space-y-4">
       {/* Wall / Ceiling Coating — global for the whole job */}
-      <section className="rounded-2xl border border-outline-variant bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
+      <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
+        <h3 className="text-on-surface-variant mb-3 text-sm font-semibold tracking-wide uppercase">
           Wall &amp; Ceiling Coating
         </h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -510,16 +636,18 @@ export function QuickQuoteBuilder({
               onClick={() => setField('wall_paint_system', sys)}
               aria-pressed={value.wall_paint_system === sys}
               className={[
-                'flex flex-col rounded-xl border p-3 text-left transition-colors',
+                'focus-visible:ring-primary/30 flex min-h-11 flex-col rounded-xl border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
                 value.wall_paint_system === sys
                   ? 'border-primary bg-primary-container text-on-primary-container'
-                  : 'border-outline-variant bg-white hover:border-primary',
+                  : 'border-outline-variant bg-surface-container-lowest hover:border-primary',
               ].join(' ')}
             >
               <span
                 className={[
                   'text-sm font-semibold',
-                  value.wall_paint_system === sys ? 'text-on-primary-container' : 'text-on-surface',
+                  value.wall_paint_system === sys
+                    ? 'text-on-primary-container'
+                    : 'text-on-surface',
                 ].join(' ')}
               >
                 {INTERIOR_WALL_PAINT_SYSTEM_LABELS[sys]}
@@ -556,8 +684,8 @@ export function QuickQuoteBuilder({
       ))}
 
       {/* Add room grid */}
-      <section className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low p-4">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
+      <section className="border-outline-variant bg-surface-container-low rounded-2xl border border-dashed p-4">
+        <h3 className="text-on-surface-variant mb-3 text-sm font-semibold tracking-wide uppercase">
           Add Room
         </h3>
         <div className="grid grid-cols-3 gap-2">
@@ -566,12 +694,12 @@ export function QuickQuoteBuilder({
               key={preset.anchor}
               type="button"
               onClick={() => addRoom(preset)}
-              className="flex flex-col items-center gap-1 rounded-xl border border-outline-variant bg-white px-2 py-3 text-center transition-colors hover:border-primary hover:bg-primary/10 active:scale-95"
+              className="border-outline-variant bg-surface-container-lowest hover:border-primary hover:bg-primary/10 focus-visible:ring-primary/30 flex min-h-11 flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-95"
             >
               <span className="text-xl leading-none" role="img" aria-hidden>
                 {preset.emoji}
               </span>
-              <span className="text-xs font-medium text-on-surface leading-tight">
+              <span className="text-on-surface text-xs leading-tight font-medium">
                 {preset.label}
               </span>
             </button>
@@ -581,28 +709,34 @@ export function QuickQuoteBuilder({
 
       {/* Price summary + adjustment */}
       {value.rooms.length > 0 && (
-        <section className="rounded-2xl border border-outline-variant bg-white p-4">
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
+        <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
+          <h3 className="text-on-surface-variant mb-4 text-sm font-semibold tracking-wide uppercase">
             Estimate Totals
           </h3>
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
               <dt className="text-on-surface-variant">Subtotal</dt>
-              <dd className="font-medium text-on-surface">{formatAUD(preview.subtotal_cents)}</dd>
+              <dd className="text-on-surface font-medium">
+                {formatAUD(preview.subtotal_cents)}
+              </dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-on-surface-variant">GST (10%)</dt>
-              <dd className="font-medium text-on-surface">{formatAUD(preview.gst_cents)}</dd>
+              <dd className="text-on-surface font-medium">
+                {formatAUD(preview.gst_cents)}
+              </dd>
             </div>
 
             {/* Adjustment row */}
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant p-3">
-              <dt className="text-sm font-medium text-on-surface">Adjustment</dt>
+            <div className="border-outline-variant flex items-center justify-between gap-3 rounded-xl border p-3">
+              <dt className="text-on-surface text-sm font-medium">
+                Adjustment
+              </dt>
               <dd className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => adjustBy(-STEP)}
-                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-error hover:bg-error-container hover:text-error"
+                  className="border-outline-variant bg-surface-container-lowest text-on-surface hover:border-error hover:bg-error-container hover:text-error focus-visible:ring-error/30 flex h-11 w-11 items-center justify-center rounded-xl border text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
                   aria-label="Decrease by $50"
                 >
                   −
@@ -610,7 +744,11 @@ export function QuickQuoteBuilder({
                 <span
                   className={[
                     'w-20 text-center text-sm font-semibold',
-                    value.manual_adjustment_cents < 0 ? 'text-error' : value.manual_adjustment_cents > 0 ? 'text-primary' : 'text-on-surface-variant',
+                    value.manual_adjustment_cents < 0
+                      ? 'text-error'
+                      : value.manual_adjustment_cents > 0
+                        ? 'text-primary'
+                        : 'text-on-surface-variant',
                   ].join(' ')}
                 >
                   {value.manual_adjustment_cents === 0
@@ -620,7 +758,7 @@ export function QuickQuoteBuilder({
                 <button
                   type="button"
                   onClick={() => adjustBy(STEP)}
-                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-primary hover:bg-primary/15 hover:text-primary"
+                  className="border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary hover:bg-primary/15 hover:text-primary focus-visible:ring-primary/30 flex h-11 w-11 items-center justify-center rounded-xl border text-base font-bold focus-visible:ring-2 focus-visible:outline-none"
                   aria-label="Increase by $50"
                 >
                   +
@@ -628,9 +766,11 @@ export function QuickQuoteBuilder({
               </dd>
             </div>
 
-            <div className="flex items-center justify-between border-t border-outline-variant pt-3">
-              <dt className="font-semibold text-on-surface">Total (inc. GST)</dt>
-              <dd className="text-base font-bold text-on-surface">
+            <div className="border-outline-variant flex items-center justify-between border-t pt-3">
+              <dt className="text-on-surface font-semibold">
+                Total (inc. GST)
+              </dt>
+              <dd className="text-on-surface text-base font-bold">
                 {formatAUD(preview.total_cents)}
               </dd>
             </div>

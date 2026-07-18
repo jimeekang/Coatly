@@ -3,8 +3,14 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { approveQuote, duplicateQuote } from '@/modules/quotes/application/actions';
+import {
+  approveQuote,
+  duplicateQuote,
+  sendQuoteToClient,
+} from '@/modules/quotes/application/actions';
 import type { QuoteStatus } from '@/modules/quotes/domain/quotes';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { Modal } from '@/components/ui/modal';
 
 export type ConvertQuoteToJobAction = (quoteId: string) => Promise<{
   error: string | null;
@@ -17,6 +23,7 @@ interface Props {
   quoteNumber: string;
   status: QuoteStatus;
   publicQuoteUrl: string | null;
+  recipientEmail: string | null;
   hasLinkedInvoices?: boolean;
   convertQuoteToJobAction: ConvertQuoteToJobAction;
 }
@@ -51,6 +58,7 @@ export function QuoteActions({
   quoteNumber,
   status,
   publicQuoteUrl,
+  recipientEmail,
   hasLinkedInvoices = false,
   convertQuoteToJobAction,
 }: Props) {
@@ -58,6 +66,7 @@ export function QuoteActions({
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [approvePending, startApprove] = useTransition();
+  const [sendPending, startSend] = useTransition();
   const [jobPending, startJob] = useTransition();
   const [dupPending, startDup] = useTransition();
   const [menuPending, startMenu] = useTransition();
@@ -67,6 +76,14 @@ export function QuoteActions({
     setError(null);
     startApprove(async () => {
       const result = await approveQuote(quoteId);
+      if (result?.error) setError(result.error);
+    });
+  }
+
+  function handleSendQuote() {
+    setError(null);
+    startSend(async () => {
+      const result = await sendQuoteToClient(quoteId);
       if (result?.error) setError(result.error);
     });
   }
@@ -91,7 +108,8 @@ export function QuoteActions({
     });
   }
 
-  const anyPending = approvePending || jobPending || dupPending || menuPending;
+  const anyPending =
+    approvePending || sendPending || jobPending || dupPending || menuPending;
 
   function handleApproveWithoutSignature() {
     setError(null);
@@ -125,24 +143,50 @@ export function QuoteActions({
 
   return (
     <div className="flex flex-col gap-4">
-      {error && (
-        <p className="bg-error/10 text-error rounded-lg px-3 py-2.5 text-sm">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
       {hasLinkedInvoices && (
-        <p className="rounded-lg bg-warning-container px-3 py-2.5 text-sm text-on-warning-container">
+        <p className="bg-warning-container text-on-warning-container rounded-xl px-3 py-2.5 text-sm">
           Quote editing and deletion are locked after invoice creation.
         </p>
       )}
 
       {/* Primary CTAs — status-aware */}
       {(status === 'draft' || status === 'sent') && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={handleSendQuote}
+            disabled={anyPending || !recipientEmail}
+            className={
+              status === 'draft'
+                ? 'bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50'
+                : 'border-primary bg-surface-container-lowest text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50'
+            }
+          >
+            {sendPending ? (
+              <>
+                <SpinnerIcon /> Sending…
+              </>
+            ) : status === 'draft' ? (
+              'Send to Client'
+            ) : (
+              'Resend to Client'
+            )}
+          </button>
+          {!recipientEmail && (
+            <p className="text-on-surface-variant text-sm">
+              Add a customer email before sending this quote.
+            </p>
+          )}
+        </div>
+      )}
+
+      {(status === 'draft' || status === 'sent') && (
         <button
           type="button"
           onClick={handleApprove}
           disabled={anyPending}
-          className="bg-tertiary text-on-tertiary hover:bg-tertiary/90 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-colors disabled:opacity-50"
+          className="bg-tertiary text-on-tertiary hover:bg-tertiary/90 focus-visible:ring-tertiary/30 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
         >
           {approvePending ? (
             <>
@@ -173,7 +217,7 @@ export function QuoteActions({
         <div className="flex flex-col gap-2.5">
           <Link
             href={`/invoices/new?quoteId=${quoteId}`}
-            className="bg-primary text-on-primary hover:bg-primary/90 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-colors"
+            className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl px-5 text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -197,7 +241,7 @@ export function QuoteActions({
             type="button"
             onClick={handleConvertToJob}
             disabled={anyPending}
-            className="border-outline-variant text-on-surface hover:bg-surface-container inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border bg-white px-5 text-sm font-semibold transition-colors disabled:opacity-50"
+            className="border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container focus-visible:ring-primary/30 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
           >
             {jobPending ? (
               <>
@@ -238,7 +282,7 @@ export function QuoteActions({
             disabled={anyPending}
             aria-expanded={isMoreOpen}
             aria-haspopup="menu"
-            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
+            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high focus-visible:ring-primary/30 flex min-h-11 flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -260,13 +304,13 @@ export function QuoteActions({
           {isMoreOpen && (
             <div
               role="menu"
-              className="border-outline-variant absolute left-0 z-20 mt-2 w-64 rounded-xl border bg-white p-2 shadow-lg"
+              className="border-outline-variant bg-surface-container-lowest absolute left-0 z-20 mt-2 w-64 rounded-xl border p-2 shadow-lg"
             >
               {(status === 'draft' || status === 'sent') && (
                 <button
                   type="button"
                   onClick={handleApproveWithoutSignature}
-                  className="text-on-surface hover:bg-surface-container-low flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors"
+                  className="text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   Approve without signature
                 </button>
@@ -274,7 +318,7 @@ export function QuoteActions({
               <button
                 type="button"
                 onClick={handleApproveAndConvertToJob}
-                className="text-on-surface hover:bg-surface-container-low mt-1 flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors"
+                className="text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 mt-1 flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 {status === 'approved'
                   ? 'Convert to Job'
@@ -290,7 +334,7 @@ export function QuoteActions({
           target="_blank"
           rel="noreferrer"
           download={getQuotePdfFilename(quoteNumber)}
-          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors"
+          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high focus-visible:ring-primary/30 flex min-h-11 flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -315,7 +359,7 @@ export function QuoteActions({
             href={publicQuoteUrl}
             target="_blank"
             rel="noreferrer"
-            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors"
+            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high focus-visible:ring-primary/30 flex min-h-11 flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -341,7 +385,7 @@ export function QuoteActions({
           type="button"
           onClick={handleDuplicate}
           disabled={anyPending}
-          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
+          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high focus-visible:ring-primary/30 flex min-h-11 flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
         >
           {dupPending ? (
             <SpinnerIcon />
@@ -369,7 +413,7 @@ export function QuoteActions({
           type="button"
           onClick={() => setShowDeleteModal(true)}
           disabled={anyPending || hasLinkedInvoices}
-          className="border-error/30 bg-error/5 text-error hover:bg-error/10 flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
+          className="border-error/30 bg-error/5 text-error hover:bg-error/10 focus-visible:ring-error/30 flex min-h-11 flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -419,7 +463,8 @@ function DeleteModal({
   function handleDelete() {
     setError(null);
     startTransition(async () => {
-      const { deleteQuote } = await import('@/modules/quotes/application/actions');
+      const { deleteQuote } =
+        await import('@/modules/quotes/application/actions');
       const result = await deleteQuote(quoteId);
       if (result?.error) {
         setError(result.error);
@@ -429,15 +474,46 @@ function DeleteModal({
     });
   }
 
+  const closeIfIdle = () => {
+    if (!isPending) onClose();
+  };
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-6 sm:items-center"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isPending) onClose();
-      }}
+    <Modal
+      open
+      onClose={closeIfIdle}
+      title="Delete Quote?"
+      description={`${quoteNumber} will be permanently deleted. This cannot be undone.`}
+      size="sm"
+      footer={
+        <div className="flex flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isPending}
+            className="bg-error text-on-error hover:bg-error/90 focus-visible:ring-error/30 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
+          >
+            {isPending ? (
+              <>
+                <SpinnerIcon /> Deleting…
+              </>
+            ) : (
+              'Yes, Delete Quote'
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={closeIfIdle}
+            disabled={isPending}
+            className="border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 inline-flex min-h-12 w-full items-center justify-center rounded-xl border px-4 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
+          >
+            Cancel
+          </button>
+        </div>
+      }
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-        <div className="bg-error/10 mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+      <div className="flex flex-col gap-4">
+        <div className="bg-error/10 flex h-12 w-12 items-center justify-center rounded-full">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="24"
@@ -455,41 +531,8 @@ function DeleteModal({
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </div>
-        <h2 className="text-on-surface text-lg font-bold">Delete Quote?</h2>
-        <p className="text-on-surface-variant mt-1.5 text-sm">
-          <span className="text-on-surface font-semibold">{quoteNumber}</span> will
-          be permanently deleted. This cannot be undone.
-        </p>
-        {error && (
-          <p className="bg-error/10 text-error mt-3 rounded-lg px-3 py-2 text-sm">
-            {error}
-          </p>
-        )}
-        <div className="mt-5 flex flex-col gap-2.5">
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isPending}
-            className="bg-error hover:bg-error/90 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-on-error transition-colors disabled:opacity-60"
-          >
-            {isPending ? (
-              <>
-                <SpinnerIcon /> Deleting…
-              </>
-            ) : (
-              'Yes, Delete Quote'
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isPending}
-            className="border-outline-variant bg-surface-container text-on-surface hover:bg-outline-variant inline-flex min-h-12 w-full items-center justify-center rounded-xl border px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60"
-          >
-            Cancel
-          </button>
-        </div>
+        {error && <ErrorAlert>{error}</ErrorAlert>}
       </div>
-    </div>
+    </Modal>
   );
 }

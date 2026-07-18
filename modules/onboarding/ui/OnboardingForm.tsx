@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import {
   formatStreetAddressWithUnit,
   type ParsedGooglePlaceAddress,
 } from '@/lib/google-places-address';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 const AU_STATES = [
   'ACT',
@@ -25,34 +26,44 @@ const AU_STATES = [
 ] as const;
 
 const schema = z.object({
-  businessName: z.string().min(1, 'Business name is required'),
+  businessName: z.string().trim().min(1, 'Business name is required'),
   abn: z
     .string()
     .min(1, 'ABN is required')
     .transform((v) => v.replace(/\s/g, ''))
     .pipe(z.string().regex(/^\d{11}$/, 'ABN must be 11 digits')),
-  phone: z.string().min(1, 'Phone is required'),
-  addressLine1: z.string().min(1, 'Street address is required'),
-  city: z.string().min(1, 'Suburb is required'),
-  state: z.string().min(1, 'State is required'),
+  phone: z.string().trim(),
+  addressLine1: z.string().trim(),
+  city: z.string().trim(),
+  state: z
+    .string()
+    .trim()
+    .refine(
+      (value) =>
+        value === '' || AU_STATES.includes(value as (typeof AU_STATES)[number]),
+      'Select a valid Australian state'
+    ),
   postcode: z
     .string()
-    .min(1, 'Postcode is required')
-    .regex(/^\d{4}$/, 'Postcode must be 4 digits'),
+    .trim()
+    .refine(
+      (value) => value === '' || /^\d{4}$/.test(value),
+      'Postcode must be 4 digits'
+    ),
   createExampleData: z.boolean(),
 });
 
 type FormInput = z.infer<typeof schema>;
 
 const inputBase =
-  'w-full h-12 rounded-lg border px-4 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 focus:border-primary-container disabled:opacity-50 bg-white transition-colors';
+  'h-12 w-full rounded-xl border bg-surface-container-lowest px-4 text-base text-on-surface transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50';
 
 function inputClass(hasError: boolean) {
-  return `${inputBase} ${hasError ? 'border-error' : 'border-outline'}`;
+  return `${inputBase} ${hasError ? 'border-error' : 'border-outline-variant'}`;
 }
 
 const labelClass = 'block text-sm font-medium text-on-surface mb-1.5';
-const errorClass = 'mt-1.5 text-xs text-on-error-container';
+const errorClass = 'mt-1.5 text-sm text-error';
 
 type CompleteOnboarding = (data: {
   businessName: string;
@@ -83,6 +94,15 @@ export default function OnboardingForm({
   completeOnboarding,
 }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(() =>
+    Boolean(
+      defaultValues.phone.trim() ||
+      defaultValues.addressLine1.trim() ||
+      defaultValues.city.trim() ||
+      defaultValues.state.trim() ||
+      defaultValues.postcode.trim()
+    )
+  );
 
   const {
     register,
@@ -191,14 +211,9 @@ export default function OnboardingForm({
   }
 
   return (
-    <div className="border-outline rounded-2xl border bg-white p-6 shadow-sm">
+    <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-6 shadow-sm">
       {errors.root && (
-        <div
-          role="alert"
-          className="border-error bg-error-container text-on-error-container mb-5 rounded-lg border px-4 py-3 text-sm"
-        >
-          {errors.root.message}
-        </div>
+        <ErrorAlert className="mb-5">{errors.root.message}</ErrorAlert>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
@@ -259,114 +274,142 @@ export default function OnboardingForm({
           )}
         </div>
 
-        <div>
-          <label htmlFor="phone" className={labelClass}>
-            Phone <span className="text-error">*</span>
-          </label>
-          <input
-            id="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="0400 000 000"
-            disabled={isPending}
-            className={inputClass(!!errors.phone)}
-            {...register('phone')}
-          />
-          {errors.phone && <p className={errorClass}>{errors.phone.message}</p>}
-        </div>
+        <details
+          open={optionalDetailsOpen}
+          onToggle={(event) => setOptionalDetailsOpen(event.currentTarget.open)}
+          className="border-outline-variant bg-surface-container-low rounded-2xl border p-4"
+        >
+          <summary className="text-on-surface focus-visible:ring-primary/40 flex min-h-11 cursor-pointer items-center rounded-xl text-base font-semibold focus-visible:ring-2 focus-visible:outline-none">
+            Optional business details
+          </summary>
+          <p className="text-on-surface-variant mt-1 text-sm">
+            Add contact and address details now, or complete them later in
+            Settings.
+          </p>
 
-        <fieldset>
-          <legend className="text-on-surface mb-3 text-sm font-medium">
-            Business Address <span className="text-error">*</span>
-          </legend>
-
-          <div className="space-y-3">
+          <div className="mt-4 flex flex-col gap-4">
             <div>
-              <GoogleAddressAutocomplete
-                id="addressLine1"
-                autoComplete="street-address"
-                placeholder="Street address"
+              <label htmlFor="phone" className={labelClass}>
+                Phone
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="0400 000 000"
                 disabled={isPending}
-                value={addressLine1Value}
-                onChange={(value) =>
-                  setValue('addressLine1', value, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-                onAddressSelected={applyGoogleAddress}
-                aria-invalid={!!errors.addressLine1}
-                className={inputClass(!!errors.addressLine1)}
+                className={inputClass(!!errors.phone)}
+                {...register('phone')}
               />
-              {errors.addressLine1 && (
-                <p className={errorClass}>{errors.addressLine1.message}</p>
+              {errors.phone && (
+                <p className={errorClass}>{errors.phone.message}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <fieldset className="flex flex-col gap-3">
+              <legend className="text-on-surface mb-1 text-sm font-medium">
+                Business Address
+              </legend>
+
               <div>
-                <input
-                  id="city"
-                  type="text"
-                  autoComplete="address-level2"
-                  placeholder="Suburb"
+                <label htmlFor="addressLine1" className={labelClass}>
+                  Street address
+                </label>
+                <GoogleAddressAutocomplete
+                  id="addressLine1"
+                  autoComplete="street-address"
+                  placeholder="Street address"
                   disabled={isPending}
-                  className={inputClass(!!errors.city)}
-                  {...register('city')}
+                  value={addressLine1Value}
+                  onChange={(value) =>
+                    setValue('addressLine1', value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  onAddressSelected={applyGoogleAddress}
+                  aria-invalid={!!errors.addressLine1}
+                  className={inputClass(!!errors.addressLine1)}
                 />
-                {errors.city && (
-                  <p className={errorClass}>{errors.city.message}</p>
+                {errors.addressLine1 && (
+                  <p className={errorClass}>{errors.addressLine1.message}</p>
                 )}
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="city" className={labelClass}>
+                    Suburb
+                  </label>
+                  <input
+                    id="city"
+                    type="text"
+                    autoComplete="address-level2"
+                    placeholder="Suburb"
+                    disabled={isPending}
+                    className={inputClass(!!errors.city)}
+                    {...register('city')}
+                  />
+                  {errors.city && (
+                    <p className={errorClass}>{errors.city.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="postcode" className={labelClass}>
+                    Postcode
+                  </label>
+                  <input
+                    id="postcode"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    placeholder="Postcode"
+                    maxLength={4}
+                    disabled={isPending}
+                    className={inputClass(!!errors.postcode)}
+                    {...register('postcode')}
+                  />
+                  {errors.postcode && (
+                    <p className={errorClass}>
+                      {errors.postcode.message as string}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div>
-                <input
-                  id="postcode"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="postal-code"
-                  placeholder="Postcode"
-                  maxLength={4}
+                <label htmlFor="state" className={labelClass}>
+                  State
+                </label>
+                <select
+                  id="state"
                   disabled={isPending}
-                  className={inputClass(!!errors.postcode)}
-                  {...register('postcode')}
-                />
-                {errors.postcode && (
-                  <p className={errorClass}>
-                    {errors.postcode.message as string}
-                  </p>
+                  className={`${inputClass(!!errors.state)} text-on-surface`}
+                  {...register('state')}
+                >
+                  <option value="">Select state</option>
+                  {AU_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                {errors.state && (
+                  <p className={errorClass}>{errors.state.message}</p>
                 )}
               </div>
-            </div>
-
-            <div>
-              <select
-                id="state"
-                disabled={isPending}
-                className={`${inputClass(!!errors.state)} text-on-surface`}
-                {...register('state')}
-              >
-                <option value="">Select state</option>
-                {AU_STATES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              {errors.state && (
-                <p className={errorClass}>{errors.state.message}</p>
-              )}
-            </div>
+            </fieldset>
           </div>
-        </fieldset>
+        </details>
 
-        <div className="border-success-container bg-success-container/70 rounded-xl border p-4">
-          <label className="flex items-start gap-3">
+        <div className="border-success-container bg-success-container/70 rounded-2xl border p-4">
+          <label className="focus-within:ring-primary/30 flex min-h-11 cursor-pointer items-start gap-3 rounded-xl focus-within:ring-2 focus-within:outline-none">
             <input
               type="checkbox"
               disabled={isPending}
-              className="border-primary-fixed text-primary focus:ring-primary-container mt-1 h-5 w-5 rounded focus:ring-2"
+              className="border-primary-fixed text-primary mt-1 h-5 w-5 cursor-pointer rounded focus:outline-none"
               {...register('createExampleData')}
             />
             <div>
@@ -388,7 +431,7 @@ export default function OnboardingForm({
         <button
           type="submit"
           disabled={isPending}
-          className="bg-primary hover:bg-primary/90 focus:ring-primary-container mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold text-on-primary transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

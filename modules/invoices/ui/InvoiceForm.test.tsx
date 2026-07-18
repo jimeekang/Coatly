@@ -17,6 +17,61 @@ describe('InvoiceForm', () => {
     vi.useRealTimers();
   });
 
+  it('uses canonical controls, focused actions, and rounded cards', () => {
+    const { container } = render(<InvoiceForm customers={[]} quotes={[]} />);
+
+    expect(screen.getByLabelText('Customer')).toHaveClass(
+      'h-12',
+      'text-base',
+      'rounded-xl',
+      'border-outline-variant',
+      'focus:ring-2'
+    );
+    expect(screen.getByLabelText('Notes')).toHaveClass(
+      'text-base',
+      'rounded-xl',
+      'border-outline-variant',
+      'focus:ring-2'
+    );
+    expect(screen.getByRole('button', { name: /Full/i })).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+    expect(screen.getByRole('button', { name: 'Add line item' })).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+    expect(
+      screen.getByRole('button', { name: /Business & payment details/i })
+    ).toHaveClass('min-h-11', 'rounded-2xl', 'focus-visible:ring-2');
+    expect(
+      container.querySelectorAll('section.rounded-2xl').length
+    ).toBeGreaterThan(3);
+  });
+
+  it('keeps the form status selector and renders its state with the canonical badge', async () => {
+    const user = userEvent.setup();
+
+    render(<InvoiceForm customers={[]} quotes={[]} />);
+
+    expect(screen.getByText('Draft', { selector: 'span' })).toHaveClass(
+      'bg-surface-container-highest',
+      'text-on-surface-variant'
+    );
+
+    await user.selectOptions(screen.getByLabelText('Status'), 'paid');
+
+    expect(screen.getByText('Paid', { selector: 'span' })).toHaveClass(
+      'bg-success-container',
+      'text-success',
+      'font-bold',
+      'uppercase'
+    );
+    expect(screen.getByLabelText('Status')).toHaveValue('paid');
+  });
+
   it('submits a DB-compatible payload from the filled form', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -83,9 +138,12 @@ describe('InvoiceForm', () => {
     fireEvent.change(screen.getAllByLabelText('Unit price (A$)')[0], {
       target: { value: '250' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Add a payment note or job summary'), {
-      target: { value: 'Pay within 7 days' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Add a payment note or job summary'),
+      {
+        target: { value: 'Pay within 7 days' },
+      }
+    );
     await user.click(screen.getByRole('button', { name: 'Save Invoice' }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
@@ -161,7 +219,9 @@ describe('InvoiceForm', () => {
     );
 
     expect(screen.getByLabelText('ABN')).toHaveValue('12345678901');
-    expect(screen.getByLabelText('Payment terms')).toHaveValue('Payment due within 7 days');
+    expect(screen.getByLabelText('Payment terms')).toHaveValue(
+      'Payment due within 7 days'
+    );
     expect(screen.getByLabelText('Bank details')).toHaveValue(
       'BSB: 123-456\nAccount: 12345678'
     );
@@ -234,7 +294,9 @@ describe('InvoiceForm', () => {
     expect(screen.getAllByLabelText('Description')[1]).toHaveValue(
       'Interior repaint\nWalls and ceiling'
     );
-    expect(screen.queryByRole('option', { name: 'Sent' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: 'Sent' })
+    ).not.toBeInTheDocument();
   });
 
   it('rebuilds linked quote lines for deposit and progress invoice presets', async () => {
@@ -294,7 +356,9 @@ describe('InvoiceForm', () => {
     );
     expect(screen.getByLabelText('Unit price (A$)')).toHaveValue(600);
     expect(
-      screen.getByText('Deposit invoice uses the 20% deposit saved on the linked quote.')
+      screen.getByText(
+        'Deposit invoice uses the 20% deposit saved on the linked quote.'
+      )
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Progress/ }));
@@ -367,7 +431,9 @@ describe('InvoiceForm', () => {
     );
 
     expect(screen.getByLabelText('Notes')).toBeInTheDocument();
-    expect(screen.getByLabelText('Payment terms')).toHaveValue('Payment due within 14 days');
+    expect(screen.getByLabelText('Payment terms')).toHaveValue(
+      'Payment due within 14 days'
+    );
   });
 
   it('shows paid date and payment method fields when marking an invoice as paid', async () => {
