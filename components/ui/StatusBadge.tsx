@@ -13,8 +13,8 @@ interface StatusBadgeProps {
 export function StatusBadge({ tone, label, size = 'sm' }: StatusBadgeProps) {
   const sizeClass =
     size === 'md'
-      ? 'px-3 py-1 text-xs tracking-wider'
-      : 'px-2.5 py-0.5 text-[10px] tracking-widest';
+      ? 'px-3 py-1 text-xs tracking-[0.14em]'
+      : 'px-2.5 py-0.5 text-[10px] tracking-[0.18em]';
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded font-bold uppercase ${sizeClass} ${STATUS_TONE_BG[tone]}`}

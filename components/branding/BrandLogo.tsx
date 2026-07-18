@@ -2,7 +2,6 @@ import Image from 'next/image';
 import { APP_NAME } from '@/config/constants';
 
 type BrandLogoProps = {
-  variant?: 'light' | 'dark';
   mode?: 'full' | 'icon';
   width?: number;
   height?: number;
@@ -10,21 +9,17 @@ type BrandLogoProps = {
   priority?: boolean;
 };
 
-const FULL_LOGO_SRC = {
-  light: '/icons/Coatly_Logo_Primary_Light.svg',
-  dark: '/icons/Coatly_Logo_Primary_Dark.svg',
-} as const;
+// 다크모드 토글 미지원(docs/DESIGN.md) — dark 로고 variant는 dead code라 제거.
+const FULL_LOGO_SRC = '/icons/Coatly_Logo_Primary_Light.svg';
 
 export function BrandLogo({
-  variant = 'light',
   mode = 'full',
   width,
   height,
   className,
   priority = false,
 }: BrandLogoProps) {
-  const src =
-    mode === 'icon' ? '/icons/Coatly_Icon_512.svg' : FULL_LOGO_SRC[variant];
+  const src = mode === 'icon' ? '/icons/Coatly_Icon_512.svg' : FULL_LOGO_SRC;
 
   const resolvedWidth = width ?? (mode === 'icon' ? 40 : 160);
   const resolvedHeight = height ?? (mode === 'icon' ? 40 : 36);

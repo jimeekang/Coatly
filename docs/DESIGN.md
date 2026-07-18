@@ -42,20 +42,26 @@
 - PDF 견적서/청구서는 비즈니스 로고, ABN, 연락처 자동 포함
 - 깔끔한 레이아웃으로 고객에게 전문적 이미지 전달
 
-## Color System
+## Color System — "Warm Paper & Eucalyptus" (2026-07-12 v1.1)
 
-Material Design 3 토큰만 사용. 레거시 `pm-*` alias는 제거 완료(프로덕션 0건) — 재도입 금지. `bg-white` 직접 사용 금지(`bg-surface-container-lowest` 등 토큰 사용).
+Material Design 3 토큰만 사용. 레거시 `pm-*` alias는 제거 완료(프로덕션 0건) — 재도입 금지. `bg-white` 직접 사용 금지(`bg-surface-container-lowest` 등 토큰 사용). 팔레트 원칙: **웜 뉴트럴 단일 세계**(paper surface + stone outline, 쿨 slate 혼용 금지) + 딥 eucalyptus primary + navy ink 텍스트.
 
-| Token | 용도 | 참고 |
+| Token | 용도 | 값 (v1.1) |
 |-------|------|------|
-| `primary` / `on-primary` | 핵심 CTA, 브랜드 | `#0D8068` 계열 |
-| `primary-container` / `primary-fixed` | primary 배경/pale | |
-| `on-surface` / `on-surface-variant` | 본문 / 보조 텍스트 | `#0F1620` / `#475569` |
-| `outline` / `outline-variant` | 경계선 / 가는 구분선 | `#CBD5E1` / `#E2E8F0` |
-| `surface-container-lowest`~`high` | 카드/배경 계층 | `bg-white` 대체 |
-| `error` / `error-container` / `on-error-container` | 삭제, 에러 | `#B91C1C` 계열 |
-| `success` / `success-container` | 성공, paid 상태 | |
-| `warning` / `warning-container` | 경고, overdue/due-soon | |
+| `primary` / `on-primary` | 핵심 CTA, 브랜드 | `#0B7A64` / white (AA 5.2:1) |
+| `primary-container` / `on-primary-container` | **강조 칩·totals 밴드·focus border** (딥 pine + 라이트 텍스트 — 이 앱은 MD3 pale tint 대신 강조색으로 사용, 극성 변경 금지) | `#095F4E` / `#E9FBF4` |
+| `primary-fixed` | pale mint tint | `#BFE8DE` |
+| `on-surface` / `on-surface-variant` | 본문 / 보조 텍스트 (ink navy 계열) | `#101828` / `#4C5665` |
+| `outline` / `outline-variant` | 경계선 / 가는 구분선 (웜 stone — 텍스트 사용 금지, 대비 미달) | `#C9C1B2` / `#E5DFD3` |
+| `surface` | 페이지 배경 (warm paper) | `#FAF7F2` |
+| `surface-container-lowest`→`highest` | 카드/배경 5단 계층: `#FFFFFF` → `#F4F0E9` → `#EEE9E0` → `#E8E2D7` → `#E1DACD` | 단계별 상이 — hover는 한 단계 위 티어 |
+| `secondary` / `secondary-container` | slate-blue, info·sent | `#3E5266` / `#D9E2EC` (pale + `on-…`=`#24384E`) |
+| `tertiary` / `tertiary-container` | navy ink 액센트 (아바타, 이벤트 칩) | `#102B47` / `#1B3D60` |
+| `error` / `error-container` / `on-error-container` | 삭제, 에러 | `#B3261E` / `#F9DEDC` / `#7A1714` |
+| `success` / `success-container` | 성공, paid (primary teal과 구분되는 leaf green) | `#177D53` / `#DDF3E4` |
+| `warning` / `warning-container` | 경고, overdue/due-soon | `#B45309` / `#FBEFC9` |
+
+PWA 크롬 정합: `viewport.themeColor` = `manifest.theme_color` = `manifest.background_color` = `#FAF7F2` (surface). shadcn `:root` 변수(`--primary`, `--border`, `--ring` 등)도 동일 팔레트의 hex로 일치시킴. 다크모드는 **토글 미제공 = 미지원** — `.dark` 블록은 브랜드 정합 placeholder일 뿐 프로덕션 경로 아님.
 
 ### 상태색 매핑 (invoice 기준, 앱 전역 재사용)
 
@@ -64,16 +70,21 @@ Material Design 3 토큰만 사용. 레거시 `pm-*` alias는 제거 완료(프�
 | paid | `bg-success-container` | `text-success` / `border-l-success` |
 | overdue / due-soon | `bg-warning-container` | `text-warning` / `border-l-warning` |
 | sent | `bg-primary/10` (또는 `surface-container-lowest`) | `text-primary` / `border-l-primary` |
-| draft | `bg-surface-container-low` | `text-on-surface` / `border-l-outline` |
+| draft (칩) | `bg-surface-container-highest` (`STATUS_TONE_BG.neutral` 코드 기준) | `text-on-surface-variant` / `border-l-outline` |
+
+상태색 정본 구현은 `lib/constants/status-colors.ts` (`STATUS_TONE_*` + `QUOTE/INVOICE/JOB_STATUS_TONE`) — 배지·리스트 카드·캘린더는 반드시 이 맵을 통해 사용(로컬 재정의 금지).
 
 **실데이터 원칙**: 타임라인·meta·결제정보는 실데이터(`paid_date`, `payment_method`, `customer.email`)만 사용. Stripe 세부, 이메일 주소, BSB 같은 목업 더미값 생성·하드코딩 금지. `InvoiceKpiBand`의 `paid_this_month`는 `paid_date`의 **Sydney 월** 기준 `amount_paid_cents` 합으로 정의.
 
 ## Typography
 
-- 본문: `text-base` (16px) — 가독성 우선
-- 제목: `text-lg` ~ `text-2xl` — 계층 구조
-- 금액: `text-xl font-semibold` + `tabular-nums` — 시각적 강조
-- 송장번호: `font-mono tracking-[0.18em]`
+- 서체: **Manrope 단일** (`--font-sans`, next/font, w400–800). Geist는 제거됨 — 재도입 금지
+- 본문: `text-base` (16px) — 가독성 우선. input도 `text-base` (iOS 자동 줌 방지)
+- 제목: `text-lg` ~ `text-2xl`, 페이지 타이틀 상한 `text-4xl` = **32px** (글로벌 스케일에서 2rem으로 재정의 — 유틸리티 앱 스케일)
+- 숫자: **전역 `tabular-nums`** (body에 `font-variant-numeric` 적용됨) — 금액·날짜 컬럼 자동 정렬. 금액 강조는 `text-xl font-semibold`
+- 송장번호: `font-mono tracking-[0.18em]` (시스템 mono 폴백 — 전용 mono 폰트 미로드)
+- 마이크로 라벨(overline): `text-[10px]~[11px] font-bold uppercase` + tracking `0.14em`/`0.18em` 2종만 사용 — 신규 UI는 공유 `SectionLabel` 프리미티브 신설 후 수렴 예정 (arbitrary px 신규 추가 금지)
+- `h1`/`h2`는 전역 `text-wrap: balance`
 - 모든 금액은 AUD 포맷: `$1,234.56` (`formatAUD`)
 
 ## Canonical Rules (필수)
@@ -101,15 +112,18 @@ Material Design 3 토큰만 사용. 레거시 `pm-*` alias는 제거 완료(프�
 | 섹션 카드 radius | `rounded-2xl` |
 | button · input radius | `rounded-xl` |
 
+Radius 베이스는 `--radius: 0.75rem` (12px) — `rounded-lg`=12px, `xl`≈17px, `2xl`≈22px로 소프트하게 스케일됨. 컴포넌트는 named radius만 사용(arbitrary 금지).
+
 ### z-index 레이어
 
 | 레이어 | z-index |
 |--------|---------|
 | 폼 footer 액션 바 (`FormFooter`) | `z-30` |
-| 모바일 탭바 / nav | `z-40` |
+| 모바일 탭바 / nav / 데스크탑 sidebar | `z-40` |
 | 모달 · 오버레이 | `z-50` |
+| Toast (`ToastProvider`) | `z-[100]` |
 
-새 shared footer 적용 시 기존 `z-50` 모달을 낮추지 말 것.
+새 shared footer 적용 시 기존 `z-50` 모달을 낮추지 말 것. 데스크탑 sidebar의 현행 `z-50`은 `z-40`으로 하향 예정(모달 레이어 침범).
 
 ## Container Width Rules
 
@@ -140,38 +154,39 @@ feature UI/action/domain은 `modules/<feature>/{ui,application,domain,infrastruc
 modules/
   quotes/     ui/ (QuoteForm, QuoteTable, QuoteCreateScreen, QuoteDetail 계열,
               LineItemsSection, ScopeBuilder, *EstimateBuilder, public/) ·
-              application/ (actions.ts, *-service.ts) · domain/ · infrastructure/
+              application/ · domain/ · infrastructure/pdf/ (quote-template.tsx)
   invoices/   ui/ (InvoiceForm, InvoiceTable, InvoiceDetail, InvoiceKpiBand,
-              InvoiceCreateScreen) · application/ · domain/ · infrastructure/
+              InvoiceCreateScreen) · application/ · domain/ ·
+              infrastructure/pdf/ (invoice-template.tsx)
   customers/  ui/ (CustomerForm, CustomerTable, CustomerDetail, CreateScreen) ·
               application/ · infrastructure/
-  jobs/       ui/ (JobsWorkspace, JobDetail, JobEditForm) · application/ · domain/
+  jobs/       ui/ (JobDetail, JobEditForm — JobsWorkspace는 미사용 死코드, 정리 대상) ·
+              application/ · domain/
+  schedule/   ui/ (ScheduleCalendar)
+  assistant/  ui/ (WorkspaceAssistant)
+  auth/       ui/ (AuthShell, *PageClient)
+  onboarding/ ui/ (OnboardingForm)
+  billing/    ui/ (UpgradePrompt) · application/
   materials/  ui/ (MaterialItemForm, MaterialItemList) · application/ · domain/
   price-rates/ ui/ (PriceRatesForm, QuickEstimateTab) · domain/
   settings/   ui/ (BusinessProfileForm, PricingSection, GoogleCalendarCard) ·
-              application/ (business/profile/settings-actions.ts) · domain/ · infrastructure/
+              application/ · domain/ · infrastructure/
 
 components/
-  ui/         → shadcn/ui primitives + ConfirmDialog, input, select (프리미티브)
+  ui/         → shadcn/ui primitives + ConfirmDialog, StatusBadge, toast, modal
+                (button.tsx는 import 0건 死코드 — 정리 대상)
   forms/      → FormField, FormSection, FormFooter, GoogleAddressAutocomplete
-  layout/     → PageHeader, BackButton, BackLink
+  layout/     → PageHeader(+PrimaryActionLink/SecondaryActionLink), BackButton, BackLink
   shared/     → ErrorAlert, NumericInput
-  dashboard/  → Sidebar, WorkspaceAssistant
-  schedule/   → ScheduleCalendar
-  auth/       → AuthShell, *PageClient
+  dashboard/  → Sidebar
   branding/   → BrandLogo
-  onboarding/ → OnboardingForm
-  subscription/ → UpgradePrompt
-  ai/         → AIDraftPanel
-
-lib/pdf/      → React-PDF 템플릿 (quote-template.tsx, invoice-template.tsx)
 ```
 
 ## Shared Form Primitives
 
 세 폼(Quote/Invoice/Customer)의 입력·섹션·footer 스타일은 `components/forms/`로 통일:
 - `FormField` — label + control + error 묶음. `input: h-12 rounded-xl border-outline-variant`, focus `border-primary` + `ring-primary/20`, error `text-error`.
-- `FormSection` — `rounded-2xl border-outline-variant bg-white p-4 shadow-sm sm:p-6` 카드 래퍼.
+- `FormSection` — `rounded-2xl border-outline-variant bg-surface-container-lowest p-4 shadow-sm sm:p-6` 카드 래퍼.
 - `FormFooter` — 고정 하단 액션 바. `z-30`, 모바일은 탭바 위(`bottom-[calc(4rem+...)]`), 태블릿/데스크탑은 sidebar offset(`md:left-60 lg:left-64`). Primary `h-14 bg-primary`, Secondary `h-14 border-outline-variant`.
 
 폼별 inline `FIELD`/`LABEL`/`TEXTAREA` const는 폐기 — 위 프리미티브 사용. 컨테이너 너비는 Container Width Rules 준수(변경 금지).
@@ -186,10 +201,11 @@ lib/pdf/      → React-PDF 템플릿 (quote-template.tsx, invoice-template.tsx)
 
 ## Open Items
 
-디자인 부채 (Codex 구현 대상, AUDIT 참조):
+디자인 부채 전수는 **[`docs/features/audit/DESIGN-AUDIT-2026-07-12.md`](./features/audit/DESIGN-AUDIT-2026-07-12.md)** (91건, 우선순위·해결층 분류)가 정본. 최상위 항목:
 
-- **`bg-white` 하드코딩 다수** — `components/schedule/ScheduleCalendar.tsx` 28회, QuoteForm 등. `bg-surface-container-lowest`(또는 계층 토큰)로 치환 예정.
-- **`components/ui/button.tsx` 기본 44px 위반** — `size: default`가 `h-8`(32px), `sm` `h-7`, `lg`도 `h-9`뿐. 모바일 터치 타겟 44px 규칙 미충족. 앱 CTA는 `PrimaryActionLink`/`SecondaryActionLink`(min-h-11+)로 우회 중이나, shadcn `<Button>` 직접 사용 지점은 높이 점검 필요.
-- **프리미티브 이원화 (AUDIT A14)** — `components/ui/input.tsx`(label/error 래핑 보유)와 `components/forms/FormField.tsx`가 병존. 어느 쪽을 정본으로 할지 미정.
-- **D5 모바일 spacing 점검 미완** — detailed quote/job 화면의 모바일 screenshot 기반 spacing 감사 미완료.
-- **`ConfirmDialog` focus trap 부재** — `components/ui/ConfirmDialog.tsx`가 `role="dialog"`만 두고 focus trap/키보드 포커스 순환 미구현. 접근성 보강 필요.
+- **`bg-white` 하드코딩 241회/50파일** — PriceRatesForm 34 · ScheduleCalendar 28 · QuoteForm 15 등. 계층 토큰으로 치환 (Codex).
+- **`text-outline`을 정보 텍스트로 오용** — InvoiceDetail(16곳) 등 대비 ~1.5:1. `text-on-surface-variant`로 상향 (Codex).
+- **공유 프리미티브 15개 focus-visible 부재** + `ConfirmDialog`/커스텀 모달 focus trap 부재 (Codex).
+- **`loading.tsx` 5개 라우트 누락** — jobs·schedule·materials-service·price-rates·settings (Codex).
+- **`components/ui/button.tsx`·`JobsWorkspace` 死코드 정리** — Button import 0건(기본 h-8 이슈는 이로써 무의미), raw `<button>` 275개가 실제 표준 (Codex).
+- **프리미티브 이원화 (AUDIT A14)** — `components/ui/input.tsx` vs `components/forms/FormField.tsx` 병존. FormField를 정본으로 확정하고 auth/onboarding/settings/materials의 inline FIELD const를 이관 (Codex).
