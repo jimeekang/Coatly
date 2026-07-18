@@ -12,6 +12,8 @@ v1 core: 기존 Excel 가격표 참고 → 앱 내 price item 직접 추가 또�
 
 자세한 건 [`docs/features/ai/V1-PLAN.md`](./docs/features/ai/V1-PLAN.md). 파일명은 기존 링크 호환을 위해 유지하지만, 현재 내용은 workflow-first plan이다.
 
+포지셔닝 한 줄: **"Your Excel price list, now an app"** — anti-AI(painter 단가 존중), anti-job-management. 가격 방향은 단일 A$39/월 flat + 30일 무카드 trial. 상품화 전략/경쟁/비용/GTM 정본: [`docs/COMMERCIALIZATION.md`](./docs/COMMERCIALIZATION.md) (2026-07-12 분석).
+
 ## Stack
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS + Storage) · Stripe · React-PDF · Resend · Vercel. AI provider는 post-core workflow 단계에서만 활성화.
 
@@ -93,5 +95,6 @@ Claude Code가 직접 담당하지 않음:
 - Claude Code commands: [`.claude/commands/`](./.claude/commands/) — `plan`, `ui-spec` (git용 `commit`은 Codex로 이관: [`.codex/skills/commit.md`](./.codex/skills/commit.md))
 - Codex skills: [`.codex/skills/`](./.codex/skills/) (lowercase = skill name) | engineering guide: [`docs/ENGINEERING.md`](./docs/ENGINEERING.md)
 - 작업 흐름: `/plan` (Claude) → Codex 구현/검증/배포/git → Claude QA/design-review 필요 시 재검토
-- 가장 최근 audit / tech debt: [`docs/features/audit/AUDIT.md`](./docs/features/audit/AUDIT.md) (2026-07-05 전체 분석 반영: A1–A16)
+- 가장 최근 audit / tech debt: [`docs/features/audit/AUDIT.md`](./docs/features/audit/AUDIT.md) (2026-07-12 상품화/UX 분석 반영: A1–A20)
 - 런칭 준비 상태: [`docs/LAUNCH-READINESS.md`](./docs/LAUNCH-READINESS.md)
+- 상품화 전략 정본: [`docs/COMMERCIALIZATION.md`](./docs/COMMERCIALIZATION.md)

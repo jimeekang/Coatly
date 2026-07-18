@@ -69,19 +69,16 @@ Existing Excel price book
 | Pain | Workflow repetition, disconnected follow-up, manual conversion to invoice/schedule |
 | Not the pain yet | AI photo damage recognition, automatic takeoff, AI deciding price |
 
-## Competitive Read
+## Competitive Read (2026-07-12 verified)
 
-Recent landscape check shows the AI quote space is crowded:
+2026-07 전수 가격 검증(공식 가격 페이지 교차 확인) 기준, 시장은 4개 진영으로 나뉘며 어느 쪽도 Coatly wedge를 점유하지 못한다:
 
-- QuoteMate: Australian tradie quote/invoice app with AI, supplier pricing, PDF, follow-up, Xero.
-- Sammy AI Estimator: Australian tradie AI estimator with voice-to-quote, PDF, price lists, job/client tracking.
-- Let’s Quote: Australian painting-specific quoting/job/customer platform.
-- ServiceM8 / Tradify: incumbent tradie job management tools with quote, invoice, schedule, templates, follow-up, and AI writing.
-- WonDeal / QuoteChase: narrow quote follow-up tools.
-- PaintScout / BrushQuote / Paint Quote Now: painting proposal, tracking, AI/scan quote, and follow-up tools.
-- PaintLike Pro / QuoteReady / Estimo / PaintQuote Pro: smaller or newer quote apps using offline-first, AI estimating, room-by-room quoting, or low monthly pricing as their wedge.
+- **AU 범용 tradie 앱**: ServiceM8(A$0–349/월 flat, 현장앱 iOS 전용), Tradify(A$48–62/user), Fergus(A$53–77/user) — GST/Xero는 되지만 painter 전용 아님, per-user 과금·작업 캡 마찰.
+- **AU 헤비급**: Simpro/AroFlo(견적제 + 구현비 A$1,299–US$10k+), Buildxact(A$199+/월), Groundplan(A$99/seat) — 1–3인 업체와 체급 불일치.
+- **미국 painter 전용**: PaintScout(US$119/월 flat + 시트 $20), DripJobs(US$97–147), Estimate Rocket(US$139+) — painter 전용 카테고리가 돈이 된다는 증명이나 AUD/GST/Xero/ABN 전무.
+- **직접 위협**: QuoteMate(AU painter 전용 A$49/월, AI-first — price-book-first 아님, send→follow-up→invoice 루프 얇음), YourTradebase(£29 flat, UK 전용). 그 외 니치: Sammy, Let's Quote, WonDeal/QuoteChase, BrushQuote류.
 
-Implication: "AI quote generator" is not differentiated enough. Coatly needs to win by being better at **existing painter workflow migration + quote send loop**.
+Implication: "AI quote generator" is not differentiated enough. Coatly는 **painter-first + AU-first + price-book-first + flat 가격** 조합으로 이긴다 — 범용 앱은 painter-first가, QuoteMate는 price-book-first가, 미국 도구는 AU-first가 될 수 없다. 비교표/검증 근거: [`../../COMMERCIALIZATION.md`](../../COMMERCIALIZATION.md).
 
 ## Product Principles
 
@@ -206,7 +203,7 @@ When reopened, the order is:
 
 ## Pricing Note
 
-Previous AI-first docs assumed Basic A$29 and Pro A$59 with AI limits. That assumption is superseded. Current implemented app pricing still uses Starter A$39 and Pro A$59. Pricing should be revalidated after A workflow recreation and competitor comparison, not before.
+2026-07-12 경쟁 비교 완료 기준 가격 방향: 단일 플랜 **A$39/월 (GST 포함, 업체당 flat, 3인까지, 견적 무제한)** + 30일 무카드 trial. 현재 구현된 Starter A$39/Pro A$59 2단은 폐지하고, Pro(A$59)는 post-core AI 헬퍼가 실제 동작할 때 재도입한다(AI는 문구만, 가격 산출 금지). Founding Painter 최초 20명은 A$29 종신. **최종 확정은 A workflow 재현 후.** 근거/지불의향/비교표: [`../../COMMERCIALIZATION.md`](../../COMMERCIALIZATION.md).
 
 ## Documentation Links
 
