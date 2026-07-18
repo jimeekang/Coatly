@@ -11,7 +11,7 @@ export function ErrorAlert({ children, className }: ErrorAlertProps) {
     <div
       role="alert"
       className={cn(
-        'rounded-lg border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container',
+        'rounded-xl border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container',
         className,
       )}
     >

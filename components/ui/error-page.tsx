@@ -73,7 +73,7 @@ export function ErrorPage({
           <button
             type="button"
             onClick={onRetry}
-            className="h-12 rounded-xl bg-primary px-6 text-base font-semibold text-on-primary transition-colors hover:bg-primary/90 active:bg-primary/90"
+            className="h-12 rounded-xl bg-primary px-6 text-base font-semibold text-on-primary transition-colors hover:bg-primary/90 active:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Try again
           </button>
@@ -81,7 +81,7 @@ export function ErrorPage({
         {showHome && (
           <Link
             href="/dashboard"
-            className="h-12 rounded-xl border border-outline bg-white px-6 text-base font-medium text-on-surface transition-colors hover:bg-surface-container-low active:bg-surface-container-low inline-flex items-center"
+            className="h-12 rounded-xl border border-outline bg-surface-container-lowest px-6 text-base font-medium text-on-surface transition-colors hover:bg-surface-container-low active:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 inline-flex items-center"
           >
             Back to Dashboard
           </Link>

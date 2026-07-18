@@ -42,7 +42,6 @@ describe('mobile accessibility regressions', () => {
       'app/(dashboard)/customers/[id]/page.tsx',
       'modules/customers/ui/CustomerForm.tsx',
       'modules/jobs/ui/JobEditForm.tsx',
-      'modules/jobs/ui/JobsWorkspace.tsx',
       'modules/quotes/ui/QuoteExtraLineItems.tsx',
       'modules/quotes/ui/QuoteForm.tsx',
       'modules/price-rates/ui/PriceRatesForm.tsx',

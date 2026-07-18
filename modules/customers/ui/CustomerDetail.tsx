@@ -13,7 +13,13 @@ import {
 import type { QuoteListItem } from '@/modules/quotes/domain/quotes';
 import type { InvoiceListItem } from '@/modules/invoices/domain/invoice';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { CustomerForm } from '@/modules/customers/ui/CustomerForm';
+import {
+  INVOICE_STATUS_TONE,
+  QUOTE_STATUS_TONE,
+} from '@/lib/constants/status-colors';
 import { formatAUD, formatDate } from '@/utils/format';
 
 function toFormData(c: Customer): CustomerFormData {
@@ -98,7 +104,7 @@ function PhoneValue({ value, primary }: { value: string; primary: boolean }) {
         {value}
       </a>
       {primary && (
-        <span className="shrink-0 rounded-full bg-success-container px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+        <span className="shrink-0 rounded-full bg-success-container px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
           Primary
         </span>
       )}
@@ -116,7 +122,7 @@ function EmailValue({ value, primary }: { value: string; primary: boolean }) {
         {value}
       </a>
       {primary && (
-        <span className="shrink-0 rounded-full bg-success-container px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+        <span className="shrink-0 rounded-full bg-success-container px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
           Primary
         </span>
       )}
@@ -129,22 +135,6 @@ function getContactValues(values: string[] | undefined, fallback: string | null)
 }
 
 type DialogType = 'cancel' | 'delete' | null;
-
-const QUOTE_STATUS_STYLE: Record<string, string> = {
-  draft:    'bg-surface-container-low text-on-surface-variant border border-outline',
-  sent:     'bg-secondary-container text-on-secondary-container border border-secondary/30',
-  approved: 'bg-success-container text-on-success-container border border-success/30',
-  declined: 'bg-error-container text-error border border-error/30',
-  expired:  'bg-warning-container text-on-warning-container border border-warning/30',
-};
-
-const INVOICE_STATUS_STYLE: Record<string, string> = {
-  draft:     'bg-surface-container-low text-on-surface-variant border border-outline',
-  sent:      'bg-secondary-container text-on-secondary-container border border-secondary/30',
-  paid:      'bg-success-container text-on-success-container border border-success/30',
-  overdue:   'bg-error-container text-error border border-error/30',
-  cancelled: 'bg-surface-container-low text-on-surface-variant border border-outline',
-};
 
 interface Props {
   customer: Customer;
@@ -207,27 +197,23 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setEditing(true)}
-            className="min-h-11 rounded-lg border border-outline bg-white px-5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+            className="min-h-11 rounded-xl border border-outline bg-surface-container-lowest px-5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Edit
           </button>
           <button
             onClick={() => setDialog('delete')}
             disabled={deleting}
-            className="min-h-11 rounded-lg bg-error px-5 text-sm font-medium text-on-error transition-colors hover:bg-error/90 disabled:opacity-50"
+            className="min-h-11 rounded-xl bg-error px-5 text-sm font-medium text-on-error transition-colors hover:bg-error/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
 
-        {error && (
-          <div className="rounded-lg border border-error bg-error-container px-4 py-3">
-            <p className="text-sm text-on-error-container">{error}</p>
-          </div>
-        )}
+        {error && <ErrorAlert>{error}</ErrorAlert>}
 
-        <section className="divide-y divide-outline rounded-xl border border-outline bg-white">
-          <div className="rounded-t-xl bg-surface-container-low px-5 py-3">
+        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
+          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
               Contact Details
             </h3>
@@ -276,8 +262,8 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
           </div>
         </section>
 
-        <section className="divide-y divide-outline rounded-xl border border-outline bg-white">
-          <div className="rounded-t-xl bg-surface-container-low px-5 py-3">
+        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
+          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
               Site Address
             </h3>
@@ -285,11 +271,11 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
           <div className="space-y-3 px-5 py-4">
             {customer.properties?.length ? (
               customer.properties.map((property, index) => (
-                <div key={`${property.label}-${index}`} className="rounded-lg border border-outline bg-surface-container-low px-4 py-3">
+                <div key={`${property.label}-${index}`} className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-on-surface">{property.label || `Site ${index + 1}`}</p>
                     {index === 0 && (
-                      <span className="rounded-full bg-success-container px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      <span className="rounded-full bg-success-container px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
                         Primary
                       </span>
                     )}
@@ -308,8 +294,8 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
           </div>
         </section>
 
-        <section className="divide-y divide-outline rounded-xl border border-outline bg-white">
-          <div className="rounded-t-xl bg-surface-container-low px-5 py-3">
+        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
+          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
               Billing Address
             </h3>
@@ -326,8 +312,8 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
         </section>
 
         {customer.notes && (
-          <section className="divide-y divide-outline rounded-xl border border-outline bg-white">
-            <div className="rounded-t-xl bg-surface-container-low px-5 py-3">
+          <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
+            <div className="rounded-t-2xl bg-surface-container-low px-5 py-3">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
                 Notes
               </h3>
@@ -339,8 +325,8 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
         )}
 
         {/* ── Quotes ── */}
-        <section className="divide-y divide-outline rounded-xl border border-outline bg-white">
-          <div className="rounded-t-xl bg-surface-container-low px-5 py-3 flex items-center justify-between gap-3">
+        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
+          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3 flex items-center justify-between gap-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
               Quotes
               {quotes.length > 0 && (
@@ -349,7 +335,7 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
             </h3>
             <Link
               href={`/quotes/new?customer_id=${customer.id}`}
-              className="text-xs font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 items-center rounded-lg text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               + New Quote
             </Link>
@@ -361,8 +347,6 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
           ) : (
             <ul className="divide-y divide-outline">
               {quotes.map((q) => {
-                const statusClass =
-                  QUOTE_STATUS_STYLE[q.status] ?? QUOTE_STATUS_STYLE.draft;
                 return (
                   <li key={q.id}>
                     <Link
@@ -385,9 +369,10 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusClass}`}>
-                          {q.status}
-                        </span>
+                        <StatusBadge
+                          tone={QUOTE_STATUS_TONE[q.status]}
+                          label={q.status}
+                        />
                         <span className="text-sm font-medium text-on-surface">
                           {formatAUD(q.total_cents)}
                         </span>
@@ -401,8 +386,8 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
         </section>
 
         {/* ── Invoices ── */}
-        <section className="divide-y divide-outline rounded-xl border border-outline bg-white">
-          <div className="rounded-t-xl bg-surface-container-low px-5 py-3 flex items-center justify-between gap-3">
+        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
+          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3 flex items-center justify-between gap-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
               Invoices
               {invoices.length > 0 && (
@@ -411,7 +396,7 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
             </h3>
             <Link
               href={`/invoices/new?customer_id=${customer.id}`}
-              className="text-xs font-medium text-primary hover:underline"
+              className="inline-flex min-h-11 items-center rounded-lg text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               + New Invoice
             </Link>
@@ -423,8 +408,6 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
           ) : (
             <ul className="divide-y divide-outline">
               {invoices.map((inv) => {
-                const statusClass =
-                  INVOICE_STATUS_STYLE[inv.status] ?? INVOICE_STATUS_STYLE.draft;
                 const isOverdue = inv.status === 'overdue';
                 return (
                   <li key={inv.id}>
@@ -450,9 +433,10 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusClass}`}>
-                          {inv.status}
-                        </span>
+                        <StatusBadge
+                          tone={INVOICE_STATUS_TONE[inv.status]}
+                          label={inv.status}
+                        />
                         <span className="text-sm font-medium text-on-surface">
                           {formatAUD(inv.total_cents)}
                         </span>

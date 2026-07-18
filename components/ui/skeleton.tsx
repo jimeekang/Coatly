@@ -37,7 +37,7 @@ export function SkeletonText({
 /** 통계 카드 1개 */
 export function SkeletonStat() {
   return (
-    <div className="rounded-lg bg-surface-container-low p-5">
+    <div className="rounded-2xl bg-surface-container-low p-5">
       <Skeleton className="mb-2 h-3 w-24" />
       <Skeleton className="mb-2 h-7 w-16" />
       <Skeleton className="h-3 w-32" />
@@ -48,7 +48,7 @@ export function SkeletonStat() {
 /** 카드 블록 */
 export function SkeletonCard({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="rounded-xl border border-outline bg-white p-4">
+    <div className="rounded-2xl border border-outline bg-surface-container-lowest p-4">
       <Skeleton className="mb-4 h-5 w-40" />
       <div className="flex flex-col gap-3">
         {Array.from({ length: rows }).map((_, i) => (
@@ -78,7 +78,7 @@ export function SkeletonTableRow({ cols = 5 }: { cols?: number }) {
 /** 전체 테이블 스켈레톤 */
 export function SkeletonTable({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-outline bg-white">
+    <div className="overflow-x-auto rounded-2xl border border-outline bg-surface-container-lowest">
       <table className="w-full text-sm">
         <thead className="border-b border-outline bg-surface-container-low">
           <tr>
@@ -104,7 +104,7 @@ export function SkeletonListCard({ count = 5 }: { count?: number }) {
   return (
     <ul className="flex flex-col gap-3">
       {Array.from({ length: count }).map((_, i) => (
-        <li key={i} className="rounded-xl border border-outline bg-white px-4 py-4">
+        <li key={i} className="rounded-2xl border border-outline bg-surface-container-lowest px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-2 flex-1">
               <Skeleton className="h-4 w-32" />
@@ -147,8 +147,8 @@ export function ListPageSkeleton({ cols = 5 }: { cols?: number }) {
     <div className="flex flex-col gap-4">
       {/* 검색 + 필터 영역 */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_200px]">
-        <Skeleton className="h-12 w-full rounded-lg" />
-        <Skeleton className="h-12 w-full rounded-lg" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
       </div>
 
       {/* 모바일 리스트 */}

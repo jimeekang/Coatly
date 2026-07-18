@@ -5,7 +5,10 @@ import { useState, useTransition, type ReactNode } from 'react';
 import { deleteInvoice, markInvoiceAsPaid, sendInvoice } from '@/modules/invoices/application/actions';
 import type { InvoiceFormQuoteOption } from '@/modules/invoices/ui/InvoiceForm';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/shared/SectionLabel';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { INVOICE_STATUS_TONE } from '@/lib/constants/status-colors';
 import { getSydneyTodayDateString } from '@/modules/invoices/domain/invoices';
 import type { InvoiceStatus, InvoiceWithCustomer } from '@/modules/invoices/domain/invoice';
 import { formatABN, formatAUD, formatDate } from '@/utils/format';
@@ -13,14 +16,6 @@ import { formatABN, formatAUD, formatDate } from '@/utils/format';
 /* ──────────────────────────────────────────────────────────
    Static maps
    ────────────────────────────────────────────────────────── */
-
-const STATUS_BADGE: Record<InvoiceStatus, string> = {
-  draft: 'bg-surface-container-highest text-on-surface-variant',
-  sent: 'bg-primary/10 text-primary',
-  paid: 'bg-success-container text-success',
-  overdue: 'bg-warning-container text-warning',
-  cancelled: 'bg-surface-container-highest text-on-surface-variant',
-};
 
 const STATUS_LABEL: Record<InvoiceStatus, string> = {
   draft: 'Draft',
@@ -198,10 +193,8 @@ function MetaBox({
   sub?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-surface-container-low p-[18px]">
-      <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-        {label}
-      </p>
+    <div className="rounded-2xl bg-surface-container-low p-[18px]">
+      <SectionLabel className="mb-1.5">{label}</SectionLabel>
       <p className="text-sm font-semibold text-on-surface">{value || '—'}</p>
       {sub && <p className="mt-1 text-xs text-on-surface-variant">{sub}</p>}
     </div>
@@ -209,9 +202,9 @@ function MetaBox({
 }
 
 const PRIMARY_BTN =
-  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50';
+  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50';
 const SECONDARY_BTN =
-  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface-container px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high';
+  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 /* ──────────────────────────────────────────────────────────
    Payment progress band
@@ -259,36 +252,30 @@ function PaymentProgressBand({ invoice }: { invoice: InvoiceWithCustomer }) {
     <section className={`rounded-2xl border border-l-4 p-5 shadow-sm sm:p-6 ${tone.container}`}>
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-            Amount due
-          </p>
+          <SectionLabel>Amount due</SectionLabel>
           <p className={`mt-1 text-[26px] font-extrabold tabular-nums sm:text-[32px] ${tone.amount}`}>
             {formatAUD(balanceCents)}
-            <span className="ml-1.5 text-xs font-bold tracking-wider text-outline">AUD</span>
+            <span className="ml-1.5 text-xs font-bold tracking-wider text-on-surface-variant">AUD</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <div>
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-              Invoiced
-            </p>
+            <SectionLabel>Invoiced</SectionLabel>
             <p className="mt-0.5 text-sm font-bold tabular-nums text-on-surface">
               {formatAUD(invoice.total_cents)}
             </p>
           </div>
           <div>
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-              Received
-            </p>
+            <SectionLabel>Received</SectionLabel>
             <p className="mt-0.5 text-sm font-bold tabular-nums text-on-surface">
               {formatAUD(invoice.amount_paid_cents)}
             </p>
           </div>
           {invoice.due_date && (
             <div>
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
+              <SectionLabel>
                 {invoice.status === 'overdue' ? 'Was due' : 'Due'}
-              </p>
+              </SectionLabel>
               <p className="mt-0.5 text-sm font-bold tabular-nums text-on-surface">
                 {formatDate(invoice.due_date)}
               </p>
@@ -341,11 +328,13 @@ function buildTimeline(
   });
 
   if (invoice.status !== 'draft' && invoice.status !== 'cancelled') {
+    // No sent timestamp is stored for invoices — omit the date rather than
+    // showing created_at as a stand-in on a money document.
     events.push({
       icon: 'send',
       tone: 'info',
       label: 'Invoice sent',
-      when: formatDate(invoice.created_at),
+      when: '',
       detail: invoice.customer.email
         ? `Emailed to ${invoice.customer.email}`
         : 'Sent to customer',
@@ -371,7 +360,7 @@ function buildTimeline(
       icon: 'check-circle-2',
       tone: 'success',
       label: 'Payment received',
-      when: formatDate(invoice.paid_date ?? invoice.created_at),
+      when: invoice.paid_date ? formatDate(invoice.paid_date) : '',
       detail: `${methodLabel} · ${formatAUD(invoice.amount_paid_cents)} settled`,
     });
   } else if (invoice.amount_paid_cents > 0) {
@@ -379,7 +368,7 @@ function buildTimeline(
       icon: 'wallet',
       tone: 'success',
       label: 'Part-payment received',
-      when: formatDate(invoice.paid_date ?? invoice.created_at),
+      when: invoice.paid_date ? formatDate(invoice.paid_date) : '',
       detail: `${methodLabel} · ${formatAUD(invoice.amount_paid_cents)}`,
     });
   }
@@ -414,7 +403,7 @@ function ActivityTimeline({
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <span className="text-[13.5px] font-bold text-on-surface">{event.label}</span>
                 {event.when && (
-                  <span className="text-[11.5px] tabular-nums text-outline">{event.when}</span>
+                  <span className="text-xs tabular-nums text-on-surface-variant">{event.when}</span>
                 )}
               </div>
               <p className="mt-0.5 text-xs text-on-surface-variant">{event.detail}</p>
@@ -495,7 +484,7 @@ export function InvoiceDetail({
         {/* ── Header ─────────────────────────────────────────── */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em] text-outline">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
               {invoice.invoice_number}
             </p>
             <h1 className="mt-1 truncate text-[22px] font-extrabold tracking-[-0.02em] text-on-surface sm:text-[26px]">
@@ -508,11 +497,11 @@ export function InvoiceDetail({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${STATUS_BADGE[invoice.status]}`}
-            >
-              {STATUS_LABEL[invoice.status]}
-            </span>
+            <StatusBadge
+              tone={INVOICE_STATUS_TONE[invoice.status]}
+              label={STATUS_LABEL[invoice.status]}
+              size="md"
+            />
             <a
               href={`/api/pdf/invoice?id=${invoice.id}`}
               target="_blank"
@@ -580,20 +569,16 @@ export function InvoiceDetail({
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="space-y-1.5">
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-                  Paid date
-                </span>
+                <SectionLabel as="span">Paid date</SectionLabel>
                 <input
                   type="date"
                   value={paidDate}
                   onChange={(event) => setPaidDate(event.target.value)}
-                  className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                  className="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </label>
               <label className="space-y-1.5">
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-                  Payment method
-                </span>
+                <SectionLabel as="span">Payment method</SectionLabel>
                 <select
                   value={paymentMethod}
                   onChange={(event) =>
@@ -601,7 +586,7 @@ export function InvoiceDetail({
                       event.target.value as NonNullable<InvoiceWithCustomer['payment_method']> | ''
                     )
                   }
-                  className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                  className="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">Select payment method</option>
                   <option value="bank_transfer">Bank transfer</option>
@@ -638,7 +623,7 @@ export function InvoiceDetail({
           <div className="flex flex-col gap-5">
             {/* Line items */}
             <Card title="Line items">
-              <div className="hidden grid-cols-[minmax(0,1fr)_80px_110px_110px] gap-3 border-b border-outline-variant/60 pb-2 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline sm:grid">
+              <div className="hidden grid-cols-[minmax(0,1fr)_80px_110px_110px] gap-3 border-b border-outline-variant/60 pb-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant sm:grid">
                 <span>Item</span>
                 <span className="text-right">Qty</span>
                 <span className="text-right">Rate</span>
@@ -653,7 +638,7 @@ export function InvoiceDetail({
                     <p className="whitespace-pre-wrap text-sm font-semibold text-on-surface">
                       {item.description}
                     </p>
-                    <p className="mt-0.5 text-xs text-outline">GST {formatAUD(item.gst_cents)}</p>
+                    <p className="mt-0.5 text-xs text-on-surface-variant">GST {formatAUD(item.gst_cents)}</p>
                   </div>
                   <p className="text-right text-sm tabular-nums text-on-surface-variant">
                     {item.quantity}
@@ -680,7 +665,7 @@ export function InvoiceDetail({
                   <span>Total</span>
                   <span className="tabular-nums">
                     {formatAUD(invoice.total_cents)}{' '}
-                    <span className="text-[11px] font-bold text-outline">AUD</span>
+                    <span className="text-xs font-bold text-on-surface-variant">AUD</span>
                   </span>
                 </div>
               </div>
@@ -712,7 +697,7 @@ export function InvoiceDetail({
                           {formatAUD(item.total_cents)}
                         </p>
                       </div>
-                      <p className="mt-0.5 text-xs text-outline">
+                      <p className="mt-0.5 text-xs text-on-surface-variant">
                         Qty {item.quantity} × {formatAUD(item.unit_price_cents)}
                       </p>
                     </div>
@@ -799,9 +784,7 @@ export function InvoiceDetail({
                 <div className="flex flex-col gap-4">
                   {invoice.payment_terms && (
                     <div>
-                      <p className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-                        Terms
-                      </p>
+                      <SectionLabel className="mb-1">Terms</SectionLabel>
                       <p className="whitespace-pre-wrap text-sm leading-6 text-on-surface">
                         {invoice.payment_terms}
                       </p>
@@ -809,9 +792,7 @@ export function InvoiceDetail({
                   )}
                   {invoice.bank_details && (
                     <div>
-                      <p className="mb-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-                        Bank
-                      </p>
+                      <SectionLabel className="mb-1">Bank</SectionLabel>
                       <p className="whitespace-pre-wrap text-sm leading-6 text-on-surface">
                         {invoice.bank_details}
                       </p>
@@ -834,7 +815,7 @@ export function InvoiceDetail({
             type="button"
             onClick={() => setOpenDeleteDialog(true)}
             disabled={deleting}
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-error transition-colors hover:bg-error-container/50 disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-error transition-colors hover:bg-error-container/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
           >
             <Icon name="trash" size={16} />
             {deleting ? 'Deleting…' : 'Delete invoice'}

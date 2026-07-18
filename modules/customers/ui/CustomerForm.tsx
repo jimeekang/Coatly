@@ -17,6 +17,7 @@ import {
 } from '@/components/forms/FormField';
 import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
 import { FormSection } from '@/components/forms/FormSection';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
 import type { ParsedGooglePlaceAddress } from '@/lib/google-places-address';
 
@@ -354,7 +355,7 @@ export function CustomerForm({
             {useCompanyName ? (
               <div className={formDisabledControlClassName}>
                 {form.company_name || (
-                  <span className="text-outline-variant">
+                  <span className="text-on-surface-variant">
                     Auto-filled from company name
                   </span>
                 )}
@@ -407,9 +408,9 @@ export function CustomerForm({
               <button
                 type="button"
                 onClick={addEmail}
-                className="border-outline-variant text-on-surface min-h-11 rounded-xl border bg-white px-3 text-sm font-medium"
+                className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
               >
-                Add Email
+                + New Email
               </button>
             </div>
             <div className="flex flex-col gap-2">
@@ -430,7 +431,7 @@ export function CustomerForm({
                     <button
                       type="button"
                       onClick={() => removeEmail(index)}
-                      className="border-outline-variant text-on-surface-variant min-h-12 shrink-0 rounded-xl border bg-white px-3 text-sm font-medium"
+                      className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-12 shrink-0 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
                     >
                       Remove
                     </button>
@@ -446,9 +447,9 @@ export function CustomerForm({
               <button
                 type="button"
                 onClick={addPhone}
-                className="border-outline-variant text-on-surface min-h-11 rounded-xl border bg-white px-3 text-sm font-medium"
+                className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
               >
-                Add Phone
+                + New Phone
               </button>
             </div>
             <div className="flex flex-col gap-2">
@@ -469,7 +470,7 @@ export function CustomerForm({
                     <button
                       type="button"
                       onClick={() => removePhone(index)}
-                      className="border-outline-variant text-on-surface-variant min-h-12 shrink-0 rounded-xl border bg-white px-3 text-sm font-medium"
+                      className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-12 shrink-0 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
                     >
                       Remove
                     </button>
@@ -489,16 +490,16 @@ export function CustomerForm({
           <button
             type="button"
             onClick={addProperty}
-            className="border-outline-variant text-on-surface min-h-11 rounded-xl border bg-white px-3 text-sm font-medium"
+            className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
           >
-            Add Site
+            + New Site
           </button>
         </div>
         <div className="flex flex-col gap-4">
           {form.properties.map((property, index) => (
             <div
               key={index}
-              className="border-outline-variant rounded-xl border bg-white p-4"
+              className="border-outline-variant bg-surface-container-lowest rounded-xl border p-4"
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
@@ -508,7 +509,7 @@ export function CustomerForm({
                   <button
                     type="button"
                     onClick={() => removeProperty(index)}
-                    className="border-outline-variant text-on-surface-variant min-h-11 rounded-xl border bg-white px-3 text-sm font-medium"
+                    className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
                   >
                     Remove
                   </button>
@@ -628,7 +629,7 @@ export function CustomerForm({
 
       {/* ── Billing Address ── */}
       <FormSection title="Billing Address">
-        <div className="border-outline-variant rounded-xl border bg-white p-4">
+        <div className="border-outline-variant bg-surface-container-lowest rounded-xl border p-4">
           <label className="flex cursor-pointer items-center gap-3 select-none">
             <input
               type="checkbox"
@@ -757,11 +758,7 @@ export function CustomerForm({
       </FormSection>
 
       {/* ── 에러 메시지 ── */}
-      {error && (
-        <div className="bg-error-container border-error rounded-xl border px-4 py-3">
-          <p className="text-on-error-container text-sm">{error}</p>
-        </div>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
 
       {/* ── CTA — 하단 고정 ── */}
       <FormFooter>

@@ -52,7 +52,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={[
-              'h-12 w-full rounded-xl border bg-white px-4 text-base text-on-surface',
+              'h-12 w-full rounded-xl border bg-surface-container-lowest px-4 text-base text-on-surface',
               'placeholder:text-on-surface-variant/70 transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-primary/20',
               error

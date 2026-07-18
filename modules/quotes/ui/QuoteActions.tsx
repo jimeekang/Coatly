@@ -3,7 +3,15 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { approveQuote, duplicateQuote } from '@/modules/quotes/application/actions';
+import {
+  approveQuote,
+  deleteQuote,
+  duplicateQuote,
+  sendQuoteToClient,
+} from '@/modules/quotes/application/actions';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/toast';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import type { QuoteStatus } from '@/modules/quotes/domain/quotes';
 
 export type ConvertQuoteToJobAction = (quoteId: string) => Promise<{
@@ -55,13 +63,46 @@ export function QuoteActions({
   convertQuoteToJobAction,
 }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [approvePending, startApprove] = useTransition();
   const [jobPending, startJob] = useTransition();
   const [dupPending, startDup] = useTransition();
   const [menuPending, startMenu] = useTransition();
+  const [sendPending, startSend] = useTransition();
+  const [deletePending, startDelete] = useTransition();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  function handleSend() {
+    setError(null);
+    startSend(async () => {
+      const result = await sendQuoteToClient(quoteId);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        status === 'sent'
+          ? 'Quote re-sent to the client.'
+          : 'Quote sent to the client.'
+      );
+    });
+  }
+
+  function handleDeleteConfirm() {
+    setError(null);
+    startDelete(async () => {
+      const result = await deleteQuote(quoteId);
+      if (result?.error) {
+        setShowDeleteModal(false);
+        toast.error(result.error);
+        return;
+      }
+      setShowDeleteModal(false);
+      router.push('/quotes');
+    });
+  }
 
   function handleApprove() {
     setError(null);
@@ -91,7 +132,13 @@ export function QuoteActions({
     });
   }
 
-  const anyPending = approvePending || jobPending || dupPending || menuPending;
+  const anyPending =
+    approvePending ||
+    jobPending ||
+    dupPending ||
+    menuPending ||
+    sendPending ||
+    deletePending;
 
   function handleApproveWithoutSignature() {
     setError(null);
@@ -125,11 +172,7 @@ export function QuoteActions({
 
   return (
     <div className="flex flex-col gap-4">
-      {error && (
-        <p className="bg-error/10 text-error rounded-lg px-3 py-2.5 text-sm">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
       {hasLinkedInvoices && (
         <p className="rounded-lg bg-warning-container px-3 py-2.5 text-sm text-on-warning-container">
           Quote editing and deletion are locked after invoice creation.
@@ -137,12 +180,45 @@ export function QuoteActions({
       )}
 
       {/* Primary CTAs — status-aware */}
+      {status === 'draft' && (
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={anyPending}
+          className="bg-primary text-on-primary hover:bg-primary/90 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+        >
+          {sendPending ? (
+            <>
+              <SpinnerIcon /> Sending…
+            </>
+          ) : (
+            <>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+              Send to Client
+            </>
+          )}
+        </button>
+      )}
+
       {(status === 'draft' || status === 'sent') && (
         <button
           type="button"
           onClick={handleApprove}
           disabled={anyPending}
-          className="bg-tertiary text-on-tertiary hover:bg-tertiary/90 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-colors disabled:opacity-50"
+          className="bg-tertiary text-on-tertiary hover:bg-tertiary/90 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
         >
           {approvePending ? (
             <>
@@ -164,6 +240,39 @@ export function QuoteActions({
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Approve Quote
+            </>
+          )}
+        </button>
+      )}
+
+      {status === 'sent' && (
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={anyPending}
+          className="border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+        >
+          {sendPending ? (
+            <>
+              <SpinnerIcon /> Sending…
+            </>
+          ) : (
+            <>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+              Resend to Client
             </>
           )}
         </button>
@@ -238,7 +347,7 @@ export function QuoteActions({
             disabled={anyPending}
             aria-expanded={isMoreOpen}
             aria-haspopup="menu"
-            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
+            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -260,7 +369,7 @@ export function QuoteActions({
           {isMoreOpen && (
             <div
               role="menu"
-              className="border-outline-variant absolute left-0 z-20 mt-2 w-64 rounded-xl border bg-white p-2 shadow-lg"
+              className="border-outline-variant absolute left-0 z-20 mt-2 w-64 rounded-xl border bg-surface-container-lowest p-2 shadow-lg"
             >
               {(status === 'draft' || status === 'sent') && (
                 <button
@@ -290,7 +399,7 @@ export function QuoteActions({
           target="_blank"
           rel="noreferrer"
           download={getQuotePdfFilename(quoteNumber)}
-          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors"
+          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -315,7 +424,7 @@ export function QuoteActions({
             href={publicQuoteUrl}
             target="_blank"
             rel="noreferrer"
-            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors"
+            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -341,7 +450,7 @@ export function QuoteActions({
           type="button"
           onClick={handleDuplicate}
           disabled={anyPending}
-          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
+          className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
         >
           {dupPending ? (
             <SpinnerIcon />
@@ -369,7 +478,7 @@ export function QuoteActions({
           type="button"
           onClick={() => setShowDeleteModal(true)}
           disabled={anyPending || hasLinkedInvoices}
-          className="border-error/30 bg-error/5 text-error hover:bg-error/10 flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors disabled:opacity-50"
+          className="border-error/30 bg-error/5 text-error hover:bg-error/10 flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

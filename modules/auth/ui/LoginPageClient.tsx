@@ -5,9 +5,16 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signInWithEmail, getGoogleOAuthUrl } from '@/modules/auth/application/actions';
 import { AuthShell } from '@/modules/auth/ui/AuthShell';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import {
+  FormField,
+  FormLabel,
+  formControlClassName,
+} from '@/components/forms/FormField';
+import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/config/constants';
 
 const loginSchema = z.object({
@@ -21,12 +28,16 @@ type LoginPageClientProps = {
   initialError?: string | null;
 };
 
+const linkClassName =
+  'rounded font-medium text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
 export default function LoginPageClient({
   initialError = null,
 }: LoginPageClientProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isGooglePending, setIsGooglePending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -62,78 +73,68 @@ export default function LoginPageClient({
     <AuthShell
       eyebrow="Sign in"
       title="Pick up where the workday left off."
-      description="Sign in to quotes, invoices, schedule, and customer follow-up without losing the warm Coatly tone."
-      sideTitle="Less admin. More time on the tools."
-      sideDescription="Every quote, invoice, and customer record in one place — built for Australian painters who want to spend more time painting and less time on paperwork."
+      description="Quotes, invoices and follow-ups for Australian painters."
       footer={
         <>
           Don&apos;t have an account?{' '}
-          <Link href="/signup" className="font-medium text-primary/90 hover:underline">
+          <Link href="/signup" className={linkClassName}>
             Sign up free
           </Link>
         </>
       }
     >
-      {displayedError && (
-        <div
-          role="alert"
-          className="mb-4 rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container"
-        >
-          {displayedError}
-        </div>
-      )}
+      {displayedError && <ErrorAlert className="mb-4">{displayedError}</ErrorAlert>}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-        <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-on-surface">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            placeholder="you@example.com"
-            disabled={isLoading}
-            aria-invalid={!!errors.email}
-            aria-describedby={errors.email ? 'email-error' : undefined}
-            className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
-            {...register('email')}
-          />
-          {errors.email && (
-            <p id="email-error" className="mt-1.5 text-xs text-error">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
+        <FormField
+          htmlFor="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder="you@example.com"
+          disabled={isLoading}
+          error={errors.email?.message}
+          {...register('email')}
+        />
 
         <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-on-surface">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            disabled={isLoading}
-            aria-invalid={!!errors.password}
-            aria-describedby={errors.password ? 'password-error' : undefined}
-            className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
-            {...register('password')}
-          />
+          <FormLabel htmlFor="password">Password</FormLabel>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              disabled={isLoading}
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
+              className={cn(formControlClassName, 'pr-14 disabled:opacity-50')}
+              {...register('password')}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              disabled={isLoading}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Eye className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
+          </div>
           {errors.password && (
-            <p id="password-error" className="mt-1.5 text-xs text-error">
+            <p id="password-error" className="mt-1 text-sm text-error">
               {errors.password.message}
             </p>
           )}
         </div>
 
         <div className="flex justify-end">
-          <Link
-            href="/forgot-password"
-            className="text-sm font-medium text-primary/90 hover:underline"
-          >
+          <Link href="/forgot-password" className={cn(linkClassName, 'text-sm')}>
             Forgot password?
           </Link>
         </div>
@@ -141,7 +142,7 @@ export default function LoginPageClient({
         <button
           type="submit"
           disabled={isLoading}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           Sign in
@@ -153,7 +154,7 @@ export default function LoginPageClient({
           <div className="w-full border-t border-outline" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white px-3 text-xs text-on-surface-variant">or</span>
+          <span className="bg-surface-container-lowest px-3 text-xs text-on-surface-variant">or</span>
         </div>
       </div>
 
@@ -161,7 +162,7 @@ export default function LoginPageClient({
         type="button"
         onClick={handleGoogleLogin}
         disabled={isLoading}
-        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-outline bg-white text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-outline bg-surface-container-lowest text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isGooglePending ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

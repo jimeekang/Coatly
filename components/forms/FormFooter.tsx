@@ -43,8 +43,8 @@ export function FormFooterButton({
       className={cn(
         'inline-flex h-14 items-center justify-center rounded-xl px-4 text-base font-semibold transition-colors disabled:cursor-not-allowed',
         variant === 'primary'
-          ? 'bg-primary text-on-primary hover:bg-primary/90 disabled:bg-surface-container-high disabled:text-outline disabled:hover:bg-surface-container-high'
-          : 'border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low disabled:text-outline',
+          ? 'bg-primary text-on-primary hover:bg-primary/90 disabled:bg-surface-container-high disabled:text-on-surface-variant disabled:hover:bg-surface-container-high'
+          : 'border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low disabled:text-on-surface-variant',
         className,
       )}
       {...props}

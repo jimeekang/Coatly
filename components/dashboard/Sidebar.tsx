@@ -3,6 +3,8 @@
 import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { BrandLogo } from '@/components/branding/BrandLogo';
+import { SectionLabel } from '@/components/shared/SectionLabel';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -78,18 +80,14 @@ export default function DashboardSidebar({
   return (
     <>
       {/* ── Tablet/Desktop sidebar ── */}
-      <aside className="hidden md:flex md:w-60 lg:w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-50 border-r border-outline-variant shrink-0">
+      <aside className="hidden md:flex md:w-60 lg:w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-40 border-r border-outline-variant shrink-0">
         {/* Logo */}
         <div className="mb-6 flex justify-start px-4 pt-2">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-primary flex-shrink-0 flex items-center justify-center">
-              <span className="text-on-primary text-[11px] font-extrabold leading-none">C</span>
-            </div>
+            <BrandLogo mode="icon" width={28} height={28} className="shrink-0" />
             <div>
-              <h1 className="text-xl font-extrabold tracking-tight text-on-surface" style={{ letterSpacing: '-0.02em' }}>Coatly</h1>
-              <p className="text-[10px] font-bold tracking-[0.14em] text-on-surface-variant uppercase mt-0.5">
-                Painter Workspace
-              </p>
+              <h1 className="text-xl font-extrabold tracking-[-0.02em] text-on-surface">Coatly</h1>
+              <SectionLabel className="mt-0.5">Painter Workspace</SectionLabel>
             </div>
           </div>
         </div>
@@ -145,7 +143,7 @@ export default function DashboardSidebar({
             <div className="min-w-0">
               <p className="text-xs font-bold text-on-surface truncate">{businessName}</p>
               <p
-                className={`text-[11px] uppercase tracking-widest font-semibold ${
+                className={`text-xs uppercase tracking-[0.18em] font-semibold ${
                   isPro ? 'text-primary' : 'text-on-surface-variant'
                 }`}
               >

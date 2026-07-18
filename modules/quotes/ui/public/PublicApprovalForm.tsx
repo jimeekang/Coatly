@@ -3,6 +3,9 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { approvePublicQuote, rejectPublicQuote } from '@/modules/quotes/application/actions';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/shared/SectionLabel';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SignaturePad } from './SignaturePad';
 
 interface PublicApprovalFormProps {
@@ -31,6 +34,7 @@ export function PublicApprovalForm({
 }: PublicApprovalFormProps) {
   const [signature, setSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isRejectPending, startRejectTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -57,7 +61,7 @@ export function PublicApprovalForm({
     });
   };
 
-  const handleReject = () => {
+  const handleRejectClick = () => {
     const form = formRef.current;
     if (!form) return;
 
@@ -70,8 +74,18 @@ export function PublicApprovalForm({
       return;
     }
 
-    fd.set('rejectedByName', rejectedByName);
-    fd.set('rejectedByEmail', rejectedByEmail);
+    setError(null);
+    setShowDeclineConfirm(true);
+  };
+
+  const handleRejectConfirm = () => {
+    setShowDeclineConfirm(false);
+    const form = formRef.current;
+    if (!form) return;
+
+    const fd = new FormData(form);
+    fd.set('rejectedByName', String(fd.get('approvedByName') ?? '').trim());
+    fd.set('rejectedByEmail', String(fd.get('approvedByEmail') ?? '').trim());
     setError(null);
 
     startRejectTransition(async () => {

@@ -2,7 +2,7 @@ import { type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes } fro
 
 export function Table({ className = '', children, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-outline bg-white">
+    <div className="overflow-x-auto rounded-2xl border border-outline bg-surface-container-lowest">
       <table
         className={['w-full text-left text-sm', className].filter(Boolean).join(' ')}
         {...props}

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { PageHeader } from '@/components/layout/PageHeader';
 import PricingSection from '@/modules/settings/ui/PricingSection';
 import { syncSubscriptionCacheForUser } from '@/modules/billing/application/subscription-sync';
 import { createServerClient } from '@/lib/supabase/server';
@@ -31,13 +32,13 @@ export default async function BillingPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-on-surface">Billing & subscription</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">
-          Choose your plan, open Stripe billing portal tools, or manage renewal timing.
-        </p>
-      </div>
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 sm:gap-6">
+      <PageHeader
+        title="Billing & subscription"
+        subtitle="Choose your plan, open Stripe billing portal tools, or manage renewal timing."
+        backHref="/settings"
+        backLabel="Settings"
+      />
 
       <PricingSection subscription={subscription} returnPath="/settings/billing" />
     </div>

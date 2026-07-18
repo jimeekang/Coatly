@@ -301,7 +301,7 @@ export function GoogleAddressAutocomplete({
         onBlur={handleBlur}
       />
       {suggestions.length > 0 && (
-        <div className="border-outline-variant absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-lg border bg-surface-container-lowest shadow-lg">
+        <div className="border-outline-variant absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-xl border bg-surface-container-lowest shadow-lg">
           <ul
             id={listboxId}
             role="listbox"

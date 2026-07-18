@@ -45,7 +45,7 @@ describe('CustomerForm', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Add Site' }));
+    await user.click(screen.getByRole('button', { name: '+ New Site' }));
     await user.clear(
       screen.getAllByPlaceholderText('e.g. Home, Rental, Beach house')[1]
     );

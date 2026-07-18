@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 type ModalSize = 'sm' | 'md' | 'lg';
@@ -30,6 +30,8 @@ export function Modal({
   footer,
   size = 'md',
 }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
   // ESC 키 닫기
   useEffect(() => {
     if (!open) return;
@@ -46,6 +48,11 @@ export function Modal({
     return () => {
       document.body.style.overflow = '';
     };
+  }, [open]);
+
+  // 열릴 때 패널로 초기 포커스 이동
+  useEffect(() => {
+    if (open) panelRef.current?.focus();
   }, [open]);
 
   if (!open) return null;
@@ -66,9 +73,11 @@ export function Modal({
 
       {/* 패널 */}
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={[
-          'relative flex w-full flex-col rounded-2xl bg-white shadow-xl',
-          'max-h-[90dvh]',
+          'relative flex w-full flex-col rounded-2xl bg-surface-container-lowest shadow-xl',
+          'max-h-[90dvh] focus:outline-none',
           SIZE[size],
         ].join(' ')}
       >
@@ -88,7 +97,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-lg p-1 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
+              className="-m-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               aria-label="Close"
             >
               <X className="h-5 w-5" />

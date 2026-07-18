@@ -12,10 +12,9 @@ import {
 import { MaterialItemForm } from './MaterialItemForm';
 import { createMaterialItem, updateMaterialItem, deleteMaterialItem, importMaterialItems } from '@/modules/materials/application/actions';
 import { generateMaterialItemsCsv, parseMaterialItemsCsv } from '@/modules/materials/domain/csv';
-
-function formatAUD(cents: number) {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100);
-}
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { formatAUD } from '@/utils/format';
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   paint: PaintBucket,
@@ -64,6 +63,7 @@ interface MaterialItemListProps {
 export function MaterialItemList({ initialItems }: MaterialItemListProps) {
   const [items, setItems] = useState<MaterialItem[]>(initialItems);
   const [mode, setMode] = useState<'list' | 'add' | { edit: MaterialItem }>('list');
+  const [pendingDelete, setPendingDelete] = useState<MaterialItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [csvError, setCsvError] = useState<string | null>(null);
@@ -210,7 +210,7 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
       <button
         type="button"
         onClick={() => importInputRef.current?.click()}
-        className="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2 text-sm font-medium text-on-surface-variant hover:border-outline hover:text-on-surface"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2 text-sm font-medium text-on-surface-variant hover:border-outline hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         <Upload className="h-4 w-4" />
         Import CSV
@@ -218,7 +218,7 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
       <button
         type="button"
         onClick={handleExportCsv}
-        className="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2 text-sm font-medium text-on-surface-variant hover:border-outline hover:text-on-surface"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2 text-sm font-medium text-on-surface-variant hover:border-outline hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         <Download className="h-4 w-4" />
         Export CSV
@@ -255,20 +255,12 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
 
   return (
     <div className="space-y-4">
-      {deleteError && (
-        <p className="rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container">
-          {deleteError}
-        </p>
-      )}
+      {deleteError && <ErrorAlert>{deleteError}</ErrorAlert>}
 
-      {csvError && (
-        <p className="rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container">
-          {csvError}
-        </p>
-      )}
+      {csvError && <ErrorAlert>{csvError}</ErrorAlert>}
 
       {csvMessage && (
-        <p className="rounded-lg border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface">
+        <p className="rounded-xl border border-outline-variant bg-surface px-4 py-3 text-sm text-on-surface">
           {csvMessage}
         </p>
       )}
@@ -283,10 +275,10 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
           <button
             type="button"
             onClick={() => setMode('add')}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary"
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary hover:bg-primary/90 active:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <Plus className="h-4 w-4" />
-            Add First Item
+            + New Item
           </button>
           <div className="mt-4 flex justify-center">{csvActions}</div>
         </div>
@@ -389,16 +381,16 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
                               <button
                                 type="button"
                                 onClick={() => setMode({ edit: item })}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+                                className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                                 aria-label={`Edit ${item.name}`}
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDelete(item.id)}
+                                onClick={() => setPendingDelete(item)}
                                 disabled={deletingId === item.id}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-on-error-container disabled:opacity-40"
+                                className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-on-surface-variant hover:bg-error-container hover:text-on-error-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40"
                                 aria-label={`Delete ${item.name}`}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -438,16 +430,16 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
                         <button
                           type="button"
                           onClick={() => setMode({ edit: item })}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+                          className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                           aria-label={`Edit ${item.name}`}
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => setPendingDelete(item)}
                           disabled={deletingId === item.id}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-on-error-container disabled:opacity-40"
+                          className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-on-surface-variant hover:bg-error-container hover:text-on-error-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40"
                           aria-label={`Delete ${item.name}`}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -485,6 +477,24 @@ export function MaterialItemList({ initialItems }: MaterialItemListProps) {
           </button>
         </>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete item?"
+        message={
+          pendingDelete
+            ? `"${pendingDelete.name}" will be permanently removed from your price book.`
+            : ''
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={() => {
+          if (pendingDelete) void handleDelete(pendingDelete.id);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

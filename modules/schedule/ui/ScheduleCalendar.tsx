@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -24,6 +24,10 @@ import {
   type ScheduleEventInput,
 } from '@/modules/schedule/application/actions';
 import { useToast } from '@/components/ui/toast';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/shared/SectionLabel';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { JOB_STATUS_TONE, STATUS_TONE_BG } from '@/lib/constants/status-colors';
 import type { JobStatus } from '@/modules/jobs/domain/jobs';
 
 export type CalendarJob = {
@@ -155,13 +159,6 @@ const SYDNEY_TIME_FORMATTER = new Intl.DateTimeFormat('en-AU', {
   minute: '2-digit',
   hour12: true,
 });
-
-const STATUS_BADGE: Record<JobStatus, string> = {
-  scheduled: 'border-primary/20 bg-primary/10 text-primary',
-  in_progress: 'border-warning/30 bg-warning-container text-warning',
-  completed: 'border-success/30 bg-success-container text-success',
-  cancelled: 'border-error/30 bg-error-container text-error',
-};
 
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const TABLET_AGENDA_VIEW_QUERY = '(max-width: 1023px)';
@@ -477,6 +474,15 @@ function EventModal({
   );
   const [error, setError] = useState<string | null>(null);
 
+  // ESC 키로 닫기 (ConfirmDialog 패턴)
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title.trim()) {
@@ -536,12 +542,19 @@ function EventModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="event-modal-title"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-2xl">
-        <ModalHeader title={editing ? 'Edit Event' : 'Add Event'} onClose={onClose} />
+      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface-container-lowest p-6 shadow-2xl sm:rounded-2xl">
+        <ModalHeader
+          title={editing ? 'Edit Event' : 'New Event'}
+          titleId="event-modal-title"
+          onClose={onClose}
+        />
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field label="Title">
             <input
@@ -549,7 +562,7 @@ function EventModal({
               value={form.title}
               onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
               placeholder="e.g. Site inspection"
-              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="h-11 rounded-xl border border-outline bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               autoFocus
             />
           </Field>
@@ -558,7 +571,7 @@ function EventModal({
               type="date"
               value={form.date}
               onChange={(e) => setForm((c) => ({ ...c, date: e.target.value }))}
-              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="h-11 rounded-xl border border-outline bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </Field>
           <label className="flex min-h-11 items-center gap-3 text-sm font-medium text-on-surface">
@@ -577,7 +590,7 @@ function EventModal({
                   type="time"
                   value={form.startTime}
                   onChange={(e) => setForm((c) => ({ ...c, startTime: e.target.value }))}
-                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  className="h-11 rounded-xl border border-outline bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </Field>
               <Field label="End time">
@@ -585,7 +598,7 @@ function EventModal({
                   type="time"
                   value={form.endTime}
                   onChange={(e) => setForm((c) => ({ ...c, endTime: e.target.value }))}
-                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  className="h-11 rounded-xl border border-outline bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </Field>
             </div>
@@ -596,7 +609,7 @@ function EventModal({
               value={form.location}
               onChange={(e) => setForm((c) => ({ ...c, location: e.target.value }))}
               placeholder="Optional"
-              className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="h-11 rounded-xl border border-outline bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </Field>
           <Field label="Notes">
@@ -605,17 +618,17 @@ function EventModal({
               onChange={(e) => setForm((c) => ({ ...c, notes: e.target.value }))}
               rows={3}
               placeholder="Optional"
-              className="rounded-xl border border-outline bg-white px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="rounded-xl border border-outline bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </Field>
-          {error && <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-error">{error}</p>}
+          {error && <ErrorAlert>{error}</ErrorAlert>}
           <div className="flex items-center gap-3 pt-1">
             {editing && (
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="flex h-11 w-11 items-center justify-center rounded-xl border border-error/30 text-error transition-colors hover:bg-error-container disabled:opacity-50"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-error/30 text-error transition-colors hover:bg-error-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
                 aria-label="Delete event"
                 title="Delete event"
               >
@@ -625,16 +638,16 @@ function EventModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-outline text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-outline text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
             >
-              {isPending ? 'Saving...' : editing ? 'Save' : 'Add'}
+              {isPending ? 'Saving...' : 'Save'}
             </button>
           </div>
         </form>
@@ -673,6 +686,17 @@ function JobScheduleModal({
   );
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // ESC 키로 닫기 + 열릴 때 닫기 버튼으로 초기 포커스 (ConfirmDialog 패턴)
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   function syncRangeFromDates(nextDates: string[]) {
     const sortedDates = sortUniqueDates(nextDates);
@@ -758,12 +782,20 @@ function JobScheduleModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="job-schedule-modal-title"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-2xl">
-        <ModalHeader title="Edit Job Schedule" onClose={onClose} />
+      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface-container-lowest p-6 shadow-2xl sm:rounded-2xl">
+        <ModalHeader
+          title="Edit Job Schedule"
+          titleId="job-schedule-modal-title"
+          onClose={onClose}
+          closeButtonRef={closeButtonRef}
+        />
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="rounded-xl border border-outline bg-surface-container-low/40 p-4">
             <p className="text-sm font-semibold text-on-surface">{job.customerName}</p>
@@ -841,7 +873,7 @@ function JobScheduleModal({
                     setStartDate(nextStart);
                     if (endDate < nextStart) setEndDate(nextStart);
                   }}
-                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  className="h-11 rounded-xl border border-outline bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </Field>
               <Field label="End date">
@@ -850,7 +882,7 @@ function JobScheduleModal({
                   value={endDate}
                   min={startDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="h-11 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  className="h-11 rounded-xl border border-outline bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </Field>
             </div>
@@ -863,14 +895,14 @@ function JobScheduleModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-outline text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+              className="flex h-11 flex-1 items-center justify-center rounded-xl border border-outline text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="flex h-11 flex-1 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
             >
               {isPending ? 'Saving...' : 'Save range'}
             </button>

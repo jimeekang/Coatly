@@ -53,7 +53,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={[
-              'h-12 w-full appearance-none rounded-xl border bg-white pl-4 pr-10',
+              'h-12 w-full appearance-none rounded-xl border bg-surface-container-lowest pl-4 pr-10',
               'text-base text-on-surface transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-primary/20',
               error

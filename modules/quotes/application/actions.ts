@@ -1155,6 +1155,74 @@ export async function approveQuote(
   revalidatePath(`/quotes/${quoteId}`);
 }
 
+export async function sendQuoteToClient(
+  quoteId: string
+): Promise<{ error: string } | void> {
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: quote, error: fetchError } = await supabase
+    .from('quotes')
+    .select('id, status, customer_id, customer_email')
+    .eq('id', quoteId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (fetchError || !quote) return { error: 'Quote not found.' };
+
+  if (!['draft', 'sent'].includes(quote.status)) {
+    return { error: 'Only draft or sent quotes can be sent to the client.' };
+  }
+
+  let recipientEmail = quote.customer_email?.trim() ?? '';
+  if (!recipientEmail) {
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('email, emails')
+      .eq('id', quote.customer_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (customerError) {
+      return { error: customerError.message };
+    }
+
+    recipientEmail = customer ? (normalizeCustomerEmails(customer)[0] ?? '') : '';
+  }
+
+  if (!recipientEmail) {
+    return { error: 'Add a customer email before sending this quote.' };
+  }
+
+  const { error: emailError } = await sendQuoteDocumentEmail({
+    supabase,
+    userId: user.id,
+    userEmail: user.email ?? null,
+    quoteId: quote.id,
+    to: recipientEmail,
+  });
+
+  if (emailError) {
+    return { error: emailError };
+  }
+
+  const { error: sentStatusError } = await supabase
+    .from('quotes')
+    .update({ status: 'sent' })
+    .eq('id', quoteId)
+    .eq('user_id', user.id);
+
+  if (sentStatusError) {
+    return { error: sentStatusError.message };
+  }
+
+  revalidatePath('/quotes');
+  revalidatePath(`/quotes/${quoteId}`);
+}
+
 export async function deleteQuote(
   quoteId: string
 ): Promise<{ error: string } | void> {

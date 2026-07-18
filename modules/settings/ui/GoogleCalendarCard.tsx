@@ -2,6 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
+import { FormLabel, formControlClassName } from '@/components/forms/FormField';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/shared/SectionLabel';
 import type { GoogleCalendarIntegrationSummary } from '@/modules/schedule/infrastructure/google-calendar/types';
 import type { GoogleCalendarSettingsInput } from '@/lib/supabase/validators';
 
@@ -14,11 +17,8 @@ type DisconnectGoogleCalendarAction = () => Promise<{
   success: string | null;
 }>;
 
-const inputBase =
-  'w-full rounded-xl border border-outline bg-white px-4 text-sm text-on-surface transition-colors focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50';
-
 function selectClass() {
-  return `${inputBase} h-12`;
+  return `${formControlClassName} disabled:opacity-50`;
 }
 
 export default function GoogleCalendarCard({
@@ -104,7 +104,7 @@ export default function GoogleCalendarCard({
 
   if (!canConnectGoogleCalendar || !integration) {
     return (
-      <section className="rounded-2xl border border-outline bg-white p-5">
+      <section className="rounded-2xl border border-outline bg-surface-container-lowest p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-on-surface">Calendar</h3>
@@ -122,7 +122,7 @@ export default function GoogleCalendarCard({
   }
 
   return (
-    <section className="rounded-2xl border border-outline bg-white p-5">
+    <section className="rounded-2xl border border-outline bg-surface-container-lowest p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-on-surface">Google Calendar</h3>
@@ -138,14 +138,14 @@ export default function GoogleCalendarCard({
               type="button"
               onClick={handleDisconnect}
               disabled={isPending}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low disabled:opacity-60"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60"
             >
               {isPending ? 'Disconnecting...' : 'Disconnect'}
             </button>
           ) : (
             <a
               href="/api/integrations/google-calendar/connect?next=/settings"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               Connect Google Calendar
             </a>
@@ -158,9 +158,9 @@ export default function GoogleCalendarCard({
       </div>
 
       {(errorMessage || integration.warning || localError) && (
-        <div className="mt-5 rounded-xl border border-error/30 bg-error-container/40 px-4 py-3 text-sm text-on-error-container">
+        <ErrorAlert className="mt-5">
           {localError ?? errorMessage ?? integration.warning}
-        </div>
+        </ErrorAlert>
       )}
 
       {(successMessage || localSuccess) && (
@@ -178,17 +178,13 @@ export default function GoogleCalendarCard({
         <div className="mt-5 space-y-5">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
-                Connected account
-              </p>
+              <SectionLabel>Connected account</SectionLabel>
               <p className="mt-1 text-sm font-medium text-on-surface">
                 {integration.accountEmail ?? 'Unknown account'}
               </p>
             </div>
             <div className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
-                Last sync
-              </p>
+              <SectionLabel>Last sync</SectionLabel>
               <p className="mt-1 text-sm font-medium text-on-surface">
                 {integration.lastSyncAt
                   ? new Date(integration.lastSyncAt).toLocaleString('en-AU')
@@ -204,10 +200,11 @@ export default function GoogleCalendarCard({
           ) : (
             <div className="grid gap-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-on-surface">
+                <FormLabel htmlFor="google-display-calendar">
                   Schedule display calendar
-                </label>
+                </FormLabel>
                 <select
+                  id="google-display-calendar"
                   value={displayCalendarId}
                   onChange={(event) => setDisplayCalendarId(event.target.value)}
                   disabled={isPending}
@@ -223,10 +220,11 @@ export default function GoogleCalendarCard({
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-on-surface">
+                <FormLabel htmlFor="google-availability-calendar">
                   Booking availability calendar
-                </label>
+                </FormLabel>
                 <select
+                  id="google-availability-calendar"
                   value={availabilityCalendarId}
                   onChange={(event) => setAvailabilityCalendarId(event.target.value)}
                   disabled={isPending}
@@ -242,10 +240,11 @@ export default function GoogleCalendarCard({
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-on-surface">
+                <FormLabel htmlFor="google-destination-calendar">
                   Booking destination calendar
-                </label>
+                </FormLabel>
                 <select
+                  id="google-destination-calendar"
                   value={eventDestinationCalendarId}
                   onChange={(event) => setEventDestinationCalendarId(event.target.value)}
                   disabled={isPending}
@@ -261,8 +260,9 @@ export default function GoogleCalendarCard({
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-on-surface">Timezone</label>
+                <FormLabel htmlFor="google-calendar-timezone">Timezone</FormLabel>
                 <input
+                  id="google-calendar-timezone"
                   type="text"
                   value={timezone}
                   onChange={(event) => setTimezone(event.target.value)}
@@ -276,7 +276,7 @@ export default function GoogleCalendarCard({
                 type="button"
                 onClick={handleSave}
                 disabled={isPending}
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-60"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60"
               >
                 {isPending ? 'Saving...' : 'Save Google Calendar settings'}
               </button>

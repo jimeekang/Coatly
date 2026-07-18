@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/toast';
 import { PLANS } from '@/config/plans';
 import type { BillingInterval, PlanId } from '@/config/plans';
 
@@ -58,6 +59,7 @@ export default function PricingSection({
   returnPath = '/settings/billing',
 }: PricingSectionProps) {
   const router = useRouter();
+  const toast = useToast();
   const [interval, setInterval] = useState<BillingInterval>('monthly');
   const [loading, setLoading] = useState<LoadingState>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -92,9 +94,9 @@ export default function PricingSection({
         window.location.href = data.url;
         return;
       }
-      alert(data.error ?? 'Something went wrong');
+      toast.error(data.error ?? 'Something went wrong');
     } catch {
-      alert('Failed to start checkout');
+      toast.error('Failed to start checkout');
     } finally {
       setLoading(null);
     }
@@ -131,9 +133,9 @@ export default function PricingSection({
           return;
         }
       }
-      alert(data.error ?? 'Something went wrong');
+      toast.error(data.error ?? 'Something went wrong');
     } catch {
-      alert('Failed to open billing portal');
+      toast.error('Failed to open billing portal');
     } finally {
       setLoading(null);
     }
@@ -147,13 +149,13 @@ export default function PricingSection({
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error ?? 'Failed to resume renewal');
+        toast.error(data.error ?? 'Failed to resume renewal');
         return;
       }
 
       router.refresh();
     } catch {
-      alert('Failed to resume renewal');
+      toast.error('Failed to resume renewal');
     } finally {
       setLoading(null);
     }
@@ -225,7 +227,7 @@ export default function PricingSection({
       </div>
 
       {hasSubscription && currentPlan && (
-        <div className="rounded-xl border border-success-container bg-success-container px-4 py-3">
+        <div className="rounded-2xl border border-success-container bg-success-container px-4 py-3">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -259,14 +261,14 @@ export default function PricingSection({
                     })
                   }
                   disabled={loading === 'portal-payment'}
-                  className="rounded-lg border border-primary-fixed bg-white px-3 py-1.5 text-sm font-medium text-primary/90 hover:bg-success-container disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary-fixed bg-surface-container-lowest px-3 py-1.5 text-sm font-medium text-primary/90 hover:bg-success-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
                 >
                   {loading === 'portal-payment' ? 'Loading...' : 'Update payment method'}
                 </button>
                 <button
                   onClick={() => openBillingPortal({ loadingState: 'portal-invoices' })}
                   disabled={loading === 'portal-invoices'}
-                  className="rounded-lg border border-outline bg-white px-3 py-1.5 text-sm font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline bg-surface-container-lowest px-3 py-1.5 text-sm font-medium text-on-surface hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
                 >
                   {loading === 'portal-invoices' ? 'Loading...' : 'Invoices & receipts'}
                 </button>
@@ -274,7 +276,7 @@ export default function PricingSection({
                   <button
                     onClick={resumeRenewal}
                     disabled={loading === 'portal-resume'}
-                    className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary hover:bg-primary/90 disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
                   >
                     {loading === 'portal-resume' ? 'Loading...' : 'Resume renewal'}
                   </button>
@@ -287,7 +289,7 @@ export default function PricingSection({
                       })
                     }
                     disabled={loading === 'portal-cancel'}
-                    className="rounded-lg border border-error bg-white px-3 py-1.5 text-sm font-medium text-on-error-container hover:bg-error-container disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-error bg-surface-container-lowest px-3 py-1.5 text-sm font-medium text-on-error-container hover:bg-error-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
                   >
                     {loading === 'portal-cancel' ? 'Loading...' : 'Cancel at renewal'}
                   </button>
@@ -295,7 +297,7 @@ export default function PricingSection({
               </div>
             </div>
 
-            <div className="rounded-lg border border-primary-fixed/70 bg-white/70 px-3 py-2 text-xs text-on-surface-variant">
+            <div className="rounded-xl border border-primary-fixed/70 bg-surface-container-lowest/70 px-3 py-2 text-xs text-on-surface-variant">
               Update payment method opens the Stripe card screen. Invoices & receipts opens
               your Stripe billing portal home with billing history and downloadable invoices.
             </div>
@@ -305,14 +307,15 @@ export default function PricingSection({
 
       <div className="flex items-center gap-3">
         <span className="text-sm text-on-surface-variant">Billing:</span>
-        <div className="flex rounded-lg border border-outline bg-surface-container-low p-0.5">
+        <div className="flex rounded-xl border border-outline bg-surface-container-low p-0.5">
           {(['monthly', 'annual'] as BillingInterval[]).map((selectedInterval) => (
             <button
               key={selectedInterval}
               onClick={() => setInterval(selectedInterval)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              aria-pressed={interval === selectedInterval}
+              className={`inline-flex min-h-11 items-center rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
                 interval === selectedInterval
-                  ? 'bg-white text-on-surface shadow-sm'
+                  ? 'bg-surface-container-lowest text-on-surface shadow-sm'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
@@ -341,7 +344,7 @@ export default function PricingSection({
                 planId === 'pro'
                   ? 'border-primary-container ring-1 ring-primary-container'
                   : 'border-outline'
-              } ${isCurrent ? 'bg-success-container/30' : 'bg-white'}`}
+              } ${isCurrent ? 'bg-success-container/30' : 'bg-surface-container-lowest'}`}
             >
               {planId === 'pro' && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-on-primary">
@@ -423,10 +426,10 @@ export default function PricingSection({
                     });
                   }}
                   disabled={action.disabled || loading === action.loadingState}
-                  className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                  className={`inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 ${
                     planId === 'pro'
                       ? 'bg-primary text-on-primary hover:bg-primary/90'
-                      : 'border border-outline bg-white text-on-surface hover:bg-surface-container-low'
+                      : 'border border-outline bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
                   }`}
                 >
                   {loading === action.loadingState ? 'Loading...' : action.label}
@@ -435,10 +438,10 @@ export default function PricingSection({
                 <button
                   onClick={() => handleSubscribe(planId)}
                   disabled={loading === planId}
-                  className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                  className={`inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 ${
                     planId === 'pro'
                       ? 'bg-primary text-on-primary hover:bg-primary/90'
-                      : 'bg-on-surface text-white hover:bg-primary'
+                      : 'border border-outline bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
                   }`}
                 >
                   {loading === planId

@@ -13,7 +13,7 @@ export function BackButton({ href, label, className }: BackButtonProps) {
       href={href}
       aria-label={label}
       className={cn(
-        'flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors hover:bg-primary-container hover:text-on-primary-container active:bg-outline-variant',
+        'flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors hover:bg-primary-container hover:text-on-primary-container active:bg-outline-variant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         className,
       )}
     >

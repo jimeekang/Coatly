@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -23,6 +23,8 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
   // ESC 키로 닫기
   useEffect(() => {
     if (!open) return;
@@ -32,6 +34,11 @@ export function ConfirmDialog({
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open, onCancel]);
+
+  // 열릴 때 취소 버튼으로 초기 포커스 이동
+  useEffect(() => {
+    if (open) cancelButtonRef.current?.focus();
+  }, [open]);
 
   // 스크롤 잠금
   useEffect(() => {
@@ -60,7 +67,7 @@ export function ConfirmDialog({
       />
 
       {/* 다이얼로그 패널 */}
-      <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-xl p-6 flex flex-col gap-4">
+      <div className="relative w-full max-w-sm rounded-2xl bg-surface-container-lowest shadow-xl p-6 flex flex-col gap-4">
         <div>
           <h2
             id="confirm-dialog-title"
@@ -73,16 +80,17 @@ export function ConfirmDialog({
 
         <div className="flex gap-3 pt-1">
           <button
+            ref={cancelButtonRef}
             type="button"
             onClick={onCancel}
-            className="flex-1 h-12 rounded-xl border border-outline bg-white text-sm font-medium text-on-surface hover:bg-surface-container-low active:bg-surface-container-low transition-colors"
+            className="flex-1 h-12 rounded-xl border border-outline bg-surface-container-lowest text-sm font-medium text-on-surface hover:bg-surface-container-low active:bg-surface-container-low transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`flex-1 h-12 rounded-xl text-sm font-semibold transition-colors ${
+            className={`flex-1 h-12 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
               destructive
                 ? 'bg-error text-on-error hover:bg-error/90 active:bg-error/90'
                 : 'bg-primary text-on-primary hover:bg-primary/90 active:bg-primary/90'

@@ -35,7 +35,7 @@ export function PageHeader({
         {backHref && (
           <Link
             href={backHref}
-            className="mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-on-surface-variant transition-colors hover:text-on-surface"
+            className="mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
             {backLabel}
@@ -66,7 +66,7 @@ export function PrimaryActionLink({ href, children, className }: PrimaryActionLi
     <Link
       href={href}
       className={cn(
-        'inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 sm:px-5',
+        'inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-5',
         className,
       )}
     >
@@ -86,7 +86,7 @@ export function SecondaryActionLink({
     <Link
       href={href}
       className={cn(
-        'inline-flex min-h-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high sm:px-5',
+        'inline-flex min-h-11 items-center justify-center rounded-xl border border-outline-variant bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-5',
         className,
       )}
     >
