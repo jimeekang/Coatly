@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { Pencil } from 'lucide-react';
+import { ExternalLink, Pencil } from 'lucide-react';
 import {
   getQuote,
   setQuoteOptionalLineItemSelection,
@@ -22,7 +22,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { QUOTE_STATUS_TONE } from '@/lib/constants/status-colors';
-import { BackLink } from '@/components/layout/BackLink';
+import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 export const metadata: Metadata = { title: 'Quote Detail' };
@@ -152,27 +152,22 @@ export default async function QuoteDetailPage({
     : [];
 
   return (
-    <div className="mx-auto max-w-4xl pb-24">
-      {/* Back nav */}
-      <div className="mb-4">
-        <BackLink href="/quotes" label="All quotes" />
-      </div>
-
+    <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-4 pb-24 sm:gap-6">
       {error || !quote ? (
         <ErrorAlert>{error ?? 'Quote not found.'}</ErrorAlert>
       ) : (
         <>
           {/* Banners */}
           {emailSent && (
-            <div className="border-primary/20 bg-primary/8 mb-4 rounded-xl border px-4 py-3">
+            <div className="border-primary/20 bg-primary/8 rounded-xl border px-4 py-3">
               <p className="text-primary text-sm">
                 Quote email sent to {emailSentRecipient}.
               </p>
             </div>
           )}
-          {jobError && <ErrorAlert className="mb-4">{jobError}</ErrorAlert>}
+          {jobError && <ErrorAlert>{jobError}</ErrorAlert>}
           {(editLocked || quote.has_linked_invoices) && (
-            <div className="border-warning/20 bg-warning-container mb-4 rounded-xl border px-4 py-3">
+            <div className="border-warning/20 bg-warning-container rounded-xl border px-4 py-3">
               <p className="text-on-warning-container text-sm">
                 This quote is locked because at least one linked invoice already
                 exists.
@@ -180,47 +175,51 @@ export default async function QuoteDetailPage({
             </div>
           )}
 
-          {/* ── detail-head ── */}
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <div className="min-w-0">
-              <SectionLabel className="mb-1 font-mono">
-                {quote.quote_number}
-              </SectionLabel>
-              <h1 className="text-on-surface mt-1 text-[26px] leading-tight font-extrabold tracking-tight">
-                {quote.customer.company_name || quote.customer.name}
-              </h1>
-              {quote.title && (
-                <p className="text-on-surface-variant mt-1 text-sm">
-                  {quote.title}
-                </p>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <StatusBadge
-                tone={QUOTE_STATUS_TONE[quote.status]}
-                label={QUOTE_STATUS_LABELS[quote.status]}
-                size="md"
-              />
-              {!quote.has_linked_invoices && (
-                <Link
-                  href={`/quotes/${id}/edit`}
-                  className="bg-primary text-on-primary focus-visible:ring-primary focus-visible:ring-offset-surface inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                >
-                  <Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  Edit
-                </Link>
-              )}
-            </div>
-          </div>
+          <PageHeader
+            backHref="/quotes"
+            backLabel="All quotes"
+            title={quote.customer.company_name || quote.customer.name}
+            subtitle={
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-mono text-xs font-bold tracking-[0.18em] uppercase">
+                  {quote.quote_number}
+                </span>
+                {quote.title && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{quote.title}</span>
+                  </>
+                )}
+              </span>
+            }
+            action={
+              <>
+                <StatusBadge
+                  tone={QUOTE_STATUS_TONE[quote.status]}
+                  label={QUOTE_STATUS_LABELS[quote.status]}
+                  size="md"
+                />
+                {!quote.has_linked_invoices && (
+                  <PrimaryActionLink
+                    href={`/quotes/${id}/edit`}
+                    className="gap-2"
+                  >
+                    <Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    Edit
+                  </PrimaryActionLink>
+                )}
+              </>
+            }
+          />
 
           {/* ── detail-grid: main card + sidebar ── */}
-          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(18rem,0.9fr)] xl:gap-6">
             {/* ── Main card: Line items + Totals ── */}
-            <div className="bg-surface-container-lowest border-outline-variant min-w-0 self-start rounded-2xl border shadow-sm">
-              <div className="p-4">
-                <p className="text-on-surface mb-3 text-[13px] font-bold tracking-[-0.005em]">
+            <section className="border-outline-variant bg-surface-container-lowest min-w-0 self-start rounded-2xl border shadow-sm">
+              <div className="p-4 sm:p-6">
+                <h2 className="text-on-surface mb-4 text-lg font-bold tracking-tight">
                   Line items
-                </p>
+                </h2>
 
                 {/* Table header — md+ only */}
                 {scopeRows.length > 0 && (
@@ -404,71 +403,82 @@ export default async function QuoteDetailPage({
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* ── Sidebar: meta-boxes ── */}
-            <div className="flex min-w-0 flex-col gap-4">
-              {/* Customer meta-box */}
-              <div className="border-outline-variant bg-surface-container-low rounded-2xl border p-4 shadow-sm">
-                <SectionLabel className="text-on-surface mb-1.5">
-                  Customer
-                </SectionLabel>
-                <p className="text-on-surface text-sm font-semibold">
-                  {quote.customer.company_name || quote.customer.name}
-                </p>
-                {quote.customer.company_name && (
-                  <p className="text-on-surface-variant mt-0.5 text-xs">
-                    {quote.customer.name}
+            <aside className="flex min-w-0 flex-col gap-4">
+              <section className="border-outline-variant bg-surface-container-lowest min-w-0 overflow-hidden rounded-2xl border shadow-sm">
+                <div className="p-4 sm:p-5">
+                  <SectionLabel className="mb-2">Customer</SectionLabel>
+                  <p className="text-on-surface text-base font-semibold break-words">
+                    {quote.customer.company_name || quote.customer.name}
                   </p>
-                )}
-                {quote.customer.email && (
-                  <p className="text-on-surface-variant mt-1 text-xs">
-                    {quote.customer.email}
-                  </p>
-                )}
-                {quote.customer.phone && (
-                  <p className="text-on-surface-variant mt-0.5 text-xs">
-                    {quote.customer.phone}
-                  </p>
-                )}
-                {quote.customer.address && (
-                  <p className="text-on-surface-variant mt-1 text-xs">
-                    {quote.customer.address}
-                  </p>
-                )}
-              </div>
-
-              {/* Dates meta-box */}
-              <div className="border-outline-variant bg-surface-container-low rounded-2xl border p-4 shadow-sm">
-                <SectionLabel className="text-on-surface mb-1.5">
-                  Dates
-                </SectionLabel>
-                <p className="text-on-surface text-sm font-semibold">
-                  Created {formatDate(quote.created_at)}
-                </p>
-                <p className="text-on-surface-variant mt-1 text-xs">
-                  Valid until{' '}
-                  {quote.valid_until ? formatDate(quote.valid_until) : '—'}
-                </p>
-                <p className="text-on-surface-variant mt-0.5 text-xs">
-                  Modified {formatDate(quote.updated_at)}
-                </p>
-              </div>
-
-              {/* Client Link meta-box */}
-              {publicQuoteUrl && (
-                <div className="border-outline-variant bg-surface-container-low rounded-2xl border p-4 shadow-sm">
-                  <SectionLabel className="text-on-surface mb-1.5">
-                    Client Link
-                  </SectionLabel>
-                  <p className="text-on-surface text-xs break-all">
-                    {publicQuoteUrl}
-                  </p>
+                  {quote.customer.company_name && (
+                    <p className="text-on-surface-variant mt-0.5 text-sm break-words">
+                      {quote.customer.name}
+                    </p>
+                  )}
+                  {quote.customer.email && (
+                    <p className="text-on-surface-variant mt-2 text-sm break-words">
+                      {quote.customer.email}
+                    </p>
+                  )}
+                  {quote.customer.phone && (
+                    <p className="text-on-surface-variant mt-0.5 text-sm">
+                      {quote.customer.phone}
+                    </p>
+                  )}
+                  {quote.customer.address && (
+                    <p className="text-on-surface-variant mt-2 text-sm leading-relaxed break-words">
+                      {quote.customer.address}
+                    </p>
+                  )}
                 </div>
-              )}
+
+                <div className="border-outline-variant border-t p-4 sm:p-5">
+                  <SectionLabel className="mb-3">Dates</SectionLabel>
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-4">
+                      <dt className="text-on-surface-variant">Created</dt>
+                      <dd className="text-on-surface font-semibold">
+                        {formatDate(quote.created_at)}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <dt className="text-on-surface-variant">Valid until</dt>
+                      <dd className="text-on-surface font-medium">
+                        {quote.valid_until
+                          ? formatDate(quote.valid_until)
+                          : '—'}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <dt className="text-on-surface-variant">Modified</dt>
+                      <dd className="text-on-surface font-medium">
+                        {formatDate(quote.updated_at)}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+
+                {publicQuoteUrl && (
+                  <div className="border-outline-variant border-t p-4 sm:p-5">
+                    <SectionLabel className="mb-2">Customer view</SectionLabel>
+                    <Link
+                      href={publicQuoteUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary hover:text-primary/80 focus-visible:ring-primary/40 inline-flex min-h-11 items-center gap-2 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      Open shared quote
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </div>
+                )}
+              </section>
 
               {/* Profitability + Cost Breakdown — grouped together */}
-              <div className="flex flex-col gap-4">
+              <div className="flex min-w-0 flex-col gap-4">
                 <ProfitabilityCard
                   quote={quote}
                   targetDailyEarningsCents={
@@ -480,10 +490,10 @@ export default async function QuoteDetailPage({
                 {showBreakdown && (
                   <div className="border-warning/20 bg-warning-container overflow-hidden rounded-2xl border">
                     <div className="border-warning/20 flex items-center justify-between gap-2 border-b px-4 py-3">
-                      <SectionLabel className="text-warning">
+                      <SectionLabel className="text-on-warning-container">
                         Cost Breakdown
                       </SectionLabel>
-                      <span className="bg-warning/10 text-warning rounded-full px-2 py-0.5 text-[9px] font-bold tracking-widest uppercase">
+                      <span className="bg-warning/15 text-on-warning-container rounded-full px-2 py-0.5 text-[9px] font-bold tracking-widest uppercase">
                         Internal
                       </span>
                     </div>
@@ -570,20 +580,20 @@ export default async function QuoteDetailPage({
 
               {/* Approval */}
               {quote.approved_at && (
-                <div className="border-success/20 bg-success-container min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm">
-                  <SectionLabel className="text-success mb-1.5">
+                <section className="border-success/20 bg-success-container min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm sm:p-5">
+                  <SectionLabel className="text-on-success-container mb-2">
                     Approved
                   </SectionLabel>
-                  <p className="text-on-surface text-sm font-semibold">
+                  <p className="text-on-success-container text-base font-semibold">
                     {formatDate(quote.approved_at)}
                   </p>
                   {quote.approved_by_name && (
-                    <p className="text-on-surface-variant mt-0.5 text-xs">
+                    <p className="text-on-success-container mt-0.5 text-sm">
                       by {quote.approved_by_name}
                     </p>
                   )}
                   {quote.approved_by_email && (
-                    <p className="text-on-surface-variant mt-0.5 text-xs">
+                    <p className="text-on-success-container mt-0.5 text-sm break-words">
                       {quote.approved_by_email}
                     </p>
                   )}
@@ -594,15 +604,15 @@ export default async function QuoteDetailPage({
                       width={320}
                       height={96}
                       unoptimized
-                      className="mt-3 max-h-24 w-full max-w-xs rounded-xl border border-success/20 bg-surface-container-lowest object-contain p-2"
+                      className="border-success/20 bg-surface-container-lowest mt-3 max-h-24 w-full max-w-xs rounded-xl border object-contain p-2"
                     />
                   )}
                   {quote.approval_signature && !approvalSignatureIsImage && (
-                    <p className="mt-1 break-words text-xs text-on-surface-variant">
+                    <p className="text-on-success-container mt-2 text-sm break-words">
                       Signed: {quote.approval_signature}
                     </p>
                   )}
-                </div>
+                </section>
               )}
 
               {/* Notes — directly above Billing Progress */}
@@ -610,9 +620,7 @@ export default async function QuoteDetailPage({
                 <div className="border-outline-variant bg-surface-container-low space-y-3 rounded-2xl border p-4 shadow-sm">
                   {quote.notes && (
                     <div>
-                      <SectionLabel className="text-on-surface mb-1.5">
-                        Client Notes
-                      </SectionLabel>
+                      <SectionLabel className="mb-2">Client Notes</SectionLabel>
                       <p className="text-on-surface text-sm whitespace-pre-wrap">
                         {quote.notes}
                       </p>
@@ -620,7 +628,7 @@ export default async function QuoteDetailPage({
                   )}
                   {quote.internal_notes && (
                     <div>
-                      <SectionLabel className="text-on-surface mb-1.5">
+                      <SectionLabel className="mb-2">
                         Internal Notes
                       </SectionLabel>
                       <p className="text-on-surface text-sm whitespace-pre-wrap">
@@ -635,9 +643,7 @@ export default async function QuoteDetailPage({
               {linkedInvoices.length > 0 && (
                 <div className="border-outline-variant bg-surface-container-lowest overflow-hidden rounded-2xl border shadow-sm">
                   <div className="bg-surface-container-low border-outline-variant border-b px-4 py-3">
-                    <SectionLabel className="text-on-surface">
-                      Billing Progress
-                    </SectionLabel>
+                    <SectionLabel>Billing Progress</SectionLabel>
                   </div>
                   <div className="divide-outline-variant border-outline-variant grid grid-cols-3 divide-x border-b text-center">
                     <div className="px-2 py-3">
@@ -673,7 +679,7 @@ export default async function QuoteDetailPage({
                       <Link
                         key={invoice.id}
                         href={`/invoices/${invoice.id}`}
-                        className="hover:bg-surface-container-low focus-visible:ring-primary/30 flex items-center justify-between gap-3 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+                        className="hover:bg-surface-container-low focus-visible:ring-primary/30 flex items-center justify-between gap-3 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5">
@@ -703,21 +709,18 @@ export default async function QuoteDetailPage({
                   </div>
                 </div>
               )}
-            </div>
+            </aside>
           </div>
 
-          {/* Actions */}
-          <div className="mt-4">
-            <QuoteActions
-              quoteId={quote.id}
-              quoteNumber={quote.quote_number}
-              status={quote.status}
-              publicQuoteUrl={publicQuoteUrl}
-              recipientEmail={quoteRecipientEmail}
-              hasLinkedInvoices={quote.has_linked_invoices}
-              convertQuoteToJobAction={createJobFromQuote}
-            />
-          </div>
+          <QuoteActions
+            quoteId={quote.id}
+            quoteNumber={quote.quote_number}
+            status={quote.status}
+            publicQuoteUrl={publicQuoteUrl}
+            recipientEmail={quoteRecipientEmail}
+            hasLinkedInvoices={quote.has_linked_invoices}
+            convertQuoteToJobAction={createJobFromQuote}
+          />
         </>
       )}
     </div>
