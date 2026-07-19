@@ -173,7 +173,7 @@ function RateSetupSummary({
             type="button"
             onClick={() => setShowWarnings((open) => !open)}
             aria-expanded={showWarnings}
-            className="border-outline-variant bg-warning-container text-warning focus-visible:ring-primary/20 flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition-colors hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
+            className="border-outline-variant bg-warning-container text-on-warning-container focus-visible:ring-primary/20 flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition-colors hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
           >
             <span>
               {issues.length} setup warning{issues.length === 1 ? '' : 's'}

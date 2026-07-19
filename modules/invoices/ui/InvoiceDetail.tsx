@@ -92,8 +92,8 @@ const TIMELINE_DOT: Record<TimelineTone, string> = {
   neutral:
     'bg-surface-container-high text-on-surface-variant border-outline-variant',
   info: 'bg-primary/10 text-primary border-primary/20',
-  warning: 'bg-warning-container text-warning border-warning/25',
-  success: 'bg-success-container text-success border-success/25',
+  warning: 'bg-warning-container text-on-warning-container border-warning/25',
+  success: 'bg-success-container text-on-success-container border-success/25',
 };
 
 /* ──────────────────────────────────────────────────────────

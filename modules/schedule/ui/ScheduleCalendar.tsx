@@ -1806,8 +1806,8 @@ function getChipClassName(event: DayEvent): string {
   if (event.kind === 'job') {
     const color = {
       scheduled: 'border-primary/30 bg-primary/10 text-primary',
-      in_progress: 'border-warning/30 bg-warning-container text-warning',
-      completed: 'border-success/30 bg-success-container text-success',
+      in_progress: 'border-warning/30 bg-warning-container text-on-warning-container',
+      completed: 'border-success/30 bg-success-container text-on-success-container',
       cancelled: 'border-error/30 bg-error-container text-error',
     } satisfies Record<JobStatus, string>;
 

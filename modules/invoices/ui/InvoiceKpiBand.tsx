@@ -7,11 +7,11 @@ type KpiVariant = 'warning' | 'positive' | 'neutral';
 const VARIANT_STYLES: Record<KpiVariant, { tile: string; value: string }> = {
   warning: {
     tile: 'bg-warning-container border-warning/20',
-    value: 'text-warning',
+    value: 'text-on-warning-container',
   },
   positive: {
     tile: 'bg-success-container border-success/20',
-    value: 'text-success',
+    value: 'text-on-success-container',
   },
   neutral: {
     tile: 'bg-surface-container-low border-transparent',

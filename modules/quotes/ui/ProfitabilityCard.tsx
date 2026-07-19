@@ -62,9 +62,9 @@ function resolveCostSplit(quote: QuoteDetail): {
 function MarginBadge({ percent }: { percent: number }) {
   const color =
     percent >= 30
-      ? 'bg-success-container text-success border-success/25'
+      ? 'bg-success-container text-on-success-container border-success/25'
       : percent >= 20
-        ? 'bg-warning-container text-warning border-warning/25'
+        ? 'bg-warning-container text-on-warning-container border-warning/25'
         : 'bg-error-container text-error border-error/25';
 
   return (
@@ -207,7 +207,7 @@ export function ProfitabilityCard({
             const shortfall = targetTotal - profit_cents;
             if (shortfall <= 0) return null;
             return (
-              <div className="border-warning/25 bg-warning-container text-warning flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs">
+              <div className="border-warning/25 bg-warning-container text-on-warning-container flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
                   {formatAUD(shortfall)} below your target of{' '}
@@ -220,7 +220,7 @@ export function ProfitabilityCard({
 
         {/* Margin warning — shown regardless of method */}
         {margin_percent < 20 && profit_cents >= 0 && (
-          <div className="border-warning/25 bg-warning-container text-warning flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs">
+          <div className="border-warning/25 bg-warning-container text-on-warning-container flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>Margin below 20% — consider adjusting your price.</span>
           </div>

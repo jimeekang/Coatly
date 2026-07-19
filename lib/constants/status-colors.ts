@@ -8,7 +8,7 @@ export type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 export const STATUS_TONE_BG: Record<StatusTone, string> = {
   neutral: 'bg-surface-container-highest text-on-surface-variant',
   info:    'bg-primary/10 text-primary',
-  success: 'bg-success-container text-success',
+  success: 'bg-success-container text-on-success-container',
   warning: 'bg-warning-container text-on-warning-container',
   error:   'bg-error-container text-error',
 };

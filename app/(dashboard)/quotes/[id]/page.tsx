@@ -311,8 +311,8 @@ export default async function QuoteDetailPage({
                               <span
                                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase ${
                                   item.is_selected
-                                    ? 'bg-success-container text-success'
-                                    : 'bg-warning-container text-warning'
+                                    ? 'bg-success-container text-on-success-container'
+                                    : 'bg-warning-container text-on-warning-container'
                                 }`}
                               >
                                 {item.is_selected ? 'Selected' : 'Optional'}
