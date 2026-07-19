@@ -125,7 +125,7 @@ export default async function QuoteDetailPage({
   const approvalSignatureIsImage =
     quote?.approval_signature?.startsWith('data:image/') ?? false;
 
-  // Flatten all scope rows: rooms→surfaces + included line items
+  // Flatten every priced source so detail, PDF, and public quote show the same work.
   const scopeRows = quote
     ? [
         ...quote.rooms.flatMap((room) =>
@@ -139,6 +139,15 @@ export default async function QuoteDetailPage({
             amount: surface.total_cents,
           }))
         ),
+        ...(quote.estimate_items ?? []).map((item) => ({
+          key: `estimate-${item.id}`,
+          name: item.label,
+          sub: null as string | null,
+          notes: null as string | null,
+          qtyLabel: `${item.quantity} ${item.unit}`,
+          rateLabel: formatAUD(item.unit_price_cents),
+          amount: item.total_cents,
+        })),
         ...includedLineItems.map((item) => ({
           key: item.id,
           name: item.name,
