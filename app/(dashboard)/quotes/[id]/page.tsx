@@ -223,196 +223,214 @@ export default async function QuoteDetailPage({
 
           {/* ── detail-grid: main card + sidebar ── */}
           <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(18rem,0.9fr)] xl:gap-6">
-            {/* ── Main card: Line items + Totals ── */}
-            <section className="border-outline-variant bg-surface-container-lowest min-w-0 self-start rounded-2xl border shadow-sm">
-              <div className="p-4 sm:p-6">
-                <h2 className="text-on-surface mb-4 text-lg font-bold tracking-tight">
-                  Line items
-                </h2>
+            <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
+              {/* ── Main card: Line items + Totals ── */}
+              <section className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border shadow-sm">
+                <div className="p-4 sm:p-6">
+                  <h2 className="text-on-surface mb-4 text-lg font-bold tracking-tight">
+                    Line items
+                  </h2>
 
-                {/* Table header — md+ only */}
-                {scopeRows.length > 0 && (
-                  <div className="border-outline-variant hidden grid-cols-[1fr_90px_90px_90px] gap-3 border-b pb-2 md:grid">
-                    <SectionLabel as="div">Item</SectionLabel>
-                    <SectionLabel as="div" className="text-right">
-                      Qty
-                    </SectionLabel>
-                    <SectionLabel as="div" className="text-right">
-                      Rate
-                    </SectionLabel>
-                    <SectionLabel as="div" className="text-right">
-                      Amount
-                    </SectionLabel>
-                  </div>
-                )}
-
-                {/* Scope rows (rooms + line items flattened) */}
-                {scopeRows.length === 0 ? (
-                  <p className="text-on-surface-variant py-4 text-center text-sm">
-                    No line items added yet.
-                  </p>
-                ) : (
-                  scopeRows.map((row) => (
-                    <div
-                      key={row.key}
-                      className="border-outline-variant grid grid-cols-[1fr_auto] gap-x-3 border-t py-3 text-sm first:border-t-0 md:grid-cols-[1fr_90px_90px_90px]"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-on-surface font-semibold">
-                          {row.name}
-                        </p>
-                        {row.sub && (
-                          <p className="text-on-surface-variant mt-0.5 text-xs">
-                            {row.sub}
-                          </p>
-                        )}
-                        {row.notes && (
-                          <p className="text-on-surface-variant mt-0.5 text-xs italic">
-                            {row.notes}
-                          </p>
-                        )}
-                        {/* Mobile: qty · rate inline */}
-                        <p className="text-on-surface-variant mt-1 text-xs md:hidden">
-                          {row.qtyLabel} · {row.rateLabel}
-                        </p>
-                      </div>
-                      <div className="text-on-surface-variant hidden self-center text-right tabular-nums md:block">
-                        {row.qtyLabel}
-                      </div>
-                      <div className="text-on-surface-variant hidden self-center text-right tabular-nums md:block">
-                        {row.rateLabel}
-                      </div>
-                      <div className="text-on-surface self-center text-right font-bold tabular-nums">
-                        {formatAUD(row.amount)}
-                      </div>
+                  {/* Table header — md+ only */}
+                  {scopeRows.length > 0 && (
+                    <div className="border-outline-variant hidden grid-cols-[1fr_90px_90px_90px] gap-3 border-b pb-2 md:grid">
+                      <SectionLabel as="div">Item</SectionLabel>
+                      <SectionLabel as="div" className="text-right">
+                        Qty
+                      </SectionLabel>
+                      <SectionLabel as="div" className="text-right">
+                        Rate
+                      </SectionLabel>
+                      <SectionLabel as="div" className="text-right">
+                        Amount
+                      </SectionLabel>
                     </div>
-                  ))
-                )}
+                  )}
 
-                {/* Optional items */}
-                {optionalLineItems.length > 0 && (
-                  <div className="border-outline-variant mt-5 space-y-3 border-t-2 border-dashed pt-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <SectionLabel>Optional Items</SectionLabel>
-                        <p className="text-on-surface-variant mt-1 text-xs">
-                          Toggle customer choices to update the quote total.
-                        </p>
-                      </div>
-                      <div className="text-on-surface-variant shrink-0 text-right text-xs">
-                        {optionalSelectedTotal > 0 && (
-                          <p>Selected: {formatAUD(optionalSelectedTotal)}</p>
-                        )}
-                        {optionalAvailableTotal > 0 && (
-                          <p>Available: {formatAUD(optionalAvailableTotal)}</p>
-                        )}
-                      </div>
-                    </div>
-                    {optionalLineItems.map((item) => (
+                  {/* Scope rows (rooms + line items flattened) */}
+                  {scopeRows.length === 0 ? (
+                    <p className="text-on-surface-variant py-4 text-center text-sm">
+                      No line items added yet.
+                    </p>
+                  ) : (
+                    scopeRows.map((row) => (
                       <div
-                        key={item.id}
-                        className="border-outline-variant bg-surface-container-low rounded-2xl border px-4 py-3"
+                        key={row.key}
+                        className="border-outline-variant grid grid-cols-[1fr_auto] gap-x-3 border-t py-3 text-sm first:border-t-0 md:grid-cols-[1fr_90px_90px_90px]"
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-on-surface text-sm font-medium">
-                                {item.name}
-                              </p>
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase ${
-                                  item.is_selected
-                                    ? 'bg-success-container text-on-success-container'
-                                    : 'bg-warning-container text-on-warning-container'
-                                }`}
-                              >
-                                {item.is_selected ? 'Selected' : 'Optional'}
-                              </span>
-                            </div>
-                            <p className="text-on-surface-variant mt-1 text-xs">
-                              {item.quantity} {item.unit} at{' '}
-                              {formatAUD(item.unit_price_cents)}
+                        <div className="min-w-0">
+                          <p className="text-on-surface font-semibold">
+                            {row.name}
+                          </p>
+                          {row.sub && (
+                            <p className="text-on-surface-variant mt-0.5 text-xs">
+                              {row.sub}
                             </p>
-                            {item.notes && (
-                              <p className="text-on-surface-variant mt-1 text-xs">
-                                {item.notes}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex shrink-0 flex-col items-end gap-2">
-                            <p className="text-on-surface text-sm font-bold tabular-nums">
-                              {formatAUD(item.total_cents)}
+                          )}
+                          {row.notes && (
+                            <p className="text-on-surface-variant mt-0.5 text-xs italic">
+                              {row.notes}
                             </p>
-                            {quote.has_linked_invoices ? (
-                              <p className="text-on-surface-variant text-xs">
-                                Locked
-                              </p>
-                            ) : (
-                              <form action={setQuoteOptionalLineItemSelection}>
-                                <input
-                                  type="hidden"
-                                  name="quoteId"
-                                  value={quote.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="lineItemId"
-                                  value={item.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="isSelected"
-                                  value={item.is_selected ? 'false' : 'true'}
-                                />
-                                <button
-                                  type="submit"
-                                  className={`focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-3 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${
-                                    item.is_selected
-                                      ? 'border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low border'
-                                      : 'bg-primary text-on-primary hover:opacity-90'
-                                  }`}
-                                >
-                                  {item.is_selected ? 'Remove' : 'Add to Total'}
-                                </button>
-                              </form>
-                            )}
-                          </div>
+                          )}
+                          {/* Mobile: qty · rate inline */}
+                          <p className="text-on-surface-variant mt-1 text-xs md:hidden">
+                            {row.qtyLabel} · {row.rateLabel}
+                          </p>
+                        </div>
+                        <div className="text-on-surface-variant hidden self-center text-right tabular-nums md:block">
+                          {row.qtyLabel}
+                        </div>
+                        <div className="text-on-surface-variant hidden self-center text-right tabular-nums md:block">
+                          {row.rateLabel}
+                        </div>
+                        <div className="text-on-surface self-center text-right font-bold tabular-nums">
+                          {formatAUD(row.amount)}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ))
+                  )}
 
-                {/* Totals */}
-                <div className="border-outline-variant mt-5 space-y-2 border-t-2 pt-4">
-                  <div className="text-on-surface-variant flex justify-between text-sm">
-                    <span>Subtotal (ex GST)</span>
-                    <span className="text-on-surface font-medium tabular-nums">
-                      {formatAUD(quote.subtotal_cents)}
-                    </span>
-                  </div>
-                  <div className="text-on-surface-variant flex justify-between text-sm">
-                    <span>GST (10%)</span>
-                    <span className="text-on-surface font-medium tabular-nums">
-                      {formatAUD(quote.gst_cents)}
-                    </span>
-                  </div>
-                  <div className="border-outline-variant flex items-center justify-between border-t pt-3">
-                    <span className="text-on-surface text-base font-extrabold">
-                      Total (inc GST)
-                    </span>
-                    <div>
-                      <span className="text-on-surface text-[18px] font-extrabold tracking-tight tabular-nums">
-                        {formatAUD(quote.total_cents)}
+                  {/* Optional items */}
+                  {optionalLineItems.length > 0 && (
+                    <div className="border-outline-variant mt-5 space-y-3 border-t-2 border-dashed pt-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <SectionLabel>Optional Items</SectionLabel>
+                          <p className="text-on-surface-variant mt-1 text-xs">
+                            Toggle customer choices to update the quote total.
+                          </p>
+                        </div>
+                        <div className="text-on-surface-variant shrink-0 text-right text-xs">
+                          {optionalSelectedTotal > 0 && (
+                            <p>Selected: {formatAUD(optionalSelectedTotal)}</p>
+                          )}
+                          {optionalAvailableTotal > 0 && (
+                            <p>
+                              Available: {formatAUD(optionalAvailableTotal)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {optionalLineItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="border-outline-variant bg-surface-container-low rounded-2xl border px-4 py-3"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-on-surface text-sm font-medium">
+                                  {item.name}
+                                </p>
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase ${
+                                    item.is_selected
+                                      ? 'bg-success-container text-on-success-container'
+                                      : 'bg-warning-container text-on-warning-container'
+                                  }`}
+                                >
+                                  {item.is_selected ? 'Selected' : 'Optional'}
+                                </span>
+                              </div>
+                              <p className="text-on-surface-variant mt-1 text-xs">
+                                {item.quantity} {item.unit} at{' '}
+                                {formatAUD(item.unit_price_cents)}
+                              </p>
+                              {item.notes && (
+                                <p className="text-on-surface-variant mt-1 text-xs">
+                                  {item.notes}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-2">
+                              <p className="text-on-surface text-sm font-bold tabular-nums">
+                                {formatAUD(item.total_cents)}
+                              </p>
+                              {quote.has_linked_invoices ? (
+                                <p className="text-on-surface-variant text-xs">
+                                  Locked
+                                </p>
+                              ) : (
+                                <form
+                                  action={setQuoteOptionalLineItemSelection}
+                                >
+                                  <input
+                                    type="hidden"
+                                    name="quoteId"
+                                    value={quote.id}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="lineItemId"
+                                    value={item.id}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="isSelected"
+                                    value={item.is_selected ? 'false' : 'true'}
+                                  />
+                                  <button
+                                    type="submit"
+                                    className={`focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-3 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                                      item.is_selected
+                                        ? 'border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low border'
+                                        : 'bg-primary text-on-primary hover:opacity-90'
+                                    }`}
+                                  >
+                                    {item.is_selected
+                                      ? 'Remove'
+                                      : 'Add to Total'}
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Totals */}
+                  <div className="border-outline-variant mt-5 space-y-2 border-t-2 pt-4">
+                    <div className="text-on-surface-variant flex justify-between text-sm">
+                      <span>Subtotal (ex GST)</span>
+                      <span className="text-on-surface font-medium tabular-nums">
+                        {formatAUD(quote.subtotal_cents)}
                       </span>
-                      <span className="text-on-surface-variant ml-1 text-[10px] font-bold">
-                        AUD
+                    </div>
+                    <div className="text-on-surface-variant flex justify-between text-sm">
+                      <span>GST (10%)</span>
+                      <span className="text-on-surface font-medium tabular-nums">
+                        {formatAUD(quote.gst_cents)}
                       </span>
+                    </div>
+                    <div className="border-outline-variant flex items-center justify-between border-t pt-3">
+                      <span className="text-on-surface text-base font-extrabold">
+                        Total (inc GST)
+                      </span>
+                      <div>
+                        <span className="text-on-surface text-[18px] font-extrabold tracking-tight tabular-nums">
+                          {formatAUD(quote.total_cents)}
+                        </span>
+                        <span className="text-on-surface-variant ml-1 text-[10px] font-bold">
+                          AUD
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
+
+              <QuoteActions
+                quoteId={quote.id}
+                quoteNumber={quote.quote_number}
+                status={quote.status}
+                publicQuoteUrl={publicQuoteUrl}
+                recipientEmail={quoteRecipientEmail}
+                hasLinkedInvoices={quote.has_linked_invoices}
+                convertQuoteToJobAction={createJobFromQuote}
+              />
+            </div>
 
             {/* ── Sidebar: meta-boxes ── */}
             <aside className="flex min-w-0 flex-col gap-4">
@@ -720,16 +738,6 @@ export default async function QuoteDetailPage({
               )}
             </aside>
           </div>
-
-          <QuoteActions
-            quoteId={quote.id}
-            quoteNumber={quote.quote_number}
-            status={quote.status}
-            publicQuoteUrl={publicQuoteUrl}
-            recipientEmail={quoteRecipientEmail}
-            hasLinkedInvoices={quote.has_linked_invoices}
-            convertQuoteToJobAction={createJobFromQuote}
-          />
         </>
       )}
     </div>
