@@ -32,18 +32,23 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       id,
       ...props
     },
-    ref,
+    ref
   ) => {
     const selectId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <label htmlFor={selectId} className="block text-sm font-semibold text-on-surface">
+          <label
+            htmlFor={selectId}
+            className="text-on-surface block text-sm font-semibold"
+          >
             {label}
-            {required && <span className="ml-0.5 text-error">*</span>}
+            {required && <span className="text-error ml-0.5">*</span>}
             {optional && (
-              <span className="ml-1.5 text-xs font-normal text-on-surface-variant">(optional)</span>
+              <span className="text-on-surface-variant ml-1.5 text-xs font-normal">
+                (optional)
+              </span>
             )}
           </label>
         )}
@@ -53,9 +58,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={[
-              'h-12 w-full appearance-none rounded-xl border bg-surface-container-lowest pl-4 pr-10',
-              'text-base text-on-surface transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-primary/20',
+              'bg-surface-container-lowest h-12 w-full appearance-none rounded-xl border pr-10 pl-4',
+              'text-on-surface text-base transition-colors',
+              'focus:ring-primary/20 focus:ring-2 focus:outline-none',
               error
                 ? 'border-error focus:border-error'
                 : 'border-outline-variant focus:border-primary',
@@ -76,16 +81,18 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant">
+          <span className="text-on-surface-variant pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2">
             <ChevronDown className="h-4 w-4" />
           </span>
         </div>
 
-        {error && <p className="text-xs text-error">{error}</p>}
-        {hint && !error && <p className="text-xs text-on-surface-variant">{hint}</p>}
+        {error && <p className="text-error text-xs">{error}</p>}
+        {hint && !error && (
+          <p className="text-on-surface-variant text-xs">{hint}</p>
+        )}
       </div>
     );
-  },
+  }
 );
 
 Select.displayName = 'Select';

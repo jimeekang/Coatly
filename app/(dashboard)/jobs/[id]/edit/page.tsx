@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getJobDetail, getJobFormOptions } from '@/modules/jobs/application/actions';
+import {
+  getJobDetail,
+  getJobFormOptions,
+} from '@/modules/jobs/application/actions';
 import { JobEditForm } from '@/modules/jobs/ui/JobEditForm';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
@@ -13,10 +16,8 @@ export const metadata: Metadata = { title: 'Edit Job' };
 
 export default async function EditJobPage({ params }: Props) {
   const { id } = await params;
-  const [{ data: job, error }, { data: formOptions, error: optionsError }] = await Promise.all([
-    getJobDetail(id),
-    getJobFormOptions(),
-  ]);
+  const [{ data: job, error }, { data: formOptions, error: optionsError }] =
+    await Promise.all([getJobDetail(id), getJobFormOptions()]);
 
   if (!job || error) notFound();
 
@@ -34,7 +35,7 @@ export default async function EditJobPage({ params }: Props) {
         <ErrorAlert>{optionsError}</ErrorAlert>
       ) : (
         <div className="flex flex-col gap-5">
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
+          <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-5 shadow-sm">
             <JobEditForm
               job={job}
               customers={formOptions.customers}

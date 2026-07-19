@@ -23,13 +23,13 @@ export function ErrorPage({
     <div className="flex min-h-[60dvh] flex-col items-center justify-center px-6 text-center">
       {/* 코드 */}
       {code && (
-        <p className="mb-2 text-6xl font-extrabold tracking-tight text-primary opacity-20 select-none">
+        <p className="text-primary mb-2 text-6xl font-extrabold tracking-tight opacity-20 select-none">
           {code}
         </p>
       )}
 
       {/* 아이콘 */}
-      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2 border-outline bg-surface-container-low text-on-surface-variant">
+      <div className="border-outline bg-surface-container-low text-on-surface-variant mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2">
         {code === 404 || code === '404' ? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -65,15 +65,17 @@ export function ErrorPage({
         )}
       </div>
 
-      <h1 className="mb-2 text-xl font-bold text-on-surface">{title}</h1>
-      <p className="mb-8 max-w-xs text-sm leading-relaxed text-on-surface-variant">{description}</p>
+      <h1 className="text-on-surface mb-2 text-xl font-bold">{title}</h1>
+      <p className="text-on-surface-variant mb-8 max-w-xs text-sm leading-relaxed">
+        {description}
+      </p>
 
       <div className="flex flex-col items-center gap-3 sm:flex-row">
         {onRetry && (
           <button
             type="button"
             onClick={onRetry}
-            className="h-12 rounded-xl bg-primary px-6 text-base font-semibold text-on-primary transition-colors hover:bg-primary/90 active:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="bg-primary text-on-primary hover:bg-primary/90 active:bg-primary/90 focus-visible:ring-primary focus-visible:ring-offset-surface h-12 rounded-xl px-6 text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             Try again
           </button>
@@ -81,7 +83,7 @@ export function ErrorPage({
         {showHome && (
           <Link
             href="/dashboard"
-            className="h-12 rounded-xl border border-outline bg-surface-container-lowest px-6 text-base font-medium text-on-surface transition-colors hover:bg-surface-container-low active:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 inline-flex items-center"
+            className="border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low active:bg-surface-container-low focus-visible:ring-primary focus-visible:ring-offset-surface inline-flex h-12 items-center rounded-xl border px-6 text-base font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             Back to Dashboard
           </Link>

@@ -48,8 +48,6 @@ export const PLANS: Record<PlanId, Plan> = {
       'Everything in Starter',
       'Unlimited Quotes',
       'Unlimited Quote Templates',
-      'AI Quote Drafting',
-      'AI Workspace Assistant',
       'Priority Support',
     ],
   },

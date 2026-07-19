@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -18,69 +18,69 @@
    *    deep chip bg / focus border / accent text — NOT the pale MD3 tint)
    */
 
-  --color-primary: #0B7A64;
+  --color-primary: #0b7a64;
   --color-on-primary: #ffffff;
-  --color-primary-container: #095F4E;
-  --color-on-primary-container: #E9FBF4;
-  --color-primary-fixed: #BFE8DE;
-  --color-primary-fixed-dim: #8FD3C3;
-  --color-on-primary-fixed: #00281D;
-  --color-on-primary-fixed-variant: #0A5D4C;
-  --color-inverse-primary: #7CD6BD;
+  --color-primary-container: #095f4e;
+  --color-on-primary-container: #e9fbf4;
+  --color-primary-fixed: #bfe8de;
+  --color-primary-fixed-dim: #8fd3c3;
+  --color-on-primary-fixed: #00281d;
+  --color-on-primary-fixed-variant: #0a5d4c;
+  --color-inverse-primary: #7cd6bd;
 
-  --color-secondary: #3E5266;
+  --color-secondary: #3e5266;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #D9E2EC;
-  --color-on-secondary-container: #24384E;
-  --color-secondary-fixed: #D9E2EC;
-  --color-secondary-fixed-dim: #AABFD2;
-  --color-on-secondary-fixed: #0A1929;
-  --color-on-secondary-fixed-variant: #2D4257;
+  --color-secondary-container: #d9e2ec;
+  --color-on-secondary-container: #24384e;
+  --color-secondary-fixed: #d9e2ec;
+  --color-secondary-fixed-dim: #aabfd2;
+  --color-on-secondary-fixed: #0a1929;
+  --color-on-secondary-fixed-variant: #2d4257;
 
-  --color-tertiary: #102B47;
+  --color-tertiary: #102b47;
   --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #1B3D60;
-  --color-on-tertiary-container: #D3E2F5;
-  --color-tertiary-fixed: #D3E2F5;
-  --color-tertiary-fixed-dim: #A3C3E0;
-  --color-on-tertiary-fixed: #050F1C;
-  --color-on-tertiary-fixed-variant: #0E2440;
+  --color-tertiary-container: #1b3d60;
+  --color-on-tertiary-container: #d3e2f5;
+  --color-tertiary-fixed: #d3e2f5;
+  --color-tertiary-fixed-dim: #a3c3e0;
+  --color-on-tertiary-fixed: #050f1c;
+  --color-on-tertiary-fixed-variant: #0e2440;
 
-  --color-surface: #FAF7F2;
-  --color-surface-dim: #E7E1D6;
-  --color-surface-bright: #FDFBF8;
-  --color-surface-container-lowest: #FFFFFF;
-  --color-surface-container-low: #F4F0E9;
-  --color-surface-container: #EEE9E0;
-  --color-surface-container-high: #E8E2D7;
-  --color-surface-container-highest: #E1DACD;
-  --color-surface-variant: #E6E0D4;
-  --color-surface-tint: #0B7A64;
+  --color-surface: #faf7f2;
+  --color-surface-dim: #e7e1d6;
+  --color-surface-bright: #fdfbf8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f0e9;
+  --color-surface-container: #eee9e0;
+  --color-surface-container-high: #e8e2d7;
+  --color-surface-container-highest: #e1dacd;
+  --color-surface-variant: #e6e0d4;
+  --color-surface-tint: #0b7a64;
 
   --color-on-surface: #101828;
-  --color-on-surface-variant: #4C5665;
+  --color-on-surface-variant: #4c5665;
   --color-on-background: #101828;
-  --color-background: #FAF7F2;
+  --color-background: #faf7f2;
 
-  --color-outline: #C9C1B2;
-  --color-outline-variant: #E5DFD3;
-  --color-inverse-surface: #212B38;
-  --color-inverse-on-surface: #F4F1EA;
+  --color-outline: #c9c1b2;
+  --color-outline-variant: #e5dfd3;
+  --color-inverse-surface: #212b38;
+  --color-inverse-on-surface: #f4f1ea;
 
-  --color-error: #B3261E;
+  --color-error: #b3261e;
   --color-on-error: #ffffff;
-  --color-error-container: #F9DEDC;
-  --color-on-error-container: #7A1714;
+  --color-error-container: #f9dedc;
+  --color-on-error-container: #7a1714;
 
-  --color-warning: #B45309;
+  --color-warning: #b45309;
   --color-on-warning: #ffffff;
-  --color-warning-container: #FBEFC9;
-  --color-on-warning-container: #78350F;
+  --color-warning-container: #fbefc9;
+  --color-on-warning-container: #78350f;
 
-  --color-success: #177D53;
+  --color-success: #177d53;
   --color-on-success: #ffffff;
-  --color-success-container: #DDF3E4;
-  --color-on-success-container: #0C5132;
+  --color-success-container: #ddf3e4;
+  --color-on-success-container: #0c5132;
 
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -151,82 +151,82 @@ h2 {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F4F0E9;
+  background: #f4f0e9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #C9C1B2;
+  background: #c9c1b2;
   border-radius: 3px;
 }
 
 :root {
-  --background: #FAF7F2;
+  --background: #faf7f2;
   --foreground: #101828;
-  --card: #FFFFFF;
+  --card: #ffffff;
   --card-foreground: #101828;
-  --popover: #FFFFFF;
+  --popover: #ffffff;
   --popover-foreground: #101828;
-  --primary: #0B7A64;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F4F0E9;
-  --secondary-foreground: #24384E;
-  --muted: #F4F0E9;
-  --muted-foreground: #4C5665;
-  --accent: #F4F0E9;
-  --accent-foreground: #24384E;
-  --destructive: #B3261E;
-  --border: #E5DFD3;
-  --input: #E5DFD3;
-  --ring: #0B7A64;
-  --chart-1: #0B7A64;
-  --chart-2: #3E5266;
-  --chart-3: #102B47;
-  --chart-4: #8FD3C3;
-  --chart-5: #B45309;
+  --primary: #0b7a64;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f0e9;
+  --secondary-foreground: #24384e;
+  --muted: #f4f0e9;
+  --muted-foreground: #4c5665;
+  --accent: #f4f0e9;
+  --accent-foreground: #24384e;
+  --destructive: #b3261e;
+  --border: #e5dfd3;
+  --input: #e5dfd3;
+  --ring: #0b7a64;
+  --chart-1: #0b7a64;
+  --chart-2: #3e5266;
+  --chart-3: #102b47;
+  --chart-4: #8fd3c3;
+  --chart-5: #b45309;
   --radius: 0.75rem;
-  --sidebar: #F4F0E9;
+  --sidebar: #f4f0e9;
   --sidebar-foreground: #101828;
-  --sidebar-primary: #0B7A64;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #FFFFFF;
+  --sidebar-primary: #0b7a64;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffffff;
   --sidebar-accent-foreground: #101828;
-  --sidebar-border: #E5DFD3;
-  --sidebar-ring: #0B7A64;
+  --sidebar-border: #e5dfd3;
+  --sidebar-ring: #0b7a64;
 }
 
 /* Dark theme is not user-reachable yet (no toggle). Values kept on-brand so
    any future `.dark` opt-in doesn't fall back to stock shadcn gray. */
 .dark {
-  --background: #14161A;
-  --foreground: #F4F1EA;
-  --card: #1C1F24;
-  --card-foreground: #F4F1EA;
-  --popover: #1C1F24;
-  --popover-foreground: #F4F1EA;
-  --primary: #7CD6BD;
-  --primary-foreground: #00281D;
-  --secondary: #262A31;
-  --secondary-foreground: #F4F1EA;
-  --muted: #262A31;
-  --muted-foreground: #A8B0BC;
-  --accent: #262A31;
-  --accent-foreground: #F4F1EA;
-  --destructive: #F2B8B5;
-  --border: rgba(255, 255, 255, 0.10);
+  --background: #14161a;
+  --foreground: #f4f1ea;
+  --card: #1c1f24;
+  --card-foreground: #f4f1ea;
+  --popover: #1c1f24;
+  --popover-foreground: #f4f1ea;
+  --primary: #7cd6bd;
+  --primary-foreground: #00281d;
+  --secondary: #262a31;
+  --secondary-foreground: #f4f1ea;
+  --muted: #262a31;
+  --muted-foreground: #a8b0bc;
+  --accent: #262a31;
+  --accent-foreground: #f4f1ea;
+  --destructive: #f2b8b5;
+  --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.15);
-  --ring: #7CD6BD;
-  --chart-1: #7CD6BD;
-  --chart-2: #AABFD2;
-  --chart-3: #A3C3E0;
-  --chart-4: #8FD3C3;
-  --chart-5: #F5C97B;
-  --sidebar: #1C1F24;
-  --sidebar-foreground: #F4F1EA;
-  --sidebar-primary: #7CD6BD;
-  --sidebar-primary-foreground: #00281D;
-  --sidebar-accent: #262A31;
-  --sidebar-accent-foreground: #F4F1EA;
-  --sidebar-border: rgba(255, 255, 255, 0.10);
-  --sidebar-ring: #7CD6BD;
+  --ring: #7cd6bd;
+  --chart-1: #7cd6bd;
+  --chart-2: #aabfd2;
+  --chart-3: #a3c3e0;
+  --chart-4: #8fd3c3;
+  --chart-5: #f5c97b;
+  --sidebar: #1c1f24;
+  --sidebar-foreground: #f4f1ea;
+  --sidebar-primary: #7cd6bd;
+  --sidebar-primary-foreground: #00281d;
+  --sidebar-accent: #262a31;
+  --sidebar-accent-foreground: #f4f1ea;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #7cd6bd;
 }
 
 @layer base {

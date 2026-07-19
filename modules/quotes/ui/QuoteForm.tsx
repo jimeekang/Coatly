@@ -20,6 +20,9 @@ import {
 } from '@/components/forms/FormField';
 import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
 import { FormSection } from '@/components/forms/FormSection';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { Modal } from '@/components/ui/modal';
+import { cn } from '@/lib/utils';
 import {
   NumericInput,
   sanitizeIntegerInput,
@@ -216,6 +219,18 @@ function defaultValidUntil() {
   const date = new Date();
   date.setDate(date.getDate() + 30);
   return date.toISOString().slice(0, 10);
+}
+
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
 }
 
 function normalizeWorkingDays(value: number | null | undefined) {
@@ -684,7 +699,7 @@ function PricingSummaryPanel({
                     setIsEditingNumber(false);
                   }
                 }}
-                className="border-primary text-on-surface focus:ring-primary/20 bg-surface-container-lowest mt-1 min-h-11 w-full rounded-lg border px-2 text-lg font-semibold focus:ring-2 focus:outline-none"
+                className={cn(formControlClassName, 'mt-1 font-semibold')}
               />
             ) : (
               <button
@@ -693,7 +708,7 @@ function PricingSummaryPanel({
                 className={[
                   'text-on-surface mt-1 inline-flex min-h-11 items-center gap-1.5 text-lg font-semibold',
                   isEditable
-                    ? 'hover:text-primary cursor-pointer rounded-lg px-0 transition-colors'
+                    ? 'hover:text-primary focus-visible:ring-primary/30 cursor-pointer rounded-xl px-2 transition-colors focus-visible:ring-2 focus-visible:outline-none'
                     : 'cursor-default',
                 ].join(' ')}
                 title={isEditable ? 'Click to edit quote number' : undefined}
@@ -813,7 +828,7 @@ function PricingSummaryPanel({
                 <button
                   type="button"
                   onClick={onDiscountToggle}
-                  className="text-on-surface-variant hover:text-error inline-flex min-h-11 items-center text-xs transition-colors"
+                  className="text-on-surface-variant hover:text-error focus-visible:ring-error/30 inline-flex min-h-11 items-center rounded-xl px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   Remove
                 </button>
@@ -827,7 +842,7 @@ function PricingSummaryPanel({
                   value={discountInput}
                   onChange={(e) => onDiscountInputChange(e.target.value)}
                   placeholder="0.00"
-                  className="border-outline-variant text-on-surface focus:border-error focus:ring-error/20 bg-surface-container-lowest h-11 flex-1 rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
+                  className={cn(formControlClassName, 'w-auto min-w-0 flex-1')}
                 />
                 {discountCents > 0 && (
                   <span className="text-error text-sm font-medium">
@@ -840,7 +855,7 @@ function PricingSummaryPanel({
             <button
               type="button"
               onClick={onDiscountToggle}
-              className="border-outline-variant text-on-surface-variant hover:border-error/50 hover:text-error flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-3 text-sm transition-colors"
+              className="border-outline-variant text-on-surface-variant hover:border-error/50 hover:text-error focus-visible:ring-error/30 flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -871,7 +886,7 @@ function PricingSummaryPanel({
                 <button
                   type="button"
                   onClick={onDepositToggle}
-                  className="text-on-surface-variant hover:text-error inline-flex min-h-11 items-center text-xs transition-colors"
+                  className="text-on-surface-variant hover:text-error focus-visible:ring-error/30 inline-flex min-h-11 items-center rounded-xl px-2 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   Remove
                 </button>
@@ -885,7 +900,7 @@ function PricingSummaryPanel({
                   value={depositInput}
                   onChange={(e) => onDepositInputChange(e.target.value)}
                   placeholder="50"
-                  className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 bg-surface-container-lowest h-11 w-20 rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
+                  className={cn(formControlClassName, 'w-20 px-3')}
                 />
                 <span className="text-on-surface-variant text-sm">
                   % of total
@@ -901,7 +916,7 @@ function PricingSummaryPanel({
             <button
               type="button"
               onClick={onDepositToggle}
-              className="border-outline-variant text-on-surface-variant hover:border-primary/50 hover:text-primary flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-3 text-sm transition-colors"
+              className="border-outline-variant text-on-surface-variant hover:border-primary/50 hover:text-primary focus-visible:ring-primary/30 flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -938,6 +953,7 @@ export function QuoteForm({
   quoteNumberPreview = 'Assigned on save',
   submitLabel = 'Save Quote',
   showSendQuoteButton = false,
+  replaceQuoteStructureOnSubmit = false,
   rateSettings,
   libraryItems = [],
 }: {
@@ -952,6 +968,7 @@ export function QuoteForm({
   quoteNumberPreview?: string;
   submitLabel?: string;
   showSendQuoteButton?: boolean;
+  replaceQuoteStructureOnSubmit?: boolean;
   rateSettings?: UserRateSettings | null;
   libraryItems?: MaterialItem[];
 }) {
@@ -1623,6 +1640,7 @@ export function QuoteForm({
     payload.job_type = resolveFormJobType();
     payload.scope_sections = normalizeScopeSectionsForPayload();
     payload.clause_items = normalizeClauseItemsForPayload();
+    payload.replace_quote_structure = replaceQuoteStructureOnSubmit;
     if (defaultValues?.ai_intake_snapshot) {
       payload.ai_intake_snapshot = defaultValues.ai_intake_snapshot;
     }
@@ -1662,10 +1680,23 @@ export function QuoteForm({
       return;
     }
 
+    setError(null);
     startTransition(async () => {
       setActiveSubmitIntent(submitIntent);
-      const result = await onSubmit(payload, submitIntent);
-      if (result?.error) setError(result.error);
+      try {
+        const result = await onSubmit(payload, submitIntent);
+        if (result?.error) setError(result.error);
+      } catch (submitError) {
+        if (isNextNavigationSignal(submitError)) {
+          throw submitError;
+        }
+
+        setError(
+          submitError instanceof Error
+            ? submitError.message
+            : 'Quote could not be saved. Please try again.'
+        );
+      }
     });
   }
 
@@ -1846,7 +1877,7 @@ export function QuoteForm({
                             setSelectedPropertyIndex(event.target.value);
                             setError(null);
                           }}
-                          className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
+                          className={formControlClassName}
                         >
                           {customerPropertyOptions.map((property, index) => (
                             <option
@@ -1910,7 +1941,7 @@ export function QuoteForm({
                           if (type === 'exterior') setQuoteScope('exterior');
                           setError(null);
                         }}
-                        className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors ${
+                        className={`focus-visible:ring-primary/30 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                           isActive
                             ? 'border-primary bg-primary text-on-primary'
                             : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary'
@@ -2016,7 +2047,7 @@ export function QuoteForm({
                       setPricingStrategy(method);
                       setError(null);
                     }}
-                    className={`group relative flex h-full flex-col gap-2 rounded-xl border px-3 py-3 text-left transition-all duration-150 ${
+                    className={`group focus-visible:ring-primary/30 relative flex min-h-11 flex-col gap-2 rounded-xl border px-3 py-3 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:outline-none ${
                       isActive
                         ? 'border-primary bg-primary text-on-primary shadow-sm'
                         : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-outline-variant hover:bg-surface-container-low'
@@ -2055,7 +2086,7 @@ export function QuoteForm({
                   Pick rooms, sizes &amp; scope — ~30 sec.{' '}
                   <Link
                     href="/price-rates"
-                    className="text-primary hover:bg-primary/10 inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-2"
+                    className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-2 font-semibold underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
                   >
                     Edit room prices
                   </Link>
@@ -2065,7 +2096,7 @@ export function QuoteForm({
                   Using Detailed Estimate Anchors from Price Rates.{' '}
                   <Link
                     href="/price-rates"
-                    className="text-primary hover:bg-primary/10 inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-2"
+                    className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-2 font-semibold underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
                   >
                     Edit Price Rates
                   </Link>
@@ -2075,7 +2106,7 @@ export function QuoteForm({
                   Using default rates from Price Rates.{' '}
                   <Link
                     href="/price-rates"
-                    className="text-primary hover:bg-primary/10 inline-flex min-h-11 items-center rounded-lg px-2 font-semibold underline underline-offset-2"
+                    className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-2 font-semibold underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
                   >
                     Edit default rates
                   </Link>
@@ -2101,7 +2132,7 @@ export function QuoteForm({
                       setQuoteScope(scope);
                       if (jobType !== 'maintenance') setJobType(scope);
                     }}
-                    className={`inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all ${
+                    className={`focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:outline-none ${
                       quoteScope === scope
                         ? 'bg-surface-container-lowest text-on-surface shadow-sm'
                         : 'text-on-surface-variant hover:text-on-surface'
@@ -2266,8 +2297,8 @@ export function QuoteForm({
 
           {/* Room rate inputs — legacy method, shown read-only for existing quotes */}
           {pricingStrategy === 'room_rate' && (
-            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4">
-              <div className="mb-4 flex items-start gap-2 rounded-xl border border-warning/30 bg-warning-container px-3 py-2.5 text-sm text-on-warning-container">
+            <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
+              <div className="border-warning/30 bg-warning-container text-on-warning-container mb-4 flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm">
                 <span className="mt-0.5 shrink-0">⚠️</span>
                 <span>
                   <span className="font-semibold">
@@ -2301,7 +2332,7 @@ export function QuoteForm({
                             preset.rate_cents
                           )
                         }
-                        className="border-primary/30 text-on-surface hover:border-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border bg-surface-container-lowest px-3 text-xs font-medium"
+                        className="border-primary/30 text-on-surface hover:border-primary hover:bg-primary/15 focus-visible:ring-primary/30 bg-surface-container-lowest inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
                       >
                         {preset.title} · {preset.sqm} sqm ·{' '}
                         {formatAUD(preset.rate_cents)}
@@ -2314,7 +2345,7 @@ export function QuoteForm({
                 {roomRateItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="border-outline-variant rounded-xl border p-3"
+                    className="border-outline-variant rounded-2xl border p-3"
                   >
                     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                       <input
@@ -2328,7 +2359,7 @@ export function QuoteForm({
                           )
                         }
                         placeholder="Room name"
-                        className="border-outline-variant rounded-lg border bg-surface-container-lowest px-3 py-2 text-sm"
+                        className={formControlClassName}
                       />
                       <select
                         value={item.room_type}
@@ -2345,7 +2376,7 @@ export function QuoteForm({
                             )
                           )
                         }
-                        className="border-outline-variant min-h-11 rounded-lg border bg-surface-container-lowest px-2 text-sm"
+                        className={formControlClassName}
                       >
                         {ROOM_TYPES.map((t) => (
                           <option key={t} value={t}>
@@ -2373,7 +2404,7 @@ export function QuoteForm({
                             )
                           );
                         }}
-                        className="border-outline-variant min-h-11 rounded-lg border bg-surface-container-lowest px-2 text-sm"
+                        className={formControlClassName}
                       >
                         {ROOM_SIZES.map((s) => (
                           <option key={s} value={s}>
@@ -2407,7 +2438,7 @@ export function QuoteForm({
                               )
                             );
                           }}
-                          className="border-outline-variant min-h-11 w-24 rounded-lg border bg-surface-container-lowest px-2 text-sm"
+                          className={cn(formControlClassName, 'w-24 px-2')}
                         />
                       </div>
                     </div>
@@ -2419,7 +2450,7 @@ export function QuoteForm({
                             prev.filter((_, i) => i !== idx)
                           )
                         }
-                        className="text-on-surface-variant hover:text-error text-sm"
+                        className="text-on-surface-variant hover:text-error focus-visible:ring-error/30 min-h-11 rounded-xl px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
                       >
                         Remove
                       </button>
@@ -2431,9 +2462,9 @@ export function QuoteForm({
                 <button
                   type="button"
                   onClick={addManualRoomRateItem}
-                  className="border-primary text-primary hover:bg-primary/10 flex items-center gap-1.5 rounded-xl border border-dashed px-4 py-2.5 text-sm font-semibold"
+                  className="border-primary text-primary hover:bg-primary/10 focus-visible:ring-primary/30 flex min-h-11 items-center gap-1.5 rounded-xl border border-dashed px-4 py-2.5 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  + Add Custom Room
+                  + New Custom Room
                 </button>
               </div>
             </section>
@@ -2441,7 +2472,7 @@ export function QuoteForm({
 
           {/* Manual direct input */}
           {pricingStrategy === 'manual' && (
-            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
+            <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
               <div className="mb-4">
                 <h3 className="text-on-surface text-base leading-snug font-bold">
                   Direct Price Entry
@@ -2577,7 +2608,10 @@ export function QuoteForm({
                     }`}
                   >
                     {issue.message}{' '}
-                    <Link href="/price-rates" className="font-medium underline">
+                    <Link
+                      href="/price-rates"
+                      className="focus-visible:ring-primary/30 rounded-sm font-medium underline focus-visible:ring-2 focus-visible:outline-none"
+                    >
                       Open Price Rates
                     </Link>
                   </p>
@@ -2587,15 +2621,15 @@ export function QuoteForm({
           )}
 
           {pricingScopeWarnings.length > 0 && (
-            <div className="rounded-xl border border-warning/30 bg-warning-container px-4 py-3">
-              <p className="text-xs font-semibold tracking-wide text-on-warning-container uppercase">
+            <div className="border-warning/30 bg-warning-container rounded-xl border px-4 py-3">
+              <p className="text-on-warning-container text-xs font-semibold tracking-wide uppercase">
                 Scope warning
               </p>
               <div className="mt-1 space-y-1">
                 {pricingScopeWarnings.map((warning) => (
                   <p
                     key={`${warning.line_item_name}-${warning.scope_label}`}
-                    className="text-sm text-on-warning-container"
+                    className="text-on-warning-container text-sm"
                   >
                     {warning.message}
                   </p>
@@ -2605,7 +2639,7 @@ export function QuoteForm({
           )}
 
           {/* Notes */}
-          <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
+          <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
             <div className="mb-4">
               <h3 className="text-on-surface text-base leading-snug font-bold">
                 Notes
@@ -2645,7 +2679,7 @@ export function QuoteForm({
 
           {/* Markup Settings */}
           {pricingStrategy === 'hybrid' && (
-            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
+            <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm sm:p-6">
               <div className="mb-4">
                 <h3 className="text-on-surface text-base leading-snug font-bold">
                   Markup
@@ -2670,7 +2704,7 @@ export function QuoteForm({
                       step="1"
                       value={form.labour_markup}
                       onChange={handleChange}
-                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-surface-container-lowest pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
+                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 bg-surface-container-lowest h-12 w-full rounded-xl border pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
                     />
                     <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                       %
@@ -2694,7 +2728,7 @@ export function QuoteForm({
                       step="1"
                       value={form.material_markup}
                       onChange={handleChange}
-                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-surface-container-lowest pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
+                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 bg-surface-container-lowest h-12 w-full rounded-xl border pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
                     />
                     <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                       %
@@ -2706,11 +2740,7 @@ export function QuoteForm({
           )}
 
           {/* Validation error */}
-          {error && (
-            <div className="border-error bg-error-container rounded-lg border px-4 py-3">
-              <p className="text-error text-sm">{error}</p>
-            </div>
-          )}
+          {error && !sendDialog && <ErrorAlert>{error}</ErrorAlert>}
         </div>
 
         <aside className="hidden xl:block xl:self-stretch">
@@ -2740,108 +2770,20 @@ export function QuoteForm({
       </div>
 
       {sendDialog && selectedCustomer && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40 px-4 py-4 md:items-center md:justify-center">
-          <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface-container-lowest p-5 shadow-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
-                  Send Quote
-                </p>
-                <h3 className="text-on-surface mt-1 text-xl font-semibold">
-                  Review before sending
-                </h3>
-              </div>
+        <Modal
+          open
+          onClose={() => setSendDialog(null)}
+          title="Review before sending"
+          description="Send Quote"
+          size="lg"
+          dismissible={!isPending}
+          footer={
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="border-outline-variant text-on-surface-variant h-11 rounded-lg border px-4 text-sm font-medium disabled:opacity-50"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-5 space-y-4">
-              <div>
-                <label
-                  htmlFor="send_quote_email"
-                  className={formLabelClassName}
-                >
-                  Send to
-                </label>
-                <select
-                  id="send_quote_email"
-                  value={sendDialog.email}
-                  onChange={(event) =>
-                    setSendDialog((current) =>
-                      current
-                        ? { ...current, email: event.target.value }
-                        : current
-                    )
-                  }
-                  className={formControlClassName}
-                >
-                  {customerEmailOptions.map((email) => (
-                    <option key={email} value={email}>
-                      {email}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-on-surface-variant mt-1 text-xs">
-                  Choose from emails saved on this customer.
-                </p>
-              </div>
-
-              <div className="border-outline-variant bg-surface-container rounded-xl border px-4 py-3">
-                <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
-                  Customer
-                </p>
-                <p className="text-on-surface mt-1 font-medium">
-                  {selectedCustomer.company_name || selectedCustomer.name}
-                </p>
-                {selectedProperty?.address && (
-                  <p className="text-on-surface-variant mt-1 text-sm">
-                    {selectedProperty.address}
-                  </p>
-                )}
-              </div>
-
-              <div className="border-outline-variant rounded-xl border bg-surface-container-lowest px-4 py-3">
-                <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
-                  Quote Content
-                </p>
-                <p className="text-on-surface mt-1 font-medium">
-                  {sendDialog.payload.title}
-                </p>
-                <p className="text-on-surface-variant mt-1 text-sm">
-                  Valid until {sendDialog.payload.valid_until}
-                </p>
-                <p className="text-on-surface-variant mt-1 text-sm">
-                  Booking duration: {sendDialog.payload.working_days ?? 1} day
-                  {(sendDialog.payload.working_days ?? 1) !== 1 ? 's' : ''}
-                </p>
-                {sendDialog.payload.notes && (
-                  <p className="bg-surface-container text-on-surface mt-3 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap">
-                    {sendDialog.payload.notes}
-                  </p>
-                )}
-                <div className="bg-primary-container text-on-primary-container mt-3 flex items-center justify-between rounded-lg px-3 py-2">
-                  <span className="text-on-primary-container text-sm font-medium">
-                    Estimated total
-                  </span>
-                  <span className="text-on-primary-container text-base font-semibold">
-                    {formatAUD(displayTotal)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setSendDialog(null)}
-                disabled={isPending}
-                className="border-outline-variant text-on-surface h-12 rounded-xl border bg-surface-container-lowest px-4 text-sm font-medium disabled:opacity-50"
+                className="border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 h-12 rounded-xl border px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -2849,15 +2791,89 @@ export function QuoteForm({
                 type="button"
                 onClick={handleConfirmSendQuote}
                 disabled={isPending || !sendDialog.email}
-                className="bg-primary hover:bg-primary/90 text-on-primary h-12 rounded-xl px-4 text-sm font-semibold transition-colors disabled:opacity-50"
+                className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 h-12 rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
               >
                 {isPending && activeSubmitIntent === 'send_email'
                   ? 'Sending...'
                   : 'Send Quote'}
               </button>
             </div>
+          }
+        >
+          <div className="space-y-4">
+            {error && <ErrorAlert>{error}</ErrorAlert>}
+
+            <div>
+              <label htmlFor="send_quote_email" className={formLabelClassName}>
+                Send to
+              </label>
+              <select
+                id="send_quote_email"
+                value={sendDialog.email}
+                onChange={(event) =>
+                  setSendDialog((current) =>
+                    current
+                      ? { ...current, email: event.target.value }
+                      : current
+                  )
+                }
+                className={formControlClassName}
+              >
+                {customerEmailOptions.map((email) => (
+                  <option key={email} value={email}>
+                    {email}
+                  </option>
+                ))}
+              </select>
+              <p className="text-on-surface-variant mt-1 text-xs">
+                Choose from emails saved on this customer.
+              </p>
+            </div>
+
+            <div className="border-outline-variant bg-surface-container rounded-xl border px-4 py-3">
+              <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
+                Customer
+              </p>
+              <p className="text-on-surface mt-1 font-medium">
+                {selectedCustomer.company_name || selectedCustomer.name}
+              </p>
+              {selectedProperty?.address && (
+                <p className="text-on-surface-variant mt-1 text-sm">
+                  {selectedProperty.address}
+                </p>
+              )}
+            </div>
+
+            <div className="border-outline-variant bg-surface-container-lowest rounded-xl border px-4 py-3">
+              <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
+                Quote Content
+              </p>
+              <p className="text-on-surface mt-1 font-medium">
+                {sendDialog.payload.title}
+              </p>
+              <p className="text-on-surface-variant mt-1 text-sm">
+                Valid until {sendDialog.payload.valid_until}
+              </p>
+              <p className="text-on-surface-variant mt-1 text-sm">
+                Booking duration: {sendDialog.payload.working_days ?? 1} day
+                {(sendDialog.payload.working_days ?? 1) !== 1 ? 's' : ''}
+              </p>
+              {sendDialog.payload.notes && (
+                <p className="bg-surface-container text-on-surface mt-3 rounded-xl px-3 py-2 text-sm whitespace-pre-wrap">
+                  {sendDialog.payload.notes}
+                </p>
+              )}
+              <div className="bg-primary-container text-on-primary-container mt-3 flex items-center justify-between rounded-xl px-3 py-2">
+                <span className="text-on-primary-container text-sm font-medium">
+                  Estimated total
+                </span>
+                <span className="text-on-primary-container text-base font-semibold">
+                  {formatAUD(displayTotal)}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Sticky footer CTA sits above the dashboard bottom tab bar and device safe area on mobile. */}

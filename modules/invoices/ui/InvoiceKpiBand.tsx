@@ -1,13 +1,22 @@
 import type { InvoiceSummary } from '@/modules/invoices/domain/invoices';
-import { SectionLabel } from '@/components/shared/SectionLabel';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { formatAUD } from '@/utils/format';
 
 type KpiVariant = 'warning' | 'positive' | 'neutral';
 
 const VARIANT_STYLES: Record<KpiVariant, { tile: string; value: string }> = {
-  warning: { tile: 'bg-warning-container border-warning/20', value: 'text-warning' },
-  positive: { tile: 'bg-success-container border-success/20', value: 'text-success' },
-  neutral: { tile: 'bg-surface-container-low border-transparent', value: 'text-on-surface' },
+  warning: {
+    tile: 'bg-warning-container border-warning/20',
+    value: 'text-warning',
+  },
+  positive: {
+    tile: 'bg-success-container border-success/20',
+    value: 'text-success',
+  },
+  neutral: {
+    tile: 'bg-surface-container-low border-transparent',
+    value: 'text-on-surface',
+  },
 };
 
 function KpiTile({
@@ -26,11 +35,11 @@ function KpiTile({
     <div className={`rounded-xl border p-5 ${styles.tile}`}>
       <SectionLabel className="mb-3.5">{label}</SectionLabel>
       <p
-        className={`text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] tabular-nums sm:text-[32px] ${styles.value}`}
+        className={`text-[26px] leading-[1.1] font-extrabold tracking-[-0.02em] tabular-nums sm:text-[32px] ${styles.value}`}
       >
         {value}
       </p>
-      <p className="mt-2 text-xs text-on-surface-variant">{hint}</p>
+      <p className="text-on-surface-variant mt-2 text-xs">{hint}</p>
     </div>
   );
 }
@@ -40,7 +49,12 @@ function KpiTile({
  * Surfaces outstanding balance, overdue exposure, and money collected this month.
  */
 export function InvoiceKpiBand({ summary }: { summary: InvoiceSummary }) {
-  const { outstanding_cents, overdue_cents, overdue_count, paid_this_month_cents } = summary;
+  const {
+    outstanding_cents,
+    overdue_cents,
+    overdue_count,
+    paid_this_month_cents,
+  } = summary;
 
   return (
     <section className="flex min-w-0 flex-col gap-3">

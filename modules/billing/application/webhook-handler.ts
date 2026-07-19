@@ -38,6 +38,30 @@ async function syncCheckoutSessionSubscription(
   await syncSubscription(subscription, createAdminClient());
 }
 
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  if (invoice.parent?.type !== 'subscription_details') {
+    return null;
+  }
+
+  const subscription = invoice.parent.subscription_details?.subscription;
+  return typeof subscription === 'string' ? subscription : (subscription?.id ?? null);
+}
+
+async function markSubscriptionPastDue(
+  supabase: ReturnType<typeof createAdminClient>,
+  subscriptionId: string
+) {
+  const { error } = await supabase
+    .from('subscriptions')
+    .update({ status: 'past_due' })
+    .eq('stripe_subscription_id', subscriptionId)
+    .neq('status', 'cancelled');
+
+  if (error) {
+    throw new Error(`Failed to mark subscription cache as past_due: ${error.message}`);
+  }
+}
+
 export async function handleStripeWebhook(request: NextRequest) {
   const body = await request.text();
   const headersList = await headers();
@@ -82,7 +106,13 @@ export async function handleStripeWebhook(request: NextRequest) {
 
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice;
-      console.warn('Payment failed for invoice:', invoice.id);
+      const subscriptionId = getInvoiceSubscriptionId(invoice);
+
+      if (subscriptionId) {
+        await markSubscriptionPastDue(supabase, subscriptionId);
+      } else {
+        console.warn('Payment failed for invoice without a subscription:', invoice.id);
+      }
       break;
     }
 

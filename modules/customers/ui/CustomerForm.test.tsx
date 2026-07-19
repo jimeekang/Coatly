@@ -16,6 +16,41 @@ vi.mock('@/modules/customers/application/actions', () => ({
 }));
 
 describe('CustomerForm', () => {
+  it('renders returned root save failures through the shared error alert', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue({
+      error: 'Customer save failed.',
+    });
+
+    render(
+      <CustomerForm
+        defaultValues={{ name: 'Mark Johnson' }}
+        onSubmit={onSubmit}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Add Email' })).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+    expect(screen.getByRole('button', { name: 'Add Site' })).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save Customer' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Customer save failed.');
+    expect(alert).toHaveClass(
+      'rounded-xl',
+      'border-error/20',
+      'bg-error-container'
+    );
+  });
+
   it('submits added properties and exits the saving state when the action returns without redirecting', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -45,7 +80,7 @@ describe('CustomerForm', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: '+ New Site' }));
+    await user.click(screen.getByRole('button', { name: 'Add Site' }));
     await user.clear(
       screen.getAllByPlaceholderText('e.g. Home, Rental, Beach house')[1]
     );

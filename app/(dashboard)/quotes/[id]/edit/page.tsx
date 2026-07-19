@@ -1,6 +1,9 @@
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getQuote, getQuoteFormOptions } from '@/modules/quotes/application/actions';
+import {
+  getQuote,
+  getQuoteFormOptions,
+} from '@/modules/quotes/application/actions';
 import { getMaterialItemsForPicker } from '@/modules/materials/application/actions';
 import { type QuoteFormDefaultValues } from '@/modules/quotes/ui/QuoteForm';
 import { QuoteEditScreen } from '@/modules/quotes/ui/QuoteEditScreen';

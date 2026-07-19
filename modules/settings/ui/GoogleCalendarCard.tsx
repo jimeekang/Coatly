@@ -2,14 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
-import { FormLabel, formControlClassName } from '@/components/forms/FormField';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import { SectionLabel } from '@/components/shared/SectionLabel';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import type { GoogleCalendarIntegrationSummary } from '@/modules/schedule/infrastructure/google-calendar/types';
 import type { GoogleCalendarSettingsInput } from '@/lib/supabase/validators';
 
 type UpdateGoogleCalendarSettingsAction = (
-  input: GoogleCalendarSettingsInput,
+  input: GoogleCalendarSettingsInput
 ) => Promise<{ error: string | null; success: string | null }>;
 
 type DisconnectGoogleCalendarAction = () => Promise<{
@@ -17,8 +16,11 @@ type DisconnectGoogleCalendarAction = () => Promise<{
   success: string | null;
 }>;
 
+const inputBase =
+  'w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-base text-on-surface transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50';
+
 function selectClass() {
-  return `${formControlClassName} disabled:opacity-50`;
+  return `${inputBase} h-12`;
 }
 
 export default function GoogleCalendarCard({
@@ -47,14 +49,17 @@ export default function GoogleCalendarCard({
   const [eventDestinationCalendarId, setEventDestinationCalendarId] = useState(
     integration?.eventDestinationCalendarId ?? 'primary'
   );
-  const [timezone, setTimezone] = useState(integration?.timezone ?? 'Australia/Sydney');
+  const [timezone, setTimezone] = useState(
+    integration?.timezone ?? 'Australia/Sydney'
+  );
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
 
   const writableCalendars = useMemo(
     () =>
       (integration?.calendars ?? []).filter(
-        (calendar) => calendar.accessRole === 'owner' || calendar.accessRole === 'writer'
+        (calendar) =>
+          calendar.accessRole === 'owner' || calendar.accessRole === 'writer'
       ),
     [integration?.calendars]
   );
@@ -104,16 +109,16 @@ export default function GoogleCalendarCard({
 
   if (!canConnectGoogleCalendar || !integration) {
     return (
-      <section className="rounded-2xl border border-outline bg-surface-container-lowest p-5">
+      <section className="border-outline bg-surface-container-lowest rounded-2xl border p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-on-surface">Calendar</h3>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              This account will use Coatly&apos;s internal calendar for booking dates and schedule
-              checks.
+            <h3 className="text-on-surface text-lg font-semibold">Calendar</h3>
+            <p className="text-on-surface-variant mt-1 text-sm">
+              This account will use Coatly&apos;s internal calendar for booking
+              dates and schedule checks.
             </p>
           </div>
-          <span className="inline-flex min-h-11 items-center rounded-xl border border-outline px-4 text-sm font-medium text-on-surface-variant">
+          <span className="border-outline text-on-surface-variant inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium">
             Internal calendar
           </span>
         </div>
@@ -122,13 +127,15 @@ export default function GoogleCalendarCard({
   }
 
   return (
-    <section className="rounded-2xl border border-outline bg-surface-container-lowest p-5">
+    <section className="border-outline bg-surface-container-lowest rounded-2xl border p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-on-surface">Google Calendar</h3>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Show your real schedule from Google Calendar and automatically create calendar events
-            when a client books dates in Coatly.
+          <h3 className="text-on-surface text-lg font-semibold">
+            Google Calendar
+          </h3>
+          <p className="text-on-surface-variant mt-1 text-sm">
+            Show your real schedule from Google Calendar and automatically
+            create calendar events when a client books dates in Coatly.
           </p>
         </div>
 
@@ -138,54 +145,59 @@ export default function GoogleCalendarCard({
               type="button"
               onClick={handleDisconnect}
               disabled={isPending}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60"
+              className="border-outline text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 inline-flex min-h-11 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
             >
               {isPending ? 'Disconnecting...' : 'Disconnect'}
             </button>
           ) : (
             <a
               href="/api/integrations/google-calendar/connect?next=/settings"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               Connect Google Calendar
             </a>
           )
         ) : (
-          <span className="inline-flex min-h-11 items-center rounded-xl border border-outline px-4 text-sm font-medium text-on-surface-variant">
+          <span className="border-outline text-on-surface-variant inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium">
             Server setup required
           </span>
         )}
       </div>
 
-      {(errorMessage || integration.warning || localError) && (
-        <ErrorAlert className="mt-5">
-          {localError ?? errorMessage ?? integration.warning}
-        </ErrorAlert>
+      {(localError || errorMessage) && (
+        <ErrorAlert className="mt-5">{localError ?? errorMessage}</ErrorAlert>
+      )}
+
+      {integration.warning && (
+        <div className="border-warning/30 bg-warning-container text-on-warning-container mt-5 rounded-xl border px-4 py-3 text-sm">
+          {integration.warning}
+        </div>
       )}
 
       {(successMessage || localSuccess) && (
-        <div className="mt-5 rounded-xl border border-primary/30 bg-success-container/40 px-4 py-3 text-sm text-primary/90">
+        <div className="border-primary/30 bg-success-container/40 text-primary/90 mt-5 rounded-xl border px-4 py-3 text-sm">
           {localSuccess ?? successMessage}
         </div>
       )}
 
       {!integration.configured ? (
-        <div className="mt-5 rounded-xl border border-dashed border-outline bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
-          Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALENDAR_TOKEN_SECRET`
-          on the server, then register the callback URL before connecting.
+        <div className="border-outline bg-surface-container-low text-on-surface-variant mt-5 rounded-xl border border-dashed px-4 py-4 text-sm">
+          Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and
+          `GOOGLE_CALENDAR_TOKEN_SECRET` on the server, then register the
+          callback URL before connecting.
         </div>
       ) : integration.connected ? (
         <div className="mt-5 space-y-5">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
+            <div className="border-outline bg-surface-container-low rounded-xl border px-4 py-3">
               <SectionLabel>Connected account</SectionLabel>
-              <p className="mt-1 text-sm font-medium text-on-surface">
+              <p className="text-on-surface mt-1 text-sm font-medium">
                 {integration.accountEmail ?? 'Unknown account'}
               </p>
             </div>
-            <div className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
+            <div className="border-outline bg-surface-container-low rounded-xl border px-4 py-3">
               <SectionLabel>Last sync</SectionLabel>
-              <p className="mt-1 text-sm font-medium text-on-surface">
+              <p className="text-on-surface mt-1 text-sm font-medium">
                 {integration.lastSyncAt
                   ? new Date(integration.lastSyncAt).toLocaleString('en-AU')
                   : 'Not synced yet'}
@@ -194,17 +206,17 @@ export default function GoogleCalendarCard({
           </div>
 
           {integration.calendars.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-outline bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
-              Calendar metadata could not be loaded right now. Reconnect if this keeps happening.
+            <div className="border-outline bg-surface-container-low text-on-surface-variant rounded-xl border border-dashed px-4 py-4 text-sm">
+              Calendar metadata could not be loaded right now. Reconnect if this
+              keeps happening.
             </div>
           ) : (
             <div className="grid gap-4">
               <div>
-                <FormLabel htmlFor="google-display-calendar">
+                <label className="text-on-surface mb-1.5 block text-sm font-medium">
                   Schedule display calendar
-                </FormLabel>
+                </label>
                 <select
-                  id="google-display-calendar"
                   value={displayCalendarId}
                   onChange={(event) => setDisplayCalendarId(event.target.value)}
                   disabled={isPending}
@@ -220,13 +232,14 @@ export default function GoogleCalendarCard({
               </div>
 
               <div>
-                <FormLabel htmlFor="google-availability-calendar">
+                <label className="text-on-surface mb-1.5 block text-sm font-medium">
                   Booking availability calendar
-                </FormLabel>
+                </label>
                 <select
-                  id="google-availability-calendar"
                   value={availabilityCalendarId}
-                  onChange={(event) => setAvailabilityCalendarId(event.target.value)}
+                  onChange={(event) =>
+                    setAvailabilityCalendarId(event.target.value)
+                  }
                   disabled={isPending}
                   className={selectClass()}
                 >
@@ -240,13 +253,14 @@ export default function GoogleCalendarCard({
               </div>
 
               <div>
-                <FormLabel htmlFor="google-destination-calendar">
+                <label className="text-on-surface mb-1.5 block text-sm font-medium">
                   Booking destination calendar
-                </FormLabel>
+                </label>
                 <select
-                  id="google-destination-calendar"
                   value={eventDestinationCalendarId}
-                  onChange={(event) => setEventDestinationCalendarId(event.target.value)}
+                  onChange={(event) =>
+                    setEventDestinationCalendarId(event.target.value)
+                  }
                   disabled={isPending}
                   className={selectClass()}
                 >
@@ -260,9 +274,10 @@ export default function GoogleCalendarCard({
               </div>
 
               <div>
-                <FormLabel htmlFor="google-calendar-timezone">Timezone</FormLabel>
+                <label className="text-on-surface mb-1.5 block text-sm font-medium">
+                  Timezone
+                </label>
                 <input
-                  id="google-calendar-timezone"
                   type="text"
                   value={timezone}
                   onChange={(event) => setTimezone(event.target.value)}
@@ -276,7 +291,7 @@ export default function GoogleCalendarCard({
                 type="button"
                 onClick={handleSave}
                 disabled={isPending}
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60"
+                className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 inline-flex min-h-12 items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
               >
                 {isPending ? 'Saving...' : 'Save Google Calendar settings'}
               </button>
@@ -284,9 +299,9 @@ export default function GoogleCalendarCard({
           )}
         </div>
       ) : (
-        <div className="mt-5 rounded-xl border border-dashed border-outline bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
-          Connect the same Google account as your signed-in Coatly email to show schedule data and
-          keep bookings synced automatically.
+        <div className="border-outline bg-surface-container-low text-on-surface-variant mt-5 rounded-xl border border-dashed px-4 py-4 text-sm">
+          Connect the same Google account as your signed-in Coatly email to show
+          schedule data and keep bookings synced automatically.
         </div>
       )}
     </section>

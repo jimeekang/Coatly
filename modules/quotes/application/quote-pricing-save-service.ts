@@ -773,27 +773,30 @@ export async function saveQuotePricingRelations({
     }
   }
 
+  if (
+    mode === 'update' &&
+    (data.replace_quote_structure || hasQuoteFormStructurePayload(data))
+  ) {
+    const { error: clausesDeleteError } = await supabase
+      .from('quote_clause_items')
+      .delete()
+      .eq('quote_id', quoteId);
+    if (clausesDeleteError) return fail(clausesDeleteError.message);
+
+    const { error: intakeDeleteError } = await supabase
+      .from('quote_ai_intake_snapshots')
+      .delete()
+      .eq('quote_id', quoteId);
+    if (intakeDeleteError) return fail(intakeDeleteError.message);
+
+    const { error: sectionsDeleteError } = await supabase
+      .from('quote_scope_sections')
+      .delete()
+      .eq('quote_id', quoteId);
+    if (sectionsDeleteError) return fail(sectionsDeleteError.message);
+  }
+
   if (hasQuoteFormStructurePayload(data)) {
-    if (mode === 'update') {
-      const { error: clausesDeleteError } = await supabase
-        .from('quote_clause_items')
-        .delete()
-        .eq('quote_id', quoteId);
-      if (clausesDeleteError) return fail(clausesDeleteError.message);
-
-      const { error: intakeDeleteError } = await supabase
-        .from('quote_ai_intake_snapshots')
-        .delete()
-        .eq('quote_id', quoteId);
-      if (intakeDeleteError) return fail(intakeDeleteError.message);
-
-      const { error: sectionsDeleteError } = await supabase
-        .from('quote_scope_sections')
-        .delete()
-        .eq('quote_id', quoteId);
-      if (sectionsDeleteError) return fail(sectionsDeleteError.message);
-    }
-
     const quoteFormError = await insertQuoteFormStructure(
       supabase,
       quoteId,

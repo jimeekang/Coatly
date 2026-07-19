@@ -2,6 +2,13 @@
 
 import { useId, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Lock, Pencil, Trash2 } from 'lucide-react';
+import { formControlClassName } from '@/components/forms/FormField';
+import {
+  NumericInput,
+  sanitizeDecimalInput,
+  sanitizeIntegerInput,
+} from '@/components/shared/NumericInput';
+import { cn } from '@/lib/utils';
 import type {
   QuickEstimateSettings,
   QuickEstimateRoom,
@@ -84,7 +91,10 @@ const WALL_PAINT_SYSTEM_LABELS: Record<
   new_plaster_3coat: 'New Plaster (3 coats)',
 };
 
-const STOREY_LABELS: Record<NonNullable<QuickPropertyPreset['storeys']>, string> = {
+const STOREY_LABELS: Record<
+  NonNullable<QuickPropertyPreset['storeys']>,
+  string
+> = {
   '1_storey': '1 Storey',
   '2_storey': '2 Storey',
   '3_storey': '3 Storey',
@@ -259,13 +269,13 @@ function RoomCard({
   }
 
   return (
-    <div className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest">
+    <div className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border">
       <div className="flex min-h-11 items-center justify-between gap-2 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="text-on-surface flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
+            className="text-on-surface focus-visible:ring-primary/20 hover:bg-surface-container-high flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
             aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${room.label} prices`}
           >
             {collapsed ? (
@@ -291,7 +301,10 @@ function RoomCard({
                 }
               }}
               autoFocus
-              className="border-outline-variant h-11 min-w-0 flex-1 rounded-xl border bg-surface-container-lowest px-3 text-sm font-semibold text-on-surface"
+              className={cn(
+                formControlClassName,
+                'min-w-0 flex-1 px-3 font-semibold'
+              )}
             />
           ) : (
             <button
@@ -300,7 +313,7 @@ function RoomCard({
                 setDraftLabel(room.label);
                 setIsEditingLabel(true);
               }}
-              className="group/name text-on-surface flex min-h-11 min-w-0 items-center gap-1.5 rounded-lg px-2 text-left text-sm font-medium transition-colors hover:bg-surface-container-high focus-visible:bg-surface-container-high"
+              className="group/name text-on-surface focus-visible:ring-primary/20 hover:bg-surface-container-high focus-visible:bg-surface-container-high flex min-h-11 min-w-0 items-center gap-1.5 rounded-xl px-2 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               aria-label={`Edit ${room.label} name`}
             >
               <span className="min-w-0 truncate">{room.label}</span>
@@ -314,7 +327,7 @@ function RoomCard({
         <button
           type="button"
           onClick={onDelete}
-          className="text-on-surface-variant hover:text-error flex h-11 w-11 shrink-0 items-center justify-center"
+          className="text-on-surface-variant hover:text-error focus-visible:ring-primary/20 hover:bg-error-container flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
           aria-label="Delete room"
         >
           <Trash2 className="h-4 w-4" />
@@ -322,16 +335,18 @@ function RoomCard({
       </div>
 
       {!collapsed && (
-        <div className="border-outline-variant border-t px-4 pb-4 pt-3">
+        <div className="border-outline-variant border-t px-4 pt-3 pb-4">
           {/* Surface toggles */}
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-on-surface-variant text-xs font-semibold">Surfaces:</span>
+            <span className="text-on-surface-variant text-xs font-semibold">
+              Surfaces:
+            </span>
             {(['walls', 'ceiling', 'trim'] as const).map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => handleSurfaceToggle(s)}
-                className={`inline-flex min-h-11 items-center rounded-full border px-4 text-xs font-medium transition-colors ${
+                className={`focus-visible:ring-primary/20 inline-flex min-h-11 items-center rounded-xl border px-4 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                   room.enabled_surfaces.includes(s)
                     ? 'border-primary bg-primary text-on-primary'
                     : 'border-outline-variant text-on-surface-variant'
@@ -364,7 +379,9 @@ function RoomCard({
               <tbody className="divide-outline-variant divide-y">
                 {(['small', 'medium', 'large'] as const).map((size) => (
                   <tr key={size}>
-                    <td className="py-2 text-sm font-medium">{SIZE_LABELS[size]}</td>
+                    <td className="py-2 text-sm font-medium">
+                      {SIZE_LABELS[size]}
+                    </td>
                     {room.enabled_surfaces.map((s) => {
                       if (s === 'trim') {
                         return (
@@ -373,20 +390,23 @@ function RoomCard({
                               {TRIM_PRICE_FIELDS.map((field) => (
                                 <label
                                   key={field.key}
-                                  className="grid grid-cols-[52px_1fr] items-center gap-2 text-xs text-on-surface-variant"
+                                  className="text-on-surface-variant grid grid-cols-[52px_1fr] items-center gap-2 text-xs"
                                 >
                                   <span>{field.label}</span>
-                                  <span className="border-outline-variant inline-flex h-11 min-w-0 items-center gap-1 rounded-lg border bg-surface-container-lowest px-2">
-                                    <span>$</span>
-                                    <input
+                                  <span className="relative min-w-0">
+                                    <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center">
+                                      $
+                                    </span>
+                                    <NumericInput
                                       aria-label={`${room.label} ${SIZE_LABELS[size]} Trim ${field.label} price`}
-                                      type="number"
                                       min="0"
                                       step="0.01"
-                                      defaultValue={centsToDisplay(
+                                      value={centsToDisplay(
                                         room.sizes[size][field.key] ??
                                           room.sizes[size].trim_cents
                                       )}
+                                      sanitize={sanitizeDecimalInput}
+                                      onValueChange={() => {}}
                                       onBlur={(event) =>
                                         handleSurfaceCentsChange(
                                           size,
@@ -395,7 +415,10 @@ function RoomCard({
                                           field.key
                                         )
                                       }
-                                      className="w-20 min-w-0 bg-transparent text-right text-sm text-on-surface outline-none"
+                                      className={cn(
+                                        formControlClassName,
+                                        'min-w-0 pr-3 pl-7 text-right'
+                                      )}
                                     />
                                   </span>
                                 </label>
@@ -407,15 +430,30 @@ function RoomCard({
 
                       return (
                         <td key={s} className="py-2 pl-2 text-right">
-                          <div className="border-outline-variant inline-flex h-11 min-w-0 items-center gap-1 rounded-lg border bg-surface-container-lowest px-2">
-                            <span className="text-on-surface-variant text-xs">$</span>
-                            <input
-                              type="number"
+                          <div className="relative ml-auto w-28 min-w-0">
+                            <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center text-xs">
+                              $
+                            </span>
+                            <NumericInput
+                              aria-label={`${room.label} ${SIZE_LABELS[size]} ${SURFACE_LABELS[s]} price`}
                               min="0"
                               step="0.01"
-                              defaultValue={centsToDisplay(room.sizes[size][`${s}_cents`])}
-                              onBlur={(e) => handleSurfaceCentsChange(size, s, e.target.value)}
-                              className="w-20 min-w-0 bg-transparent text-right text-sm text-on-surface outline-none"
+                              value={centsToDisplay(
+                                room.sizes[size][`${s}_cents`]
+                              )}
+                              sanitize={sanitizeDecimalInput}
+                              onValueChange={() => {}}
+                              onBlur={(e) =>
+                                handleSurfaceCentsChange(
+                                  size,
+                                  s,
+                                  e.target.value
+                                )
+                              }
+                              className={cn(
+                                formControlClassName,
+                                'min-w-0 pr-3 pl-7 text-right'
+                              )}
                             />
                           </div>
                         </td>
@@ -427,33 +465,34 @@ function RoomCard({
             </table>
           </div>
 
-          <div className="mt-4 space-y-3 rounded-xl border border-outline-variant bg-surface-container-low p-3">
-            <p className="text-xs font-semibold text-on-surface-variant">
+          <div className="border-outline-variant bg-surface-container-low mt-4 space-y-3 rounded-2xl border p-3">
+            <p className="text-on-surface-variant text-xs font-semibold">
               Default measured quantities for Detailed Specific
             </p>
             <div className="grid gap-3 md:grid-cols-3">
               {(['small', 'medium', 'large'] as const).map((size) => (
                 <div
                   key={size}
-                  className="min-w-0 space-y-2 rounded-lg bg-surface-container-lowest p-3"
+                  className="bg-surface-container-lowest min-w-0 space-y-2 rounded-xl p-3"
                 >
-                  <p className="text-xs font-semibold text-on-surface">
+                  <p className="text-on-surface text-xs font-semibold">
                     {SIZE_LABELS[size]}
                   </p>
                   {MEASUREMENT_FIELDS.map((field) => (
                     <label
                       key={field.key}
-                      className="grid gap-1 text-xs text-on-surface-variant"
+                      className="text-on-surface-variant grid gap-1 text-xs"
                     >
                       <span>
                         {field.label} ({field.suffix})
                       </span>
-                      <input
+                      <NumericInput
                         aria-label={`${room.label} ${SIZE_LABELS[size]} ${field.label} ${field.suffix}`}
-                        type="number"
                         min="0"
                         step="0.1"
-                        defaultValue={room.sizes[size][field.key] ?? 0}
+                        value={String(room.sizes[size][field.key] ?? 0)}
+                        sanitize={sanitizeDecimalInput}
+                        onValueChange={() => {}}
                         onBlur={(event) =>
                           handleMeasurementChange(
                             size,
@@ -461,7 +500,10 @@ function RoomCard({
                             event.target.value
                           )
                         }
-                        className="border-outline-variant h-11 w-full min-w-0 rounded-lg border bg-surface-container-lowest px-2 text-right text-sm text-on-surface"
+                        className={cn(
+                          formControlClassName,
+                          'min-w-0 px-2 text-right'
+                        )}
                       />
                     </label>
                   ))}
@@ -482,7 +524,10 @@ interface QuickEstimateTabProps {
   onChange: (updated: QuickEstimateSettings) => void;
 }
 
-export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) {
+export function QuickEstimateTab({
+  settings,
+  onChange,
+}: QuickEstimateTabProps) {
   const [customLabel, setCustomLabel] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const generatedRoomIdPrefix = useId();
@@ -539,9 +584,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
   function handlePropertyPresetDelete(id: string) {
     onChange({
       ...settings,
-      property_presets: propertyPresets.filter(
-        (preset) => preset.id !== id
-      ),
+      property_presets: propertyPresets.filter((preset) => preset.id !== id),
     });
   }
 
@@ -570,7 +613,9 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
     });
   }
 
-  function addPropertyPreset(propertyType: QuickPropertyPreset['property_type']) {
+  function addPropertyPreset(
+    propertyType: QuickPropertyPreset['property_type']
+  ) {
     nextPropertyPresetIdRef.current += 1;
     onChange({
       ...settings,
@@ -613,37 +658,70 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
   return (
     <div className="min-w-0 space-y-8">
       {/* Coating multipliers */}
-      <section className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest p-4 sm:p-5">
+      <section className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border p-4 sm:p-5">
         <div className="mb-4 flex flex-col gap-1">
-          <h3 className="text-on-surface text-base font-semibold">Coating Type Multipliers</h3>
+          <h3 className="text-on-surface text-base font-semibold">
+            Coating Type Multipliers
+          </h3>
           <p className="text-on-surface-variant mt-0.5 text-sm">
-            Applied to the room price based on number of coats. 2 coats is the baseline (100%, locked).
+            Applied to the room price based on number of coats. 2 coats is the
+            baseline (100%, locked).
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            { key: 'one_coat_refresh_pct', label: '1 Coat Refresh', locked: false },
-            { key: 'two_coats_repaint_pct', label: '2 Coats Repaint', locked: true },
-            { key: 'three_coats_new_plaster_pct', label: '3 Coats New Plaster', locked: false },
+            {
+              key: 'one_coat_refresh_pct',
+              label: '1 Coat Refresh',
+              locked: false,
+            },
+            {
+              key: 'two_coats_repaint_pct',
+              label: '2 Coats Repaint',
+              locked: true,
+            },
+            {
+              key: 'three_coats_new_plaster_pct',
+              label: '3 Coats New Plaster',
+              locked: false,
+            },
           ].map(({ key, label, locked }) => (
             <div key={key} className="min-w-0">
-              <label className="text-on-surface-variant mb-1 block text-xs font-medium">{label}</label>
+              <label className="text-on-surface-variant mb-1 block text-xs font-medium">
+                {label}
+              </label>
               <div className="flex items-center gap-1">
-                <input
-                  type="number"
+                <NumericInput
+                  aria-label={`${label} multiplier`}
                   min="0"
                   step="1"
+                  inputMode="numeric"
                   disabled={locked}
-                  value={settings.coating_multipliers[key as keyof typeof settings.coating_multipliers]}
-                  onChange={(e) => !locked && handleMultiplierChange('coating_multipliers', key, e.target.value)}
-                  className={`border-outline-variant h-11 w-20 min-w-0 rounded-lg border px-3 text-right text-sm ${
-                    locked ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : 'bg-surface-container-lowest'
-                  }`}
+                  value={String(
+                    settings.coating_multipliers[
+                      key as keyof typeof settings.coating_multipliers
+                    ]
+                  )}
+                  sanitize={sanitizeIntegerInput}
+                  onValueChange={(nextValue) =>
+                    !locked &&
+                    handleMultiplierChange(
+                      'coating_multipliers',
+                      key,
+                      nextValue
+                    )
+                  }
+                  className={cn(
+                    formControlClassName,
+                    'w-20 min-w-0 px-3 text-right',
+                    locked &&
+                      'bg-surface-container-low text-on-surface-variant cursor-not-allowed'
+                  )}
                 />
                 <span className="text-on-surface-variant text-sm">%</span>
                 {locked && (
                   <Lock
-                    className="ml-1 h-3.5 w-3.5 text-on-surface-variant"
+                    className="text-on-surface-variant ml-1 h-3.5 w-3.5"
                     aria-label={`${label} locked`}
                   />
                 )}
@@ -654,11 +732,14 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
       </section>
 
       {/* Condition multipliers */}
-      <section className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest p-4 sm:p-5">
+      <section className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border p-4 sm:p-5">
         <div className="mb-4 flex flex-col gap-1">
-          <h3 className="text-on-surface text-base font-semibold">Condition Multipliers</h3>
+          <h3 className="text-on-surface text-base font-semibold">
+            Condition Multipliers
+          </h3>
           <p className="text-on-surface-variant mt-0.5 text-sm">
-            Applied to the room price based on surface condition. Average is baseline (100%, locked).
+            Applied to the room price based on surface condition. Average is
+            baseline (100%, locked).
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -668,23 +749,41 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             { key: 'poor_pct', label: 'Poor', locked: false },
           ].map(({ key, label, locked }) => (
             <div key={key} className="min-w-0">
-              <label className="text-on-surface-variant mb-1 block text-xs font-medium">{label}</label>
+              <label className="text-on-surface-variant mb-1 block text-xs font-medium">
+                {label}
+              </label>
               <div className="flex items-center gap-1">
-                <input
-                  type="number"
+                <NumericInput
+                  aria-label={`${label} condition multiplier`}
                   min="0"
                   step="1"
+                  inputMode="numeric"
                   disabled={locked}
-                  value={settings.condition_multipliers[key as keyof typeof settings.condition_multipliers]}
-                  onChange={(e) => !locked && handleMultiplierChange('condition_multipliers', key, e.target.value)}
-                  className={`border-outline-variant h-11 w-20 min-w-0 rounded-lg border px-3 text-right text-sm ${
-                    locked ? 'bg-surface-container-low text-on-surface-variant cursor-not-allowed' : 'bg-surface-container-lowest'
-                  }`}
+                  value={String(
+                    settings.condition_multipliers[
+                      key as keyof typeof settings.condition_multipliers
+                    ]
+                  )}
+                  sanitize={sanitizeIntegerInput}
+                  onValueChange={(nextValue) =>
+                    !locked &&
+                    handleMultiplierChange(
+                      'condition_multipliers',
+                      key,
+                      nextValue
+                    )
+                  }
+                  className={cn(
+                    formControlClassName,
+                    'w-20 min-w-0 px-3 text-right',
+                    locked &&
+                      'bg-surface-container-low text-on-surface-variant cursor-not-allowed'
+                  )}
                 />
                 <span className="text-on-surface-variant text-sm">%</span>
                 {locked && (
                   <Lock
-                    className="ml-1 h-3.5 w-3.5 text-on-surface-variant"
+                    className="text-on-surface-variant ml-1 h-3.5 w-3.5"
                     aria-label={`${label} locked`}
                   />
                 )}
@@ -705,7 +804,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
           </p>
         </div>
 
-        <div className="border-outline-variant bg-surface-container-low min-w-0 rounded-xl border px-4 py-3">
+        <div className="border-outline-variant bg-surface-container-low min-w-0 rounded-2xl border px-4 py-3">
           <p className="text-on-surface text-sm font-semibold">
             How this price is calculated
           </p>
@@ -721,7 +820,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
           {propertyPresets.map((preset) => (
             <div
               key={preset.id}
-              className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest p-4"
+              className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border p-4"
             >
               {(() => {
                 const surfaceShare = getSurfacePriceShare(preset);
@@ -732,340 +831,368 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
 
                 return (
                   <>
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_44px]">
-                <div>
-                  <label className="text-on-surface-variant mb-1 block text-xs font-medium">
-                    Preset name
-                  </label>
-                  <input
-                    value={preset.label}
-                    onChange={(event) =>
-                      handlePropertyPresetUpdate(preset.id, {
-                        label: event.target.value,
-                      })
-                    }
-                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor={`property-type-${preset.id}`}
-                    className="text-on-surface-variant mb-1 block text-xs font-medium"
-                  >
-                    Property type
-                  </label>
-                  <select
-                    id={`property-type-${preset.id}`}
-                    aria-label={`Property type for ${preset.label}`}
-                    value={preset.property_type}
-                    onChange={(event) =>
-                      handlePropertyPresetUpdate(preset.id, {
-                        property_type: event.target
-                          .value as QuickPropertyPreset['property_type'],
-                        apartment_type:
-                          event.target.value === 'apartment'
-                            ? (preset.apartment_type ?? '2_bedroom_standard')
-                            : null,
-                        storeys:
-                          event.target.value === 'house'
-                            ? (preset.storeys ?? '1_storey')
-                            : null,
-                      })
-                    }
-                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                  >
-                    {(['apartment', 'house'] as const).map((propertyType) => (
-                      <option key={propertyType} value={propertyType}>
-                        {PROPERTY_TYPE_LABELS[propertyType]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handlePropertyPresetDelete(preset.id)}
-                  className="text-on-surface-variant hover:text-error flex h-11 w-11 shrink-0 items-center justify-center self-end"
-                  aria-label={`Delete ${preset.label}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_44px]">
+                      <div>
+                        <label className="text-on-surface-variant mb-1 block text-xs font-medium">
+                          Preset name
+                        </label>
+                        <input
+                          aria-label={`Preset name for ${preset.label}`}
+                          value={preset.label}
+                          onChange={(event) =>
+                            handlePropertyPresetUpdate(preset.id, {
+                              label: event.target.value,
+                            })
+                          }
+                          className={cn(formControlClassName, 'min-w-0 px-3')}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor={`property-type-${preset.id}`}
+                          className="text-on-surface-variant mb-1 block text-xs font-medium"
+                        >
+                          Property type
+                        </label>
+                        <select
+                          id={`property-type-${preset.id}`}
+                          aria-label={`Property type for ${preset.label}`}
+                          value={preset.property_type}
+                          onChange={(event) =>
+                            handlePropertyPresetUpdate(preset.id, {
+                              property_type: event.target
+                                .value as QuickPropertyPreset['property_type'],
+                              apartment_type:
+                                event.target.value === 'apartment'
+                                  ? (preset.apartment_type ??
+                                    '2_bedroom_standard')
+                                  : null,
+                              storeys:
+                                event.target.value === 'house'
+                                  ? (preset.storeys ?? '1_storey')
+                                  : null,
+                            })
+                          }
+                          className={cn(formControlClassName, 'min-w-0 px-3')}
+                        >
+                          {(['apartment', 'house'] as const).map(
+                            (propertyType) => (
+                              <option key={propertyType} value={propertyType}>
+                                {PROPERTY_TYPE_LABELS[propertyType]}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handlePropertyPresetDelete(preset.id)}
+                        className="text-on-surface-variant hover:text-error focus-visible:ring-primary/20 hover:bg-error-container flex h-11 w-11 shrink-0 items-center justify-center self-end rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                        aria-label={`Delete ${preset.label}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
 
-              <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {preset.property_type === 'apartment' && (
-                  <div>
-                    <label
-                      htmlFor={`apartment-type-${preset.id}`}
-                      className="text-on-surface-variant mb-1 block text-xs font-medium"
-                    >
-                      Apartment type
-                    </label>
-                    <select
-                      id={`apartment-type-${preset.id}`}
-                      value={preset.apartment_type ?? '2_bedroom_standard'}
-                      onChange={(event) =>
-                        handlePropertyPresetUpdate(preset.id, {
-                          apartment_type: event.target
-                            .value as QuickPropertyPreset['apartment_type'],
-                        })
-                      }
-                      className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                    >
-                      {Object.entries(APARTMENT_TYPE_LABELS).map(
-                        ([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      {preset.property_type === 'apartment' && (
+                        <div>
+                          <label
+                            htmlFor={`apartment-type-${preset.id}`}
+                            className="text-on-surface-variant mb-1 block text-xs font-medium"
+                          >
+                            Apartment type
+                          </label>
+                          <select
+                            id={`apartment-type-${preset.id}`}
+                            value={
+                              preset.apartment_type ?? '2_bedroom_standard'
+                            }
+                            onChange={(event) =>
+                              handlePropertyPresetUpdate(preset.id, {
+                                apartment_type: event.target
+                                  .value as QuickPropertyPreset['apartment_type'],
+                              })
+                            }
+                            className={cn(formControlClassName, 'min-w-0 px-3')}
+                          >
+                            {Object.entries(APARTMENT_TYPE_LABELS).map(
+                              ([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              )
+                            )}
+                          </select>
+                        </div>
+                      )}
+                      <div>
+                        <label
+                          htmlFor={`bedrooms-${preset.id}`}
+                          className="text-on-surface-variant mb-1 block text-xs font-medium"
+                        >
+                          Bedrooms
+                        </label>
+                        <NumericInput
+                          id={`bedrooms-${preset.id}`}
+                          aria-label={`Bedrooms for ${preset.label}`}
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          value={
+                            preset.bedrooms == null
+                              ? ''
+                              : String(preset.bedrooms)
+                          }
+                          sanitize={sanitizeIntegerInput}
+                          onValueChange={(nextValue) =>
+                            handlePropertyPresetUpdate(preset.id, {
+                              bedrooms: numberOrNull(nextValue),
+                            })
+                          }
+                          className={cn(formControlClassName, 'min-w-0 px-3')}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor={`bathrooms-${preset.id}`}
+                          className="text-on-surface-variant mb-1 block text-xs font-medium"
+                        >
+                          Bathrooms
+                        </label>
+                        <NumericInput
+                          id={`bathrooms-${preset.id}`}
+                          aria-label={`Bathrooms for ${preset.label}`}
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          value={
+                            preset.bathrooms == null
+                              ? ''
+                              : String(preset.bathrooms)
+                          }
+                          sanitize={sanitizeIntegerInput}
+                          onValueChange={(nextValue) =>
+                            handlePropertyPresetUpdate(preset.id, {
+                              bathrooms: numberOrNull(nextValue),
+                            })
+                          }
+                          className={cn(formControlClassName, 'min-w-0 px-3')}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor={`sqm-${preset.id}`}
+                          className="text-on-surface-variant mb-1 block text-xs font-medium"
+                        >
+                          Sqm
+                        </label>
+                        <NumericInput
+                          id={`sqm-${preset.id}`}
+                          aria-label={`Sqm for ${preset.label}`}
+                          min="1"
+                          step="1"
+                          inputMode="numeric"
+                          value={preset.sqm == null ? '' : String(preset.sqm)}
+                          sanitize={sanitizeIntegerInput}
+                          onValueChange={(nextValue) =>
+                            handlePropertyPresetUpdate(preset.id, {
+                              sqm: numberOrNull(nextValue),
+                            })
+                          }
+                          className={cn(formControlClassName, 'min-w-0 px-3')}
+                        />
+                      </div>
+                      {preset.property_type === 'house' && (
+                        <div>
+                          <label
+                            htmlFor={`storeys-${preset.id}`}
+                            className="text-on-surface-variant mb-1 block text-xs font-medium"
+                          >
+                            Storeys
+                          </label>
+                          <select
+                            id={`storeys-${preset.id}`}
+                            aria-label={`Storeys for ${preset.label}`}
+                            value={preset.storeys ?? '1_storey'}
+                            onChange={(event) =>
+                              handlePropertyPresetUpdate(preset.id, {
+                                storeys: event.target
+                                  .value as QuickPropertyPreset['storeys'],
+                              })
+                            }
+                            className={cn(formControlClassName, 'min-w-0 px-3')}
+                          >
+                            {Object.entries(STOREY_LABELS).map(
+                              ([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              )
+                            )}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                      <div>
+                        <label
+                          htmlFor={`condition-${preset.id}`}
+                          className="text-on-surface-variant mb-1 block text-xs font-medium"
+                        >
+                          Condition
+                        </label>
+                        <select
+                          id={`condition-${preset.id}`}
+                          value={preset.condition}
+                          onChange={(event) =>
+                            handlePropertyPresetUpdate(preset.id, {
+                              condition: event.target
+                                .value as QuickPropertyPreset['condition'],
+                            })
+                          }
+                          className={cn(formControlClassName, 'min-w-0 px-3')}
+                        >
+                          {Object.entries(CONDITION_LABELS).map(
+                            ([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+                      <div>
+                        <label
+                          htmlFor={`wall-paint-system-${preset.id}`}
+                          className="text-on-surface-variant mb-1 block text-xs font-medium"
+                        >
+                          Wall coating
+                        </label>
+                        <select
+                          id={`wall-paint-system-${preset.id}`}
+                          value={preset.wall_paint_system}
+                          onChange={(event) =>
+                            handlePropertyPresetUpdate(preset.id, {
+                              wall_paint_system: event.target
+                                .value as QuickPropertyPreset['wall_paint_system'],
+                            })
+                          }
+                          className={cn(formControlClassName, 'min-w-0 px-3')}
+                        >
+                          {Object.entries(WALL_PAINT_SYSTEM_LABELS).map(
+                            ([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+                      <div>
+                        <label
+                          htmlFor={`trim-paint-system-${preset.id}`}
+                          className="text-on-surface-variant mb-1 block text-xs font-medium"
+                        >
+                          Trim base
+                        </label>
+                        <select
+                          id={`trim-paint-system-${preset.id}`}
+                          value={preset.trim_paint_system ?? 'oil_2coat'}
+                          onChange={(event) =>
+                            handlePropertyPresetUpdate(preset.id, {
+                              trim_paint_system: event.target
+                                .value as QuickPropertyPreset['trim_paint_system'],
+                            })
+                          }
+                          className={cn(formControlClassName, 'min-w-0 px-3')}
+                        >
+                          {Object.entries(TRIM_PAINT_SYSTEM_LABELS).map(
+                            ([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(['walls', 'ceiling', 'trim'] as const).map(
+                        (surface) => (
+                          <button
+                            key={surface}
+                            type="button"
+                            onClick={() =>
+                              handlePropertyPresetScopeToggle(preset, surface)
+                            }
+                            className={`focus-visible:ring-primary/20 inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
+                              preset.scope.includes(surface)
+                                ? 'border-primary bg-primary text-on-primary'
+                                : 'border-outline-variant text-on-surface-variant'
+                            }`}
+                          >
+                            {SURFACE_LABELS[surface]}
+                          </button>
                         )
                       )}
-                    </select>
-                  </div>
-                )}
-                <div>
-                  <label
-                    htmlFor={`bedrooms-${preset.id}`}
-                    className="text-on-surface-variant mb-1 block text-xs font-medium"
-                  >
-                    Bedrooms
-                  </label>
-                  <input
-                    id={`bedrooms-${preset.id}`}
-                    aria-label={`Bedrooms for ${preset.label}`}
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={preset.bedrooms ?? ''}
-                    onChange={(event) =>
-                      handlePropertyPresetUpdate(preset.id, {
-                        bedrooms: numberOrNull(event.target.value),
-                      })
-                    }
-                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor={`bathrooms-${preset.id}`}
-                    className="text-on-surface-variant mb-1 block text-xs font-medium"
-                  >
-                    Bathrooms
-                  </label>
-                  <input
-                    id={`bathrooms-${preset.id}`}
-                    aria-label={`Bathrooms for ${preset.label}`}
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={preset.bathrooms ?? ''}
-                    onChange={(event) =>
-                      handlePropertyPresetUpdate(preset.id, {
-                        bathrooms: numberOrNull(event.target.value),
-                      })
-                    }
-                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor={`sqm-${preset.id}`}
-                    className="text-on-surface-variant mb-1 block text-xs font-medium"
-                  >
-                    Sqm
-                  </label>
-                  <input
-                    id={`sqm-${preset.id}`}
-                    aria-label={`Sqm for ${preset.label}`}
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={preset.sqm ?? ''}
-                    onChange={(event) =>
-                      handlePropertyPresetUpdate(preset.id, {
-                        sqm: numberOrNull(event.target.value),
-                      })
-                    }
-                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                  />
-                </div>
-                {preset.property_type === 'house' && (
-                  <div>
-                    <label
-                      htmlFor={`storeys-${preset.id}`}
-                      className="text-on-surface-variant mb-1 block text-xs font-medium"
-                    >
-                      Storeys
-                    </label>
-                    <select
-                      id={`storeys-${preset.id}`}
-                      aria-label={`Storeys for ${preset.label}`}
-                      value={preset.storeys ?? '1_storey'}
-                      onChange={(event) =>
-                        handlePropertyPresetUpdate(preset.id, {
-                          storeys: event.target
-                            .value as QuickPropertyPreset['storeys'],
-                        })
-                      }
-                      className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                    >
-                      {Object.entries(STOREY_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-3 grid gap-3 lg:grid-cols-3">
-                <div>
-                  <label
-                    htmlFor={`condition-${preset.id}`}
-                    className="text-on-surface-variant mb-1 block text-xs font-medium"
-                  >
-                    Condition
-                  </label>
-                  <select
-                    id={`condition-${preset.id}`}
-                    value={preset.condition}
-                    onChange={(event) =>
-                      handlePropertyPresetUpdate(preset.id, {
-                        condition: event.target
-                          .value as QuickPropertyPreset['condition'],
-                      })
-                    }
-                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                  >
-                    {Object.entries(CONDITION_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor={`wall-paint-system-${preset.id}`}
-                    className="text-on-surface-variant mb-1 block text-xs font-medium"
-                  >
-                    Wall coating
-                  </label>
-                  <select
-                    id={`wall-paint-system-${preset.id}`}
-                    value={preset.wall_paint_system}
-                    onChange={(event) =>
-                      handlePropertyPresetUpdate(preset.id, {
-                        wall_paint_system: event.target
-                          .value as QuickPropertyPreset['wall_paint_system'],
-                      })
-                    }
-                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                  >
-                    {Object.entries(WALL_PAINT_SYSTEM_LABELS).map(
-                      ([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor={`trim-paint-system-${preset.id}`}
-                    className="text-on-surface-variant mb-1 block text-xs font-medium"
-                  >
-                    Trim base
-                  </label>
-                  <select
-                    id={`trim-paint-system-${preset.id}`}
-                    value={preset.trim_paint_system ?? 'oil_2coat'}
-                    onChange={(event) =>
-                      handlePropertyPresetUpdate(preset.id, {
-                        trim_paint_system: event.target
-                          .value as QuickPropertyPreset['trim_paint_system'],
-                      })
-                    }
-                    className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                  >
-                    {Object.entries(TRIM_PAINT_SYSTEM_LABELS).map(
-                      ([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(['walls', 'ceiling', 'trim'] as const).map((surface) => (
-                  <button
-                    key={surface}
-                    type="button"
-                    onClick={() =>
-                      handlePropertyPresetScopeToggle(preset, surface)
-                    }
-                    className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
-                      preset.scope.includes(surface)
-                        ? 'border-primary bg-primary text-on-primary'
-                        : 'border-outline-variant text-on-surface-variant'
-                    }`}
-                  >
-                    {SURFACE_LABELS[surface]}
-                  </button>
-                ))}
-              </div>
-              <div className="border-outline-variant bg-surface-container-low mt-4 min-w-0 rounded-xl border p-3">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-on-surface text-sm font-semibold">
-                    How the total price is split
-                  </p>
-                  <p
-                    className={`text-xs font-semibold ${
-                      surfaceShareTotal === 100
-                        ? 'text-primary'
-                        : 'text-error'
-                    }`}
-                  >
-                    {surfaceShareTotal}% total
-                  </p>
-                </div>
-                <p className="text-on-surface-variant mt-1 text-xs">
-                  If a quote only includes walls, ceiling, or trim, these shares
-                  decide how much of the whole-property price is used.
-                </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                  {SURFACE_SHARE_FIELDS.map((field) => (
-                    <div key={field.key} className="min-w-0">
-                      <label
-                        htmlFor={`surface-share-${field.key}-${preset.id}`}
-                        className="text-on-surface-variant mb-1 block text-xs font-medium"
-                      >
-                        {field.label} share %
-                      </label>
-                      <input
-                        id={`surface-share-${field.key}-${preset.id}`}
-                        aria-label={`${field.ariaLabel} price share for ${preset.label}`}
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="1"
-                        value={surfaceShare[field.key]}
-                        onChange={(event) =>
-                          handlePropertyPresetShareChange(
-                            preset,
-                            field.key,
-                            event.target.value
-                          )
-                        }
-                        className="border-outline-variant h-11 w-full min-w-0 rounded-xl border bg-surface-container-lowest px-3 text-sm"
-                      />
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="border-outline-variant bg-surface-container-low mt-4 min-w-0 rounded-2xl border p-3">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-on-surface text-sm font-semibold">
+                          How the total price is split
+                        </p>
+                        <p
+                          className={`text-xs font-semibold ${
+                            surfaceShareTotal === 100
+                              ? 'text-primary'
+                              : 'text-error'
+                          }`}
+                        >
+                          {surfaceShareTotal}% total
+                        </p>
+                      </div>
+                      <p className="text-on-surface-variant mt-1 text-xs">
+                        If a quote only includes walls, ceiling, or trim, these
+                        shares decide how much of the whole-property price is
+                        used.
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                        {SURFACE_SHARE_FIELDS.map((field) => (
+                          <div key={field.key} className="min-w-0">
+                            <label
+                              htmlFor={`surface-share-${field.key}-${preset.id}`}
+                              className="text-on-surface-variant mb-1 block text-xs font-medium"
+                            >
+                              {field.label} share %
+                            </label>
+                            <NumericInput
+                              id={`surface-share-${field.key}-${preset.id}`}
+                              aria-label={`${field.ariaLabel} price share for ${preset.label}`}
+                              min="0"
+                              max="100"
+                              step="1"
+                              inputMode="numeric"
+                              value={String(surfaceShare[field.key])}
+                              sanitize={sanitizeIntegerInput}
+                              onValueChange={(nextValue) =>
+                                handlePropertyPresetShareChange(
+                                  preset,
+                                  field.key,
+                                  nextValue
+                                )
+                              }
+                              className={cn(
+                                formControlClassName,
+                                'min-w-0 px-3'
+                              )}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </>
                 );
               })()}
@@ -1077,14 +1204,14 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
           <button
             type="button"
             onClick={() => addPropertyPreset('apartment')}
-            className="border-primary text-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors"
+            className="border-primary text-primary hover:bg-primary/15 focus-visible:ring-primary/20 inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             + Apartment preset
           </button>
           <button
             type="button"
             onClick={() => addPropertyPreset('house')}
-            className="border-primary text-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors"
+            className="border-primary text-primary hover:bg-primary/15 focus-visible:ring-primary/20 inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             + House preset
           </button>
@@ -1098,12 +1225,13 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             Room Price Library ({settings.rooms.length})
           </h3>
           <p className="text-on-surface-variant text-sm">
-            Used by Quick Estimate, Advanced room presets, and future AI draft pricing.
+            Used by Quick Estimate, Advanced room presets, and future AI draft
+            pricing.
           </p>
         </div>
 
         {settings.rooms.length === 0 && (
-          <p className="text-on-surface-variant border-outline-variant rounded-xl border border-dashed p-4 text-center text-sm">
+          <p className="text-on-surface-variant border-outline-variant rounded-2xl border border-dashed p-4 text-center text-sm">
             No rooms yet. Add from templates below.
           </p>
         )}
@@ -1121,7 +1249,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
       </section>
 
       {/* Add room templates */}
-      <section className="border-outline-variant min-w-0 rounded-2xl border bg-surface-container-lowest p-4 sm:p-5">
+      <section className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border p-4 sm:p-5">
         <div className="mb-3 flex flex-col gap-1">
           <h3 className="text-on-surface text-base font-semibold">Add Room</h3>
         </div>
@@ -1131,7 +1259,7 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
               key={label}
               type="button"
               onClick={() => addRoomFromTemplate(label)}
-              className="border-outline-variant text-on-surface hover:border-primary hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-full border bg-surface-container-lowest px-4 text-xs font-medium transition-colors"
+              className="border-outline-variant text-on-surface hover:border-primary hover:bg-surface-container-low focus-visible:ring-primary/20 bg-surface-container-lowest inline-flex min-h-11 items-center rounded-xl border px-4 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               + {label}
             </button>
@@ -1140,9 +1268,9 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
             <button
               type="button"
               onClick={() => setShowCustomInput(true)}
-              className="border-primary text-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border px-4 text-xs font-medium transition-colors"
+              className="border-primary text-primary hover:bg-primary/15 focus-visible:ring-primary/20 inline-flex min-h-11 items-center rounded-xl border px-4 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              + Custom…
+              + New Custom Room
             </button>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
@@ -1153,19 +1281,22 @@ export function QuickEstimateTab({ settings, onChange }: QuickEstimateTabProps) 
                 onKeyDown={(e) => e.key === 'Enter' && addCustomRoom()}
                 placeholder="Room name"
                 autoFocus
-                className="border-outline-variant h-11 min-w-0 rounded-lg border bg-surface-container-lowest px-3 text-sm"
+                className={cn(formControlClassName, 'min-w-0 px-3')}
               />
               <button
                 type="button"
                 onClick={addCustomRoom}
-                className="bg-primary inline-flex min-h-11 items-center rounded-lg px-4 text-xs font-semibold text-on-primary"
+                className="bg-primary focus-visible:ring-primary/20 text-on-primary inline-flex min-h-11 items-center rounded-xl px-4 text-xs font-semibold transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
               >
                 Add
               </button>
               <button
                 type="button"
-                onClick={() => { setShowCustomInput(false); setCustomLabel(''); }}
-                className="text-on-surface-variant inline-flex min-h-11 items-center px-2 text-xs"
+                onClick={() => {
+                  setShowCustomInput(false);
+                  setCustomLabel('');
+                }}
+                className="text-on-surface-variant focus-visible:ring-primary/20 hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-xl px-3 text-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 Cancel
               </button>

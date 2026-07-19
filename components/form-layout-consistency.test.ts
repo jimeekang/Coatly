@@ -34,20 +34,20 @@ function findTokenPairOffenders(pattern: RegExp) {
       readSource(file)
         .split('\n')
         .flatMap((line, index) =>
-          pattern.test(line) ? [`${file}:${index + 1}: ${line.trim()}`] : [],
-        ),
-    ),
+          pattern.test(line) ? [`${file}:${index + 1}: ${line.trim()}`] : []
+        )
+    )
   );
 }
 
 describe('D6 form layout consistency', () => {
   it('keeps one dashboard PageHeader primitive and no deprecated global UI classes', () => {
-    expect(existsSync(path.join(process.cwd(), 'components/layout/PageHeader.tsx'))).toBe(
-      true
-    );
-    expect(existsSync(path.join(process.cwd(), 'components/ui/PageHeader.tsx'))).toBe(
-      false
-    );
+    expect(
+      existsSync(path.join(process.cwd(), 'components/layout/PageHeader.tsx'))
+    ).toBe(true);
+    expect(
+      existsSync(path.join(process.cwd(), 'components/ui/PageHeader.tsx'))
+    ).toBe(false);
 
     const globals = readSource('app/globals.css');
     expect(globals).not.toMatch(/\.field\b/);
@@ -66,7 +66,10 @@ describe('D6 form layout consistency', () => {
     ] as const;
 
     for (const file of primitiveFiles) {
-      expect(existsSync(path.join(process.cwd(), file)), `${file} should exist`).toBe(true);
+      expect(
+        existsSync(path.join(process.cwd(), file)),
+        `${file} should exist`
+      ).toBe(true);
     }
 
     const field = readSource('components/forms/FormField.tsx');
@@ -98,7 +101,7 @@ describe('D6 form layout consistency', () => {
 
       expect(source, file).not.toContain('pm-');
       expect(source, file).not.toMatch(
-        /\bconst\s+(FIELD|FIELD_CLASS|FIELD_DISABLED_CLASS|LABEL|LABEL_CLASS|TEXTAREA|TEXTAREA_CLASS)\b/,
+        /\bconst\s+(FIELD|FIELD_CLASS|FIELD_DISABLED_CLASS|LABEL|LABEL_CLASS|TEXTAREA|TEXTAREA_CLASS)\b/
       );
       expect(source, file).toContain("from '@/components/forms/FormField'");
       expect(source, file).toContain("from '@/components/forms/FormSection'");
@@ -107,7 +110,10 @@ describe('D6 form layout consistency', () => {
   });
 
   it('keeps ui input and select primitives on MD3 tokens', () => {
-    for (const file of ['components/ui/input.tsx', 'components/ui/select.tsx']) {
+    for (const file of [
+      'components/ui/input.tsx',
+      'components/ui/select.tsx',
+    ]) {
       const source = readSource(file);
 
       expect(source, file).not.toContain('pm-');
@@ -119,8 +125,10 @@ describe('D6 form layout consistency', () => {
   });
 
   it('uses on-color text tokens on solid semantic backgrounds', () => {
-    const solidPrimaryWithWhite = /(?<![:\w-])bg-primary(?![/\w-])(?=.*\btext-white\b)|\btext-white\b(?=.*(?<![:\w-])bg-primary(?![/\w-]))/;
-    const solidErrorWithWrongText = /(?<![:\w-])bg-error(?![/\w-])(?=.*\b(text-white|text-primary|text-on-primary|text-error)\b)|\b(text-white|text-primary|text-on-primary|text-error)\b(?=.*(?<![:\w-])bg-error(?![/\w-]))/;
+    const solidPrimaryWithWhite =
+      /(?<![:\w-])bg-primary(?![/\w-])(?=.*\btext-white\b)|\btext-white\b(?=.*(?<![:\w-])bg-primary(?![/\w-]))/;
+    const solidErrorWithWrongText =
+      /(?<![:\w-])bg-error(?![/\w-])(?=.*\b(text-white|text-primary|text-on-primary|text-error)\b)|\b(text-white|text-primary|text-on-primary|text-error)\b(?=.*(?<![:\w-])bg-error(?![/\w-]))/;
 
     expect(findTokenPairOffenders(solidPrimaryWithWhite)).toEqual([]);
     expect(findTokenPairOffenders(solidErrorWithWrongText)).toEqual([]);
@@ -137,8 +145,10 @@ describe('D6 form layout consistency', () => {
   });
 
   it('keeps the quote send modal above mobile navigation', () => {
-    const source = readSource('modules/quotes/ui/QuoteForm.tsx');
+    const quoteForm = readSource('modules/quotes/ui/QuoteForm.tsx');
+    const modal = readSource('components/ui/modal.tsx');
 
-    expect(source).toContain('fixed inset-0 z-50');
+    expect(quoteForm).toContain('<Modal');
+    expect(modal).toContain('fixed inset-0 z-50');
   });
 });

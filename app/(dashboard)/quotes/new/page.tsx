@@ -6,7 +6,9 @@ import { QuoteCreateScreen } from '@/modules/quotes/ui/QuoteCreateScreen';
 import { AIDraftPanel } from '@/modules/ai/ui/AIDraftPanel';
 import { UpgradePrompt } from '@/modules/billing/ui/UpgradePrompt';
 import { generateAIDraft } from '@/modules/ai/application/actions';
+import { isAIDraftConfigured } from '@/modules/ai/application/drafts';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLiveMonthlyActiveQuoteUsageForUser } from '@/modules/billing/application/server';
@@ -18,11 +20,12 @@ export default async function NewQuotePage({
 }: {
   searchParams?: Promise<{ customer_id?: string; customerId?: string }>;
 }) {
-  const [{ data, error }, { data: libraryItems }, { data: templates }] = await Promise.all([
-    getQuoteFormOptions(),
-    getMaterialItemsForPicker(),
-    listQuoteTemplates(),
-  ]);
+  const [{ data, error }, { data: libraryItems }, { data: templates }] =
+    await Promise.all([
+      getQuoteFormOptions(),
+      getMaterialItemsForPicker(),
+      listQuoteTemplates(),
+    ]);
   const resolvedSearchParams = (await searchParams) ?? {};
   const requestedCustomerId =
     typeof resolvedSearchParams.customer_id === 'string'
@@ -40,6 +43,7 @@ export default async function NewQuotePage({
     : null;
   const subscription = usageResult?.snapshot ?? null;
   const quoteUsage = usageResult?.usage ?? null;
+  const aiConfigured = isAIDraftConfigured();
 
   return (
     <div className="mx-auto w-full max-w-lg pt-4 pb-32 lg:max-w-6xl">
@@ -52,16 +56,16 @@ export default async function NewQuotePage({
       />
 
       {quoteUsage && (
-        <div className="mb-5 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
-            Starter Usage
+        <div className="border-outline-variant bg-surface-container-low mb-5 rounded-xl border px-4 py-3">
+          <SectionLabel>Starter Usage</SectionLabel>
+          <p className="text-on-surface mt-1 text-base font-semibold">
+            {quoteUsage.remaining} of {quoteUsage.limit} active quote slots
+            remaining this month
           </p>
-          <p className="mt-1 text-base font-semibold text-on-surface">
-            {quoteUsage.remaining} of {quoteUsage.limit} active quote slots remaining this month
-          </p>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Starter includes up to {quoteUsage.limit} draft, sent, or approved quotes each
-            month. Upgrade to Pro for unlimited quoting and AI drafting.
+          <p className="text-on-surface-variant mt-1 text-sm">
+            Starter includes up to {quoteUsage.limit} draft, sent, or approved
+            quotes each month. Upgrade to Pro for unlimited quoting and AI
+            drafting.
           </p>
         </div>
       )}
@@ -69,9 +73,11 @@ export default async function NewQuotePage({
       {error ? (
         <ErrorAlert>{error}</ErrorAlert>
       ) : customers.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-5 py-8">
-          <h2 className="text-base font-semibold text-on-surface">Add a customer first</h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
+        <div className="border-outline-variant bg-surface-container-low rounded-xl border border-dashed px-5 py-8">
+          <h2 className="text-on-surface text-base font-semibold">
+            Add a customer first
+          </h2>
+          <p className="text-on-surface-variant mt-1 text-sm">
             Quotes are linked to a saved customer in your workspace.
           </p>
           <PrimaryActionLink href="/customers/new" className="mt-4">
@@ -81,13 +87,15 @@ export default async function NewQuotePage({
       ) : (
         <QuoteCreateScreen
           customers={customers}
-          canUseAI={subscription?.features.ai ?? false}
+          canUseAI={aiConfigured && (subscription?.features.ai ?? false)}
+          showAIUpgrade={aiConfigured && !(subscription?.features.ai ?? false)}
           quoteNumberPreview={data.nextQuoteNumber ?? undefined}
           rateSettings={data.userRates}
           libraryItems={libraryItems}
           templates={templates}
           initialCustomerId={
-            requestedCustomerId && customers.some((customer) => customer.id === requestedCustomerId)
+            requestedCustomerId &&
+            customers.some((customer) => customer.id === requestedCustomerId)
               ? requestedCustomerId
               : undefined
           }

@@ -36,11 +36,13 @@ type UpgradePromptComponent = ComponentType<{
 
 export function CustomerCreateScreen({
   canUseAI,
+  showAIUpgrade = true,
   generateAIDraft,
   AIDraftPanel,
   UpgradePrompt,
 }: {
   canUseAI: boolean;
+  showAIUpgrade?: boolean;
   AIDraftPanel: AIDraftPanelComponent;
   UpgradePrompt: UpgradePromptComponent;
   generateAIDraft: (input: {
@@ -104,14 +106,14 @@ export function CustomerCreateScreen({
           onApply={handleApply}
           canApply={Boolean(draft)}
         />
-      ) : (
+      ) : showAIUpgrade ? (
         <div className="mb-6">
           <UpgradePrompt
             title="AI customer drafting is available on Pro"
             description="Starter includes manual customer management. Upgrade to Pro to turn a quick note into a structured customer draft."
           />
         </div>
-      )}
+      ) : null}
 
       <CustomerForm key={resetKey} defaultValues={draft ?? undefined} />
     </>

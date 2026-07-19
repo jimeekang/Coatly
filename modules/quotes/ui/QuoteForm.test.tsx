@@ -1,4 +1,10 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { calculateQuickQuotePreview } from '@/modules/quotes/ui/QuickQuoteBuilder';
@@ -125,6 +131,58 @@ async function addDetailedSpecificRoom(
 describe('QuoteForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('uses canonical controls and focus targets across quote editing sections', async () => {
+    const user = userEvent.setup();
+    render(<QuoteForm customers={[CUSTOMER]} libraryItems={[LIBRARY_ITEM]} />);
+
+    expect(screen.getByLabelText('Customer')).toHaveClass(
+      'h-12',
+      'rounded-xl',
+      'text-base',
+      'focus:ring-2'
+    );
+    expect(screen.getByLabelText('Title')).toHaveClass(
+      'h-12',
+      'rounded-xl',
+      'text-base'
+    );
+    expect(screen.getByRole('tab', { name: /Quick/i })).toHaveClass(
+      'min-h-11',
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: /Maintenance \/ touch-up/i })
+    );
+    await user.click(
+      screen.getByRole('button', { name: /Add scope section/i })
+    );
+
+    expect(screen.getByLabelText('Scope title')).toHaveClass(
+      'h-12',
+      'rounded-xl',
+      'text-base'
+    );
+    expect(screen.getByLabelText('Scope description')).toHaveClass(
+      'rounded-xl',
+      'text-base',
+      'focus:ring-2'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Add Line Item' }));
+    expect(screen.getByLabelText('Line item name')).toHaveClass(
+      'h-12',
+      'rounded-xl',
+      'text-base'
+    );
+    expect(screen.getByLabelText('Line item price')).toHaveClass(
+      'h-12',
+      'rounded-xl',
+      'text-base'
+    );
   });
 
   it('submits a detailed interior payload when form submitted', async () => {
@@ -278,13 +336,21 @@ describe('QuoteForm', () => {
     await user.clear(screen.getByLabelText('Valid Until'));
     await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
     await addDetailedSpecificRoom(user);
-    await user.click(
-      screen.getByRole('button', { name: 'Send Quote to Client' })
-    );
+    const sendTrigger = screen.getByRole('button', {
+      name: 'Send Quote to Client',
+    });
+    await user.click(sendTrigger);
 
     expect(
-      screen.getByRole('heading', { name: 'Review before sending' })
+      screen.getByRole('dialog', { name: 'Review before sending' })
     ).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(
+      screen.queryByRole('dialog', { name: 'Review before sending' })
+    ).not.toBeInTheDocument();
+    expect(sendTrigger).toHaveFocus();
+
+    await user.click(sendTrigger);
     await user.selectOptions(
       screen.getByLabelText('Send to'),
       'accounts@example.com'
@@ -298,6 +364,58 @@ describe('QuoteForm', () => {
         customer_email: 'accounts@example.com',
       })
     );
+  });
+
+  it('locks the send review dialog while pending and shows send errors inline', async () => {
+    const user = userEvent.setup();
+    let resolveSubmit: ((value: { error: string }) => void) | undefined;
+    const onSubmit = vi.fn(
+      () =>
+        new Promise<{ error: string }>((resolve) => {
+          resolveSubmit = resolve;
+        })
+    );
+
+    render(
+      <QuoteForm
+        customers={[CUSTOMER]}
+        onSubmit={onSubmit}
+        showSendQuoteButton
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
+    await user.type(screen.getByLabelText('Title'), 'Email-ready quote');
+    await user.clear(screen.getByLabelText('Valid Until'));
+    await user.type(screen.getByLabelText('Valid Until'), '2026-04-10');
+    await addDetailedSpecificRoom(user);
+    await user.click(
+      screen.getByRole('button', { name: 'Send Quote to Client' })
+    );
+    await user.click(screen.getByRole('button', { name: 'Send Quote' }));
+
+    const dialog = screen.getByRole('dialog', {
+      name: 'Review before sending',
+    });
+    expect(
+      await within(dialog).findByRole('button', { name: 'Sending...' })
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole('button', { name: 'Close' })
+    ).toBeDisabled();
+    await user.keyboard('{Escape}');
+    expect(
+      screen.getByRole('dialog', { name: 'Review before sending' })
+    ).toBeInTheDocument();
+
+    resolveSubmit?.({ error: 'Quote email could not be sent.' });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Quote email could not be sent.'
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'Review before sending' })
+    ).toBeInTheDocument();
   });
 
   it('disables send quote button when the selected customer has no email', async () => {
@@ -1127,6 +1245,10 @@ describe('QuoteForm', () => {
         rateSettings={rateSettings}
       />
     );
+
+    expect(
+      screen.getByRole('button', { name: '+ New Custom Room' })
+    ).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Customer'), CUSTOMER.id);
     await user.type(screen.getByLabelText('Title'), 'Preset-based room quote');

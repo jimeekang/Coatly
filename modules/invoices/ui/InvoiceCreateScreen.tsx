@@ -48,6 +48,7 @@ export function InvoiceCreateScreen({
   initialDefaultValues,
   initialCustomerId,
   canUseAI,
+  showAIUpgrade = true,
   generateAIDraft,
   AIDraftPanel,
   UpgradePrompt,
@@ -58,6 +59,7 @@ export function InvoiceCreateScreen({
   initialDefaultValues?: InvoiceFormDefaultValues;
   initialCustomerId?: string;
   canUseAI: boolean;
+  showAIUpgrade?: boolean;
   AIDraftPanel: AIDraftPanelComponent;
   UpgradePrompt: UpgradePromptComponent;
   generateAIDraft: (input: {
@@ -123,14 +125,14 @@ export function InvoiceCreateScreen({
           onApply={handleApply}
           canApply={Boolean(draft)}
         />
-      ) : (
+      ) : showAIUpgrade ? (
         <div className="mb-6">
           <UpgradePrompt
             title="AI invoice drafting is available on Pro"
             description="Starter covers manual invoicing. Upgrade to Pro to generate invoice drafts from a short prompt and review them before saving."
           />
         </div>
-      )}
+      ) : null}
 
       <InvoiceForm
         key={resetKey}

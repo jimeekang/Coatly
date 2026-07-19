@@ -44,6 +44,7 @@ export function QuoteEditScreen({
       onSubmit={handleSubmit}
       submitLabel="Save Changes"
       showSendQuoteButton
+      replaceQuoteStructureOnSubmit
     />
   );
 }

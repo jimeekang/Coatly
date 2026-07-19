@@ -2,12 +2,14 @@
 
 import { useDeferredValue, useState } from 'react';
 import Link from 'next/link';
-import type { Customer, CustomerRecentJob } from '@/modules/customers/application/actions';
-import { PrimaryActionLink } from '@/components/layout/PageHeader';
-import { SectionLabel } from '@/components/shared/SectionLabel';
+import type {
+  Customer,
+  CustomerRecentJob,
+} from '@/modules/customers/application/actions';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
   INVOICE_STATUS_TONE,
+  JOB_STATUS_TONE,
   QUOTE_STATUS_TONE,
   type StatusTone,
 } from '@/lib/constants/status-colors';
@@ -61,13 +63,29 @@ function matchesQuery(c: Customer, q: string): boolean {
   );
 }
 
-function getRecentJobTone(job: CustomerRecentJob): StatusTone {
-  const status = job.status.toLowerCase();
+function formatStatusLabel(status: string) {
+  const normalized = status.trim().toLowerCase();
+  if (!normalized) return 'Unknown';
+  return normalized
+    .split(/[_\s-]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function getRecentJobStatusPresentation(recentJob: CustomerRecentJob): {
+  tone: StatusTone;
+  label: string;
+} {
+  const status = recentJob.status.trim().toLowerCase();
+  const primaryTones =
+    recentJob.type === 'quote' ? QUOTE_STATUS_TONE : INVOICE_STATUS_TONE;
   const tone =
-    job.type === 'quote'
-      ? QUOTE_STATUS_TONE[status as keyof typeof QUOTE_STATUS_TONE]
-      : INVOICE_STATUS_TONE[status as keyof typeof INVOICE_STATUS_TONE];
-  return tone ?? 'neutral';
+    (primaryTones as Record<string, StatusTone>)[status] ??
+    (JOB_STATUS_TONE as Record<string, StatusTone>)[status] ??
+    'neutral';
+  const label = formatStatusLabel(recentJob.status);
+
+  return { tone, label };
 }
 
 function CustomerRow({
@@ -81,36 +99,42 @@ function CustomerRow({
   const phone = getPrimaryPhone(customer);
   const primaryContact = getPrimaryContact(customer);
   const address = formatAddress(customer);
+  const recentJobStatus = recentJob
+    ? getRecentJobStatusPresentation(recentJob)
+    : null;
 
   return (
-    <li className="relative min-w-0 rounded-2xl border border-l-4 border-outline-variant border-l-primary bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md">
-      <Link href={`/customers/${customer.id}`} className="block min-w-0 p-3 sm:p-5">
+    <li className="border-outline-variant border-l-primary bg-surface-container-lowest relative min-w-0 rounded-2xl border border-l-4 shadow-sm transition-shadow hover:shadow-md">
+      <Link
+        href={`/customers/${customer.id}`}
+        className="focus-visible:ring-primary/30 block min-w-0 rounded-2xl p-3 focus-visible:ring-2 focus-visible:outline-none sm:p-5"
+      >
         {/* Top row: avatar + main info */}
         <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="shrink-0 w-10 h-10 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary text-sm font-bold">
+            <div className="bg-tertiary text-on-tertiary flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold">
               {initials}
             </div>
             <div className="min-w-0">
-              <h3 className="font-bold text-on-surface text-base leading-tight truncate">
+              <h3 className="text-on-surface truncate text-base leading-tight font-bold">
                 {customer.company_name || customer.name}
               </h3>
               {customer.company_name && (
-                <p className="text-on-surface-variant text-sm font-medium truncate mt-0.5">
+                <p className="text-on-surface-variant mt-0.5 truncate text-sm font-medium">
                   {customer.name}
                 </p>
               )}
             </div>
           </div>
           {/* Recent job badge */}
-          {recentJob && (
+          {recentJob && recentJobStatus && (
             <div className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
-              <SectionLabel>
+              <p className="text-on-surface-variant text-[10px] font-bold uppercase">
                 {recentJob.type === 'quote' ? 'Quote' : 'Invoice'}
-              </SectionLabel>
+              </p>
               <StatusBadge
-                tone={getRecentJobTone(recentJob)}
-                label={recentJob.status}
+                tone={recentJobStatus.tone}
+                label={recentJobStatus.label}
               />
             </div>
           )}
@@ -119,39 +143,80 @@ function CustomerRow({
         {/* Meta row */}
         <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
           {phone && (
-            <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-on-surface-variant">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.93-.93a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            <div className="text-on-surface-variant flex min-w-0 items-center gap-1.5 text-xs font-medium">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.93-.93a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
               <span className="min-w-0 truncate">{phone}</span>
             </div>
           )}
           {!phone && primaryContact && (
-            <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-on-surface-variant">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
+            <div className="text-on-surface-variant flex min-w-0 items-center gap-1.5 text-xs font-medium">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
               </svg>
               <span className="min-w-0 truncate">{primaryContact}</span>
             </div>
           )}
           {address && (
-            <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-on-surface-variant">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                <circle cx="12" cy="10" r="3"/>
+            <div className="text-on-surface-variant flex min-w-0 items-center gap-1.5 text-xs font-medium">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
               </svg>
               <span className="min-w-0 truncate">{address}</span>
             </div>
           )}
           {recentJob && (
-            <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-on-surface-variant">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            <div className="text-on-surface-variant flex min-w-0 items-center gap-1.5 text-xs font-medium">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
               </svg>
               <span className="min-w-0 truncate">
-                {recentJob.number}{recentJob.title ? ` · ${recentJob.title}` : ''}
+                {recentJob.number}
+                {recentJob.title ? ` · ${recentJob.title}` : ''}
               </span>
             </div>
           )}
@@ -169,14 +234,11 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
 
   if (customers.length === 0) {
     return (
-      <div className="flex flex-col items-center rounded-2xl border border-dashed border-outline-variant bg-surface-container-low px-6 py-20 text-center">
-        <p className="text-base text-on-surface-variant">No customers yet.</p>
-        <p className="mt-1 text-sm text-on-surface-variant opacity-70">
-          Save your first customer to start creating quotes and invoices.
+      <div className="border-outline-variant bg-surface-container-low rounded-2xl border border-dashed py-20 text-center">
+        <p className="text-on-surface-variant text-base">No customers yet.</p>
+        <p className="text-on-surface-variant mt-1 text-sm opacity-70">
+          Add your first customer to start creating quotes and invoices.
         </p>
-        <PrimaryActionLink href="/customers/new" className="mt-4">
-          + New Customer
-        </PrimaryActionLink>
       </div>
     );
   }
@@ -186,7 +248,8 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
     : customers;
 
   const sorted = [...filtered].sort((a, b) => {
-    if (sort === 'alpha') return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    if (sort === 'alpha')
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
     return b.created_at.localeCompare(a.created_at);
   });
 
@@ -194,8 +257,18 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
     <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
       {/* Search */}
       <div className="relative min-w-0">
-        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-on-surface-variant">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 left-4 flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
@@ -205,16 +278,26 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name, email or phone…"
-          className="w-full rounded-xl border-none bg-surface-container py-3.5 pl-11 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary/20 sm:py-4 sm:pl-12"
+          className="border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border pr-12 pl-11 text-base transition-colors outline-none focus:ring-2"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="absolute inset-y-0 right-4 flex items-center text-on-surface-variant hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface focus-visible:ring-primary/30 absolute top-0.5 right-0.5 flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
             aria-label="Clear search"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -231,7 +314,7 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
               key={option.value}
               type="button"
               onClick={() => setSort(option.value)}
-              className={`min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-4 ${
+              className={`focus-visible:ring-primary/30 min-h-11 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-4 ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
@@ -245,12 +328,14 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
 
       {/* Empty search state */}
       {sorted.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low py-12 text-center">
-          <p className="text-base text-on-surface-variant">No customers match this search.</p>
+        <div className="border-outline-variant bg-surface-container-low rounded-2xl border border-dashed py-12 text-center">
+          <p className="text-on-surface-variant text-base">
+            No customers match this search.
+          </p>
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="mt-2 inline-flex min-h-11 items-center rounded-lg px-3 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 mt-2 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
           >
             Clear search
           </button>
@@ -259,11 +344,15 @@ export function CustomerTable({ customers, recentJobs }: CustomerTableProps) {
         <>
           <ul className="flex min-w-0 flex-col gap-3">
             {sorted.map((c) => (
-              <CustomerRow key={c.id} customer={c} recentJob={recentJobs?.[c.id]} />
+              <CustomerRow
+                key={c.id}
+                customer={c}
+                recentJob={recentJobs?.[c.id]}
+              />
             ))}
           </ul>
           {normalizedQuery && (
-            <p className="text-xs text-on-surface-variant text-right">
+            <p className="text-on-surface-variant text-right text-xs">
               {sorted.length} of {customers.length} customers
             </p>
           )}

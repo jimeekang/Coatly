@@ -5,16 +5,11 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle } from 'lucide-react';
 import { signUpWithEmail } from '@/modules/auth/application/actions';
 import { AuthShell } from '@/modules/auth/ui/AuthShell';
+import { PasswordInput } from '@/modules/auth/ui/PasswordInput';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import {
-  FormField,
-  FormLabel,
-  formControlClassName,
-} from '@/components/forms/FormField';
-import { cn } from '@/lib/utils';
 
 const signupSchema = z
   .object({
@@ -30,12 +25,15 @@ const signupSchema = z
 
 type SignupInput = z.infer<typeof signupSchema>;
 
+const inputClass =
+  'h-12 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-base text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50';
+
 export default function SignupPage() {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [successState, setSuccessState] = useState<'idle' | 'check-email'>('idle');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [successState, setSuccessState] = useState<'idle' | 'check-email'>(
+    'idle'
+  );
 
   const {
     register,
@@ -69,16 +67,19 @@ export default function SignupPage() {
         sideDescription="Confirm your email and you're in. From there, set up your business profile and start sending quotes straight away."
       >
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-container">
-            <CheckCircle className="h-7 w-7 text-primary-container" aria-hidden="true" />
+          <div className="bg-success-container mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
+            <CheckCircle
+              className="text-primary-container h-7 w-7"
+              aria-hidden="true"
+            />
           </div>
-          <p className="text-sm leading-6 text-on-surface-variant">
-            We sent a confirmation link to your email. After confirming, sign in to continue to
-            business setup.
+          <p className="text-on-surface-variant text-sm leading-6">
+            We sent a confirmation link to your email. After confirming, sign in
+            to continue to business setup.
           </p>
           <Link
             href="/login"
-            className="mt-6 inline-block rounded text-sm font-medium text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="text-primary/90 hover:bg-primary/10 focus-visible:ring-primary/30 mt-6 inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             Back to login
           </Link>
@@ -99,7 +100,7 @@ export default function SignupPage() {
           Already have an account?{' '}
           <Link
             href="/login"
-            className="rounded font-medium text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="text-primary/90 hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-3 font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             Sign in
           </Link>
@@ -109,111 +110,94 @@ export default function SignupPage() {
       {serverError && <ErrorAlert className="mb-4">{serverError}</ErrorAlert>}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-        <FormField
-          htmlFor="businessName"
-          label="Business Name"
-          type="text"
-          autoComplete="organization"
-          placeholder="Smith's Painting"
-          disabled={isPending}
-          error={errors.businessName?.message}
-          {...register('businessName')}
-        />
-
-        <FormField
-          htmlFor="email"
-          label="Email"
-          type="email"
-          autoComplete="email"
-          inputMode="email"
-          placeholder="you@example.com"
-          disabled={isPending}
-          error={errors.email?.message}
-          {...register('email')}
-        />
-
         <div>
-          <FormLabel htmlFor="password">Password</FormLabel>
-          <div className="relative">
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              placeholder="Min. 8 characters"
-              disabled={isPending}
-              aria-invalid={!!errors.password}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-              className={cn(formControlClassName, 'pr-14 disabled:opacity-50')}
-              {...register('password')}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((value) => !value)}
-              disabled={isPending}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
-            >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5" aria-hidden="true" />
-              ) : (
-                <Eye className="h-5 w-5" aria-hidden="true" />
-              )}
-            </button>
-          </div>
-          {errors.password && (
-            <p id="password-error" className="mt-1 text-sm text-error">
-              {errors.password.message}
+          <label
+            htmlFor="businessName"
+            className="text-on-surface mb-1.5 block text-sm font-medium"
+          >
+            Business Name
+          </label>
+          <input
+            id="businessName"
+            type="text"
+            autoComplete="organization"
+            placeholder="Smith's Painting"
+            disabled={isPending}
+            aria-invalid={!!errors.businessName}
+            aria-describedby={
+              errors.businessName ? 'businessName-error' : undefined
+            }
+            className={inputClass}
+            {...register('businessName')}
+          />
+          {errors.businessName && (
+            <p id="businessName-error" className="text-error mt-1.5 text-xs">
+              {errors.businessName.message}
             </p>
           )}
         </div>
 
         <div>
-          <FormLabel htmlFor="confirmPassword">Confirm Password</FormLabel>
-          <div className="relative">
-            <input
-              id="confirmPassword"
-              type={showConfirmPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              placeholder="••••••••"
-              disabled={isPending}
-              aria-invalid={!!errors.confirmPassword}
-              aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
-              className={cn(formControlClassName, 'pr-14 disabled:opacity-50')}
-              {...register('confirmPassword')}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((value) => !value)}
-              disabled={isPending}
-              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
-            >
-              {showConfirmPassword ? (
-                <EyeOff className="h-5 w-5" aria-hidden="true" />
-              ) : (
-                <Eye className="h-5 w-5" aria-hidden="true" />
-              )}
-            </button>
-          </div>
-          {errors.confirmPassword && (
-            <p id="confirmPassword-error" className="mt-1 text-sm text-error">
-              {errors.confirmPassword.message}
+          <label
+            htmlFor="email"
+            className="text-on-surface mb-1.5 block text-sm font-medium"
+          >
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="you@example.com"
+            disabled={isPending}
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? 'email-error' : undefined}
+            className={inputClass}
+            {...register('email')}
+          />
+          {errors.email && (
+            <p id="email-error" className="text-error mt-1.5 text-xs">
+              {errors.email.message}
             </p>
           )}
         </div>
+
+        <PasswordInput
+          id="password"
+          label="Password"
+          error={errors.password?.message}
+          autoComplete="new-password"
+          placeholder="Min. 8 characters"
+          disabled={isPending}
+          {...register('password')}
+        />
+
+        <PasswordInput
+          id="confirmPassword"
+          label="Confirm password"
+          error={errors.confirmPassword?.message}
+          autoComplete="new-password"
+          placeholder="••••••••"
+          disabled={isPending}
+          {...register('confirmPassword')}
+        />
 
         <button
           type="submit"
           disabled={isPending}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {isPending && (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          )}
           Create account
         </button>
       </form>
 
-      <p className="mt-3 text-center text-xs text-on-surface-variant">
-        After sign up, you&apos;ll continue to business setup before using the dashboard.
+      <p className="text-on-surface-variant mt-3 text-center text-xs">
+        After sign up, you&apos;ll continue to business setup before using the
+        dashboard.
       </p>
     </AuthShell>
   );

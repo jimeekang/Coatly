@@ -11,6 +11,7 @@ import {
 } from '@/modules/materials/application/actions';
 import { createServerClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 export const metadata: Metadata = { title: 'Price Rates' };
 
@@ -23,7 +24,7 @@ export default async function PriceRatesPage() {
   if (!user) redirect('/login');
 
   const [
-    { data: rateSettings },
+    { data: rateSettings, error: rateSettingsError },
     { data: manualItems, error: manualItemsError },
   ] = await Promise.all([
     getBusinessRateSettings(supabase, user.id),
@@ -36,7 +37,7 @@ export default async function PriceRatesPage() {
         title="Price Rates"
         subtitle="Set the default rates used by new quotes and choose which detailed estimate options your quoting workflow offers."
         action={
-          <div className="border-outline-variant bg-surface-container inline-flex shrink-0 items-baseline gap-1.5 self-start rounded-lg border px-3 py-2 sm:self-center">
+          <div className="border-outline-variant bg-surface-container inline-flex shrink-0 items-baseline gap-1.5 self-start rounded-xl border px-3 py-2 sm:self-center">
             <span className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Currency
             </span>
@@ -44,14 +45,18 @@ export default async function PriceRatesPage() {
           </div>
         }
       />
-      <PriceRatesForm
-        defaultRates={rateSettings ?? DEFAULT_RATE_SETTINGS}
-        manualItems={manualItems}
-        manualItemsError={manualItemsError}
-        updateRateSettingsAction={updateRateSettingsAction}
-        createMaterialItem={createMaterialItem}
-        importMaterialItems={importMaterialItems}
-      />
+      {rateSettingsError ? (
+        <ErrorAlert>{rateSettingsError}</ErrorAlert>
+      ) : (
+        <PriceRatesForm
+          defaultRates={rateSettings ?? DEFAULT_RATE_SETTINGS}
+          manualItems={manualItems}
+          manualItemsError={manualItemsError}
+          updateRateSettingsAction={updateRateSettingsAction}
+          createMaterialItem={createMaterialItem}
+          importMaterialItems={importMaterialItems}
+        />
+      )}
     </div>
   );
 }

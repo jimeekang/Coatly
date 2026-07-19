@@ -17,6 +17,7 @@ import {
   type CalendarGoogleEvent,
 } from '@/modules/schedule/ui/ScheduleCalendar';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 export const metadata: Metadata = { title: 'Schedule' };
 
@@ -51,11 +52,34 @@ export default async function SchedulePage({
   const timeMin = new Date(dateFrom + 'T00:00:00').toISOString();
   const timeMax = new Date(dateTo + 'T23:59:59').toISOString();
 
-  const [googleSchedule, { data: allJobs }, { data: nativeEvents }] = await Promise.all([
-    listGoogleScheduleEventsForUser({ supabase, userId: user.id, timeMin, timeMax }),
+  const [
+    googleSchedule,
+    { data: allJobs, error: jobsError },
+    { data: nativeEvents, error: nativeEventsError },
+  ] = await Promise.all([
+    listGoogleScheduleEventsForUser({
+      supabase,
+      userId: user.id,
+      timeMin,
+      timeMax,
+    }),
     getJobs(),
     getScheduleEvents(dateFrom, dateTo),
   ]);
+  const scheduleError = jobsError ?? nativeEventsError;
+
+  if (scheduleError) {
+    return (
+      <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
+        <PageHeader
+          title="Schedule & Jobs"
+          subtitle="Switch between calendar planning and the job list without leaving the schedule."
+        />
+        <ErrorAlert>{scheduleError}</ErrorAlert>
+      </div>
+    );
+  }
+
   const calendarJobs: CalendarJob[] = allJobs.map((job) => ({
     id: job.id,
     title: job.title,
@@ -70,17 +94,19 @@ export default async function SchedulePage({
     quoteNumber: job.quote?.quote_number ?? null,
   }));
 
-  const calendarGoogleEvents: CalendarGoogleEvent[] = googleSchedule.events.map((ev) => ({
-    id: ev.id,
-    title: ev.title,
-    startDate: ev.startDate,
-    endDate: ev.endDate,
-    startDateTime: ev.startDateTime,
-    endDateTime: ev.endDateTime,
-    isAllDay: ev.isAllDay,
-    location: ev.location,
-    htmlLink: ev.htmlLink,
-  }));
+  const calendarGoogleEvents: CalendarGoogleEvent[] = googleSchedule.events.map(
+    (ev) => ({
+      id: ev.id,
+      title: ev.title,
+      startDate: ev.startDate,
+      endDate: ev.endDate,
+      startDateTime: ev.startDateTime,
+      endDateTime: ev.endDateTime,
+      isAllDay: ev.isAllDay,
+      location: ev.location,
+      htmlLink: ev.htmlLink,
+    })
+  );
 
   return (
     <div className="flex min-w-0 flex-col gap-4 sm:gap-6">

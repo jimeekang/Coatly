@@ -3,10 +3,7 @@ import { redirect } from 'next/navigation';
 import BusinessProfileForm from '@/modules/settings/ui/BusinessProfileForm';
 import GoogleCalendarCard from '@/modules/settings/ui/GoogleCalendarCard';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import {
-  PageHeader,
-  PrimaryActionLink,
-} from '@/components/layout/PageHeader';
+import { PageHeader, PrimaryActionLink } from '@/components/layout/PageHeader';
 import {
   disconnectGoogleCalendarAction,
   updateGoogleCalendarSettingsAction,
@@ -51,8 +48,14 @@ export default async function SettingsPage({
 
   if (error || !business) {
     return (
-      <div className="mx-auto max-w-4xl">
-        <ErrorAlert>{error ?? 'Business settings could not be loaded.'}</ErrorAlert>
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 sm:gap-6">
+        <PageHeader
+          title="Business Settings"
+          subtitle="Manage the business details shown on your quotes and invoices."
+        />
+        <ErrorAlert>
+          {error ?? 'Business settings could not be loaded.'}
+        </ErrorAlert>
       </div>
     );
   }
@@ -79,29 +82,39 @@ export default async function SettingsPage({
 
       <hr className="border-outline-variant" />
 
-      <section className="rounded-2xl border border-outline-variant bg-surface-container p-5">
+      <section className="border-outline-variant bg-surface-container rounded-2xl border p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-on-surface">Price Rates</h3>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Configure your default rates for surfaces, doors and windows — and control which options appear in the estimator.
+            <h3 className="text-on-surface text-lg font-semibold">
+              Price Rates
+            </h3>
+            <p className="text-on-surface-variant mt-1 text-sm">
+              Configure your default rates for surfaces, doors and windows — and
+              control which options appear in the estimator.
             </p>
           </div>
-          <PrimaryActionLink href="/price-rates">Manage rates</PrimaryActionLink>
+          <PrimaryActionLink href="/price-rates">
+            Manage rates
+          </PrimaryActionLink>
         </div>
       </section>
 
       <hr className="border-outline-variant" />
 
-      <section className="rounded-2xl border border-outline-variant bg-surface-container p-5">
+      <section className="border-outline-variant bg-surface-container rounded-2xl border p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-on-surface">Billing & subscription</h3>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Manage your plan, billing portal, payment method, and cancellation options.
+            <h3 className="text-on-surface text-lg font-semibold">
+              Billing & subscription
+            </h3>
+            <p className="text-on-surface-variant mt-1 text-sm">
+              Manage your plan, billing portal, payment method, and cancellation
+              options.
             </p>
           </div>
-          <PrimaryActionLink href="/settings/billing">Open billing</PrimaryActionLink>
+          <PrimaryActionLink href="/settings/billing">
+            Open billing
+          </PrimaryActionLink>
         </div>
       </section>
     </div>

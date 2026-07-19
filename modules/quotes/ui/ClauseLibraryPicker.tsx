@@ -1,6 +1,10 @@
 'use client';
 
 import { Plus, Trash2 } from 'lucide-react';
+import {
+  formControlClassName,
+  formTextareaClassName,
+} from '@/components/forms/FormField';
 import { QUOTE_FORM_CLAUSE_LIBRARY } from '@/config/quote-form-taxonomy';
 import type { QuoteClauseItemInput } from '@/modules/quotes/domain/quote';
 
@@ -107,7 +111,7 @@ export function ClauseLibraryPicker({
               type="button"
               disabled={selected}
               onClick={() => addClause(clause)}
-              className="border-outline-variant text-on-surface hover:border-primary disabled:bg-surface-container disabled:text-on-surface-variant flex min-h-11 items-center justify-between gap-3 rounded-lg border bg-surface-container-lowest px-3 py-2 text-left text-sm disabled:cursor-not-allowed"
+              className="border-outline-variant text-on-surface hover:border-primary disabled:bg-surface-container disabled:text-on-surface-variant focus-visible:ring-primary/30 bg-surface-container-lowest flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed"
             >
               <span>
                 <span className="block font-semibold">{clause.title}</span>
@@ -132,7 +136,7 @@ export function ClauseLibraryPicker({
           {value.map((clause, index) => (
             <div
               key={clause.client_id ?? clause.clause_key}
-              className="border-outline-variant rounded-xl border bg-surface-container-lowest p-4"
+              className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4"
             >
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
@@ -146,7 +150,7 @@ export function ClauseLibraryPicker({
                 <button
                   type="button"
                   onClick={() => removeClause(index)}
-                  className="text-error hover:bg-error/10 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold"
+                  className="text-error hover:bg-error/10 focus-visible:ring-error/30 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Remove
@@ -162,7 +166,7 @@ export function ClauseLibraryPicker({
                     onChange={(event) =>
                       updateClause(index, { title: event.target.value })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className={formControlClassName}
                   />
                 </div>
                 <div>
@@ -175,7 +179,7 @@ export function ClauseLibraryPicker({
                     onChange={(event) =>
                       updateClause(index, { body: event.target.value })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface w-full rounded-lg border px-3 py-2 text-sm"
+                    className={formTextareaClassName}
                   />
                 </div>
               </div>

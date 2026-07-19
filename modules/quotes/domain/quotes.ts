@@ -1028,6 +1028,7 @@ export function parseQuoteCreateInput(input: QuoteCreateInput) {
       exterior_estimate: parsed.data.exterior_estimate ?? null,
       scope_sections: parsed.data.scope_sections as QuoteScopeSectionInput[],
       clause_items: parsed.data.clause_items as QuoteClauseItemInput[],
+      replace_quote_structure: parsed.data.replace_quote_structure,
       ai_intake_snapshot:
         (parsed.data.ai_intake_snapshot as
           | QuoteAiIntakeSnapshotInput

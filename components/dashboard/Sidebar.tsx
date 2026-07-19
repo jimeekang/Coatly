@@ -3,8 +3,6 @@
 import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BrandLogo } from '@/components/branding/BrandLogo';
-import { SectionLabel } from '@/components/shared/SectionLabel';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -19,6 +17,7 @@ import {
   MoreHorizontal,
   X,
 } from 'lucide-react';
+import { BrandLogo } from '@/components/branding/BrandLogo';
 
 type NavItem = {
   href: string;
@@ -56,9 +55,11 @@ const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 
 function isActive(href: string, pathname: string) {
-  return pathname === href || (href !== '/dashboard' && pathname.startsWith(href + '/'));
+  return (
+    pathname === href ||
+    (href !== '/dashboard' && pathname.startsWith(href + '/'))
+  );
 }
-
 
 export default function DashboardSidebar({
   businessName,
@@ -73,27 +74,30 @@ export default function DashboardSidebar({
 }) {
   const pathname = usePathname();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const hasHydrated = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
+  const hasHydrated = useSyncExternalStore(
+    emptySubscribe,
+    getClientSnapshot,
+    getServerSnapshot
+  );
   const activePathname = hasHydrated ? pathname : '';
-  const isMoreActive = mobileMoreItems.some(({ href }) => isActive(href, activePathname));
+  const isMoreActive = mobileMoreItems.some(({ href }) =>
+    isActive(href, activePathname)
+  );
 
   return (
     <>
       {/* ── Tablet/Desktop sidebar ── */}
-      <aside className="hidden md:flex md:w-60 lg:w-64 flex-col bg-surface-container-low p-4 min-h-screen sticky top-0 h-screen overflow-y-auto z-40 border-r border-outline-variant shrink-0">
+      <aside className="border-outline-variant bg-surface-container-low sticky top-0 z-40 hidden h-screen min-h-screen w-60 shrink-0 flex-col overflow-y-auto border-r p-4 md:flex lg:w-64">
         {/* Logo */}
         <div className="mb-6 flex justify-start px-4 pt-2">
-          <div className="flex items-center gap-2.5">
-            <BrandLogo mode="icon" width={28} height={28} className="shrink-0" />
-            <div>
-              <h1 className="text-xl font-extrabold tracking-[-0.02em] text-on-surface">Coatly</h1>
-              <SectionLabel className="mt-0.5">Painter Workspace</SectionLabel>
-            </div>
-          </div>
+          <BrandLogo width={160} height={36} priority />
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-col gap-0.5 flex-1" aria-label="Main navigation">
+        <nav
+          className="flex flex-1 flex-col gap-0.5"
+          aria-label="Main navigation"
+        >
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = isActive(href, activePathname);
             return (
@@ -102,10 +106,10 @@ export default function DashboardSidebar({
                 href={href}
                 title={label}
                 aria-current={active ? 'page' : undefined}
-                className={`flex items-center justify-start gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200 ${
+                className={`focus-visible:ring-primary/30 flex min-h-11 items-center justify-start gap-3 rounded-xl px-4 py-3 text-sm transition-all duration-200 focus-visible:ring-2 focus-visible:outline-none ${
                   active
-                    ? 'bg-surface-container-high text-on-surface font-bold border border-outline-variant shadow-xs'
-                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-medium border border-transparent'
+                    ? 'bg-surface-container-high text-on-surface border-outline-variant border font-bold shadow-xs'
+                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface border border-transparent font-medium'
                 }`}
               >
                 <Icon
@@ -123,7 +127,7 @@ export default function DashboardSidebar({
           <button
             type="submit"
             title="Logout"
-            className="flex items-center justify-start gap-3 px-4 py-3 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container transition-colors w-full"
+            className="text-on-surface-variant hover:bg-surface-container focus-visible:ring-primary/30 flex min-h-11 w-full items-center justify-start gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
             aria-label="Logout"
           >
             <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
@@ -132,18 +136,20 @@ export default function DashboardSidebar({
         </form>
 
         {/* User card */}
-        <div className="mt-2 px-4 py-4 bg-surface-container-high rounded-xl border border-outline-variant">
+        <div className="bg-surface-container-high border-outline-variant mt-2 rounded-xl border px-4 py-4">
           <div className="flex items-center justify-start gap-3">
             <div
               title={businessName}
-              className="w-9 h-9 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary text-sm font-bold flex-shrink-0"
+              className="bg-tertiary text-on-tertiary flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold"
             >
               {businessName.slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-on-surface truncate">{businessName}</p>
+              <p className="text-on-surface truncate text-xs font-bold">
+                {businessName}
+              </p>
               <p
-                className={`text-xs uppercase tracking-[0.18em] font-semibold ${
+                className={`text-[11px] font-semibold tracking-widest uppercase ${
                   isPro ? 'text-primary' : 'text-on-surface-variant'
                 }`}
               >
@@ -155,15 +161,17 @@ export default function DashboardSidebar({
       </aside>
 
       {/* ── Mobile top bar ── */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between border-b border-outline-variant bg-surface/90 px-4 pt-[env(safe-area-inset-top)] shadow-sm backdrop-blur-md">
-        <h1 className="text-xl font-bold tracking-tight text-on-surface">Coatly</h1>
+      <header className="border-outline-variant bg-surface/90 fixed inset-x-0 top-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between border-b px-4 pt-[env(safe-area-inset-top)] shadow-sm backdrop-blur-md md:hidden">
+        <BrandLogo width={112} height={26} priority />
         <div className="flex items-center gap-2">
-          <p className="text-xs text-on-surface-variant truncate max-w-[120px] font-medium">
+          <p className="text-on-surface-variant max-w-[120px] truncate text-xs font-medium">
             {businessName}
           </p>
           <span
             className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-              isPro ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'
+              isPro
+                ? 'bg-primary text-on-primary'
+                : 'bg-surface-container text-on-surface-variant'
             }`}
           >
             {planLabel}
@@ -176,7 +184,7 @@ export default function DashboardSidebar({
           <button
             type="button"
             aria-label="Close more navigation"
-            className="fixed inset-x-0 top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 bg-black/30 md:hidden"
+            className="focus-visible:ring-primary fixed inset-x-0 top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 bg-black/30 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset md:hidden"
             onClick={() => setIsMoreOpen(false)}
           />
           <div
@@ -188,20 +196,20 @@ export default function DashboardSidebar({
             <nav
               id="mobile-more-navigation"
               aria-label="More navigation"
-              className="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-2xl"
+              className="border-outline-variant bg-surface overflow-hidden rounded-2xl border shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-outline-variant px-4 py-3">
-                <p className="text-sm font-bold text-on-surface">More</p>
+              <div className="border-outline-variant flex items-center justify-between border-b px-4 py-3">
+                <p className="text-on-surface text-sm font-bold">More</p>
                 <button
                   type="button"
                   aria-label="Close more navigation"
-                  className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-high active:bg-outline-variant"
+                  className="text-on-surface-variant hover:bg-surface-container-high focus-visible:ring-primary/30 active:bg-outline-variant flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   onClick={() => setIsMoreOpen(false)}
                 >
                   <X className="h-5 w-5" strokeWidth={2} aria-hidden="true" />
                 </button>
               </div>
-              <div className="divide-y divide-outline-variant">
+              <div className="divide-outline-variant divide-y">
                 {mobileMoreItems.map(({ href, label, icon: Icon }) => {
                   const active = isActive(href, activePathname);
                   return (
@@ -209,7 +217,7 @@ export default function DashboardSidebar({
                       key={href}
                       href={href}
                       aria-current={active ? 'page' : undefined}
-                      className={`flex min-h-12 items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors ${
+                      className={`focus-visible:ring-primary/30 flex min-h-12 items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset ${
                         active
                           ? 'bg-surface-container-high text-primary'
                           : 'text-on-surface hover:bg-surface-container-high'
@@ -233,7 +241,7 @@ export default function DashboardSidebar({
 
       {/* ── Mobile bottom tab bar ── */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t border-outline-variant bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
+        className="border-outline-variant bg-surface/90 fixed inset-x-0 bottom-0 z-40 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
         aria-label="Bottom navigation"
       >
         {mobilePrimaryItems.map(({ href, label, icon: Icon }) => {
@@ -242,10 +250,13 @@ export default function DashboardSidebar({
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 duration-150 ${
-                active ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
+              className={`focus-visible:ring-primary/30 flex min-h-11 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset active:scale-95 ${
+                active
+                  ? 'text-primary'
+                  : 'text-on-surface-variant hover:text-primary'
               }`}
               aria-current={active ? 'page' : undefined}
+              onClick={() => setIsMoreOpen(false)}
             >
               <Icon
                 className={`h-[22px] w-[22px] ${active ? 'text-primary' : 'text-on-surface-variant'}`}
@@ -261,14 +272,18 @@ export default function DashboardSidebar({
           aria-controls="mobile-more-navigation"
           aria-current={isMoreActive ? 'page' : undefined}
           aria-expanded={isMoreOpen}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors active:scale-95 duration-150 ${
-            isMoreActive || isMoreOpen ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
+          className={`focus-visible:ring-primary/30 flex min-h-11 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset active:scale-95 ${
+            isMoreActive || isMoreOpen
+              ? 'text-primary'
+              : 'text-on-surface-variant hover:text-primary'
           }`}
           onClick={() => setIsMoreOpen((open) => !open)}
         >
           <MoreHorizontal
             className={`h-[22px] w-[22px] ${
-              isMoreActive || isMoreOpen ? 'text-primary' : 'text-on-surface-variant'
+              isMoreActive || isMoreOpen
+                ? 'text-primary'
+                : 'text-on-surface-variant'
             }`}
             strokeWidth={isMoreActive || isMoreOpen ? 2.25 : 1.75}
             aria-hidden="true"

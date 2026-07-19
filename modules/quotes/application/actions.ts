@@ -234,6 +234,63 @@ export async function getQuote(id: string): Promise<{
   return getHydratedQuoteDetailForUser(supabase, id, user.id);
 }
 
+export async function sendQuoteToClient(
+  quoteId: string
+): Promise<{ error: string } | void> {
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
+  const quoteResult = await getHydratedQuoteDetailForUser(
+    supabase,
+    quoteId,
+    user.id
+  );
+
+  if (quoteResult.error || !quoteResult.data) {
+    return { error: quoteResult.error ?? 'Quote not found.' };
+  }
+
+  const quote = quoteResult.data;
+  if (quote.status !== 'draft' && quote.status !== 'sent') {
+    return { error: 'Only draft or sent quotes can be emailed.' };
+  }
+
+  const recipientEmail =
+    quote.customer_email?.trim() || quote.customer.email?.trim() || '';
+  if (!recipientEmail) {
+    return { error: 'Add a customer email before sending this quote.' };
+  }
+
+  const emailResult = await sendQuoteDocumentEmail({
+    supabase,
+    userId: user.id,
+    userEmail: user.email ?? null,
+    quoteId,
+    to: recipientEmail,
+  });
+
+  if (emailResult.error) {
+    return { error: emailResult.error };
+  }
+
+  if (quote.status === 'draft') {
+    const { error: sentStatusError } = await supabase
+      .from('quotes')
+      .update({ status: 'sent' })
+      .eq('id', quoteId)
+      .eq('user_id', user.id);
+
+    if (sentStatusError) {
+      return { error: sentStatusError.message };
+    }
+  }
+
+  revalidatePath('/quotes');
+  revalidatePath(`/quotes/${quoteId}`);
+  redirect(`/quotes/${quoteId}?emailSent=1`);
+}
+
 export async function getPublicQuoteByToken(token: string): Promise<{
   data: {
     quote: PublicQuoteDetail;
@@ -779,7 +836,7 @@ export async function setPublicQuoteOptionalLineItemSelection(
 
 export async function approvePublicQuote(
   formData: FormData
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; warning?: string }> {
   const quoteToken = parseTrimmedFormValue(formData.get('quoteToken'));
   const approvedByName = parseTrimmedFormValue(formData.get('approvedByName'));
   const approvedByEmail = parseTrimmedFormValue(
@@ -817,7 +874,10 @@ export async function approvePublicQuote(
   revalidatePath(`/q/${quoteToken}`);
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${result.data.quoteId}`);
-  return { error: null };
+  return {
+    error: null,
+    ...(result.warning ? { warning: result.warning } : {}),
+  };
 }
 
 export async function rejectPublicQuote(
@@ -1150,73 +1210,6 @@ export async function approveQuote(
     .eq('user_id', user.id);
 
   if (updateError) return { error: updateError.message };
-
-  revalidatePath('/quotes');
-  revalidatePath(`/quotes/${quoteId}`);
-}
-
-export async function sendQuoteToClient(
-  quoteId: string
-): Promise<{ error: string } | void> {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: quote, error: fetchError } = await supabase
-    .from('quotes')
-    .select('id, status, customer_id')
-    .eq('id', quoteId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (fetchError || !quote) return { error: 'Quote not found.' };
-
-  if (!['draft', 'sent'].includes(quote.status)) {
-    return { error: 'Only draft or sent quotes can be sent to the client.' };
-  }
-
-  const { data: customer, error: customerError } = await supabase
-    .from('customers')
-    .select('email, emails')
-    .eq('id', quote.customer_id)
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (customerError) {
-    return { error: customerError.message };
-  }
-
-  const recipientEmail = customer
-    ? (normalizeCustomerEmails(customer)[0] ?? '')
-    : '';
-
-  if (!recipientEmail) {
-    return { error: 'Add a customer email before sending this quote.' };
-  }
-
-  const { error: emailError } = await sendQuoteDocumentEmail({
-    supabase,
-    userId: user.id,
-    userEmail: user.email ?? null,
-    quoteId: quote.id,
-    to: recipientEmail,
-  });
-
-  if (emailError) {
-    return { error: emailError };
-  }
-
-  const { error: sentStatusError } = await supabase
-    .from('quotes')
-    .update({ status: 'sent' })
-    .eq('id', quoteId)
-    .eq('user_id', user.id);
-
-  if (sentStatusError) {
-    return { error: sentStatusError.message };
-  }
 
   revalidatePath('/quotes');
   revalidatePath(`/quotes/${quoteId}`);

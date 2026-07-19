@@ -1,10 +1,20 @@
-import { type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes } from 'react';
+import {
+  type HTMLAttributes,
+  type TdHTMLAttributes,
+  type ThHTMLAttributes,
+} from 'react';
 
-export function Table({ className = '', children, ...props }: HTMLAttributes<HTMLTableElement>) {
+export function Table({
+  className = '',
+  children,
+  ...props
+}: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-outline bg-surface-container-lowest">
+    <div className="border-outline-variant bg-surface-container-lowest overflow-x-auto rounded-2xl border">
       <table
-        className={['w-full text-left text-sm', className].filter(Boolean).join(' ')}
+        className={['w-full text-left text-sm', className]
+          .filter(Boolean)
+          .join(' ')}
         {...props}
       >
         {children}
@@ -20,7 +30,12 @@ export function TableHead({
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead
-      className={['border-b border-outline bg-surface-container-low', className].filter(Boolean).join(' ')}
+      className={[
+        'border-outline-variant bg-surface-container-low border-b',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
       {...props}
     >
       {children}
@@ -35,7 +50,9 @@ export function TableBody({
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <tbody
-      className={['divide-y divide-outline', className].filter(Boolean).join(' ')}
+      className={['divide-outline-variant divide-y', className]
+        .filter(Boolean)
+        .join(' ')}
       {...props}
     >
       {children}
@@ -50,7 +67,9 @@ export function TableRow({
 }: HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={['transition-colors hover:bg-success-container', className].filter(Boolean).join(' ')}
+      className={['hover:bg-surface-container-low transition-colors', className]
+        .filter(Boolean)
+        .join(' ')}
       {...props}
     >
       {children}
@@ -66,7 +85,7 @@ export function Th({
   return (
     <th
       className={[
-        'px-5 py-3 text-xs font-semibold uppercase tracking-wide text-on-surface-variant',
+        'text-on-surface-variant px-5 py-3 text-xs font-semibold tracking-wide uppercase',
         className,
       ]
         .filter(Boolean)
@@ -85,7 +104,9 @@ export function Td({
 }: TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={['px-5 py-4 text-on-surface', className].filter(Boolean).join(' ')}
+      className={['text-on-surface px-5 py-4', className]
+        .filter(Boolean)
+        .join(' ')}
       {...props}
     >
       {children}

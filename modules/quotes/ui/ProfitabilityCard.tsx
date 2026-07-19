@@ -13,7 +13,13 @@ function resolveCostSplit(quote: QuoteDetail): {
   const inputs = quote.pricing_method_inputs;
 
   if (inputs?.method === 'day_rate' && inputs.inputs) {
-    const { days, daily_rate_cents, material_method, material_percent, material_flat_cents } = inputs.inputs;
+    const {
+      days,
+      daily_rate_cents,
+      material_method,
+      material_percent,
+      material_flat_cents,
+    } = inputs.inputs;
     const labor_cents = Math.round(days * daily_rate_cents);
     const material_cents =
       material_method === 'percentage'
@@ -37,11 +43,14 @@ function resolveCostSplit(quote: QuoteDetail): {
   // hybrid / sqm_rate: derive from room surfaces if available
   if (quote.rooms.length > 0) {
     const labor_cents = quote.rooms.reduce(
-      (sum, room) => sum + room.surfaces.reduce((s, surf) => s + surf.labour_cost_cents, 0),
+      (sum, room) =>
+        sum + room.surfaces.reduce((s, surf) => s + surf.labour_cost_cents, 0),
       0
     );
     const material_cents = quote.rooms.reduce(
-      (sum, room) => sum + room.surfaces.reduce((s, surf) => s + surf.material_cost_cents, 0),
+      (sum, room) =>
+        sum +
+        room.surfaces.reduce((s, surf) => s + surf.material_cost_cents, 0),
       0
     );
     return { labor_cents, material_cents };
@@ -55,11 +64,13 @@ function MarginBadge({ percent }: { percent: number }) {
     percent >= 30
       ? 'bg-success-container text-success border-success/25'
       : percent >= 20
-      ? 'bg-warning-container text-warning border-warning/25'
-      : 'bg-error-container text-error border-error/25';
+        ? 'bg-warning-container text-warning border-warning/25'
+        : 'bg-error-container text-error border-error/25';
 
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${color}`}>
+    <span
+      className={`rounded-full border px-2 py-0.5 text-xs font-bold ${color}`}
+    >
       {percent.toFixed(1)}%
     </span>
   );
@@ -74,11 +85,12 @@ export function ProfitabilityCard({
 }) {
   const split = resolveCostSplit(quote);
   const isRoomRate = quote.pricing_method_inputs?.method === 'room_rate';
-  const methodLabel = PRICING_METHOD_LABELS[quote.pricing_method] ?? quote.pricing_method;
+  const methodLabel =
+    PRICING_METHOD_LABELS[quote.pricing_method] ?? quote.pricing_method;
 
   // Header shared between both render paths
   const header = (
-    <div className="bg-tertiary/10 flex items-center justify-between gap-2 rounded-t-xl px-5 py-3">
+    <div className="bg-tertiary/10 flex items-center justify-between gap-2 rounded-t-2xl px-5 py-3">
       <div className="flex items-center gap-2">
         <h2 className="text-tertiary text-xs font-semibold tracking-wide uppercase">
           Profitability
@@ -87,7 +99,7 @@ export function ProfitabilityCard({
           Internal
         </span>
       </div>
-      <span className="bg-tertiary/10 text-tertiary rounded-lg px-2 py-0.5 text-[10px]">
+      <span className="bg-tertiary/10 text-tertiary rounded-full px-2 py-0.5 text-[10px]">
         {methodLabel}
       </span>
     </div>
@@ -97,18 +109,23 @@ export function ProfitabilityCard({
   if (isRoomRate || !split) {
     if (!isRoomRate) return null;
     return (
-      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest">
+      <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border">
         {header}
         <div className="px-5 py-4">
-          <p className="text-sm text-on-surface-variant">
+          <p className="text-on-surface-variant text-sm">
             Room rate pricing — cost breakdown not available.
           </p>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            Room flat rates include your margin. To see a profit split, switch to Day Rate or Manual pricing.
+          <p className="text-on-surface-variant mt-1 text-xs">
+            Room flat rates include your margin. To see a profit split, switch
+            to Day Rate or Manual pricing.
           </p>
-          <div className="mt-3 flex justify-between border-t border-outline-variant pt-3 text-sm">
-            <span className="text-on-surface-variant">Quote value (ex-GST)</span>
-            <span className="font-medium text-on-surface">{formatAUD(quote.subtotal_cents)}</span>
+          <div className="border-outline-variant mt-3 flex justify-between border-t pt-3 text-sm">
+            <span className="text-on-surface-variant">
+              Quote value (ex-GST)
+            </span>
+            <span className="text-on-surface font-medium">
+              {formatAUD(quote.subtotal_cents)}
+            </span>
           </div>
         </div>
       </section>
@@ -123,12 +140,13 @@ export function ProfitabilityCard({
 
   // Estimate days from day_rate inputs if available
   const estimatedDays =
-    quote.pricing_method_inputs?.method === 'day_rate' && quote.pricing_method_inputs.inputs
+    quote.pricing_method_inputs?.method === 'day_rate' &&
+    quote.pricing_method_inputs.inputs
       ? quote.pricing_method_inputs.inputs.days
       : null;
 
   return (
-    <section className="rounded-xl border border-outline-variant bg-surface-container-lowest">
+    <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border">
       {/* Header */}
       {header}
 
@@ -142,21 +160,30 @@ export function ProfitabilityCard({
           <span className="text-on-surface-variant">Material cost</span>
           <span className="text-on-surface">{formatAUD(material_cents)}</span>
         </div>
-        <div className="flex justify-between border-t border-outline-variant pt-2">
-          <span className="font-medium text-on-surface">Total cost</span>
-          <span className="font-medium text-on-surface">{formatAUD(total_cost_cents)}</span>
+        <div className="border-outline-variant flex justify-between border-t pt-2">
+          <span className="text-on-surface font-medium">Total cost</span>
+          <span className="text-on-surface font-medium">
+            {formatAUD(total_cost_cents)}
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="text-on-surface-variant">Quote value (ex-GST)</span>
-          <span className="text-on-surface">{formatAUD(quote.subtotal_cents)}</span>
+          <span className="text-on-surface">
+            {formatAUD(quote.subtotal_cents)}
+          </span>
         </div>
 
         {/* Profit line */}
-        <div className="flex items-center justify-between rounded-lg bg-surface-container px-3 py-2.5">
-          <span className="font-semibold text-on-surface">Estimated profit</span>
+        <div className="bg-surface-container flex items-center justify-between rounded-xl px-3 py-2.5">
+          <span className="text-on-surface font-semibold">
+            Estimated profit
+          </span>
           <div className="flex items-center gap-2">
-            <span className={`font-semibold ${profit_cents >= 0 ? 'text-success' : 'text-error'}`}>
-              {profit_cents >= 0 ? '+' : ''}{formatAUD(profit_cents)}
+            <span
+              className={`font-semibold ${profit_cents >= 0 ? 'text-success' : 'text-error'}`}
+            >
+              {profit_cents >= 0 ? '+' : ''}
+              {formatAUD(profit_cents)}
             </span>
             <MarginBadge percent={margin_percent} />
           </div>
@@ -164,41 +191,48 @@ export function ProfitabilityCard({
 
         {/* Days estimate */}
         {estimatedDays && (
-          <div className="flex justify-between text-xs text-on-surface-variant">
+          <div className="text-on-surface-variant flex justify-between text-xs">
             <span>Estimated duration</span>
-            <span>{estimatedDays} day{estimatedDays !== 1 ? 's' : ''}</span>
+            <span>
+              {estimatedDays} day{estimatedDays !== 1 ? 's' : ''}
+            </span>
           </div>
         )}
 
         {/* Target earnings warning */}
-        {targetDailyEarningsCents && estimatedDays && (
+        {targetDailyEarningsCents &&
+          estimatedDays &&
           (() => {
             const targetTotal = targetDailyEarningsCents * estimatedDays;
             const shortfall = targetTotal - profit_cents;
             if (shortfall <= 0) return null;
             return (
-              <div className="border-warning/25 bg-warning-container text-warning flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs">
+              <div className="border-warning/25 bg-warning-container text-warning flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
-                  {formatAUD(shortfall)} below your target of {formatAUD(targetTotal)} for {estimatedDays} day{estimatedDays !== 1 ? 's' : ''}.
+                  {formatAUD(shortfall)} below your target of{' '}
+                  {formatAUD(targetTotal)} for {estimatedDays} day
+                  {estimatedDays !== 1 ? 's' : ''}.
                 </span>
               </div>
             );
-          })()
-        )}
+          })()}
 
         {/* Margin warning — shown regardless of method */}
         {margin_percent < 20 && profit_cents >= 0 && (
-          <div className="border-warning/25 bg-warning-container text-warning flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs">
+          <div className="border-warning/25 bg-warning-container text-warning flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>Margin below 20% — consider adjusting your price.</span>
           </div>
         )}
 
         {profit_cents < 0 && (
-          <div className="border-error/25 bg-error-container text-error flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs">
+          <div className="border-error/25 bg-error-container text-error flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>This quote is priced below cost — you would lose money on this job.</span>
+            <span>
+              This quote is priced below cost — you would lose money on this
+              job.
+            </span>
           </div>
         )}
       </div>

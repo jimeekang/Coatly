@@ -24,7 +24,9 @@ vi.mock('next/navigation', () => ({
 // The composition layer injects the draft forms and create actions. Tests wire
 // the real QuoteForm (the only form the assistant renders here) and lightweight
 // stubs for the customer/invoice forms that these cases never open.
-function renderAssistant(props: Pick<WorkspaceAssistantProps, 'customers' | 'quotes'>) {
+function renderAssistant(
+  props: Pick<WorkspaceAssistantProps, 'customers' | 'quotes'>
+) {
   return render(
     <WorkspaceAssistant
       {...props}
@@ -111,7 +113,9 @@ describe('WorkspaceAssistant', () => {
     });
 
     expect(
-      screen.getByText(/AI may use business, customer, quote, and invoice context/i)
+      screen.getByText(
+        /AI may use business, customer, quote, and invoice context/i
+      )
     ).toBeInTheDocument();
 
     await user.type(
@@ -132,6 +136,37 @@ describe('WorkspaceAssistant', () => {
     expect(screen.getByRole('link', { name: /INV-0012/i })).toHaveAttribute(
       'href',
       '/invoices/invoice-1'
+    );
+  });
+
+  it('uses semantic gradient, touch-sized chips, focus styles, and ErrorAlert feedback', async () => {
+    const user = userEvent.setup();
+    const { container } = renderAssistant({ customers: [], quotes: [] });
+
+    const example = screen.getByRole('button', {
+      name: "Find Mark's latest quote",
+    });
+    expect(example).toHaveClass('min-h-11', 'focus-visible:ring-2');
+    expect(screen.getByRole('button', { name: 'Run Prompt' })).toHaveClass(
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+    expect(screen.getByRole('button', { name: 'Clear' })).toHaveClass(
+      'rounded-xl',
+      'focus-visible:ring-2'
+    );
+    expect(container.querySelector('.via-white')).not.toBeInTheDocument();
+    expect(
+      Array.from(container.querySelectorAll('div')).some((element) =>
+        element.classList.contains('via-surface-container-lowest')
+      )
+    ).toBe(true);
+
+    await user.click(example);
+    await user.click(screen.getByRole('button', { name: 'Run Prompt' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Assistant unavailable'
     );
   });
 
@@ -224,7 +259,9 @@ describe('WorkspaceAssistant', () => {
     });
 
     await user.click(
-      screen.getByRole('button', { name: /Create a better quote for Mark's living room/i })
+      screen.getByRole('button', {
+        name: /Create a better quote for Mark's living room/i,
+      })
     );
     await user.click(screen.getByRole('button', { name: /Run Prompt/i }));
 
@@ -236,8 +273,12 @@ describe('WorkspaceAssistant', () => {
 
     // Form renders with AI-drafted title pre-filled (advanced mode due to pre-filled rooms)
     await waitFor(() =>
-      expect(screen.getByLabelText('Title')).toHaveValue('Living room and ceiling repaint')
+      expect(screen.getByLabelText('Title')).toHaveValue(
+        'Living room and ceiling repaint'
+      )
     );
-    expect(screen.getByText('Customer match was inferred from Mark Johnson.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Customer match was inferred from Mark Johnson.')
+    ).toBeInTheDocument();
   });
 });

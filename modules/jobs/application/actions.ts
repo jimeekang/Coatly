@@ -135,8 +135,25 @@ function fallbackScheduleDates(
   job: Pick<JobRow, 'scheduled_date' | 'start_date' | 'end_date'>
 ): string[] {
   const startDate = job.start_date ?? job.scheduled_date;
+  if (!startDate) return [];
   const endDate = job.end_date ?? startDate;
   return buildDateRangeValues(startDate, endDate);
+}
+
+function shiftScheduleDatesToStart(dates: string[], nextStartDate: string): string[] {
+  const sortedDates = sortUniqueDateValues(dates);
+  const currentStartDate = sortedDates[0];
+  if (!currentStartDate || currentStartDate === nextStartDate) {
+    return sortedDates.length > 0 ? sortedDates : [nextStartDate];
+  }
+
+  const dayOffset = Math.round(
+    (Date.parse(`${nextStartDate}T00:00:00Z`) -
+      Date.parse(`${currentStartDate}T00:00:00Z`)) /
+      86_400_000
+  );
+
+  return sortedDates.map((date) => addDaysToDateValue(date, dayOffset));
 }
 
 function mapJobListItem(
@@ -842,20 +859,16 @@ export async function updateJob(
     return { error: getActiveSubscriptionRequiredMessage('job management') };
   }
 
-  const { data: existingJob, error: existingJobError } = await supabase
-    .from('jobs')
-    .select('id, quote_id')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (existingJobError) {
-    return { error: existingJobError.message };
+  const existingScheduleResult = await loadJobScheduleRecord(
+    supabase,
+    user.id,
+    id
+  );
+  if (existingScheduleResult.error || !existingScheduleResult.data) {
+    return { error: existingScheduleResult.error ?? 'Job not found.' };
   }
-
-  if (!existingJob) {
-    return { error: 'Job not found.' };
-  }
+  const { job: existingJob, dates: existingScheduleDates } =
+    existingScheduleResult.data;
 
   const validation = await validateJobLinks(supabase, user.id, input);
   if ('error' in validation) {
@@ -873,6 +886,12 @@ export async function updateJob(
     }
   }
 
+  const nextScheduleDates = shiftScheduleDatesToStart(
+    existingScheduleDates,
+    validation.parsed.scheduled_date
+  );
+  const scheduleSummary = summarizeScheduleDates(nextScheduleDates);
+
   const { error } = await supabase
     .from('jobs')
     .update({
@@ -880,10 +899,10 @@ export async function updateJob(
       quote_id: validation.quoteId,
       title: validation.parsed.title.trim(),
       status: validation.parsed.status,
-      scheduled_date: validation.parsed.scheduled_date,
-      start_date: validation.parsed.scheduled_date,
-      end_date: validation.parsed.scheduled_date,
-      duration_days: 1,
+      scheduled_date: scheduleSummary.scheduledDate,
+      start_date: scheduleSummary.startDate,
+      end_date: scheduleSummary.endDate,
+      duration_days: scheduleSummary.durationDays,
       notes: validation.notes,
     })
     .eq('id', id)
@@ -893,9 +912,12 @@ export async function updateJob(
     return { error: error.message };
   }
 
-  const scheduleResult = await replaceJobScheduleDays(supabase, user.id, id, [
-    validation.parsed.scheduled_date,
-  ]);
+  const scheduleResult = await replaceJobScheduleDays(
+    supabase,
+    user.id,
+    id,
+    nextScheduleDates
+  );
   if (scheduleResult.error) {
     return { error: scheduleResult.error };
   }
@@ -917,8 +939,8 @@ export async function updateJob(
         quoteNumber: quote.quote_number,
         quoteTitle: quote.title,
         customerId: quote.customer_id,
-        startDate: validation.parsed.scheduled_date,
-        endDate: validation.parsed.scheduled_date,
+        startDate: scheduleSummary.startDate,
+        endDate: scheduleSummary.endDate,
       });
     }
   }

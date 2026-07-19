@@ -5,6 +5,22 @@ import { createServerClient } from '@/lib/supabase/server';
 import { saveBusinessProfileForUser } from '@/modules/settings/infrastructure/businesses';
 import { isMissingOnboardingColumnError } from '@/lib/supabase/onboarding-errors';
 
+const AU_STATES = new Set([
+  'ACT',
+  'NSW',
+  'NT',
+  'QLD',
+  'SA',
+  'TAS',
+  'VIC',
+  'WA',
+]);
+
+function optionalValue(value: string) {
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
 export async function completeOnboarding(data: {
   businessName: string;
   abn: string;
@@ -22,7 +38,6 @@ export async function completeOnboarding(data: {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // 서버 사이드 필수 값 검증 — business name + ABN만 필수, 나머지는 Settings에서 완료 가능
   const required: Array<[keyof typeof data, string]> = [
     ['businessName', 'Business name'],
     ['abn', 'ABN'],
@@ -34,13 +49,20 @@ export async function completeOnboarding(data: {
     }
   }
 
-  // ABN 형식 검증 (11자리 숫자)
   const abn = data.abn.replace(/\s/g, '');
   if (!/^\d{11}$/.test(abn)) return { error: 'ABN must be 11 digits' };
 
-  // 우편번호 형식 검증 (입력된 경우에만 4자리)
-  const trimmedPostcode = data.postcode.trim();
-  if (trimmedPostcode && !/^\d{4}$/.test(trimmedPostcode)) {
+  const phone = optionalValue(data.phone);
+  const addressLine1 = optionalValue(data.addressLine1);
+  const city = optionalValue(data.city);
+  const state = optionalValue(data.state);
+  const postcode = optionalValue(data.postcode);
+
+  if (state && !AU_STATES.has(state)) {
+    return { error: 'Select a valid Australian state' };
+  }
+
+  if (postcode && !/^\d{4}$/.test(postcode)) {
     return { error: 'Postcode must be 4 digits' };
   }
 
@@ -49,11 +71,11 @@ export async function completeOnboarding(data: {
     .update({
       business_name: data.businessName.trim(),
       abn,
-      phone: data.phone.trim(),
-      address_line1: data.addressLine1.trim(),
-      city: data.city.trim(),
-      state: data.state.trim(),
-      postcode: data.postcode.trim(),
+      phone,
+      address_line1: addressLine1,
+      city,
+      state,
+      postcode,
       onboarding_completed: true,
     })
     .eq('user_id', user.id);
@@ -64,11 +86,11 @@ export async function completeOnboarding(data: {
       .update({
         business_name: data.businessName.trim(),
         abn,
-        phone: data.phone.trim(),
-        address_line1: data.addressLine1.trim(),
-        city: data.city.trim(),
-        state: data.state.trim(),
-        postcode: data.postcode.trim(),
+        phone,
+        address_line1: addressLine1,
+        city,
+        state,
+        postcode,
       })
       .eq('user_id', user.id);
 
@@ -83,11 +105,11 @@ export async function completeOnboarding(data: {
     input: {
       name: data.businessName.trim(),
       abn,
-      addressLine1: data.addressLine1.trim(),
-      city: data.city.trim(),
-      state: data.state.trim(),
-      postcode: data.postcode.trim(),
-      phone: data.phone.trim(),
+      addressLine1: addressLine1 ?? '',
+      city: city ?? '',
+      state: state ?? '',
+      postcode: postcode ?? '',
+      phone: phone ?? '',
       email: user.email ?? '',
       logo_url: undefined,
     },
@@ -121,23 +143,30 @@ async function createExampleWorkspace({
   userId: string;
   businessName: string;
 }): Promise<string | null> {
-  const [{ count: customerCount }, { count: quoteCount }, { count: invoiceCount }] =
-    await Promise.all([
-      supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      supabase
-        .from('quotes')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      supabase
-        .from('invoices')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-    ]);
+  const [
+    { count: customerCount },
+    { count: quoteCount },
+    { count: invoiceCount },
+  ] = await Promise.all([
+    supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId),
+    supabase
+      .from('quotes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId),
+    supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId),
+  ]);
 
-  if ((customerCount ?? 0) > 0 || (quoteCount ?? 0) > 0 || (invoiceCount ?? 0) > 0) {
+  if (
+    (customerCount ?? 0) > 0 ||
+    (quoteCount ?? 0) > 0 ||
+    (invoiceCount ?? 0) > 0
+  ) {
     return null;
   }
 
@@ -168,7 +197,9 @@ async function createExampleWorkspace({
   );
 
   if (quoteNumberError || !quoteNumber) {
-    return quoteNumberError?.message ?? 'Failed to generate example quote number.';
+    return (
+      quoteNumberError?.message ?? 'Failed to generate example quote number.'
+    );
   }
 
   const { data: quote, error: quoteError } = await supabase
@@ -215,32 +246,35 @@ async function createExampleWorkspace({
     return roomError?.message ?? 'Failed to create example quote room.';
   }
 
-  const { error: surfacesError } = await supabase.from('quote_room_surfaces').insert([
-    {
-      room_id: room.id,
-      surface_type: 'walls',
-      area_m2: 92,
-      coating_type: 'repaint_2coat',
-      rate_per_m2_cents: 2200,
-      material_cost_cents: 85000,
-      labour_cost_cents: 200000,
-      paint_litres_needed: 28,
-      tier: 'better',
-      notes: 'Wash down, patch minor marks, and apply premium low-sheen finish.',
-    },
-    {
-      room_id: room.id,
-      surface_type: 'ceiling',
-      area_m2: 58,
-      coating_type: 'repaint_2coat',
-      rate_per_m2_cents: 1700,
-      material_cost_cents: 30000,
-      labour_cost_cents: 70000,
-      paint_litres_needed: 12,
-      tier: 'better',
-      notes: 'Spot-prime stains and finish with flat ceiling white.',
-    },
-  ]);
+  const { error: surfacesError } = await supabase
+    .from('quote_room_surfaces')
+    .insert([
+      {
+        room_id: room.id,
+        surface_type: 'walls',
+        area_m2: 92,
+        coating_type: 'repaint_2coat',
+        rate_per_m2_cents: 2200,
+        material_cost_cents: 85000,
+        labour_cost_cents: 200000,
+        paint_litres_needed: 28,
+        tier: 'better',
+        notes:
+          'Wash down, patch minor marks, and apply premium low-sheen finish.',
+      },
+      {
+        room_id: room.id,
+        surface_type: 'ceiling',
+        area_m2: 58,
+        coating_type: 'repaint_2coat',
+        rate_per_m2_cents: 1700,
+        material_cost_cents: 30000,
+        labour_cost_cents: 70000,
+        paint_litres_needed: 12,
+        tier: 'better',
+        notes: 'Spot-prime stains and finish with flat ceiling white.',
+      },
+    ]);
 
   if (surfacesError) {
     return surfacesError.message;
@@ -252,7 +286,10 @@ async function createExampleWorkspace({
   );
 
   if (invoiceNumberError || !invoiceNumber) {
-    return invoiceNumberError?.message ?? 'Failed to generate example invoice number.';
+    return (
+      invoiceNumberError?.message ??
+      'Failed to generate example invoice number.'
+    );
   }
 
   const { data: invoice, error: invoiceError } = await supabase
@@ -280,15 +317,17 @@ async function createExampleWorkspace({
     return invoiceError?.message ?? 'Failed to create example invoice.';
   }
 
-  const { error: lineItemsError } = await supabase.from('invoice_line_items').insert({
-    invoice_id: invoice.id,
-    description: '30% deposit for Harbor Cafe interior repaint',
-    quantity: 1,
-    unit_price_cents: 126000,
-    gst_cents: 12600,
-    total_cents: 126000,
-    sort_order: 0,
-  });
+  const { error: lineItemsError } = await supabase
+    .from('invoice_line_items')
+    .insert({
+      invoice_id: invoice.id,
+      description: '30% deposit for Harbor Cafe interior repaint',
+      quantity: 1,
+      unit_price_cents: 126000,
+      gst_cents: 12600,
+      total_cents: 126000,
+      sort_order: 0,
+    });
 
   if (lineItemsError) {
     return lineItemsError.message;

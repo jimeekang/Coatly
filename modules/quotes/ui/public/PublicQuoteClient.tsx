@@ -3,13 +3,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { formatAUD, formatDate } from '@/utils/format';
-import { SectionLabel } from '@/components/shared/SectionLabel';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import {
-  QUOTE_STATUS_TONE,
-  STATUS_TONE_BG,
-  STATUS_TONE_DOT,
-} from '@/lib/constants/status-colors';
 import type { PublicQuoteDetail } from '@/modules/quotes/domain/quotes';
 import { PublicOptionalItems } from './PublicOptionalItems';
 import { PublicApprovalForm } from './PublicApprovalForm';
@@ -27,6 +20,9 @@ import {
   calculateQuoteTotals,
   groupQuoteLineItemsByCategory,
 } from '@/modules/quotes/domain/quotes';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { QUOTE_STATUS_TONE } from '@/lib/constants/status-colors';
 
 interface Business {
   name: string;
@@ -89,7 +85,7 @@ function PriceSummary({
       {optionalSelectedCents > 0 && (
         <div className="flex items-center justify-between py-2.5 text-sm">
           <span className="text-on-surface-variant">Add-ons selected</span>
-          <span className="font-medium text-on-success-container">
+          <span className="text-on-success-container font-medium">
             +{formatAUD(optionalSelectedCents)}
           </span>
         </div>
@@ -139,7 +135,9 @@ function PriceSummary({
       )}
       <div className="border-outline mt-1 border-t-2 pt-3">
         <div className="flex items-center justify-between">
-          <span className="text-on-surface font-semibold">Total (inc. GST)</span>
+          <span className="text-on-surface font-semibold">
+            Total (inc. GST)
+          </span>
           <span
             className={
               sidebar
@@ -174,9 +172,9 @@ function PriceSummary({
           </div>
         )}
         {approvedAt && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl bg-success-container px-3 py-2">
+          <div className="bg-success-container mt-3 flex items-center gap-2 rounded-xl px-3 py-2">
             <svg
-              className="h-4 w-4 shrink-0 text-on-success-container"
+              className="text-on-success-container h-4 w-4 shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -188,7 +186,7 @@ function PriceSummary({
                 d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-xs font-medium text-on-success-container">
+            <p className="text-on-success-container text-xs font-medium">
               Approved {formatDate(approvedAt)}
             </p>
           </div>
@@ -207,7 +205,7 @@ function SectionCard({
 }) {
   return (
     <section
-      className={`border-outline overflow-hidden rounded-2xl border bg-surface-container-lowest shadow-sm ${className}`}
+      className={`border-outline bg-surface-container-lowest overflow-hidden rounded-2xl border shadow-sm ${className}`}
     >
       {children}
     </section>
@@ -225,7 +223,9 @@ function SectionHeader({
     <div className="border-outline/60 bg-surface-container-low border-b px-5 py-3.5">
       <SectionLabel>{label}</SectionLabel>
       {description && (
-        <p className="text-on-surface-variant/80 mt-0.5 text-xs">{description}</p>
+        <p className="text-on-surface-variant/80 mt-0.5 text-xs">
+          {description}
+        </p>
       )}
     </div>
   );
@@ -317,29 +317,31 @@ export function PublicQuoteClient({
             <div className="bg-primary px-6 py-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <SectionLabel className="tracking-[0.18em] text-on-primary/70">
+                  <SectionLabel className="text-on-primary/70">
                     {business?.name || 'Painting Quote'}
                   </SectionLabel>
-                  <h1 className="mt-2 text-2xl leading-tight font-bold text-on-primary sm:text-3xl">
+                  <h1 className="text-on-primary mt-2 text-2xl leading-tight font-bold sm:text-3xl">
                     {quote.title || 'Painting Quote'}
                   </h1>
-                  <p className="mt-1.5 text-sm text-on-primary/75">
+                  <p className="text-on-primary/75 mt-1.5 text-sm">
                     {quote.quote_number}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   {/* Status badge */}
-                  <StatusBadge
-                    tone={QUOTE_STATUS_TONE[quote.status]}
-                    label={QUOTE_STATUS_LABELS[quote.status]}
-                    size="md"
-                  />
+                  <div className="bg-surface-container-lowest mt-0.5 rounded-md p-0.5 shadow-sm">
+                    <StatusBadge
+                      tone={QUOTE_STATUS_TONE[quote.status]}
+                      label={QUOTE_STATUS_LABELS[quote.status]}
+                      size="md"
+                    />
+                  </div>
                   <a
                     href={`/api/pdf/quote?token=${encodeURIComponent(token)}`}
                     target="_blank"
                     rel="noreferrer"
                     download={getQuotePdfFilename(quote.quote_number)}
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-on-primary/30 px-4 text-xs font-semibold text-on-primary transition-colors hover:bg-on-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-primary/60"
+                    className="border-on-primary/30 text-on-primary hover:bg-on-primary/10 focus-visible:ring-on-primary/60 inline-flex min-h-11 items-center justify-center rounded-full border px-4 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
                     PDF
                   </a>
@@ -440,11 +442,11 @@ export function PublicQuoteClient({
                             formatLabel(section.section_kind)}
                         </p>
                       </div>
-                      <span className="text-primary shrink-0 rounded-full bg-surface-container-lowest px-2.5 py-1 text-xs font-bold tracking-wide uppercase">
+                      <span className="text-primary bg-surface-container-lowest shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase">
                         {formatLabel(section.pricing_status) ?? 'Included'}
                       </span>
                     </div>
-                    <div className="space-y-3 bg-surface-container-lowest px-4 py-3">
+                    <div className="bg-surface-container-lowest space-y-3 px-4 py-3">
                       {section.description && (
                         <p className="text-on-surface text-sm whitespace-pre-wrap">
                           {section.description}
@@ -516,7 +518,7 @@ export function PublicQuoteClient({
                       </p>
                     </div>
                     {/* Surfaces */}
-                    <div className="divide-outline/50 divide-y bg-surface-container-lowest">
+                    <div className="divide-outline/50 bg-surface-container-lowest divide-y">
                       {room.surfaces.map((surface) => (
                         <div
                           key={surface.id}
@@ -556,7 +558,9 @@ export function PublicQuoteClient({
                     className="border-outline bg-surface-container-low flex items-start justify-between gap-4 rounded-xl border px-4 py-3"
                   >
                     <div>
-                      <p className="text-on-surface font-medium">{item.label}</p>
+                      <p className="text-on-surface font-medium">
+                        {item.label}
+                      </p>
                       <p className="text-on-surface-variant mt-0.5 text-xs tracking-wide uppercase">
                         {item.category.replaceAll('_', ' ')}
                       </p>
@@ -737,7 +741,7 @@ export function PublicQuoteClient({
                 {business.phone && (
                   <a
                     href={`tel:${business.phone}`}
-                    className="text-on-surface-variant hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    className="text-on-surface-variant hover:bg-surface-container-low hover:text-primary focus-visible:ring-primary/30 -mx-3 inline-flex min-h-11 items-center rounded-xl px-3 focus-visible:ring-2 focus-visible:outline-none"
                   >
                     {business.phone}
                   </a>
@@ -745,7 +749,7 @@ export function PublicQuoteClient({
                 {business.email && (
                   <a
                     href={`mailto:${business.email}`}
-                    className="text-on-surface-variant hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    className="text-on-surface-variant hover:bg-surface-container-low hover:text-primary focus-visible:ring-primary/30 -mx-3 inline-flex min-h-11 items-center rounded-xl px-3 focus-visible:ring-2 focus-visible:outline-none"
                   >
                     {business.email}
                   </a>
@@ -762,15 +766,17 @@ export function PublicQuoteClient({
         <div className="hidden lg:block">
           <div className="sticky top-6 space-y-3">
             {/* Price card */}
-            <div className="border-outline overflow-hidden rounded-2xl border bg-surface-container-lowest shadow-sm">
+            <div className="border-outline-variant bg-surface-container-lowest overflow-hidden rounded-2xl border shadow-sm">
               <div className="bg-primary px-5 py-4">
                 <SectionLabel className="text-on-primary/70">
                   Quote Total
                 </SectionLabel>
-                <p className="mt-1 text-3xl font-bold text-on-primary">
+                <p className="text-on-primary mt-1 text-3xl font-bold">
                   {formatAUD(displayTotal)}
                 </p>
-                <p className="mt-0.5 text-xs text-on-primary/60">Including GST</p>
+                <p className="text-on-primary/60 mt-0.5 text-xs">
+                  Including GST
+                </p>
               </div>
               <div className="px-5 py-1">
                 <PriceSummary
@@ -791,27 +797,29 @@ export function PublicQuoteClient({
             </div>
 
             {/* Status badge */}
-            <div
-              className={`flex items-center gap-2 rounded-xl border border-outline-variant px-4 py-3 ${STATUS_TONE_BG[QUOTE_STATUS_TONE[quote.status]]}`}
-            >
-              <span
-                className={`h-2 w-2 shrink-0 rounded-full ${STATUS_TONE_DOT[QUOTE_STATUS_TONE[quote.status]]}`}
+            <div className="border-outline-variant bg-surface-container-lowest flex items-center rounded-xl border px-4 py-3">
+              <StatusBadge
+                tone={QUOTE_STATUS_TONE[quote.status]}
+                label={QUOTE_STATUS_LABELS[quote.status]}
+                size="md"
               />
-              <span className="text-sm font-medium">
-                {QUOTE_STATUS_LABELS[quote.status]}
-              </span>
             </div>
 
             {/* Business contact (full detail) */}
             {business && (
-              <div className="border-outline overflow-hidden rounded-2xl border bg-surface-container-lowest shadow-sm">
+              <div className="border-outline bg-surface-container-lowest overflow-hidden rounded-2xl border shadow-sm">
                 <div className="border-outline/60 bg-surface-container-low border-b px-4 py-3">
                   <SectionLabel>Business Contact</SectionLabel>
                 </div>
                 <div className="space-y-2.5 px-4 py-4 text-sm">
-                  <p className="text-on-surface font-semibold">{business.name}</p>
+                  <p className="text-on-surface font-semibold">
+                    {business.name}
+                  </p>
                   {business.phone && (
-                    <div className="flex items-center gap-2">
+                    <a
+                      href={`tel:${business.phone}`}
+                      className="text-on-surface-variant hover:bg-surface-container-low hover:text-primary focus-visible:ring-primary/30 -mx-2 flex min-h-11 items-center gap-2 rounded-xl px-2 focus-visible:ring-2 focus-visible:outline-none"
+                    >
                       <svg
                         className="text-on-surface-variant h-3.5 w-3.5 shrink-0"
                         fill="none"
@@ -825,16 +833,14 @@ export function PublicQuoteClient({
                           d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"
                         />
                       </svg>
-                      <a
-                        href={`tel:${business.phone}`}
-                        className="text-on-surface-variant hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                      >
-                        {business.phone}
-                      </a>
-                    </div>
+                      <span>{business.phone}</span>
+                    </a>
                   )}
                   {business.email && (
-                    <div className="flex items-center gap-2">
+                    <a
+                      href={`mailto:${business.email}`}
+                      className="text-on-surface-variant hover:bg-surface-container-low hover:text-primary focus-visible:ring-primary/30 -mx-2 flex min-h-11 items-center gap-2 rounded-xl px-2 focus-visible:ring-2 focus-visible:outline-none"
+                    >
                       <svg
                         className="text-on-surface-variant h-3.5 w-3.5 shrink-0"
                         fill="none"
@@ -848,13 +854,8 @@ export function PublicQuoteClient({
                           d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
                         />
                       </svg>
-                      <a
-                        href={`mailto:${business.email}`}
-                        className="text-on-surface-variant hover:text-primary break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                      >
-                        {business.email}
-                      </a>
-                    </div>
+                      <span className="break-all">{business.email}</span>
+                    </a>
                   )}
                   {business.abn && (
                     <div className="flex items-center gap-2">

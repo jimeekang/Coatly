@@ -1,56 +1,60 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-function FieldRow() {
-  return (
-    <div className="flex flex-col gap-2">
-      <Skeleton className="h-3.5 w-28" />
-      <Skeleton className="h-12 w-full rounded-xl" />
-    </div>
-  );
-}
-
 export default function SettingsLoading() {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 sm:gap-6">
-      {/* PageHeader */}
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-8 w-56" />
-        <Skeleton className="h-4 w-80 max-w-full" />
+    <div
+      className="mx-auto flex w-full max-w-4xl flex-col gap-4 sm:gap-6"
+      role="status"
+      aria-live="polite"
+    >
+      <p className="sr-only">Loading settings</p>
+
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-56 max-w-full" />
+        <Skeleton className="h-4 w-96 max-w-full" />
       </div>
 
-      {/* Business profile form */}
-      <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm sm:p-6">
-        <Skeleton className="mb-4 h-5 w-40" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <FieldRow key={i} />
+      <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-5 shadow-sm sm:p-6">
+        <div className="mb-6 space-y-2">
+          <Skeleton className="h-6 w-44" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <div className="grid gap-5 md:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="min-w-0 space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-12 w-full rounded-xl" />
+            </div>
           ))}
         </div>
-        <Skeleton className="mt-6 h-12 w-40 rounded-xl" />
-      </div>
-
-      {/* Google Calendar card */}
-      <div className="rounded-2xl border border-outline-variant bg-surface-container p-5">
-        <Skeleton className="mb-3 h-5 w-48" />
-        <Skeleton className="h-4 w-full max-w-md" />
-        <Skeleton className="mt-4 h-11 w-40 rounded-xl" />
-      </div>
-
-      {/* Linked sections (Price Rates, Billing) */}
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-2xl border border-outline-variant bg-surface-container p-5"
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 flex-col gap-2">
-              <Skeleton className="h-5 w-36" />
-              <Skeleton className="h-4 w-full max-w-lg" />
-            </div>
-            <Skeleton className="h-11 w-36 rounded-xl" />
-          </div>
+        <div className="mt-6 flex justify-end">
+          <Skeleton className="h-12 w-full rounded-xl md:w-52" />
         </div>
-      ))}
+      </section>
+
+      <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-6 w-48 max-w-full" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+            <Skeleton className="h-4 w-56 max-w-full" />
+          </div>
+          <Skeleton className="h-11 w-full shrink-0 rounded-xl sm:w-36" />
+        </div>
+      </section>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <section
+            key={index}
+            className="border-outline-variant bg-surface-container-low rounded-2xl border p-5"
+          >
+            <Skeleton className="mb-2 h-5 w-44 max-w-full" />
+            <Skeleton className="mb-4 h-4 w-full" />
+            <Skeleton className="h-11 w-32 rounded-xl" />
+          </section>
+        ))}
+      </div>
     </div>
   );
 }

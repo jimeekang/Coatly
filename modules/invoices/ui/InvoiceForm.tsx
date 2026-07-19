@@ -17,7 +17,9 @@ import {
 import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
 import { FormSection } from '@/components/forms/FormSection';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import { SectionLabel } from '@/components/shared/SectionLabel';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { INVOICE_STATUS_TONE } from '@/lib/constants/status-colors';
 
 /* ──────────────────────────────────────────────────────────
    Inline icon set — Lucide-style stroke paths. Keeps the new
@@ -25,7 +27,12 @@ import { SectionLabel } from '@/components/shared/SectionLabel';
    without pulling a runtime icon dependency.
    ────────────────────────────────────────────────────────── */
 const ICON_PATHS = {
-  full: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z', 'M14 3v5h5', 'M9 13h6', 'M9 17h4'],
+  full: [
+    'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z',
+    'M14 3v5h5',
+    'M9 13h6',
+    'M9 17h4',
+  ],
   deposit: [
     'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z',
     'M12 7v10',
@@ -33,7 +40,14 @@ const ICON_PATHS = {
   ],
   progress: ['M5 21V11', 'M12 21V4', 'M19 21v-7'],
   final: ['M5 21V4', 'M5 4h12l-2.5 4 2.5 4H5'],
-  bank: ['M3 21h18', 'M5 21V10', 'M19 21V10', 'M9 21v-6', 'M15 21v-6', 'M3 10 12 4l9 6'],
+  bank: [
+    'M3 21h18',
+    'M5 21V10',
+    'M19 21V10',
+    'M9 21v-6',
+    'M15 21v-6',
+    'M3 10 12 4l9 6',
+  ],
   card: ['M3 6h18v12H3z', 'M3 10h18'],
   cash: ['M3 7h18v10H3z', 'M12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
   cheque: ['M4 5h16v14H4z', 'M8 9.5h8', 'M8 13.5h5'],
@@ -41,7 +55,13 @@ const ICON_PATHS = {
   plus: ['M12 5v14', 'M5 12h14'],
 } as const;
 
-function Icon({ name, className }: { name: keyof typeof ICON_PATHS; className?: string }) {
+function Icon({
+  name,
+  className,
+}: {
+  name: keyof typeof ICON_PATHS;
+  className?: string;
+}) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -66,13 +86,36 @@ const INVOICE_TYPE_OPTIONS: Array<{
   icon: keyof typeof ICON_PATHS;
   hint: string;
 }> = [
-  { value: 'full', label: 'Full', icon: 'full', hint: 'One invoice for the full quoted scope.' },
-  { value: 'deposit', label: 'Deposit', icon: 'deposit', hint: 'Upfront amount to secure the job.' },
-  { value: 'progress', label: 'Progress', icon: 'progress', hint: 'Staged claim while work is underway.' },
-  { value: 'final', label: 'Final', icon: 'final', hint: 'Closing balance after completion.' },
+  {
+    value: 'full',
+    label: 'Full',
+    icon: 'full',
+    hint: 'One invoice for the full quoted scope.',
+  },
+  {
+    value: 'deposit',
+    label: 'Deposit',
+    icon: 'deposit',
+    hint: 'Upfront amount to secure the job.',
+  },
+  {
+    value: 'progress',
+    label: 'Progress',
+    icon: 'progress',
+    hint: 'Staged claim while work is underway.',
+  },
+  {
+    value: 'final',
+    label: 'Final',
+    icon: 'final',
+    hint: 'Closing balance after completion.',
+  },
 ];
 
-const INVOICE_TYPE_HINT: Record<InvoiceFormDefaultValues['invoice_type'], string> = {
+const INVOICE_TYPE_HINT: Record<
+  InvoiceFormDefaultValues['invoice_type'],
+  string
+> = {
   full: 'Covers the full quoted scope in one payment.',
   deposit: 'Upfront amount to secure the job.',
   progress: 'Staged claim while work is underway.',
@@ -94,19 +137,42 @@ const PAYMENT_METHOD_OPTIONS: Array<{
   icon: keyof typeof ICON_PATHS;
   hint: string;
 }> = [
-  { value: 'bank_transfer', label: 'Bank transfer', icon: 'bank', hint: 'BSB and account on the PDF' },
+  {
+    value: 'bank_transfer',
+    label: 'Bank transfer',
+    icon: 'bank',
+    hint: 'BSB and account on the PDF',
+  },
   { value: 'card', label: 'Card', icon: 'card', hint: 'Customer pays by card' },
-  { value: 'cash', label: 'Cash', icon: 'cash', hint: 'Marked paid on receipt' },
-  { value: 'cheque', label: 'Cheque', icon: 'cheque', hint: 'Made out to your business' },
-  { value: 'other', label: 'Other', icon: 'other', hint: 'Another payment arrangement' },
+  {
+    value: 'cash',
+    label: 'Cash',
+    icon: 'cash',
+    hint: 'Marked paid on receipt',
+  },
+  {
+    value: 'cheque',
+    label: 'Cheque',
+    icon: 'cheque',
+    hint: 'Made out to your business',
+  },
+  {
+    value: 'other',
+    label: 'Other',
+    icon: 'other',
+    hint: 'Another payment arrangement',
+  },
 ];
 
-const STATUS_BADGE: Record<InvoiceFormDefaultValues['status'], { label: string; className: string }> = {
-  draft: { label: 'Draft', className: 'bg-surface-container-highest text-on-surface-variant' },
-  sent: { label: 'Sent', className: 'bg-primary/10 text-primary' },
-  paid: { label: 'Paid', className: 'bg-success-container text-success' },
-  overdue: { label: 'Overdue', className: 'bg-warning-container text-warning' },
-  cancelled: { label: 'Cancelled', className: 'bg-surface-container-highest text-on-surface-variant' },
+const INVOICE_STATUS_LABELS: Record<
+  InvoiceFormDefaultValues['status'],
+  string
+> = {
+  draft: 'Draft',
+  sent: 'Sent',
+  paid: 'Paid',
+  overdue: 'Overdue',
+  cancelled: 'Cancelled',
 };
 
 const CARD_CLASS = 'border-outline-variant/60 p-5 sm:p-6';
@@ -222,16 +288,21 @@ function createInitialInvoiceForm(
   businessDefaults?: InvoiceBusinessDefaults
 ) {
   const dueDate =
-    defaultValues == null ? buildDefaultDueDate() : (defaultValues.due_date ?? '');
+    defaultValues == null
+      ? buildDefaultDueDate()
+      : (defaultValues.due_date ?? '');
 
   return {
     customer_id: defaultValues?.customer_id ?? '',
     quote_id: defaultValues?.quote_id ?? '',
     invoice_type: defaultValues?.invoice_type ?? ('full' as const),
     status: defaultValues?.status ?? ('draft' as const),
-    business_abn: defaultValues?.business_abn ?? businessDefaults?.business_abn ?? '',
-    payment_terms: defaultValues?.payment_terms ?? businessDefaults?.payment_terms ?? '',
-    bank_details: defaultValues?.bank_details ?? businessDefaults?.bank_details ?? '',
+    business_abn:
+      defaultValues?.business_abn ?? businessDefaults?.business_abn ?? '',
+    payment_terms:
+      defaultValues?.payment_terms ?? businessDefaults?.payment_terms ?? '',
+    bank_details:
+      defaultValues?.bank_details ?? businessDefaults?.bank_details ?? '',
     due_date: dueDate,
     paid_date: defaultValues?.paid_date ?? '',
     payment_method: defaultValues?.payment_method ?? '',
@@ -239,7 +310,9 @@ function createInitialInvoiceForm(
   };
 }
 
-function createInitialLineItems(defaultValues?: InvoiceFormDefaultValues): InvoiceLineDraft[] {
+function createInitialLineItems(
+  defaultValues?: InvoiceFormDefaultValues
+): InvoiceLineDraft[] {
   if (defaultValues?.line_items.length) {
     return defaultValues.line_items.map((item) => ({
       description: item.description,
@@ -280,6 +353,18 @@ function buildInvoicePreset(
   };
 }
 
+function isNextNavigationSignal(error: unknown) {
+  if (!error || typeof error !== 'object' || !('digest' in error)) {
+    return false;
+  }
+
+  const digest = (error as { digest?: unknown }).digest;
+  return (
+    typeof digest === 'string' &&
+    (digest.startsWith('NEXT_REDIRECT') || digest.startsWith('NEXT_NOT_FOUND'))
+  );
+}
+
 export function InvoiceForm({
   customers,
   quotes,
@@ -295,7 +380,9 @@ export function InvoiceForm({
   customers: InvoiceFormCustomerOption[];
   quotes: InvoiceFormQuoteOption[];
   businessDefaults?: InvoiceBusinessDefaults;
-  onSubmit?: (data: InvoiceFormSubmitPayload) => Promise<{ error?: string } | void>;
+  onSubmit?: (
+    data: InvoiceFormSubmitPayload
+  ) => Promise<{ error?: string } | void>;
   onCancel?: () => void;
   cancelLabel?: string;
   invoiceNumberPreview?: string;
@@ -306,18 +393,19 @@ export function InvoiceForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState(() => createInitialInvoiceForm(defaultValues, businessDefaults));
+  const [form, setForm] = useState(() =>
+    createInitialInvoiceForm(defaultValues, businessDefaults)
+  );
   const [progressPercent, setProgressPercent] = useState('100');
   const [lineItems, setLineItems] = useState<InvoiceLineDraft[]>(() =>
     createInitialLineItems(defaultValues)
   );
-  const [showBusinessDetails, setShowBusinessDetails] = useState(
-    () =>
-      Boolean(
-        businessDefaults?.business_abn ||
-          businessDefaults?.payment_terms ||
-          businessDefaults?.bank_details
-      )
+  const [showBusinessDetails, setShowBusinessDetails] = useState(() =>
+    Boolean(
+      businessDefaults?.business_abn ||
+      businessDefaults?.payment_terms ||
+      businessDefaults?.bank_details
+    )
   );
 
   const filteredQuotes = useMemo(() => {
@@ -327,9 +415,13 @@ export function InvoiceForm({
 
   const selectedCustomer =
     customers.find((customer) => customer.id === form.customer_id) ?? null;
-  const selectedQuote = quotes.find((quote) => quote.id === form.quote_id) ?? null;
+  const selectedQuote =
+    quotes.find((quote) => quote.id === form.quote_id) ?? null;
   const selectedQuoteIncludedItems = useMemo(
-    () => selectedQuote?.line_items.filter((item) => !item.is_optional || item.is_selected) ?? [],
+    () =>
+      selectedQuote?.line_items.filter(
+        (item) => !item.is_optional || item.is_selected
+      ) ?? [],
     [selectedQuote]
   );
 
@@ -389,13 +481,18 @@ export function InvoiceForm({
       selectedQuote.billed_total_cents - existingLinkedQuoteTotal,
       0
     );
-    const billedAfterThisInvoiceSubtotal = billedBeforeThisInvoiceSubtotal + summary.subtotal;
-    const billedAfterThisInvoiceTotal = billedBeforeThisInvoiceTotal + summary.total;
+    const billedAfterThisInvoiceSubtotal =
+      billedBeforeThisInvoiceSubtotal + summary.subtotal;
+    const billedAfterThisInvoiceTotal =
+      billedBeforeThisInvoiceTotal + summary.total;
     const remainingSubtotal = Math.max(
       selectedQuote.subtotal_cents - billedAfterThisInvoiceSubtotal,
       0
     );
-    const remainingTotal = Math.max(selectedQuote.total_cents - billedAfterThisInvoiceTotal, 0);
+    const remainingTotal = Math.max(
+      selectedQuote.total_cents - billedAfterThisInvoiceTotal,
+      0
+    );
     const overBilled = billedAfterThisInvoiceTotal > selectedQuote.total_cents;
 
     return {
@@ -405,7 +502,13 @@ export function InvoiceForm({
       remainingTotal,
       overBilled,
     };
-  }, [existingLinkedQuoteSubtotal, existingLinkedQuoteTotal, selectedQuote, summary.subtotal, summary.total]);
+  }, [
+    existingLinkedQuoteSubtotal,
+    existingLinkedQuoteTotal,
+    selectedQuote,
+    summary.subtotal,
+    summary.total,
+  ]);
 
   const statusOptions = useMemo(() => {
     if (form.status === 'sent' || form.status === 'overdue') {
@@ -425,7 +528,8 @@ export function InvoiceForm({
   const canSubmit =
     Boolean(onSubmit) &&
     Boolean(form.customer_id) &&
-    (form.status !== 'paid' || (Boolean(form.paid_date) && Boolean(form.payment_method))) &&
+    (form.status !== 'paid' ||
+      (Boolean(form.paid_date) && Boolean(form.payment_method))) &&
     summary.total > 0 &&
     lineItems.some(
       (item) =>
@@ -451,7 +555,9 @@ export function InvoiceForm({
   }
 
   function handleFormChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) {
     const { name, value } = e.target;
 
@@ -465,7 +571,8 @@ export function InvoiceForm({
 
       if (name === 'customer_id' && prev.quote_id) {
         const matchedQuote = quotes.find((quote) => quote.id === prev.quote_id);
-        if (matchedQuote && matchedQuote.customer_id !== value) next.quote_id = '';
+        if (matchedQuote && matchedQuote.customer_id !== value)
+          next.quote_id = '';
       }
 
       if (name === 'status') {
@@ -499,7 +606,11 @@ export function InvoiceForm({
     setForm((prev) => ({ ...prev, invoice_type: value }));
 
     if (selectedQuote) {
-      const presetError = applyQuotePreset(selectedQuote, value, Number(progressPercent));
+      const presetError = applyQuotePreset(
+        selectedQuote,
+        value,
+        Number(progressPercent)
+      );
       if (presetError) return;
     }
 
@@ -514,20 +625,31 @@ export function InvoiceForm({
     setError(null);
   }
 
-  function handleLineItemChange(index: number, field: keyof InvoiceLineDraft, value: string) {
+  function handleLineItemChange(
+    index: number,
+    field: keyof InvoiceLineDraft,
+    value: string
+  ) {
     setLineItems((prev) =>
-      prev.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item))
+      prev.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      )
     );
     setError(null);
   }
 
   function addLineItem() {
-    setLineItems((prev) => [...prev, { description: '', quantity: '1', unitPrice: '' }]);
+    setLineItems((prev) => [
+      ...prev,
+      { description: '', quantity: '1', unitPrice: '' },
+    ]);
   }
 
   function removeLineItem(index: number) {
     setLineItems((prev) =>
-      prev.length === 1 ? prev : prev.filter((_, itemIndex) => itemIndex !== index)
+      prev.length === 1
+        ? prev
+        : prev.filter((_, itemIndex) => itemIndex !== index)
     );
   }
 
@@ -539,6 +661,8 @@ export function InvoiceForm({
       return;
     }
 
+    setError(null);
+
     const preparedLineItems = lineItems
       .filter((item) => item.description.trim())
       .map((item) => ({
@@ -548,26 +672,38 @@ export function InvoiceForm({
       }));
 
     startTransition(async () => {
-      const result = await onSubmit({
-        customer_id: form.customer_id,
-        quote_id: form.quote_id || null,
-        invoice_type: form.invoice_type,
-        status: form.status,
-        business_abn: form.business_abn.trim() || null,
-        payment_terms: form.payment_terms.trim() || null,
-        bank_details: form.bank_details.trim() || null,
-        due_date: form.due_date || null,
-        paid_date: form.status === 'paid' ? form.paid_date || null : null,
-        payment_method:
-          form.status === 'paid'
-            ? ((form.payment_method || null) as InvoicePaymentMethod | null)
-            : null,
-        notes: form.notes.trim() || null,
-        line_items: preparedLineItems,
-      });
+      try {
+        const result = await onSubmit({
+          customer_id: form.customer_id,
+          quote_id: form.quote_id || null,
+          invoice_type: form.invoice_type,
+          status: form.status,
+          business_abn: form.business_abn.trim() || null,
+          payment_terms: form.payment_terms.trim() || null,
+          bank_details: form.bank_details.trim() || null,
+          due_date: form.due_date || null,
+          paid_date: form.status === 'paid' ? form.paid_date || null : null,
+          payment_method:
+            form.status === 'paid'
+              ? ((form.payment_method || null) as InvoicePaymentMethod | null)
+              : null,
+          notes: form.notes.trim() || null,
+          line_items: preparedLineItems,
+        });
 
-      if (result?.error) {
-        setError(result.error);
+        if (result?.error) {
+          setError(result.error);
+        }
+      } catch (submitError) {
+        if (isNextNavigationSignal(submitError)) {
+          throw submitError;
+        }
+
+        setError(
+          submitError instanceof Error
+            ? submitError.message
+            : 'Invoice could not be saved. Please try again.'
+        );
       }
     });
   }
@@ -581,28 +717,22 @@ export function InvoiceForm({
   const showPaymentDetails = Boolean(
     form.status === 'paid' || form.paid_date || form.payment_method
   );
-  const badge = STATUS_BADGE[form.status];
-
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pb-32 sm:space-y-6">
       {/* ── Invoice meta strip ── */}
       <div className="flex flex-wrap items-center gap-2.5">
         <span
           className={cn(
-            'text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant',
-            /\d/.test(invoiceNumberPreview) && 'font-mono tracking-[0.18em]',
+            'text-on-surface-variant text-[11px] font-bold tracking-[0.16em] uppercase',
+            /\d/.test(invoiceNumberPreview) && 'font-mono tracking-[0.18em]'
           )}
         >
           {invoiceNumberPreview}
         </span>
-        <span
-          className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]',
-            badge.className
-          )}
-        >
-          {badge.label}
-        </span>
+        <StatusBadge
+          tone={INVOICE_STATUS_TONE[form.status]}
+          label={INVOICE_STATUS_LABELS[form.status]}
+        />
       </div>
 
       <div className="grid gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1.4fr)_300px]">
@@ -610,9 +740,10 @@ export function InvoiceForm({
         <div className="space-y-5 sm:space-y-6">
           {/* Customer + linked quote */}
           <FormSection className={CARD_CLASS}>
-            <h2 className="text-base font-bold text-on-surface">Customer</h2>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Who is this invoice for? Link an approved quote to pull in its line items.
+            <h2 className="text-on-surface text-base font-bold">Customer</h2>
+            <p className="text-on-surface-variant mt-1 text-sm">
+              Who is this invoice for? Link an approved quote to pull in its
+              line items.
             </p>
 
             <div className="mt-4 space-y-4">
@@ -639,7 +770,9 @@ export function InvoiceForm({
               <div>
                 <label htmlFor="quote_id" className={formLabelClassName}>
                   Linked quote{' '}
-                  <span className="text-xs font-normal text-on-surface-variant">(optional)</span>
+                  <span className="text-on-surface-variant text-xs font-normal">
+                    (optional)
+                  </span>
                 </label>
                 <select
                   id="quote_id"
@@ -656,7 +789,7 @@ export function InvoiceForm({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1.5 text-xs text-on-surface-variant">
+                <p className="text-on-surface-variant mt-1.5 text-xs">
                   Start blank or pull lines and totals from an approved quote.
                 </p>
               </div>
@@ -672,29 +805,35 @@ export function InvoiceForm({
                     : 'border-outline-variant/60 bg-surface-container-low'
                 )}
               >
-                <p className="mb-3 text-sm font-semibold text-on-surface">
+                <p className="text-on-surface mb-3 text-sm font-semibold">
                   {selectedQuote.quote_number}
                   {selectedQuote.title ? ` — ${selectedQuote.title}` : ''}
                 </p>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-surface-container-lowest px-3 py-2">
-                    <p className="text-xs text-on-surface-variant">Quote total</p>
-                    <p className="mt-0.5 text-sm font-semibold tabular-nums text-on-surface">
+                  <div className="bg-surface-container-lowest rounded-xl px-3 py-2">
+                    <p className="text-on-surface-variant text-xs">
+                      Quote total
+                    </p>
+                    <p className="text-on-surface mt-0.5 text-sm font-semibold tabular-nums">
                       {formatAUD(selectedQuote.total_cents)}
                     </p>
                   </div>
-                  <div className="rounded-lg bg-surface-container-lowest px-3 py-2">
-                    <p className="text-xs text-on-surface-variant">Already invoiced</p>
-                    <p className="mt-0.5 text-sm font-semibold tabular-nums text-on-surface">
+                  <div className="bg-surface-container-lowest rounded-xl px-3 py-2">
+                    <p className="text-on-surface-variant text-xs">
+                      Already invoiced
+                    </p>
+                    <p className="text-on-surface mt-0.5 text-sm font-semibold tabular-nums">
                       {formatAUD(quoteContext.billedBeforeThisInvoiceTotal)}
                     </p>
                   </div>
-                  <div className="rounded-lg bg-surface-container-lowest px-3 py-2">
-                    <p className="text-xs text-on-surface-variant">Remaining</p>
+                  <div className="bg-surface-container-lowest rounded-xl px-3 py-2">
+                    <p className="text-on-surface-variant text-xs">Remaining</p>
                     <p
                       className={cn(
                         'mt-0.5 text-sm font-semibold tabular-nums',
-                        quoteContext.overBilled ? 'text-warning' : 'text-primary'
+                        quoteContext.overBilled
+                          ? 'text-warning'
+                          : 'text-primary'
                       )}
                     >
                       {formatAUD(quoteContext.remainingTotal)}
@@ -702,8 +841,9 @@ export function InvoiceForm({
                   </div>
                 </div>
                 {quoteContext.overBilled && (
-                  <p className="mt-3 text-xs text-warning">
-                    This invoice would exceed the quoted total. Check staged billing.
+                  <p className="text-warning mt-3 text-xs">
+                    This invoice would exceed the quoted total. Check staged
+                    billing.
                   </p>
                 )}
               </div>
@@ -712,8 +852,10 @@ export function InvoiceForm({
 
           {/* Invoice type */}
           <FormSection className={CARD_CLASS}>
-            <h2 className="text-base font-bold text-on-surface">Invoice type</h2>
-            <p className="mt-1 text-sm text-on-surface-variant">
+            <h2 className="text-on-surface text-base font-bold">
+              Invoice type
+            </h2>
+            <p className="text-on-surface-variant mt-1 text-sm">
               {form.invoice_type === 'deposit' &&
               selectedQuote &&
               selectedQuote.deposit_percent > 0
@@ -731,9 +873,9 @@ export function InvoiceForm({
                     onClick={() => selectInvoiceType(option.value)}
                     aria-pressed={isOn}
                     className={cn(
-                      'flex min-h-11 flex-col gap-2 rounded-xl border p-3 text-left transition-colors',
+                      'focus-visible:ring-primary/30 flex min-h-11 flex-col gap-2 rounded-xl border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
                       isOn
-                        ? 'border-primary bg-primary/[0.06] ring-1 ring-primary/20'
+                        ? 'border-primary bg-primary/[0.06] ring-primary/20 ring-1'
                         : 'border-outline-variant hover:bg-surface-container-low'
                     )}
                   >
@@ -755,7 +897,7 @@ export function InvoiceForm({
                     >
                       {option.label}
                     </span>
-                    <span className="text-xs leading-snug text-on-surface-variant">
+                    <span className="text-on-surface-variant text-xs leading-snug">
                       {option.hint}
                     </span>
                   </button>
@@ -764,10 +906,10 @@ export function InvoiceForm({
             </div>
 
             {form.invoice_type === 'progress' && selectedQuote && (
-              <div className="mt-4 rounded-xl border border-outline-variant bg-surface-container-low/60 p-4">
+              <div className="border-outline-variant bg-surface-container-low/60 mt-4 rounded-xl border p-4">
                 <div className="flex items-baseline justify-between gap-3">
                   <SectionLabel as="span">Progress percent</SectionLabel>
-                  <span className="text-xl font-extrabold tabular-nums text-primary">
+                  <span className="text-primary text-xl font-extrabold tabular-nums">
                     {progressPercent || 0}%
                   </span>
                 </div>
@@ -782,7 +924,9 @@ export function InvoiceForm({
                     max="100"
                     inputMode="numeric"
                     value={progressPercent}
-                    onChange={(event) => handleProgressPercentChange(event.target.value)}
+                    onChange={(event) =>
+                      handleProgressPercentChange(event.target.value)
+                    }
                     className={formControlClassName}
                   />
                 </div>
@@ -791,9 +935,11 @@ export function InvoiceForm({
                     <button
                       key={percent}
                       type="button"
-                      onClick={() => handleProgressPercentChange(String(percent))}
+                      onClick={() =>
+                        handleProgressPercentChange(String(percent))
+                      }
                       className={cn(
-                        'inline-flex min-h-11 items-center rounded-lg border px-3 text-xs font-semibold transition-colors',
+                        'focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
                         Number(progressPercent) === percent
                           ? 'border-primary bg-primary/[0.06] text-primary'
                           : 'border-outline-variant text-on-surface hover:bg-surface-container-low'
@@ -803,8 +949,9 @@ export function InvoiceForm({
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-on-surface-variant">
-                  Applies to the remaining staged subtotal for this linked quote.
+                <p className="text-on-surface-variant mt-2 text-xs">
+                  Applies to the remaining staged subtotal for this linked
+                  quote.
                 </p>
               </div>
             )}
@@ -812,8 +959,8 @@ export function InvoiceForm({
 
           {/* Details: due date + status */}
           <FormSection className={CARD_CLASS}>
-            <h2 className="text-base font-bold text-on-surface">Details</h2>
-            <p className="mt-1 text-sm text-on-surface-variant">
+            <h2 className="text-on-surface text-base font-bold">Details</h2>
+            <p className="text-on-surface-variant mt-1 text-sm">
               Set the payment deadline and the current status of this invoice.
             </p>
 
@@ -822,7 +969,9 @@ export function InvoiceForm({
               <div>
                 <label htmlFor="due_date" className={formLabelClassName}>
                   Due date{' '}
-                  <span className="text-xs font-normal text-on-surface-variant">(optional)</span>
+                  <span className="text-on-surface-variant text-xs font-normal">
+                    (optional)
+                  </span>
                 </label>
                 <input
                   id="due_date"
@@ -836,10 +985,13 @@ export function InvoiceForm({
                   <button
                     type="button"
                     onClick={() => {
-                      setForm((prev) => ({ ...prev, due_date: buildDefaultDueDate() }));
+                      setForm((prev) => ({
+                        ...prev,
+                        due_date: buildDefaultDueDate(),
+                      }));
                       setError(null);
                     }}
-                    className="inline-flex min-h-11 items-center rounded-lg border border-outline-variant px-3 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
+                    className="border-outline-variant text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
                     Set +14 days
                   </button>
@@ -849,13 +1001,14 @@ export function InvoiceForm({
                       setForm((prev) => ({ ...prev, due_date: '' }));
                       setError(null);
                     }}
-                    className="inline-flex min-h-11 items-center rounded-lg border border-outline-variant px-3 text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low"
+                    className="border-outline-variant text-on-surface-variant hover:bg-surface-container-low focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl border px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
                     Clear
                   </button>
                 </div>
-                <p className="mt-1.5 text-xs text-on-surface-variant">
-                  Leave blank if the invoice does not need a payment deadline yet.
+                <p className="text-on-surface-variant mt-1.5 text-xs">
+                  Leave blank if the invoice does not need a payment deadline
+                  yet.
                 </p>
               </div>
 
@@ -878,21 +1031,22 @@ export function InvoiceForm({
                   ))}
                 </select>
                 {(form.status === 'sent' || form.status === 'overdue') && (
-                  <p className="mt-1.5 text-xs text-on-surface-variant">
-                    Sent and overdue are set automatically. You can mark this invoice as paid or
-                    cancelled here.
+                  <p className="text-on-surface-variant mt-1.5 text-xs">
+                    Sent and overdue are set automatically. You can mark this
+                    invoice as paid or cancelled here.
                   </p>
                 )}
                 {form.status === 'paid' && (
-                  <p className="mt-1.5 text-xs text-on-surface-variant">
-                    Marking as paid stores the paid date and sets the balance to zero.
+                  <p className="text-on-surface-variant mt-1.5 text-xs">
+                    Marking as paid stores the paid date and sets the balance to
+                    zero.
                   </p>
                 )}
               </div>
             </div>
 
             {showPaymentDetails && (
-              <div className="mt-4 space-y-4 border-t border-outline-variant/60 pt-4">
+              <div className="border-outline-variant/60 mt-4 space-y-4 border-t pt-4">
                 <div>
                   <label htmlFor="paid_date" className={formLabelClassName}>
                     Paid date
@@ -920,9 +1074,9 @@ export function InvoiceForm({
                           onClick={() => selectPaymentMethod(option.value)}
                           aria-pressed={isOn}
                           className={cn(
-                            'flex min-h-11 items-center gap-3 rounded-xl border p-3 text-left transition-colors',
+                            'focus-visible:ring-primary/30 flex min-h-11 items-center gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
                             isOn
-                              ? 'border-primary bg-primary/[0.06] ring-1 ring-primary/20'
+                              ? 'border-primary bg-primary/[0.06] ring-primary/20 ring-1'
                               : 'border-outline-variant hover:bg-surface-container-low'
                           )}
                         >
@@ -945,7 +1099,7 @@ export function InvoiceForm({
                             >
                               {option.label}
                             </span>
-                            <span className="block truncate text-xs text-on-surface-variant">
+                            <span className="text-on-surface-variant block truncate text-xs">
                               {option.hint}
                             </span>
                           </span>
@@ -953,7 +1107,7 @@ export function InvoiceForm({
                       );
                     })}
                   </div>
-                  <p className="mt-1.5 text-xs text-on-surface-variant">
+                  <p className="text-on-surface-variant mt-1.5 text-xs">
                     {form.status === 'paid'
                       ? 'Required when status is paid.'
                       : 'Optional, but useful for reconciling paid invoices later.'}
@@ -967,16 +1121,18 @@ export function InvoiceForm({
           <FormSection className={CARD_CLASS}>
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-base font-bold text-on-surface">Line items</h2>
-                <p className="mt-1 text-sm text-on-surface-variant">
+                <h2 className="text-on-surface text-base font-bold">
+                  Line items
+                </h2>
+                <p className="text-on-surface-variant mt-1 text-sm">
                   {lineCount === 0
                     ? 'No items yet — add the first one below.'
                     : `${lineCount} item${lineCount === 1 ? '' : 's'} on this invoice.`}
                 </p>
               </div>
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface-container-high px-3 py-1.5 text-xs text-on-surface-variant">
+              <span className="bg-surface-container-high text-on-surface-variant inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs">
                 Subtotal
-                <strong className="tabular-nums text-on-surface">
+                <strong className="text-on-surface tabular-nums">
                   {formatAUD(summary.subtotal)}
                 </strong>
               </span>
@@ -996,15 +1152,17 @@ export function InvoiceForm({
                 return (
                   <div
                     key={`${index}-${item.description.slice(0, 10)}`}
-                    className="rounded-xl border border-outline-variant bg-surface-container-low/50 p-4"
+                    className="border-outline-variant bg-surface-container-low/50 rounded-xl border p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <p className="text-sm font-semibold text-on-surface">Item {index + 1}</p>
+                      <p className="text-on-surface text-sm font-semibold">
+                        Item {index + 1}
+                      </p>
                       {lineItems.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeLineItem(index)}
-                          className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"
+                          className="text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                         >
                           Remove
                         </button>
@@ -1024,7 +1182,11 @@ export function InvoiceForm({
                           rows={2}
                           value={item.description}
                           onChange={(e) =>
-                            handleLineItemChange(index, 'description', e.target.value)
+                            handleLineItemChange(
+                              index,
+                              'description',
+                              e.target.value
+                            )
                           }
                           placeholder="e.g. Prep, prime and paint — 2 coats"
                           className={formTextareaClassName}
@@ -1033,7 +1195,10 @@ export function InvoiceForm({
 
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div>
-                          <label className={formLabelClassName} htmlFor={`line-qty-${index}`}>
+                          <label
+                            className={formLabelClassName}
+                            htmlFor={`line-qty-${index}`}
+                          >
                             Qty
                           </label>
                           <input
@@ -1044,13 +1209,20 @@ export function InvoiceForm({
                             inputMode="decimal"
                             value={item.quantity}
                             onChange={(e) =>
-                              handleLineItemChange(index, 'quantity', e.target.value)
+                              handleLineItemChange(
+                                index,
+                                'quantity',
+                                e.target.value
+                              )
                             }
                             className={formControlClassName}
                           />
                         </div>
                         <div>
-                          <label className={formLabelClassName} htmlFor={`line-price-${index}`}>
+                          <label
+                            className={formLabelClassName}
+                            htmlFor={`line-price-${index}`}
+                          >
                             Unit price (A$)
                           </label>
                           <input
@@ -1061,7 +1233,11 @@ export function InvoiceForm({
                             inputMode="decimal"
                             value={item.unitPrice}
                             onChange={(e) =>
-                              handleLineItemChange(index, 'unitPrice', e.target.value)
+                              handleLineItemChange(
+                                index,
+                                'unitPrice',
+                                e.target.value
+                              )
                             }
                             className={formControlClassName}
                           />
@@ -1069,22 +1245,28 @@ export function InvoiceForm({
                       </div>
                     </div>
 
-                    <div className="mt-3 rounded-lg bg-surface-container-lowest px-4 py-3 text-sm">
+                    <div className="bg-surface-container-lowest mt-3 rounded-xl px-4 py-3 text-sm">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-on-surface-variant">Line total</span>
-                        <span className="font-semibold tabular-nums text-on-surface">
+                        <span className="text-on-surface-variant">
+                          Line total
+                        </span>
+                        <span className="text-on-surface font-semibold tabular-nums">
                           {formatAUD(lineTotal)}
                         </span>
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-3">
-                        <span className="text-on-surface-variant">GST (10%)</span>
-                        <span className="font-medium tabular-nums text-on-surface">
+                        <span className="text-on-surface-variant">
+                          GST (10%)
+                        </span>
+                        <span className="text-on-surface font-medium tabular-nums">
                           {formatAUD(lineGst)}
                         </span>
                       </div>
-                      <div className="mt-2 flex items-center justify-between gap-3 border-t border-outline-variant pt-2">
-                        <span className="font-medium text-on-surface">Item total</span>
-                        <span className="font-semibold tabular-nums text-primary">
+                      <div className="border-outline-variant mt-2 flex items-center justify-between gap-3 border-t pt-2">
+                        <span className="text-on-surface font-medium">
+                          Item total
+                        </span>
+                        <span className="text-primary font-semibold tabular-nums">
                           {formatAUD(lineGrandTotal)}
                         </span>
                       </div>
@@ -1097,30 +1279,34 @@ export function InvoiceForm({
             <button
               type="button"
               onClick={addLineItem}
-              className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-dashed border-primary/50 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/[0.06]"
+              className="border-primary/50 text-primary hover:bg-primary/[0.06] focus-visible:ring-primary/30 mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-dashed px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <Icon name="plus" className="h-3.5 w-3.5" />
               Add line item
             </button>
 
-            <dl className="mt-5 space-y-2.5 border-t-2 border-outline-variant pt-4 text-sm">
+            <dl className="border-outline-variant mt-5 space-y-2.5 border-t-2 pt-4 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-on-surface-variant">Subtotal (ex GST)</dt>
-                <dd className="font-medium tabular-nums text-on-surface">
+                <dd className="text-on-surface font-medium tabular-nums">
                   {formatAUD(summary.subtotal)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-on-surface-variant">GST (10%)</dt>
-                <dd className="font-medium tabular-nums text-on-surface">
+                <dd className="text-on-surface font-medium tabular-nums">
                   {formatAUD(summary.gst)}
                 </dd>
               </div>
-              <div className="flex items-center justify-between gap-3 border-t border-outline-variant pt-2.5">
-                <dt className="text-base font-bold text-on-surface">Amount due</dt>
-                <dd className="text-base font-extrabold tabular-nums text-on-surface">
+              <div className="border-outline-variant flex items-center justify-between gap-3 border-t pt-2.5">
+                <dt className="text-on-surface text-base font-bold">
+                  Amount due
+                </dt>
+                <dd className="text-on-surface text-base font-extrabold tabular-nums">
                   {formatAUD(summary.total)}
-                  <span className="ml-1 text-xs font-bold text-on-surface-variant">AUD</span>
+                  <span className="text-on-surface-variant ml-1 text-xs font-bold">
+                    AUD
+                  </span>
                 </dd>
               </div>
             </dl>
@@ -1128,9 +1314,12 @@ export function InvoiceForm({
 
           {/* Notes & Terms */}
           <FormSection className={CARD_CLASS}>
-            <h2 className="text-base font-bold text-on-surface">Notes &amp; terms</h2>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Notes appear on the PDF. Payment terms set the expectation for the customer.
+            <h2 className="text-on-surface text-base font-bold">
+              Notes &amp; terms
+            </h2>
+            <p className="text-on-surface-variant mt-1 text-sm">
+              Notes appear on the PDF. Payment terms set the expectation for the
+              customer.
             </p>
             <div className="mt-4 space-y-4">
               <div>
@@ -1162,21 +1351,23 @@ export function InvoiceForm({
           </FormSection>
 
           {/* Business & Payment Details — collapsed by default */}
-          <section className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest shadow-sm">
+          <section className="border-outline-variant/60 bg-surface-container-lowest rounded-2xl border shadow-sm">
             <button
               type="button"
               onClick={() => setShowBusinessDetails((v) => !v)}
               aria-expanded={showBusinessDetails}
-              className="flex w-full items-center justify-between p-5 text-left sm:p-6"
+              className="focus-visible:ring-primary/30 flex min-h-11 w-full items-center justify-between rounded-2xl p-5 text-left focus-visible:ring-2 focus-visible:outline-none sm:p-6"
             >
-              <span className="text-base font-bold text-on-surface">
+              <span className="text-on-surface text-base font-bold">
                 Business &amp; payment details
               </span>
-              <span className="text-on-surface-variant">{showBusinessDetails ? '▲' : '▼'}</span>
+              <span className="text-on-surface-variant">
+                {showBusinessDetails ? '▲' : '▼'}
+              </span>
             </button>
 
             {showBusinessDetails && (
-              <div className="space-y-4 border-t border-outline-variant/60 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+              <div className="border-outline-variant/60 space-y-4 border-t px-5 pt-4 pb-5 sm:px-6 sm:pb-6">
                 <div>
                   <label htmlFor="business_abn" className={formLabelClassName}>
                     ABN
@@ -1201,7 +1392,9 @@ export function InvoiceForm({
                     rows={3}
                     value={form.bank_details}
                     onChange={handleFormChange}
-                    placeholder={'Account Name: Your Business\nBSB: 123-456\nAccount: 12345678'}
+                    placeholder={
+                      'Account Name: Your Business\nBSB: 123-456\nAccount: 12345678'
+                    }
                     className={formTextareaClassName}
                   />
                 </div>
@@ -1213,30 +1406,41 @@ export function InvoiceForm({
         {/* ── Right rail ── */}
         <aside className="space-y-5 xl:sticky xl:top-4 xl:self-start">
           {/* Amount due summary */}
-          <section className="rounded-2xl bg-primary p-5 text-on-primary shadow-sm sm:p-6">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-primary/65">
+          <section className="bg-primary text-on-primary rounded-2xl p-5 shadow-sm sm:p-6">
+            <SectionLabel className="text-on-primary/65">
               Amount due
-            </p>
-            <p className="mt-2 text-[34px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
+            </SectionLabel>
+            <p className="mt-2 text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums">
               {formatAUD(summary.total)}
-              <span className="ml-1.5 text-xs font-bold text-on-primary/55">AUD</span>
+              <span className="text-on-primary/55 ml-1.5 text-xs font-bold">
+                AUD
+              </span>
             </p>
-            <p className="mt-2 text-xs text-on-primary/70">
-              GST 10% included · {lineCount} line item{lineCount === 1 ? '' : 's'}
+            <p className="text-on-primary/70 mt-2 text-xs">
+              GST 10% included · {lineCount} line item
+              {lineCount === 1 ? '' : 's'}
             </p>
-            <dl className="mt-4 space-y-2 border-t border-on-primary/15 pt-4 text-[13px]">
+            <dl className="border-on-primary/15 mt-4 space-y-2 border-t pt-4 text-[13px]">
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-on-primary/78">Subtotal</dt>
-                <dd className="font-semibold tabular-nums">{formatAUD(summary.subtotal)}</dd>
+                <dd className="font-semibold tabular-nums">
+                  {formatAUD(summary.subtotal)}
+                </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-on-primary/78">GST (10%)</dt>
-                <dd className="font-semibold tabular-nums">{formatAUD(summary.gst)}</dd>
+                <dd className="font-semibold tabular-nums">
+                  {formatAUD(summary.gst)}
+                </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-on-primary/78">Type</dt>
                 <dd className="font-semibold">
-                  {INVOICE_TYPE_OPTIONS.find((o) => o.value === form.invoice_type)?.label}
+                  {
+                    INVOICE_TYPE_OPTIONS.find(
+                      (o) => o.value === form.invoice_type
+                    )?.label
+                  }
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-3">
@@ -1251,31 +1455,29 @@ export function InvoiceForm({
           {/* Quote items snapshot */}
           {selectedQuote && selectedQuoteIncludedItems.length > 0 && (
             <FormSection className={CARD_CLASS}>
-              <SectionLabel as="h3" className="mb-3">
-                Quote items
-              </SectionLabel>
+              <SectionLabel className="mb-3">Quote items</SectionLabel>
               <div className="space-y-2">
                 {selectedQuoteIncludedItems.map((item, index) => (
                   <div
                     key={`${item.description}-${index}`}
-                    className="rounded-xl bg-surface-container-low px-3 py-2.5"
+                    className="bg-surface-container-low rounded-xl px-3 py-2.5"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="whitespace-pre-wrap text-sm font-medium text-on-surface">
+                      <p className="text-on-surface text-sm font-medium whitespace-pre-wrap">
                         {item.description}
                       </p>
-                      <p className="shrink-0 text-sm font-semibold tabular-nums text-on-surface">
+                      <p className="text-on-surface shrink-0 text-sm font-semibold tabular-nums">
                         {formatAUD(item.total_cents)}
                       </p>
                     </div>
-                    <p className="mt-0.5 text-xs text-on-surface-variant">
+                    <p className="text-on-surface-variant mt-0.5 text-xs">
                       Qty {item.quantity} × {formatAUD(item.unit_price_cents)}
                     </p>
                   </div>
                 ))}
               </div>
               {selectedQuote.valid_until && (
-                <p className="mt-3 text-xs text-on-surface-variant">
+                <p className="text-on-surface-variant mt-3 text-xs">
                   Valid until {formatDate(selectedQuote.valid_until)}
                 </p>
               )}
@@ -1285,21 +1487,23 @@ export function InvoiceForm({
           {/* Customer snapshot */}
           {selectedCustomer && (
             <FormSection className={CARD_CLASS}>
-              <SectionLabel as="h3" className="mb-3">
-                Customer snapshot
-              </SectionLabel>
+              <SectionLabel className="mb-3">Customer snapshot</SectionLabel>
               <div className="space-y-1 text-sm">
-                <p className="font-semibold text-on-surface">
+                <p className="text-on-surface font-semibold">
                   {selectedCustomer.company_name || selectedCustomer.name}
                 </p>
                 {selectedCustomer.email && (
-                  <p className="text-on-surface-variant">{selectedCustomer.email}</p>
+                  <p className="text-on-surface-variant">
+                    {selectedCustomer.email}
+                  </p>
                 )}
                 {selectedCustomer.phone && (
-                  <p className="text-on-surface-variant">{selectedCustomer.phone}</p>
+                  <p className="text-on-surface-variant">
+                    {selectedCustomer.phone}
+                  </p>
                 )}
                 {selectedCustomer.address && (
-                  <p className="whitespace-pre-wrap text-on-surface-variant">
+                  <p className="text-on-surface-variant whitespace-pre-wrap">
                     {selectedCustomer.address}
                   </p>
                 )}
@@ -1329,14 +1533,21 @@ export function InvoiceForm({
           >
             {cancelLabel}
           </FormFooterButton>
-          <FormFooterButton type="submit" disabled={isPending || !canSubmit} className="flex-[1.6]">
+          <FormFooterButton
+            type="submit"
+            disabled={isPending || !canSubmit}
+            className="flex-[1.6]"
+          >
             {isPending ? 'Saving...' : submitLabel}
           </FormFooterButton>
         </div>
         {!customers.length && (
-          <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+          <div className="border-outline-variant bg-surface-container-low text-on-surface-variant rounded-xl border border-dashed px-4 py-3 text-sm">
             Add a customer first in{' '}
-            <Link href="/customers/new" className="font-medium text-primary hover:underline">
+            <Link
+              href="/customers/new"
+              className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-2 font-medium focus-visible:ring-2 focus-visible:outline-none"
+            >
               Customers
             </Link>
             .

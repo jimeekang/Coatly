@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { NumericInput, sanitizeDecimalInput } from '@/components/shared/NumericInput';
 import {
-  FormField,
-  FormLabel,
-  FormOptionalIndicator,
-  formControlClassName,
+  formControlClassName as FIELD,
+  formLabelClassName as LABEL,
+  formTextareaClassName,
 } from '@/components/forms/FormField';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import {
+  NumericInput,
+  sanitizeDecimalInput,
+} from '@/components/shared/NumericInput';
 import {
   MATERIAL_ITEM_CATEGORIES,
   MATERIAL_ITEM_CATEGORY_LABELS,
@@ -17,6 +19,8 @@ import {
   type MaterialItemUpsertInput,
 } from '../domain/types';
 
+const SELECT = `${FIELD} cursor-pointer`;
+
 function getInitialLitres(unit?: string | null) {
   if (!unit) return '';
 
@@ -24,9 +28,17 @@ function getInitialLitres(unit?: string | null) {
   return match?.[1] ?? '';
 }
 
+function getSubmitErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error.trim()) return error;
+  return 'Item could not be saved. Please try again.';
+}
+
 interface MaterialItemFormProps {
   defaultValues?: MaterialItem;
-  onSubmit: (data: MaterialItemUpsertInput) => Promise<{ data?: MaterialItem; error?: string }>;
+  onSubmit: (
+    data: MaterialItemUpsertInput
+  ) => Promise<{ data?: MaterialItem; error?: string }>;
   onCancel: () => void;
   submitLabel?: string;
 }
@@ -52,7 +64,7 @@ export function MaterialItemForm({
   const [litres, setLitres] = useState(getInitialLitres(defaultValues?.unit));
   const [serviceNotes, setServiceNotes] = useState(
     defaultValues?.category === 'service'
-      ? (defaultValues?.notes?.trim() || '')
+      ? defaultValues?.notes?.trim() || ''
       : ''
   );
 
@@ -77,7 +89,10 @@ export function MaterialItemForm({
     if (!Number.isFinite(dollars)) {
       return;
     }
-    setForm((prev) => ({ ...prev, unit_price_cents: Math.round(dollars * 100) }));
+    setForm((prev) => ({
+      ...prev,
+      unit_price_cents: Math.round(dollars * 100),
+    }));
     setError(null);
   }
 
@@ -104,7 +119,9 @@ export function MaterialItemForm({
     }
 
     const trimmedBrand = brand.trim();
-    const normalizedLitres = sanitizeDecimalInput(litres).replace(/\.$/, '').trim();
+    const normalizedLitres = sanitizeDecimalInput(litres)
+      .replace(/\.$/, '')
+      .trim();
 
     return {
       ...form,
@@ -123,62 +140,87 @@ export function MaterialItemForm({
 
     setIsPending(true);
     setError(null);
-    const result = await onSubmit(payload);
-    setIsPending(false);
-    if (result?.error) setError(result.error);
+    try {
+      const result = await onSubmit(payload);
+      if (result?.error) setError(result.error);
+    } catch (submitError) {
+      setError(getSubmitErrorMessage(submitError));
+    } finally {
+      setIsPending(false);
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Category */}
       <div>
-        <FormLabel htmlFor="category">Category</FormLabel>
+        <label htmlFor="category" className={LABEL}>
+          Category
+        </label>
         <select
           id="category"
           name="category"
           value={form.category}
           onChange={handleCategoryChange}
-          className={`${formControlClassName} cursor-pointer`}
+          className={SELECT}
         >
           {MATERIAL_ITEM_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>{MATERIAL_ITEM_CATEGORY_LABELS[cat]}</option>
+            <option key={cat} value={cat}>
+              {MATERIAL_ITEM_CATEGORY_LABELS[cat]}
+            </option>
           ))}
         </select>
       </div>
 
       {!isServiceCategory ? (
         <>
-          <FormField
-            htmlFor="brand"
-            name="brand"
-            type="text"
-            label={<>Brand <FormOptionalIndicator /></>}
-            value={brand}
-            onChange={(e) => {
-              setBrand(e.target.value);
-              setError(null);
-            }}
-            placeholder="e.g. Dulux"
-          />
-
-          <FormField
-            htmlFor="item_name"
-            name="item_name"
-            type="text"
-            label="Item Name"
-            value={itemName}
-            onChange={(e) => {
-              setItemName(e.target.value);
-              setError(null);
-            }}
-            placeholder="e.g. Wash & Wear"
-          />
+          <div>
+            <label htmlFor="brand" className={LABEL}>
+              Brand{' '}
+              <span className="text-on-surface-variant font-normal">
+                (optional)
+              </span>
+            </label>
+            <input
+              id="brand"
+              name="brand"
+              type="text"
+              value={brand}
+              onChange={(e) => {
+                setBrand(e.target.value);
+                setError(null);
+              }}
+              placeholder="e.g. Dulux"
+              className={FIELD}
+            />
+          </div>
 
           <div>
-            <FormLabel htmlFor="litres">
-              Size (L)
-              <FormOptionalIndicator />
-            </FormLabel>
+            <label htmlFor="item_name" className={LABEL}>
+              Item Name
+            </label>
+            <input
+              id="item_name"
+              name="item_name"
+              type="text"
+              required
+              value={itemName}
+              onChange={(e) => {
+                setItemName(e.target.value);
+                setError(null);
+              }}
+              placeholder="e.g. Wash & Wear"
+              className={FIELD}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="litres" className={LABEL}>
+              Size (L){' '}
+              <span className="text-on-surface-variant font-normal">
+                (optional)
+              </span>
+            </label>
             <NumericInput
               id="litres"
               name="litres"
@@ -188,48 +230,64 @@ export function MaterialItemForm({
                 setLitres(value);
                 setError(null);
               }}
-              className={formControlClassName}
+              className={FIELD}
               placeholder="e.g. 10"
             />
           </div>
         </>
       ) : (
         <>
-          <FormField
-            htmlFor="service_title"
-            name="service_title"
-            type="text"
-            label="Service Title"
-            value={itemName}
-            onChange={(e) => {
-              setItemName(e.target.value);
-              setError(null);
-            }}
-            placeholder="e.g. Ceiling repaint"
-          />
+          <div>
+            <label htmlFor="service_title" className={LABEL}>
+              Service Title
+            </label>
+            <input
+              id="service_title"
+              name="service_title"
+              type="text"
+              required
+              value={itemName}
+              onChange={(e) => {
+                setItemName(e.target.value);
+                setError(null);
+              }}
+              placeholder="e.g. Ceiling repaint"
+              className={FIELD}
+            />
+          </div>
 
-          <FormField
-            as="textarea"
-            htmlFor="service_notes"
-            name="service_notes"
-            label={<>Notes <FormOptionalIndicator /></>}
-            rows={3}
-            value={serviceNotes}
-            onChange={(e) => {
-              setServiceNotes(e.target.value);
-              setError(null);
-            }}
-            placeholder="Describe the service"
-            className="resize-none"
-          />
+          <div>
+            <label htmlFor="service_notes" className={LABEL}>
+              Notes{' '}
+              <span className="text-on-surface-variant font-normal">
+                (optional)
+              </span>
+            </label>
+            <textarea
+              id="service_notes"
+              name="service_notes"
+              rows={3}
+              value={serviceNotes}
+              onChange={(e) => {
+                setServiceNotes(e.target.value);
+                setError(null);
+              }}
+              placeholder="Describe the service"
+              className={`${formTextareaClassName} resize-none`}
+            />
+          </div>
         </>
       )}
 
       {/* Unit Price */}
       <div>
-        <FormLabel htmlFor="unit_price">Price (AUD)</FormLabel>
+        <label htmlFor="unit_price" className={LABEL}>
+          Price (AUD)
+        </label>
         <div className="relative">
-          <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-base font-medium text-on-surface-variant">$</span>
+          <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 left-4 flex items-center text-base font-medium">
+            $
+          </span>
           <NumericInput
             id="unit_price"
             name="unit_price"
@@ -237,7 +295,7 @@ export function MaterialItemForm({
             value={(form.unit_price_cents / 100).toFixed(2)}
             sanitize={sanitizeDecimalInput}
             onValueChange={handlePriceChange}
-            className={`${formControlClassName} pl-8`}
+            className={`${FIELD} pl-8`}
           />
         </div>
       </div>
@@ -249,17 +307,14 @@ export function MaterialItemForm({
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="h-12 flex-1 rounded-xl border border-outline bg-surface-container-lowest text-base font-medium text-on-surface disabled:opacity-50"
+          className="border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 h-12 flex-1 rounded-xl border text-base font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
         >
           Cancel
         </button>
         <button
           type="submit"
-          disabled={
-            isPending ||
-            !itemName.trim()
-          }
-          className="h-12 flex-[1.35] rounded-xl bg-primary text-base font-semibold text-on-primary disabled:opacity-50"
+          disabled={isPending || !itemName.trim()}
+          className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 h-12 flex-[1.35] rounded-xl text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
         >
           {isPending ? 'Saving...' : submitLabel}
         </button>

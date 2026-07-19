@@ -34,7 +34,9 @@ describe('tablet layout regressions', () => {
   it('keeps schedule tablet-first with readable touch targets', () => {
     const source = readSource('modules/schedule/ui/ScheduleCalendar.tsx');
 
-    expect(source).toContain("const TABLET_AGENDA_VIEW_QUERY = '(max-width: 1023px)'");
+    expect(source).toContain(
+      "const TABLET_AGENDA_VIEW_QUERY = '(max-width: 1023px)'"
+    );
     expect(source).toContain('useTabletAgendaViewport');
     expect(source).not.toMatch(/\blg:min-h-(?:5|\[32px\])\b/);
     expect(source).not.toContain('lg:text-[10px]');
@@ -45,22 +47,28 @@ describe('tablet layout regressions', () => {
     const quoteDetail = readSource('app/(dashboard)/quotes/[id]/page.tsx');
     const jobDetail = readSource('modules/jobs/ui/JobDetail.tsx');
     const invoiceDetail = readSource('modules/invoices/ui/InvoiceDetail.tsx');
-    const customerDetailPage = readSource('app/(dashboard)/customers/[id]/page.tsx');
+    const customerDetailPage = readSource(
+      'app/(dashboard)/customers/[id]/page.tsx'
+    );
 
     expect(quoteDetail).toContain('xl:grid-cols-[2fr_1fr]');
     expect(quoteDetail).not.toContain('md:grid-cols-[2fr_1fr]');
     expect(jobDetail).toContain('xl:grid-cols-[2fr_1fr]');
     expect(jobDetail).not.toContain('md:grid-cols-[2fr_1fr]');
-    expect(invoiceDetail).not.toContain('md:grid-cols-[minmax(0,1.6fr)_110px_140px_140px]');
+    expect(invoiceDetail).not.toContain(
+      'md:grid-cols-[minmax(0,1.6fr)_110px_140px_140px]'
+    );
     expect(customerDetailPage).toContain('md:max-w-2xl');
   });
 
   it('keeps form controls and modal shells tablet-safe for keyboard and Safari viewport changes', () => {
     const formField = readSource('components/forms/FormField.tsx');
     const quoteForm = readSource('modules/quotes/ui/QuoteForm.tsx');
+    const modal = readSource('components/ui/modal.tsx');
 
     expect(formField).toContain('scroll-mb-40');
     expect(formField).toContain('md:scroll-mb-32');
-    expect(quoteForm).toContain('max-h-[90dvh]');
+    expect(quoteForm).toContain('<Modal');
+    expect(modal).toContain('max-h-[90dvh]');
   });
 });

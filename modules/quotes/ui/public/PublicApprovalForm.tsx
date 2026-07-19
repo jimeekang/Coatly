@@ -2,10 +2,13 @@
 
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { approvePublicQuote, rejectPublicQuote } from '@/modules/quotes/application/actions';
+import {
+  approvePublicQuote,
+  rejectPublicQuote,
+} from '@/modules/quotes/application/actions';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import { SectionLabel } from '@/components/shared/SectionLabel';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { SignaturePad } from './SignaturePad';
 
 interface PublicApprovalFormProps {
@@ -34,13 +37,19 @@ export function PublicApprovalForm({
 }: PublicApprovalFormProps) {
   const [signature, setSignature] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [approvalSubmitted, setApprovalSubmitted] = useState(false);
+  const [showRejectConfirmation, setShowRejectConfirmation] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isRejectPending, startRejectTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
-  const isSignatureImage = (sig: string | null) => sig?.startsWith('data:image') ?? false;
+  const isSignatureImage = (sig: string | null) =>
+    sig?.startsWith('data:image') ?? false;
+
+  const getSubmissionError = (submitError: unknown, fallback: string) =>
+    submitError instanceof Error ? submitError.message : fallback;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -49,21 +58,33 @@ export function PublicApprovalForm({
       return;
     }
     setError(null);
+    setWarning(null);
     const fd = new FormData(e.currentTarget);
     fd.set('approvalSignature', signature);
     startTransition(async () => {
-      const result = await approvePublicQuote(fd);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await approvePublicQuote(fd);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setApprovalSubmitted(true);
+        setWarning(result.warning ?? null);
+        router.refresh();
+      } catch (submitError) {
+        setError(
+          getSubmissionError(
+            submitError,
+            'This quote could not be approved. Please try again.'
+          )
+        );
       }
-      router.refresh();
     });
   };
 
-  const handleRejectClick = () => {
+  const validateRejectIdentity = () => {
     const form = formRef.current;
-    if (!form) return;
+    if (!form) return null;
 
     const fd = new FormData(form);
     const rejectedByName = String(fd.get('approvedByName') ?? '').trim();
@@ -71,30 +92,49 @@ export function PublicApprovalForm({
 
     if (!rejectedByName || !rejectedByEmail) {
       setError('Please enter your name and email before declining this quote.');
+      return null;
+    }
+
+    fd.set('rejectedByName', rejectedByName);
+    fd.set('rejectedByEmail', rejectedByEmail);
+    return fd;
+  };
+
+  const handleReject = () => {
+    if (!validateRejectIdentity()) return;
+
+    setError(null);
+    setWarning(null);
+    setShowRejectConfirmation(true);
+  };
+
+  const confirmReject = () => {
+    const fd = validateRejectIdentity();
+    if (!fd) {
+      setShowRejectConfirmation(false);
       return;
     }
 
+    setShowRejectConfirmation(false);
     setError(null);
-    setShowDeclineConfirm(true);
-  };
-
-  const handleRejectConfirm = () => {
-    setShowDeclineConfirm(false);
-    const form = formRef.current;
-    if (!form) return;
-
-    const fd = new FormData(form);
-    fd.set('rejectedByName', String(fd.get('approvedByName') ?? '').trim());
-    fd.set('rejectedByEmail', String(fd.get('approvedByEmail') ?? '').trim());
-    setError(null);
+    setWarning(null);
 
     startRejectTransition(async () => {
-      const result = await rejectPublicQuote(fd);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await rejectPublicQuote(fd);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        router.refresh();
+      } catch (submitError) {
+        setError(
+          getSubmissionError(
+            submitError,
+            'This quote could not be declined. Please try again.'
+          )
+        );
       }
-      router.refresh();
     });
   };
 
@@ -102,29 +142,49 @@ export function PublicApprovalForm({
   if (approvedAt) {
     return (
       <div className="space-y-4">
-        <div className="flex items-start gap-3 rounded-xl border border-success/30 bg-success-container px-4 py-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-container">
-            <svg className="h-5 w-5 text-on-success-container" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div className="border-success/30 bg-success-container flex items-start gap-3 rounded-2xl border px-4 py-4">
+          <div className="bg-success-container flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+            <svg
+              className="text-on-success-container h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
           <div>
-            <p className="font-semibold text-on-success-container">Quote Approved</p>
-            <p className="mt-0.5 text-sm text-on-success-container">
+            <p className="text-on-success-container font-semibold">
+              Quote Approved
+            </p>
+            <p className="text-on-success-container mt-0.5 text-sm">
               Approved on {formatDate(approvedAt)}
               {approvedByName ? ` by ${approvedByName}` : ''}.
             </p>
             {approvedByEmail && (
-              <p className="mt-0.5 text-sm text-on-success-container">{approvedByEmail}</p>
+              <p className="text-on-success-container mt-0.5 text-sm">
+                {approvedByEmail}
+              </p>
             )}
           </div>
         </div>
+
+        {warning && (
+          <div className="border-warning/30 bg-warning-container rounded-2xl border px-4 py-3">
+            <p className="text-on-warning-container text-sm">{warning}</p>
+          </div>
+        )}
 
         {approvalSignature && (
           <div>
             <SectionLabel className="mb-2">Signature on file</SectionLabel>
             {isSignatureImage(approvalSignature) ? (
-              <div className="overflow-hidden rounded-xl border border-outline bg-surface-container-low p-3">
+              <div className="border-outline bg-surface-container-low overflow-hidden rounded-xl border p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={approvalSignature}
@@ -133,8 +193,10 @@ export function PublicApprovalForm({
                 />
               </div>
             ) : (
-              <div className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
-                <p className="font-serif text-lg italic text-on-surface">{approvalSignature}</p>
+              <div className="border-outline bg-surface-container-low rounded-xl border px-4 py-3">
+                <p className="text-on-surface font-serif text-lg italic">
+                  {approvalSignature}
+                </p>
               </div>
             )}
           </div>
@@ -145,100 +207,150 @@ export function PublicApprovalForm({
 
   /* ── Approval form ── */
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-      <input type="hidden" name="quoteToken" value={quoteToken} />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-1.5 text-sm">
-          <SectionLabel as="span">Your Name</SectionLabel>
-          <input
-            name="approvedByName"
-            type="text"
-            required
-            disabled={!canApprove || isPending || isRejectPending}
-            defaultValue={customerName}
-            className="min-h-12 rounded-xl border border-outline bg-surface-container-lowest px-4 py-3 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container-low"
-            placeholder="Full name"
-          />
-        </label>
-
-        <label className="grid gap-1.5 text-sm">
-          <SectionLabel as="span">Your Email</SectionLabel>
-          <input
-            name="approvedByEmail"
-            type="email"
-            required
-            disabled={!canApprove || isPending || isRejectPending}
-            defaultValue={customerEmail ?? ''}
-            className="min-h-12 rounded-xl border border-outline bg-surface-container-lowest px-4 py-3 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container-low"
-            placeholder="name@example.com"
-          />
-        </label>
-      </div>
-
-      <div className="grid gap-1.5">
-        <SectionLabel as="span">Signature</SectionLabel>
-        <SignaturePad
-          value={signature}
-          onChange={setSignature}
-          disabled={!canApprove || isPending || isRejectPending}
-        />
-      </div>
-
-      {error && <ErrorAlert>{error}</ErrorAlert>}
-
-      {canApprove ? (
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-          <button
-            type="submit"
-            disabled={isPending || isRejectPending}
-            className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-base font-bold text-on-primary shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-outline"
-          >
-            {isPending ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Approving...
-              </>
-            ) : (
-              <>
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Approve Quote
-              </>
-            )}
-          </button>
-          <button
-            type="button"
-            disabled={isPending || isRejectPending}
-            onClick={handleRejectClick}
-            className="inline-flex min-h-14 w-full items-center justify-center rounded-xl border border-error/40 bg-surface-container-lowest px-6 py-4 text-base font-bold text-on-error-container shadow-sm transition-all hover:bg-error-container/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-outline disabled:text-on-surface-variant sm:w-auto"
-          >
-            {isRejectPending ? 'Declining...' : 'Decline Quote'}
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 rounded-xl border border-outline bg-surface-container-low px-4 py-3">
-          <svg className="h-4 w-4 shrink-0 text-on-surface-variant" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-          </svg>
-          <p className="text-sm text-on-surface-variant">Approval is not available for this quote.</p>
-        </div>
-      )}
-
+    <>
       <ConfirmDialog
-        open={showDeclineConfirm}
-        title="Decline quote?"
-        message="This will decline the quote and can't be undone. The painter will be notified."
+        open={showRejectConfirmation}
+        title="Decline this quote?"
+        message="This will mark the quote as declined for the painter. You cannot approve it after declining."
         confirmLabel="Decline quote"
-        cancelLabel="Keep reviewing"
         destructive
-        onConfirm={handleRejectConfirm}
-        onCancel={() => setShowDeclineConfirm(false)}
+        onConfirm={confirmReject}
+        onCancel={() => setShowRejectConfirmation(false)}
       />
-    </form>
+
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+        <input type="hidden" name="quoteToken" value={quoteToken} />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-sm">
+            <SectionLabel as="span">Your Name</SectionLabel>
+            <input
+              name="approvedByName"
+              type="text"
+              required
+              disabled={
+                !canApprove || isPending || isRejectPending || approvalSubmitted
+              }
+              defaultValue={customerName}
+              className="border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/50 focus-visible:border-primary focus-visible:ring-primary/20 disabled:bg-surface-container-low min-h-12 rounded-xl border px-4 py-3 text-base transition-colors outline-none focus-visible:ring-2"
+              placeholder="Full name"
+            />
+          </label>
+
+          <label className="grid gap-1.5 text-sm">
+            <SectionLabel as="span">Your Email</SectionLabel>
+            <input
+              name="approvedByEmail"
+              type="email"
+              required
+              disabled={
+                !canApprove || isPending || isRejectPending || approvalSubmitted
+              }
+              defaultValue={customerEmail ?? ''}
+              className="border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/50 focus-visible:border-primary focus-visible:ring-primary/20 disabled:bg-surface-container-low min-h-12 rounded-xl border px-4 py-3 text-base transition-colors outline-none focus-visible:ring-2"
+              placeholder="name@example.com"
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-1.5">
+          <SectionLabel as="span">Signature</SectionLabel>
+          <SignaturePad
+            value={signature}
+            onChange={setSignature}
+            disabled={
+              !canApprove || isPending || isRejectPending || approvalSubmitted
+            }
+          />
+        </div>
+
+        {error && <ErrorAlert>{error}</ErrorAlert>}
+
+        {warning && (
+          <div className="border-warning/30 bg-warning-container rounded-2xl border px-4 py-3">
+            <p className="text-on-warning-container text-sm">{warning}</p>
+          </div>
+        )}
+
+        {canApprove ? (
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <button
+              type="submit"
+              disabled={isPending || isRejectPending || approvalSubmitted}
+              className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 disabled:bg-outline inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-bold shadow-sm transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed"
+            >
+              {isPending ? (
+                <>
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Approve Quote
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={isPending || isRejectPending || approvalSubmitted}
+              onClick={handleReject}
+              className="border-error/40 bg-surface-container-lowest text-on-error-container hover:bg-error-container/40 focus-visible:ring-error/30 disabled:border-outline disabled:text-on-surface-variant inline-flex min-h-14 w-full items-center justify-center rounded-xl border px-6 py-4 text-base font-bold shadow-sm transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed sm:w-auto"
+            >
+              {isRejectPending ? 'Declining...' : 'Decline Quote'}
+            </button>
+          </div>
+        ) : (
+          <div className="border-outline-variant bg-surface-container-low flex items-center gap-2 rounded-2xl border px-4 py-3">
+            <svg
+              className="text-on-surface-variant h-4 w-4 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+              />
+            </svg>
+            <p className="text-on-surface-variant text-sm">
+              Approval is not available for this quote.
+            </p>
+          </div>
+        )}
+      </form>
+    </>
   );
 }

@@ -1,7 +1,15 @@
 'use client';
 
 import { Trash2, Plus } from 'lucide-react';
-import { NumericInput, sanitizeDecimalInput, sanitizeIntegerInput } from '@/components/shared/NumericInput';
+import {
+  formControlClassName as FIELD,
+  formLabelClassName as LABEL,
+} from '@/components/forms/FormField';
+import {
+  NumericInput,
+  sanitizeDecimalInput,
+  sanitizeIntegerInput,
+} from '@/components/shared/NumericInput';
 import {
   INTERIOR_APARTMENT_TYPE_LABELS,
   INTERIOR_APARTMENT_TYPES,
@@ -37,10 +45,11 @@ import {
   type InteriorWindowScope,
   type InteriorWindowType,
 } from '@/modules/quotes/domain/interior-estimates';
-import type { QuickRoomSize, UserRateSettings } from '@/modules/price-rates/domain/rate-settings';
+import type {
+  QuickRoomSize,
+  UserRateSettings,
+} from '@/modules/price-rates/domain/rate-settings';
 
-const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
-const LABEL = 'mb-1.5 block text-sm font-medium text-on-surface';
 type RoomRef = '' | `${number}`;
 const INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION = 1;
 const MEASURED_ROOM_PRICING_MODEL = 'measured';
@@ -232,12 +241,23 @@ export function InteriorEstimateBuilder({
   onChange: (next: InteriorEstimateFormState) => void;
   rateSettings?: UserRateSettings | null;
 }) {
-  function setValue<K extends keyof InteriorEstimateFormState>(key: K, nextValue: InteriorEstimateFormState[K]) {
+  function setValue<K extends keyof InteriorEstimateFormState>(
+    key: K,
+    nextValue: InteriorEstimateFormState[K]
+  ) {
     onChange({ ...value, [key]: nextValue });
   }
 
-  function setRoom(index: number, patch: Partial<InteriorEstimateRoomFormState>) {
-    setValue('rooms', value.rooms.map((room, roomIndex) => (roomIndex === index ? { ...room, ...patch } : room)));
+  function setRoom(
+    index: number,
+    patch: Partial<InteriorEstimateRoomFormState>
+  ) {
+    setValue(
+      'rooms',
+      value.rooms.map((room, roomIndex) =>
+        roomIndex === index ? { ...room, ...patch } : room
+      )
+    );
   }
 
   function setRoomPricing(
@@ -281,25 +301,33 @@ export function InteriorEstimateBuilder({
   }
 
   function toggleScope(scope: InteriorScope) {
-    const next = value.scope.includes(scope) ? value.scope.filter((item) => item !== scope) : [...value.scope, scope];
+    const next = value.scope.includes(scope)
+      ? value.scope.filter((item) => item !== scope)
+      : [...value.scope, scope];
     setValue('scope', next.length > 0 ? next : [scope]);
   }
 
   const availableDoorTypes = (
     rateSettings?.enabled_door_types?.length
-      ? INTERIOR_DOOR_TYPES.filter((type) => rateSettings.enabled_door_types.includes(type))
+      ? INTERIOR_DOOR_TYPES.filter((type) =>
+          rateSettings.enabled_door_types.includes(type)
+        )
       : [...INTERIOR_DOOR_TYPES]
   ) as InteriorDoorType[];
 
   const availableDoorScopes = (
     rateSettings?.enabled_door_scopes?.length
-      ? INTERIOR_DOOR_SCOPES.filter((scope) => rateSettings.enabled_door_scopes.includes(scope))
+      ? INTERIOR_DOOR_SCOPES.filter((scope) =>
+          rateSettings.enabled_door_scopes.includes(scope)
+        )
       : [...INTERIOR_DOOR_SCOPES]
   ) as InteriorDoorScope[];
 
   const availableWindowTypes = (
     rateSettings?.enabled_window_types?.length
-      ? INTERIOR_WINDOW_TYPES.filter((type) => rateSettings.enabled_window_types.includes(type))
+      ? INTERIOR_WINDOW_TYPES.filter((type) =>
+          rateSettings.enabled_window_types.includes(type)
+        )
       : [...INTERIOR_WINDOW_TYPES]
   ) as InteriorWindowType[];
   const roomPriceTemplates = [
@@ -307,13 +335,18 @@ export function InteriorEstimateBuilder({
   ].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
-    <section className="space-y-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+    <section className="border-outline-variant bg-surface-container-lowest space-y-4 rounded-2xl border p-4">
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className={LABEL}>Property Type</label>
-          <div className="flex rounded-xl border border-outline-variant bg-surface-container p-1">
+          <div className="border-outline-variant bg-surface-container flex rounded-xl border p-1">
             {(['apartment', 'house'] as const).map((propertyType) => (
-              <button key={propertyType} type="button" onClick={() => setValue('property_type', propertyType)} className={`min-h-11 flex-1 rounded-lg text-sm font-medium ${value.property_type === propertyType ? 'bg-primary text-on-primary' : 'text-on-surface-variant'}`}>
+              <button
+                key={propertyType}
+                type="button"
+                onClick={() => setValue('property_type', propertyType)}
+                className={`focus-visible:ring-primary/30 min-h-11 flex-1 rounded-xl text-sm font-medium focus-visible:ring-2 focus-visible:outline-none ${value.property_type === propertyType ? 'bg-primary text-on-primary' : 'text-on-surface-variant'}`}
+              >
                 {propertyType === 'apartment' ? 'Apartment' : 'House'}
               </button>
             ))}
@@ -321,10 +354,17 @@ export function InteriorEstimateBuilder({
         </div>
         <div>
           <label className={LABEL}>Estimate Mode</label>
-          <div className="flex rounded-xl border border-outline-variant bg-surface-container p-1">
+          <div className="border-outline-variant bg-surface-container flex rounded-xl border p-1">
             {(['specific_areas', 'entire_property'] as const).map((mode) => (
-              <button key={mode} type="button" onClick={() => setValue('estimate_mode', mode)} className={`min-h-11 flex-1 rounded-lg text-sm font-medium ${value.estimate_mode === mode ? 'bg-primary text-on-primary' : 'text-on-surface-variant'}`}>
-                {mode === 'specific_areas' ? 'Specific Areas' : 'Entire Property'}
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setValue('estimate_mode', mode)}
+                className={`focus-visible:ring-primary/30 min-h-11 flex-1 rounded-xl text-sm font-medium focus-visible:ring-2 focus-visible:outline-none ${value.estimate_mode === mode ? 'bg-primary text-on-primary' : 'text-on-surface-variant'}`}
+              >
+                {mode === 'specific_areas'
+                  ? 'Specific Areas'
+                  : 'Entire Property'}
               </button>
             ))}
           </div>
@@ -335,17 +375,37 @@ export function InteriorEstimateBuilder({
         <>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label htmlFor="interior-condition" className={LABEL}>Condition</label>
-              <select id="interior-condition" value={value.condition} onChange={(event) => setValue('condition', event.target.value as InteriorCondition)} className={FIELD}>
-                {INTERIOR_CONDITIONS.map((condition) => <option key={condition} value={condition}>{INTERIOR_CONDITION_LABELS[condition]}</option>)}
+              <label htmlFor="interior-condition" className={LABEL}>
+                Condition
+              </label>
+              <select
+                id="interior-condition"
+                value={value.condition}
+                onChange={(event) =>
+                  setValue('condition', event.target.value as InteriorCondition)
+                }
+                className={FIELD}
+              >
+                {INTERIOR_CONDITIONS.map((condition) => (
+                  <option key={condition} value={condition}>
+                    {INTERIOR_CONDITION_LABELS[condition]}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <label className={LABEL}>Scope</label>
               <div className="flex flex-wrap gap-2">
                 {INTERIOR_SCOPE_OPTIONS.map((scope) => (
-                  <button key={scope} type="button" onClick={() => toggleScope(scope)} className={`min-h-11 rounded-full border px-4 text-sm font-medium ${value.scope.includes(scope) ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant bg-surface-container-lowest text-on-surface'}`}>
-                    {scope === 'trim' ? 'Trim / Skirting' : scope.charAt(0).toUpperCase() + scope.slice(1)}
+                  <button
+                    key={scope}
+                    type="button"
+                    onClick={() => toggleScope(scope)}
+                    className={`focus-visible:ring-primary/30 min-h-11 rounded-full border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none ${value.scope.includes(scope) ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant bg-surface-container-lowest text-on-surface'}`}
+                  >
+                    {scope === 'trim'
+                      ? 'Trim / Skirting'
+                      : scope.charAt(0).toUpperCase() + scope.slice(1)}
                   </button>
                 ))}
               </div>
@@ -361,7 +421,7 @@ export function InteriorEstimateBuilder({
                   type="button"
                   onClick={() => setValue('wall_paint_system', paintSystem)}
                   aria-pressed={value.wall_paint_system === paintSystem}
-                  className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
+                  className={`focus-visible:ring-primary/30 min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium focus-visible:ring-2 focus-visible:outline-none ${
                     value.wall_paint_system === paintSystem
                       ? 'border-primary bg-primary text-on-primary'
                       : 'border-outline-variant bg-surface-container-lowest text-on-surface'
@@ -383,7 +443,7 @@ export function InteriorEstimateBuilder({
                     type="button"
                     onClick={() => setTrimPaintSystem(paintSystem)}
                     aria-pressed={value.trim_paint_system === paintSystem}
-                    className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
+                    className={`focus-visible:ring-primary/30 min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium focus-visible:ring-2 focus-visible:outline-none ${
                       value.trim_paint_system === paintSystem
                         ? 'border-primary bg-primary text-on-primary'
                         : 'border-outline-variant bg-surface-container-lowest text-on-surface'
@@ -402,15 +462,113 @@ export function InteriorEstimateBuilder({
         <div className="grid gap-4 md:grid-cols-2">
           {value.property_type === 'apartment' ? (
             <>
-              <div><label htmlFor="apartment-type" className={LABEL}>Apartment Type</label><select id="apartment-type" value={value.apartment_type} onChange={(event) => setValue('apartment_type', event.target.value as InteriorApartmentType)} className={FIELD}>{INTERIOR_APARTMENT_TYPES.map((apartmentType) => <option key={apartmentType} value={apartmentType}>{INTERIOR_APARTMENT_TYPE_LABELS[apartmentType]}</option>)}</select></div>
-              <div><label htmlFor="apartment-sqm" className={LABEL}>Apartment Size (sqm)</label><NumericInput id="apartment-sqm" inputMode="decimal" value={value.apartment_sqm} sanitize={sanitizeDecimalInput} onValueChange={(nextValue) => setValue('apartment_sqm', nextValue)} className={FIELD} /></div>
+              <div>
+                <label htmlFor="apartment-type" className={LABEL}>
+                  Apartment Type
+                </label>
+                <select
+                  id="apartment-type"
+                  value={value.apartment_type}
+                  onChange={(event) =>
+                    setValue(
+                      'apartment_type',
+                      event.target.value as InteriorApartmentType
+                    )
+                  }
+                  className={FIELD}
+                >
+                  {INTERIOR_APARTMENT_TYPES.map((apartmentType) => (
+                    <option key={apartmentType} value={apartmentType}>
+                      {INTERIOR_APARTMENT_TYPE_LABELS[apartmentType]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="apartment-sqm" className={LABEL}>
+                  Apartment Size (sqm)
+                </label>
+                <NumericInput
+                  id="apartment-sqm"
+                  inputMode="decimal"
+                  value={value.apartment_sqm}
+                  sanitize={sanitizeDecimalInput}
+                  onValueChange={(nextValue) =>
+                    setValue('apartment_sqm', nextValue)
+                  }
+                  className={FIELD}
+                />
+              </div>
             </>
           ) : (
             <>
-              <div><label htmlFor="house-bedrooms" className={LABEL}>Bedrooms</label><NumericInput id="house-bedrooms" inputMode="numeric" value={value.house_bedrooms} sanitize={sanitizeIntegerInput} onValueChange={(nextValue) => setValue('house_bedrooms', nextValue)} className={FIELD} /></div>
-              <div><label htmlFor="house-bathrooms" className={LABEL}>Bathrooms</label><NumericInput id="house-bathrooms" inputMode="numeric" value={value.house_bathrooms} sanitize={sanitizeIntegerInput} onValueChange={(nextValue) => setValue('house_bathrooms', nextValue)} className={FIELD} /></div>
-              <div><label htmlFor="house-storeys" className={LABEL}>Storeys</label><select id="house-storeys" value={value.house_storeys} onChange={(event) => setValue('house_storeys', event.target.value as InteriorStoreys)} className={FIELD}>{INTERIOR_STOREYS.map((storeys) => <option key={storeys} value={storeys}>{INTERIOR_STOREY_LABELS[storeys]}</option>)}</select></div>
-              <div><label htmlFor="house-sqm" className={LABEL}>House Size (sqm)</label><NumericInput id="house-sqm" inputMode="decimal" value={value.house_sqm} sanitize={sanitizeDecimalInput} onValueChange={(nextValue) => setValue('house_sqm', nextValue)} className={FIELD} /></div>
+              <div>
+                <label htmlFor="house-bedrooms" className={LABEL}>
+                  Bedrooms
+                </label>
+                <NumericInput
+                  id="house-bedrooms"
+                  inputMode="numeric"
+                  value={value.house_bedrooms}
+                  sanitize={sanitizeIntegerInput}
+                  onValueChange={(nextValue) =>
+                    setValue('house_bedrooms', nextValue)
+                  }
+                  className={FIELD}
+                />
+              </div>
+              <div>
+                <label htmlFor="house-bathrooms" className={LABEL}>
+                  Bathrooms
+                </label>
+                <NumericInput
+                  id="house-bathrooms"
+                  inputMode="numeric"
+                  value={value.house_bathrooms}
+                  sanitize={sanitizeIntegerInput}
+                  onValueChange={(nextValue) =>
+                    setValue('house_bathrooms', nextValue)
+                  }
+                  className={FIELD}
+                />
+              </div>
+              <div>
+                <label htmlFor="house-storeys" className={LABEL}>
+                  Storeys
+                </label>
+                <select
+                  id="house-storeys"
+                  value={value.house_storeys}
+                  onChange={(event) =>
+                    setValue(
+                      'house_storeys',
+                      event.target.value as InteriorStoreys
+                    )
+                  }
+                  className={FIELD}
+                >
+                  {INTERIOR_STOREYS.map((storeys) => (
+                    <option key={storeys} value={storeys}>
+                      {INTERIOR_STOREY_LABELS[storeys]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="house-sqm" className={LABEL}>
+                  House Size (sqm)
+                </label>
+                <NumericInput
+                  id="house-sqm"
+                  inputMode="decimal"
+                  value={value.house_sqm}
+                  sanitize={sanitizeDecimalInput}
+                  onValueChange={(nextValue) =>
+                    setValue('house_sqm', nextValue)
+                  }
+                  className={FIELD}
+                />
+              </div>
             </>
           )}
         </div>
@@ -418,12 +576,15 @@ export function InteriorEstimateBuilder({
 
       {value.estimate_mode === 'specific_areas' ? (
         <>
-          <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container/50 p-4">
+          <div className="border-outline-variant bg-surface-container/50 space-y-3 rounded-2xl border p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold text-on-surface">Rooms</p>
+              <p className="text-on-surface text-sm font-semibold">Rooms</p>
             </div>
             {value.rooms.map((room, index) => (
-              <div key={`room-${index}`} className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+              <div
+                key={`room-${index}`}
+                className="border-outline-variant bg-surface-container-lowest space-y-3 rounded-2xl border p-3"
+              >
                 {/* Row 1: Room name + delete */}
                 <div className="flex items-center gap-2">
                   <input
@@ -445,8 +606,15 @@ export function InteriorEstimateBuilder({
                   <button
                     type="button"
                     aria-label="Remove room"
-                    onClick={() => setValue('rooms', value.rooms.filter((_, roomIndex) => roomIndex !== index))}
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant"
+                    onClick={() =>
+                      setValue(
+                        'rooms',
+                        value.rooms.filter(
+                          (_, roomIndex) => roomIndex !== index
+                        )
+                      )
+                    }
+                    className="border-outline-variant text-on-surface-variant hover:border-error/50 hover:text-error focus-visible:ring-error/30 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -457,36 +625,37 @@ export function InteriorEstimateBuilder({
                     <div>
                       <label
                         htmlFor={`room-price-source-${index}`}
-                        className="mb-1 block text-xs text-on-surface-variant"
+                        className="text-on-surface-variant mb-1 block text-xs"
                       >
                         Room Price Library Source
                       </label>
                       <select
                         id={`room-price-source-${index}`}
                         value={room.source_room_template_id ?? ''}
-	                        onChange={(event) => {
-	                          const template = roomPriceTemplates.find(
-	                            (item) => item.id === event.target.value
-	                          );
-                          const size = room.source_room_template_size ?? 'medium';
+                        onChange={(event) => {
+                          const template = roomPriceTemplates.find(
+                            (item) => item.id === event.target.value
+                          );
+                          const size =
+                            room.source_room_template_size ?? 'medium';
                           const measurements = getTemplateMeasurements(
                             template,
                             size
                           );
-	                          setRoom(index, {
-	                            source_room_template_id: template?.id,
-	                            source_room_template_version: template
-	                              ? (template.version ?? 1)
-	                              : undefined,
-	                            source_room_template_label: template?.label,
-	                            source_room_template_size: size,
-	                            anchor_room_type:
-	                              template?.label ?? room.anchor_room_type,
-                              ...measurements,
-	                            rate_snapshot_version: template
-	                              ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
-	                              : undefined,
-	                          });
+                          setRoom(index, {
+                            source_room_template_id: template?.id,
+                            source_room_template_version: template
+                              ? (template.version ?? 1)
+                              : undefined,
+                            source_room_template_label: template?.label,
+                            source_room_template_size: size,
+                            anchor_room_type:
+                              template?.label ?? room.anchor_room_type,
+                            ...measurements,
+                            rate_snapshot_version: template
+                              ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
+                              : undefined,
+                          });
                         }}
                         className={FIELD}
                       >
@@ -501,14 +670,14 @@ export function InteriorEstimateBuilder({
                     <div>
                       <label
                         htmlFor={`room-price-size-${index}`}
-                        className="mb-1 block text-xs text-on-surface-variant"
+                        className="text-on-surface-variant mb-1 block text-xs"
                       >
                         Size
                       </label>
                       <select
                         id={`room-price-size-${index}`}
-	                        value={room.source_room_template_size ?? 'medium'}
-	                        onChange={(event) => {
+                        value={room.source_room_template_size ?? 'medium'}
+                        onChange={(event) => {
                           const size = event.target.value as QuickRoomSize;
                           const template = roomPriceTemplates.find(
                             (item) => item.id === room.source_room_template_id
@@ -517,17 +686,17 @@ export function InteriorEstimateBuilder({
                             template,
                             size
                           );
-	                          setRoom(index, {
-	                            source_room_template_size: size,
-                              ...measurements,
-	                            rate_snapshot_version:
-	                              room.source_room_template_id != null
-	                                ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
-	                                : room.rate_snapshot_version,
-	                          })
+                          setRoom(index, {
+                            source_room_template_size: size,
+                            ...measurements,
+                            rate_snapshot_version:
+                              room.source_room_template_id != null
+                                ? INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION
+                                : room.rate_snapshot_version,
+                          });
                         }}
-	                        className={FIELD}
-	                      >
+                        className={FIELD}
+                      >
                         <option value="small">Small</option>
                         <option value="medium">Medium</option>
                         <option value="large">Large</option>
@@ -537,7 +706,12 @@ export function InteriorEstimateBuilder({
                 )}
 
                 <div>
-                  <label htmlFor={`room-condition-${index}`} className="mb-1 block text-xs text-on-surface-variant">Condition</label>
+                  <label
+                    htmlFor={`room-condition-${index}`}
+                    className="text-on-surface-variant mb-1 block text-xs"
+                  >
+                    Condition
+                  </label>
                   <select
                     id={`room-condition-${index}`}
                     aria-label={`Condition for Room ${index + 1}`}
@@ -559,7 +733,9 @@ export function InteriorEstimateBuilder({
 
                 {/* Row 4: Surface type toggles */}
                 <div>
-                  <p className="mb-1.5 text-xs font-medium text-on-surface-variant">Scope</p>
+                  <p className="text-on-surface-variant mb-1.5 text-xs font-medium">
+                    Scope
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {(
                       [
@@ -572,27 +748,27 @@ export function InteriorEstimateBuilder({
                         key={key}
                         type="button"
                         onClick={() => setRoom(index, { [key]: !room[key] })}
-                        className={`h-11 rounded-full border px-4 text-sm font-medium ${room[key] ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant bg-surface-container-lowest text-on-surface'}`}
+                        className={`focus-visible:ring-primary/30 h-11 rounded-full border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none ${room[key] ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant bg-surface-container-lowest text-on-surface'}`}
                       >
                         {label}
                       </button>
                     ))}
                   </div>
-	                  {!room.include_walls &&
-	                    !room.include_ceiling &&
-	                    !room.include_trim && (
-	                      <p className="mt-2 text-xs font-medium text-error">
-	                        Select at least one surface for Room {index + 1}.
-	                      </p>
-	                    )}
-	                </div>
+                  {!room.include_walls &&
+                    !room.include_ceiling &&
+                    !room.include_trim && (
+                      <p className="text-error mt-2 text-xs font-medium">
+                        Select at least one surface for Room {index + 1}.
+                      </p>
+                    )}
+                </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
                   {room.include_walls && (
                     <div>
                       <label
                         htmlFor={`room-wall-area-${index}`}
-                        className="mb-1 block text-xs text-on-surface-variant"
+                        className="text-on-surface-variant mb-1 block text-xs"
                       >
                         Wall area (sqm)
                       </label>
@@ -616,7 +792,7 @@ export function InteriorEstimateBuilder({
                     <div>
                       <label
                         htmlFor={`room-ceiling-area-${index}`}
-                        className="mb-1 block text-xs text-on-surface-variant"
+                        className="text-on-surface-variant mb-1 block text-xs"
                       >
                         Ceiling area (sqm)
                       </label>
@@ -640,7 +816,7 @@ export function InteriorEstimateBuilder({
                     <div>
                       <label
                         htmlFor={`room-trim-length-${index}`}
-                        className="mb-1 block text-xs text-on-surface-variant"
+                        className="text-on-surface-variant mb-1 block text-xs"
                       >
                         Trim length (m)
                       </label>
@@ -662,8 +838,10 @@ export function InteriorEstimateBuilder({
                   )}
                 </div>
 
-	                <div>
-	                  <p className="mb-1.5 text-xs font-medium text-on-surface-variant">Wall &amp; Ceiling Coating</p>
+                <div>
+                  <p className="text-on-surface-variant mb-1.5 text-xs font-medium">
+                    Wall &amp; Ceiling Coating
+                  </p>
                   <div className="grid gap-2 md:grid-cols-3">
                     {INTERIOR_WALL_PAINT_SYSTEMS.map((paintSystem) => (
                       <button
@@ -675,7 +853,7 @@ export function InteriorEstimateBuilder({
                           })
                         }
                         aria-pressed={room.wall_paint_system === paintSystem}
-                        className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
+                        className={`focus-visible:ring-primary/30 min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium focus-visible:ring-2 focus-visible:outline-none ${
                           room.wall_paint_system === paintSystem
                             ? 'border-primary bg-primary text-on-primary'
                             : 'border-outline-variant bg-surface-container-lowest text-on-surface'
@@ -689,7 +867,9 @@ export function InteriorEstimateBuilder({
 
                 {room.include_trim && (
                   <div>
-                    <p className="mb-1.5 text-xs font-medium text-on-surface-variant">Trim Base</p>
+                    <p className="text-on-surface-variant mb-1.5 text-xs font-medium">
+                      Trim Base
+                    </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {INTERIOR_PAINT_SYSTEMS.map((paintSystem) => (
                         <button
@@ -701,7 +881,7 @@ export function InteriorEstimateBuilder({
                             })
                           }
                           aria-pressed={room.trim_paint_system === paintSystem}
-                          className={`min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium ${
+                          className={`focus-visible:ring-primary/30 min-h-11 rounded-xl border px-4 py-3 text-left text-sm font-medium focus-visible:ring-2 focus-visible:outline-none ${
                             room.trim_paint_system === paintSystem
                               ? 'border-primary bg-primary text-on-primary'
                               : 'border-outline-variant bg-surface-container-lowest text-on-surface'
@@ -719,33 +899,245 @@ export function InteriorEstimateBuilder({
             {/* Add Room — full-width, bottom */}
             <button
               type="button"
-              onClick={() => setValue('rooms', [...value.rooms, createEmptyInteriorRoom()])}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest text-sm font-medium text-on-surface"
+              onClick={() =>
+                setValue('rooms', [...value.rooms, createEmptyInteriorRoom()])
+              }
+              className="border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary hover:text-primary focus-visible:ring-primary/30 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <Plus size={16} />
               Add Room
             </button>
           </div>
 
-          <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container/50 p-4">
-            <div className="flex items-center justify-between"><p className="text-sm font-semibold text-on-surface">Doors</p><button type="button" onClick={() => setValue('doors', [...value.doors, { ...createEmptyInteriorDoor(), paint_system: value.trim_paint_system }])} className="min-h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-sm font-medium text-on-surface">Add Door</button></div>
+          <div className="border-outline-variant bg-surface-container/50 space-y-3 rounded-2xl border p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-on-surface text-sm font-semibold">Doors</p>
+              <button
+                type="button"
+                onClick={() =>
+                  setValue('doors', [
+                    ...value.doors,
+                    {
+                      ...createEmptyInteriorDoor(),
+                      paint_system: value.trim_paint_system,
+                    },
+                  ])
+                }
+                className="border-outline-variant bg-surface-container-lowest text-on-surface focus-visible:ring-primary/30 min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Add Door
+              </button>
+            </div>
             {value.doors.map((door, index) => {
-              const activeDoorType = availableDoorTypes.includes(door.door_type) ? door.door_type : availableDoorTypes[0];
-              const activeDoorScope = availableDoorScopes.includes(door.scope) ? door.scope : availableDoorScopes[0];
-              return <div key={`door-${index}`} className="grid gap-3 md:grid-cols-4"><select value={activeDoorType} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, door_type: event.target.value as InteriorDoorType } : item))} className={FIELD}>{availableDoorTypes.map((type) => <option key={type} value={type}>{INTERIOR_DOOR_TYPE_LABELS[type]}</option>)}</select><select value={activeDoorScope} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorDoorScope } : item))} className={FIELD}>{availableDoorScopes.map((scope) => <option key={scope} value={scope}>{INTERIOR_DOOR_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={door.quantity} onChange={(event) => setValue('doors', value.doors.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('doors', value.doors.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-outline-variant px-4 text-sm font-medium text-on-surface-variant">Remove</button></div>;
+              const activeDoorType = availableDoorTypes.includes(door.door_type)
+                ? door.door_type
+                : availableDoorTypes[0];
+              const activeDoorScope = availableDoorScopes.includes(door.scope)
+                ? door.scope
+                : availableDoorScopes[0];
+              return (
+                <div
+                  key={`door-${index}`}
+                  className="grid gap-3 md:grid-cols-4"
+                >
+                  <select
+                    value={activeDoorType}
+                    onChange={(event) =>
+                      setValue(
+                        'doors',
+                        value.doors.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? {
+                                ...item,
+                                door_type: event.target
+                                  .value as InteriorDoorType,
+                              }
+                            : item
+                        )
+                      )
+                    }
+                    className={FIELD}
+                  >
+                    {availableDoorTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {INTERIOR_DOOR_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={activeDoorScope}
+                    onChange={(event) =>
+                      setValue(
+                        'doors',
+                        value.doors.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? {
+                                ...item,
+                                scope: event.target.value as InteriorDoorScope,
+                              }
+                            : item
+                        )
+                      )
+                    }
+                    className={FIELD}
+                  >
+                    {availableDoorScopes.map((scope) => (
+                      <option key={scope} value={scope}>
+                        {INTERIOR_DOOR_SCOPE_LABELS[scope]}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={door.quantity}
+                    onChange={(event) =>
+                      setValue(
+                        'doors',
+                        value.doors.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, quantity: event.target.value }
+                            : item
+                        )
+                      )
+                    }
+                    className={FIELD}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setValue(
+                        'doors',
+                        value.doors.filter(
+                          (_, itemIndex) => itemIndex !== index
+                        )
+                      )
+                    }
+                    className="border-outline-variant text-on-surface-variant focus-visible:ring-error/30 min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    Remove
+                  </button>
+                </div>
+              );
             })}
           </div>
 
-          <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container/50 p-4">
-            <div className="flex items-center justify-between"><p className="text-sm font-semibold text-on-surface">Windows</p><button type="button" onClick={() => setValue('windows', [...value.windows, { ...createEmptyInteriorWindow(), paint_system: value.trim_paint_system }])} className="min-h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-sm font-medium text-on-surface">Add Window</button></div>
+          <div className="border-outline-variant bg-surface-container/50 space-y-3 rounded-2xl border p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-on-surface text-sm font-semibold">Windows</p>
+              <button
+                type="button"
+                onClick={() =>
+                  setValue('windows', [
+                    ...value.windows,
+                    {
+                      ...createEmptyInteriorWindow(),
+                      paint_system: value.trim_paint_system,
+                    },
+                  ])
+                }
+                className="border-outline-variant bg-surface-container-lowest text-on-surface focus-visible:ring-primary/30 min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Add Window
+              </button>
+            </div>
             {value.windows.map((windowItem, index) => {
-              const activeWindowType = availableWindowTypes.includes(windowItem.window_type) ? windowItem.window_type : availableWindowTypes[0];
-              return <div key={`window-${index}`} className="grid gap-3 md:grid-cols-4"><select value={activeWindowType} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, window_type: event.target.value as InteriorWindowType } : item))} className={FIELD}>{availableWindowTypes.map((type) => <option key={type} value={type}>{INTERIOR_WINDOW_TYPE_LABELS[type]}</option>)}</select><select value={windowItem.scope} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, scope: event.target.value as InteriorWindowScope } : item))} className={FIELD}>{INTERIOR_WINDOW_SCOPES.map((scope) => <option key={scope} value={scope}>{INTERIOR_WINDOW_SCOPE_LABELS[scope]}</option>)}</select><input type="number" min="1" step="1" value={windowItem.quantity} onChange={(event) => setValue('windows', value.windows.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={FIELD} /><button type="button" onClick={() => setValue('windows', value.windows.filter((_, itemIndex) => itemIndex !== index))} className="min-h-11 rounded-xl border border-outline-variant px-4 text-sm font-medium text-on-surface-variant">Remove</button></div>;
+              const activeWindowType = availableWindowTypes.includes(
+                windowItem.window_type
+              )
+                ? windowItem.window_type
+                : availableWindowTypes[0];
+              return (
+                <div
+                  key={`window-${index}`}
+                  className="grid gap-3 md:grid-cols-4"
+                >
+                  <select
+                    value={activeWindowType}
+                    onChange={(event) =>
+                      setValue(
+                        'windows',
+                        value.windows.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? {
+                                ...item,
+                                window_type: event.target
+                                  .value as InteriorWindowType,
+                              }
+                            : item
+                        )
+                      )
+                    }
+                    className={FIELD}
+                  >
+                    {availableWindowTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {INTERIOR_WINDOW_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={windowItem.scope}
+                    onChange={(event) =>
+                      setValue(
+                        'windows',
+                        value.windows.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? {
+                                ...item,
+                                scope: event.target
+                                  .value as InteriorWindowScope,
+                              }
+                            : item
+                        )
+                      )
+                    }
+                    className={FIELD}
+                  >
+                    {INTERIOR_WINDOW_SCOPES.map((scope) => (
+                      <option key={scope} value={scope}>
+                        {INTERIOR_WINDOW_SCOPE_LABELS[scope]}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={windowItem.quantity}
+                    onChange={(event) =>
+                      setValue(
+                        'windows',
+                        value.windows.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, quantity: event.target.value }
+                            : item
+                        )
+                      )
+                    }
+                    className={FIELD}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setValue(
+                        'windows',
+                        value.windows.filter(
+                          (_, itemIndex) => itemIndex !== index
+                        )
+                      )
+                    }
+                    className="border-outline-variant text-on-surface-variant focus-visible:ring-error/30 min-h-11 rounded-xl border px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    Remove
+                  </button>
+                </div>
+              );
             })}
           </div>
-
-	        </>
-	      ) : null}
+        </>
+      ) : null}
     </section>
   );
 }

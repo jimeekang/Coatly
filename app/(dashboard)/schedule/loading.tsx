@@ -2,45 +2,53 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ScheduleLoading() {
   return (
-    <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
-      {/* PageHeader */}
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-8 w-52" />
-        <Skeleton className="h-4 w-80 max-w-full" />
+    <div
+      className="flex min-w-0 flex-col gap-4 sm:gap-6"
+      role="status"
+      aria-live="polite"
+    >
+      <p className="sr-only">Loading schedule and jobs</p>
+
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-56 max-w-full" />
+        <Skeleton className="h-4 w-96 max-w-full" />
       </div>
 
-      {/* Calendar card */}
-      <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm sm:p-5">
-        {/* Toolbar: view toggle + month navigation */}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-2">
-            <Skeleton className="h-11 w-24 rounded-xl" />
-            <Skeleton className="h-11 w-24 rounded-xl" />
+      <section className="border-outline-variant bg-surface-container-lowest min-w-0 overflow-hidden rounded-2xl border shadow-sm">
+        <div className="border-outline-variant flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2">
+            <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+            <Skeleton className="h-6 w-36 max-w-full" />
+            <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
           </div>
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-11 w-11 rounded-xl" />
-            <Skeleton className="h-6 w-36" />
-            <Skeleton className="h-11 w-11 rounded-xl" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-11 w-40 rounded-xl" />
+            <Skeleton className="h-11 w-28 rounded-xl" />
           </div>
         </div>
 
-        {/* Weekday header row */}
-        <div className="mb-2 grid grid-cols-7 gap-1.5 sm:gap-2">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="h-4 w-full" />
+        <div className="border-outline-variant bg-surface-container-low grid grid-cols-7 border-b p-2 sm:p-3">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div key={index} className="flex justify-center px-1 py-2">
+              <Skeleton className="h-3 w-8 max-w-full" />
+            </div>
           ))}
         </div>
 
-        {/* Day cells — 6 weeks */}
-        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-          {Array.from({ length: 42 }).map((_, i) => (
-            <Skeleton
-              key={i}
-              className="aspect-square w-full rounded-lg sm:aspect-[4/5]"
-            />
+        <div className="divide-outline-variant grid min-h-[28rem] grid-cols-7 divide-x">
+          {Array.from({ length: 7 }).map((_, column) => (
+            <div key={column} className="min-w-0 space-y-3 p-1.5 sm:p-3">
+              <Skeleton className="mx-auto h-5 w-5 rounded-full" />
+              {column % 2 === 0 && (
+                <div className="border-outline-variant bg-surface-container-low space-y-1 rounded-xl border p-1.5 sm:p-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="hidden h-3 w-3/4 sm:block" />
+                </div>
+              )}
+            </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

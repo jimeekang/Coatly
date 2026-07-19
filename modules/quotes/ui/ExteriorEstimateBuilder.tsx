@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 import { Pencil, Trash2, RotateCcw } from 'lucide-react';
-import { NumericInput, sanitizeDecimalInput } from '@/components/shared/NumericInput';
+import {
+  formControlClassName,
+  formLabelClassName as LABEL,
+} from '@/components/forms/FormField';
+import {
+  NumericInput,
+  sanitizeDecimalInput,
+} from '@/components/shared/NumericInput';
+import { cn } from '@/lib/utils';
 import {
   EXTERIOR_COATING_LABELS,
   EXTERIOR_COATING_TYPES,
@@ -13,7 +21,10 @@ import {
   type ExteriorSurface,
   type UserRateSettings,
 } from '@/modules/price-rates/domain/rate-settings';
-import { EXTERIOR_UNIT_LABELS, calculateExteriorEstimate } from '@/modules/quotes/domain/exterior-estimates';
+import {
+  EXTERIOR_UNIT_LABELS,
+  calculateExteriorEstimate,
+} from '@/modules/quotes/domain/exterior-estimates';
 import { formatAUD } from '@/utils/format';
 
 export type ExteriorEstimateFormState = {
@@ -63,8 +74,6 @@ export function buildExteriorEstimatePayload(state: ExteriorEstimateFormState) {
   };
 }
 
-const LABEL = 'mb-1.5 block text-sm font-medium text-on-surface';
-
 function rateUnitToQuantityUnit(unit: string) {
   return unit.replace(/^\//, '');
 }
@@ -78,22 +87,29 @@ export function ExteriorEstimateBuilder({
   onChange: (next: ExteriorEstimateFormState) => void;
   rateSettings?: UserRateSettings | null;
 }) {
-  const [editingLabel, setEditingLabel] = useState<ExteriorSurface | null>(null);
+  const [editingLabel, setEditingLabel] = useState<ExteriorSurface | null>(
+    null
+  );
   const [labelDraft, setLabelDraft] = useState('');
 
   const rates: ExteriorRateSettings = rateSettings?.exterior ?? {
     ext_walls: { refresh_1coat: 1800, repaint_2coat: 2500, full_system: 3500 },
-    eaves:     { refresh_1coat: 1500, repaint_2coat: 2200, full_system: 3000 },
-    fascia:    { refresh_1coat: 1000, repaint_2coat: 1500, full_system: 2000 },
-    gutters:   { refresh_1coat:  800, repaint_2coat: 1200, full_system: 1600 },
+    eaves: { refresh_1coat: 1500, repaint_2coat: 2200, full_system: 3000 },
+    fascia: { refresh_1coat: 1000, repaint_2coat: 1500, full_system: 2000 },
+    gutters: { refresh_1coat: 800, repaint_2coat: 1200, full_system: 1600 },
   };
   const customRateSurfaces = rateSettings?.custom_exterior_surfaces ?? [];
 
-  const preview = calculateExteriorEstimate(buildExteriorEstimatePayload(value), rateSettings);
+  const preview = calculateExteriorEstimate(
+    buildExteriorEstimatePayload(value),
+    rateSettings
+  );
 
   function startEdit(surface: ExteriorSurface) {
     setEditingLabel(surface);
-    setLabelDraft(value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface]);
+    setLabelDraft(
+      value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface]
+    );
   }
 
   function commitEdit(surface: ExteriorSurface) {
@@ -135,29 +151,39 @@ export function ExteriorEstimateBuilder({
   function restoreCustomSurface(id: string) {
     onChange({
       ...value,
-      hiddenCustomSurfaceIds: value.hiddenCustomSurfaceIds.filter((surfaceId) => surfaceId !== id),
+      hiddenCustomSurfaceIds: value.hiddenCustomSurfaceIds.filter(
+        (surfaceId) => surfaceId !== id
+      ),
     });
   }
 
-  const visibleSurfaces = EXTERIOR_SURFACES.filter((s) => !value.hiddenSurfaces.includes(s));
-  const hiddenSurfaces = EXTERIOR_SURFACES.filter((s) => value.hiddenSurfaces.includes(s));
-  const visibleCustomSurfaces = customRateSurfaces.filter((surface) => !value.hiddenCustomSurfaceIds.includes(surface.id));
-  const hiddenCustomSurfaces = customRateSurfaces.filter((surface) => value.hiddenCustomSurfaceIds.includes(surface.id));
+  const visibleSurfaces = EXTERIOR_SURFACES.filter(
+    (s) => !value.hiddenSurfaces.includes(s)
+  );
+  const hiddenSurfaces = EXTERIOR_SURFACES.filter((s) =>
+    value.hiddenSurfaces.includes(s)
+  );
+  const visibleCustomSurfaces = customRateSurfaces.filter(
+    (surface) => !value.hiddenCustomSurfaceIds.includes(surface.id)
+  );
+  const hiddenCustomSurfaces = customRateSurfaces.filter((surface) =>
+    value.hiddenCustomSurfaceIds.includes(surface.id)
+  );
   const visibleRowCount = visibleSurfaces.length + visibleCustomSurfaces.length;
 
   return (
-    <section className="space-y-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+    <section className="border-outline-variant bg-surface-container-lowest space-y-4 rounded-2xl border p-4">
       {/* Coating type */}
       <div>
         <label className={LABEL}>Coating System</label>
-        <div className="grid gap-2 grid-cols-3">
+        <div className="grid grid-cols-3 gap-2">
           {EXTERIOR_COATING_TYPES.map((coating) => (
             <button
               key={coating}
               type="button"
               onClick={() => onChange({ ...value, coating })}
               aria-pressed={value.coating === coating}
-              className={`min-h-11 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+              className={`focus-visible:ring-primary/30 min-h-11 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none ${
                 value.coating === coating
                   ? 'border-primary bg-primary text-on-primary'
                   : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary'
@@ -172,20 +198,20 @@ export function ExteriorEstimateBuilder({
       {/* Surface quantities */}
       <div className="space-y-3">
         <p className={LABEL}>Surface Quantities</p>
-        <div className="overflow-x-auto rounded-xl border border-outline-variant">
+        <div className="border-outline-variant overflow-x-auto rounded-2xl border">
           <table className="w-full min-w-[480px] text-sm">
             <thead>
-              <tr className="border-b border-outline-variant bg-surface-container">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+              <tr className="border-outline-variant bg-surface-container border-b">
+                <th className="text-on-surface-variant px-4 py-2.5 text-left text-xs font-semibold tracking-wide uppercase">
                   Surface
                 </th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+                <th className="text-on-surface-variant px-4 py-2.5 text-center text-xs font-semibold tracking-wide uppercase">
                   Qty
                 </th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+                <th className="text-on-surface-variant px-4 py-2.5 text-center text-xs font-semibold tracking-wide uppercase">
                   Rate
                 </th>
-                <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+                <th className="text-on-surface-variant px-4 py-2.5 text-right text-xs font-semibold tracking-wide uppercase">
                   Total
                 </th>
                 <th className="w-20 px-2 py-2.5" />
@@ -194,136 +220,177 @@ export function ExteriorEstimateBuilder({
             <tbody>
               {visibleRowCount === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-on-surface-variant">
+                  <td
+                    colSpan={5}
+                    className="text-on-surface-variant px-4 py-6 text-center text-sm"
+                  >
                     No surfaces — restore one below.
                   </td>
                 </tr>
               ) : (
                 <>
-                {visibleSurfaces.map((surface, i) => {
-                  const unit = EXTERIOR_UNIT_LABELS[surface];
-                  const rate = rates[surface][value.coating];
-                  const rawQty = value.surfaces[surface];
-                  const qty = rawQty ? parseFloat(rawQty) : NaN;
-                  const lineTotal = Number.isFinite(qty) && qty > 0 ? Math.round(qty * rate) : 0;
-                  const displayLabel = value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface];
-                  const isEditing = editingLabel === surface;
+                  {visibleSurfaces.map((surface, i) => {
+                    const unit = EXTERIOR_UNIT_LABELS[surface];
+                    const rate = rates[surface][value.coating];
+                    const rawQty = value.surfaces[surface];
+                    const qty = rawQty ? parseFloat(rawQty) : NaN;
+                    const lineTotal =
+                      Number.isFinite(qty) && qty > 0
+                        ? Math.round(qty * rate)
+                        : 0;
+                    const displayLabel =
+                      value.customLabels[surface]?.trim() ||
+                      EXTERIOR_SURFACE_LABELS[surface];
+                    const isEditing = editingLabel === surface;
 
-                  return (
-                    <tr key={surface} className={i % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container/40'}>
-                      <td className="px-4 py-2.5 font-medium text-on-surface">
-                        {isEditing ? (
-                          <input
-                            autoFocus
-                            value={labelDraft}
-                            onChange={(e) => setLabelDraft(e.target.value)}
-                            onBlur={() => commitEdit(surface)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit(surface);
-                              if (e.key === 'Escape') setEditingLabel(null);
-                            }}
-                            className="w-full rounded-lg border border-primary bg-surface-container-lowest px-2 py-1 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        ) : (
-                          <span>{displayLabel}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-center">
-                        <div className="inline-flex items-center gap-1.5">
-                          <NumericInput
-                            inputMode="decimal"
-                            value={value.surfaces[surface] ?? ''}
-                            sanitize={sanitizeDecimalInput}
-                            onValueChange={(v) =>
-                              onChange({
-                                ...value,
-                                surfaces: { ...value.surfaces, [surface]: v },
-                              })
-                            }
-                            placeholder="0"
-                            className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest py-2 px-3 text-right text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                          <span className="text-xs text-on-surface-variant">{unit}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-center text-xs text-on-surface-variant">
-                        {formatAUD(rate)}/{unit}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-on-surface">
-                        {lineTotal > 0 ? formatAUD(lineTotal) : '—'}
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                    return (
+                      <tr
+                        key={surface}
+                        className={
+                          i % 2 === 0
+                            ? 'bg-surface-container-lowest'
+                            : 'bg-surface-container/40'
+                        }
+                      >
+                        <td className="text-on-surface px-4 py-2.5 font-medium">
+                          {isEditing ? (
+                            <input
+                              autoFocus
+                              value={labelDraft}
+                              onChange={(e) => setLabelDraft(e.target.value)}
+                              onBlur={() => commitEdit(surface)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') commitEdit(surface);
+                                if (e.key === 'Escape') setEditingLabel(null);
+                              }}
+                              className={cn(formControlClassName, 'px-2')}
+                            />
+                          ) : (
+                            <span>{displayLabel}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-center">
+                          <div className="inline-flex items-center gap-1.5">
+                            <NumericInput
+                              inputMode="decimal"
+                              value={value.surfaces[surface] ?? ''}
+                              sanitize={sanitizeDecimalInput}
+                              onValueChange={(v) =>
+                                onChange({
+                                  ...value,
+                                  surfaces: { ...value.surfaces, [surface]: v },
+                                })
+                              }
+                              placeholder="0"
+                              className={cn(
+                                formControlClassName,
+                                'w-24 px-3 text-right'
+                              )}
+                            />
+                            <span className="text-on-surface-variant text-xs">
+                              {unit}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="text-on-surface-variant px-4 py-2.5 text-center text-xs">
+                          {formatAUD(rate)}/{unit}
+                        </td>
+                        <td className="text-on-surface px-4 py-2.5 text-right font-medium">
+                          {lineTotal > 0 ? formatAUD(lineTotal) : '—'}
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(surface)}
+                              aria-label={`Edit ${value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface]} name`}
+                              className="border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-primary hover:text-primary focus-visible:ring-primary/30 flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                              title="Edit name"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteSurface(surface)}
+                              aria-label={`Remove ${value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface]}`}
+                              className="border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-error/50 hover:text-error focus-visible:ring-error/30 flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                              title="Remove surface"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {visibleCustomSurfaces.map((surface, index) => {
+                    const unit = rateUnitToQuantityUnit(surface.unit);
+                    const rate = surface.rates[value.coating];
+                    const rawQty = value.customSurfaces[surface.id];
+                    const qty = rawQty ? parseFloat(rawQty) : NaN;
+                    const lineTotal =
+                      Number.isFinite(qty) && qty > 0
+                        ? Math.round(qty * rate)
+                        : 0;
+
+                    return (
+                      <tr
+                        key={surface.id}
+                        className={
+                          (visibleSurfaces.length + index) % 2 === 0
+                            ? 'bg-surface-container-lowest'
+                            : 'bg-surface-container/40'
+                        }
+                      >
+                        <td className="text-on-surface px-4 py-2.5 font-medium">
+                          {surface.label}
+                        </td>
+                        <td className="px-4 py-2 text-center">
+                          <div className="inline-flex items-center gap-1.5">
+                            <NumericInput
+                              inputMode="decimal"
+                              value={value.customSurfaces[surface.id] ?? ''}
+                              sanitize={sanitizeDecimalInput}
+                              onValueChange={(v) =>
+                                onChange({
+                                  ...value,
+                                  customSurfaces: {
+                                    ...value.customSurfaces,
+                                    [surface.id]: v,
+                                  },
+                                })
+                              }
+                              placeholder="0"
+                              className={cn(
+                                formControlClassName,
+                                'w-24 px-3 text-right'
+                              )}
+                            />
+                            <span className="text-on-surface-variant text-xs">
+                              {unit}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="text-on-surface-variant px-4 py-2.5 text-center text-xs">
+                          {formatAUD(rate)}/{unit}
+                        </td>
+                        <td className="text-on-surface px-4 py-2.5 text-right font-medium">
+                          {lineTotal > 0 ? formatAUD(lineTotal) : '—'}
+                        </td>
+                        <td className="px-2 py-2 text-center">
                           <button
                             type="button"
-                            onClick={() => startEdit(surface)}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
-                            title="Edit name"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteSurface(surface)}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-colors hover:border-error/50 hover:text-error"
+                            onClick={() => deleteCustomSurface(surface.id)}
+                            aria-label={`Remove ${surface.label}`}
+                            className="border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-error/50 hover:text-error focus-visible:ring-error/30 mx-auto flex h-11 w-11 items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
                             title="Remove surface"
                           >
                             <Trash2 size={13} />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {visibleCustomSurfaces.map((surface, index) => {
-                  const unit = rateUnitToQuantityUnit(surface.unit);
-                  const rate = surface.rates[value.coating];
-                  const rawQty = value.customSurfaces[surface.id];
-                  const qty = rawQty ? parseFloat(rawQty) : NaN;
-                  const lineTotal = Number.isFinite(qty) && qty > 0 ? Math.round(qty * rate) : 0;
-
-                  return (
-                    <tr key={surface.id} className={(visibleSurfaces.length + index) % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container/40'}>
-                      <td className="px-4 py-2.5 font-medium text-on-surface">
-                        {surface.label}
-                      </td>
-                      <td className="px-4 py-2 text-center">
-                        <div className="inline-flex items-center gap-1.5">
-                          <NumericInput
-                            inputMode="decimal"
-                            value={value.customSurfaces[surface.id] ?? ''}
-                            sanitize={sanitizeDecimalInput}
-                            onValueChange={(v) =>
-                              onChange({
-                                ...value,
-                                customSurfaces: { ...value.customSurfaces, [surface.id]: v },
-                              })
-                            }
-                            placeholder="0"
-                            className="w-24 rounded-lg border border-outline-variant bg-surface-container-lowest py-2 px-3 text-right text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                          <span className="text-xs text-on-surface-variant">{unit}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-center text-xs text-on-surface-variant">
-                        {formatAUD(rate)}/{unit}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-on-surface">
-                        {lineTotal > 0 ? formatAUD(lineTotal) : '—'}
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => deleteCustomSurface(surface.id)}
-                          className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-colors hover:border-error/50 hover:text-error"
-                          title="Remove surface"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </>
               )}
             </tbody>
@@ -333,18 +400,21 @@ export function ExteriorEstimateBuilder({
 
       {/* Restore hidden surfaces */}
       {(hiddenSurfaces.length > 0 || hiddenCustomSurfaces.length > 0) && (
-        <div className="rounded-xl border border-dashed border-outline-variant p-3">
-          <p className="mb-2 text-xs font-medium text-on-surface-variant">Removed — tap to restore</p>
+        <div className="border-outline-variant rounded-2xl border border-dashed p-3">
+          <p className="text-on-surface-variant mb-2 text-xs font-medium">
+            Removed — tap to restore
+          </p>
           <div className="flex flex-wrap gap-2">
             {hiddenSurfaces.map((surface) => (
               <button
                 key={surface}
                 type="button"
                 onClick={() => restoreSurface(surface)}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                className="border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-primary hover:text-primary focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <RotateCcw size={11} />
-                {value.customLabels[surface]?.trim() || EXTERIOR_SURFACE_LABELS[surface]}
+                {value.customLabels[surface]?.trim() ||
+                  EXTERIOR_SURFACE_LABELS[surface]}
               </button>
             ))}
             {hiddenCustomSurfaces.map((surface) => (
@@ -352,7 +422,7 @@ export function ExteriorEstimateBuilder({
                 key={surface.id}
                 type="button"
                 onClick={() => restoreCustomSurface(surface.id)}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-outline-variant bg-surface-container-lowest px-3 text-xs font-medium text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                className="border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-primary hover:text-primary focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 <RotateCcw size={11} />
                 {surface.label}
@@ -364,7 +434,7 @@ export function ExteriorEstimateBuilder({
 
       {/* Live total */}
       {preview.subtotal_cents > 0 && (
-        <div className="rounded-xl bg-primary/15 px-4 py-3 text-sm text-primary">
+        <div className="bg-primary/15 text-primary rounded-xl px-4 py-3 text-sm">
           Exterior estimate: {formatAUD(preview.subtotal_cents)} ex-GST
           &nbsp;·&nbsp;
           {formatAUD(preview.total_cents)} inc-GST

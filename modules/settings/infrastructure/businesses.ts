@@ -79,6 +79,18 @@ function hasMissingBusinessesColumn(
   );
 }
 
+function hasMissingStructuredAddressColumn(error: { message?: string } | null) {
+  return ['address_line1', 'city', 'state', 'postcode'].some((column) =>
+    hasMissingBusinessesColumn(error, column)
+  );
+}
+
+function hasMissingInvoiceDefaultsColumn(error: { message?: string } | null) {
+  return ['invoice_payment_terms', 'invoice_bank_details'].some((column) =>
+    hasMissingBusinessesColumn(error, column)
+  );
+}
+
 function formatStructuredAddress(input: {
   addressLine1?: string | null;
   city?: string | null;
@@ -197,10 +209,29 @@ async function loadBusinessRecords(
 
   let businessResult = await businessQuery.maybeSingle();
 
+  if (hasMissingStructuredAddressColumn(businessResult.error)) {
+    businessResult = await supabase
+      .from('businesses')
+      .select(
+        'user_id, name, abn, address, phone, email, invoice_payment_terms, invoice_bank_details, logo_url'
+      )
+      .eq('user_id', userId)
+      .maybeSingle();
+  }
+
+  if (hasMissingInvoiceDefaultsColumn(businessResult.error)) {
+    businessResult = await supabase
+      .from('businesses')
+      .select(
+        'user_id, name, abn, address, address_line1, city, state, postcode, phone, email, logo_url'
+      )
+      .eq('user_id', userId)
+      .maybeSingle();
+  }
+
   if (
-    hasMissingBusinessesColumn(businessResult.error, 'address_line1') ||
-    hasMissingBusinessesColumn(businessResult.error, 'invoice_payment_terms') ||
-    hasMissingBusinessesColumn(businessResult.error, 'invoice_bank_details')
+    hasMissingStructuredAddressColumn(businessResult.error) ||
+    hasMissingInvoiceDefaultsColumn(businessResult.error)
   ) {
     businessResult = await supabase
       .from('businesses')
@@ -418,36 +449,69 @@ export async function saveBusinessProfileForUser({
     return { error: parsed.error };
   }
 
+  const coreBusinessData = {
+    user_id: user.id,
+    name: parsed.data.name,
+    abn: parsed.data.abn,
+    address: parsed.data.address,
+    phone: parsed.data.phone,
+    email: parsed.data.email,
+    logo_url: parsed.data.logo_url,
+  };
+  const structuredAddressData = {
+    address_line1: parsed.data.address_line1,
+    city: parsed.data.city,
+    state: parsed.data.state,
+    postcode: parsed.data.postcode,
+  };
+  const invoiceDefaultsData = {
+    invoice_payment_terms: parsed.data.invoice_payment_terms,
+    invoice_bank_details: parsed.data.invoice_bank_details,
+  };
+
   let businessError = (
     await supabase.from('businesses').upsert(
       {
-        user_id: user.id,
-        ...parsed.data,
+        ...coreBusinessData,
+        ...structuredAddressData,
+        ...invoiceDefaultsData,
       },
       { onConflict: 'user_id' }
     )
   ).error;
 
-  if (
-    hasMissingBusinessesColumn(businessError, 'address_line1') ||
-    hasMissingBusinessesColumn(businessError, 'invoice_payment_terms') ||
-    hasMissingBusinessesColumn(businessError, 'invoice_bank_details')
-  ) {
+  if (hasMissingStructuredAddressColumn(businessError)) {
     businessError = (
       await supabase.from('businesses').upsert(
         {
-          user_id: user.id,
-          name: parsed.data.name,
-          abn: parsed.data.abn,
-          address: parsed.data.address,
-          phone: parsed.data.phone,
-          email: parsed.data.email,
-          invoice_payment_terms: parsed.data.invoice_payment_terms,
-          invoice_bank_details: parsed.data.invoice_bank_details,
-          logo_url: parsed.data.logo_url,
+          ...coreBusinessData,
+          ...invoiceDefaultsData,
         },
         { onConflict: 'user_id' }
       )
+    ).error;
+  }
+
+  if (hasMissingInvoiceDefaultsColumn(businessError)) {
+    businessError = (
+      await supabase.from('businesses').upsert(
+        {
+          ...coreBusinessData,
+          ...structuredAddressData,
+        },
+        { onConflict: 'user_id' }
+      )
+    ).error;
+  }
+
+  if (
+    hasMissingStructuredAddressColumn(businessError) ||
+    hasMissingInvoiceDefaultsColumn(businessError)
+  ) {
+    businessError = (
+      await supabase
+        .from('businesses')
+        .upsert(coreBusinessData, { onConflict: 'user_id' })
     ).error;
   }
 

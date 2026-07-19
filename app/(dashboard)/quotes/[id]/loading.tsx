@@ -2,82 +2,71 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function QuoteDetailLoading() {
   return (
-    <div className="mx-auto max-w-4xl pb-24">
-      {/* Back nav */}
-      <div className="mb-4">
-        <Skeleton className="h-4 w-24" />
-      </div>
+    <div
+      className="mx-auto w-full max-w-4xl pb-24"
+      role="status"
+      aria-live="polite"
+    >
+      <p className="sr-only">Loading quote</p>
 
-      {/* detail head */}
-      <div className="mb-4 flex items-end justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-2">
+      <Skeleton className="mb-5 h-11 w-28 rounded-xl" />
+
+      <div className="mb-4 flex min-w-0 items-end justify-between gap-4">
+        <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-7 w-56 max-w-full" />
-          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-8 w-64 max-w-full" />
+          <Skeleton className="h-4 w-44 max-w-full" />
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Skeleton className="h-6 w-16 rounded-full" />
+        <div className="flex shrink-0 gap-2">
+          <Skeleton className="h-8 w-20 rounded-full" />
           <Skeleton className="h-11 w-20 rounded-xl" />
         </div>
       </div>
 
-      {/* detail grid: main card + sidebar */}
-      <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-        {/* Main card: line items + totals */}
-        <div className="self-start rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">
-          <Skeleton className="mb-3 h-4 w-24" />
-
-          {/* Table header — md+ only */}
-          <div className="hidden gap-3 border-b border-outline-variant pb-2 md:grid md:grid-cols-[1fr_90px_90px_90px]">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-3 w-full" />
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)]">
+        <section className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border p-4 shadow-sm">
+          <Skeleton className="mb-4 h-5 w-28" />
+          <div className="border-outline-variant hidden grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_5.5rem] gap-3 border-b pb-2 md:grid">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-3 w-14 max-w-full" />
             ))}
           </div>
-
-          {/* Line item rows */}
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: 5 }).map((_, index) => (
             <div
-              key={i}
-              className="flex items-center justify-between gap-3 border-t border-outline-variant py-3 first:border-t-0"
+              key={index}
+              className="border-outline-variant grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b py-4 last:border-0 md:grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_5.5rem]"
             >
-              <div className="flex flex-1 flex-col gap-2">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-3 w-28" />
+              <div className="min-w-0 space-y-2">
+                <Skeleton className="h-4 w-40 max-w-full" />
+                <Skeleton className="h-3 w-28 max-w-full" />
               </div>
               <Skeleton className="h-4 w-16" />
+              <Skeleton className="hidden h-4 w-16 md:block" />
+              <Skeleton className="hidden h-4 w-16 md:block" />
             </div>
           ))}
-
-          {/* Totals band */}
-          <div className="mt-5 space-y-2 border-t-2 border-outline-variant pt-4">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-16" />
-            </div>
-            <div className="flex items-center justify-between border-t border-outline-variant pt-3">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-6 w-24" />
-            </div>
+          <div className="border-outline-variant mt-5 ml-auto w-full max-w-xs space-y-3 border-t pt-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-8 w-full" />
           </div>
-        </div>
+        </section>
 
-        {/* Sidebar meta-boxes */}
-        <div className="flex flex-col gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-outline-variant bg-surface-container-low p-4 shadow-sm"
+        <aside className="min-w-0 space-y-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <section
+              key={index}
+              className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4 shadow-sm"
             >
-              <Skeleton className="mb-2 h-3 w-20" />
-              <Skeleton className="h-4 w-36" />
-              <Skeleton className="mt-2 h-3 w-28" />
-            </div>
+              <Skeleton className="mb-4 h-5 w-32 max-w-full" />
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-11 w-full rounded-xl" />
+              </div>
+            </section>
           ))}
-        </div>
+        </aside>
       </div>
     </div>
   );

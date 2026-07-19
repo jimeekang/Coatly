@@ -1,7 +1,7 @@
 # Coatly — Launch Readiness Snapshot
 
 > Owner: **Shared** — 런칭 판정은 Claude(QA/PM), blocker 해소는 Codex(high).
-> 기준일: 2026-07-05. 이 문서는 현재 코드 기준 외부 런칭 가능 여부와 남은 release blockers를 정리합니다.
+> 기준일: 2026-07-12 (상품화/UX 분석 반영). 이 문서는 현재 코드 기준 외부 런칭 가능 여부와 남은 release blockers를 정리합니다.
 
 ## Verdict
 
@@ -41,6 +41,8 @@
 | P1       | Quote follow-up reminder cron 미구현                       | v1 core flow 명시 요구("send → follow-up reminder")이자 핵심 차별점. `invoice-reminders` 패턴 복제로 구현 필요 (AUDIT A9)                                                                    |
 | P1       | plans.ts 판매 카피–scope 모순                              | Pro 플랜이 보류된 AI 기능을 판매 feature로 노출 (`config/plans.ts:50-51`) — 신뢰/ACL 리스크, 카피 교체 + AI UI gating (AUDIT A11)                                                            |
 | P1       | Stripe webhook 하드닝                                      | `event.id` 멱등 체크 부재, `payment_failed` no-op(매출 누수), webhook 중복 라우트 정리 (AUDIT A10)                                                                                           |
+| P1       | Trial 부재 하드 페이월                                     | 첫 견적 생성 전 결제 요구(checkout `trial_period_days` 미설정) — 외부 런칭 시 최대 adoption 장벽. 30일 무카드 trial + A$39 단일 플랜 개편과 함께 적용 (AUDIT A19)                            |
+| P1       | 고객 이메일 reply_to/발송 기록 부재                        | `reply_to` 미설정으로 고객 답장이 painter에게 도달하지 않음, 견적 상세에 재발송/발송 기록 없음 — production sender P0와 함께 처리 (AUDIT A17/A18)                                            |
 | P2       | Design D5 mobile spacing check remains                    | Capture detailed quote/job screens on mobile and fix spacing/overlap if found                                                                                                                |
 
 ## Open Decisions (사용자 결정 대기)
@@ -51,6 +53,7 @@
 | Live Supabase 태그 fixture | `[LAUNCH_SMOKE]` 태그 레코드를 live DB에 허용할지 |
 | Production Resend sender | 검증 도메인 발신 주소 확정 (`RESEND_FROM_ADDRESS`) |
 | Painter A 자료 | 실제 Excel 가격표 + 최근 quote PDF/email 1건 제공 시점 |
+| 가격 개편 적용 시점 | 단일 A$39 flat + 30일 무카드 trial 전환을 A workflow 검증 전/후 언제 집행할지 ([COMMERCIALIZATION.md](./COMMERCIALIZATION.md)) |
 
 ## Launch Criteria
 

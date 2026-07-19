@@ -1,11 +1,14 @@
+'use client';
+
 import Link from 'next/link';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 
 export function UpgradePrompt({
   badge = 'Pro Feature',
   title,
   description,
-  href = '/subscribe',
-  ctaLabel = 'Upgrade to Pro',
+  href = '/settings/billing',
+  ctaLabel = 'View Plans',
 }: {
   badge?: string;
   title: string;
@@ -14,24 +17,18 @@ export function UpgradePrompt({
   ctaLabel?: string;
 }) {
   return (
-    <section className="rounded-2xl border border-outline-variant bg-gradient-to-br from-surface via-surface-container-low to-primary-container/40 p-5 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-        {badge}
+    <section className="border-outline-variant from-surface via-surface-container-low to-primary-container/40 rounded-2xl border bg-gradient-to-br p-5 shadow-sm">
+      <SectionLabel className="text-primary">{badge}</SectionLabel>
+      <h2 className="text-on-surface mt-2 text-xl font-bold">{title}</h2>
+      <p className="text-on-surface-variant mt-2 max-w-2xl text-sm">
+        {description}
       </p>
-      <h2 className="mt-2 text-xl font-bold text-on-surface">{title}</h2>
-      <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">{description}</p>
-      <div className="mt-4 flex flex-wrap gap-3">
+      <div className="mt-4">
         <Link
           href={href}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-5"
+          className="bg-primary text-on-primary focus-visible:ring-primary focus-visible:ring-offset-surface inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:px-5"
         >
           {ctaLabel}
-        </Link>
-        <Link
-          href="/settings"
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline-variant bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high active:bg-outline-variant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-5"
-        >
-          Compare Plans
         </Link>
       </div>
     </section>

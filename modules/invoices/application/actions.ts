@@ -16,7 +16,10 @@ import {
   getInvoiceQuoteOptions,
   getQuoteInvoiceLinkState,
 } from '@/modules/invoices/infrastructure/invoice-options';
-import { getBusinessDocumentBranding, getBusinessInvoiceDefaults } from '@/modules/settings/application/business-branding';
+import {
+  getBusinessDocumentBranding,
+  getBusinessInvoiceDefaults,
+} from '@/modules/settings/application/business-branding';
 import { InvoiceTemplate } from '@/modules/invoices/infrastructure/pdf/invoice-template';
 import {
   getActiveSubscriptionRequiredMessage,
@@ -201,11 +204,17 @@ async function validateQuoteLinkForInvoice(input: {
   }
 
   if (quote.status !== 'approved') {
-    return { data: null, error: 'Only approved quotes can be linked to invoices.' };
+    return {
+      data: null,
+      error: 'Only approved quotes can be linked to invoices.',
+    };
   }
 
   if (quote.customer_id !== input.customerId) {
-    return { data: null, error: 'Quote customer does not match the selected customer.' };
+    return {
+      data: null,
+      error: 'Quote customer does not match the selected customer.',
+    };
   }
 
   return {
@@ -258,27 +267,28 @@ type InvoiceDetailRow = {
         postcode: string | null;
       }>
     | null;
-  line_items:
-    | Array<{
-        id: string;
-        invoice_id: string;
-        description: string;
-        quantity: number;
-        unit_price_cents: number;
-        gst_cents: number;
-        total_cents: number;
-        sort_order: number;
-        created_at: string;
-        updated_at: string;
-      }>
-    | null;
+  line_items: Array<{
+    id: string;
+    invoice_id: string;
+    description: string;
+    quantity: number;
+    unit_price_cents: number;
+    gst_cents: number;
+    total_cents: number;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+  }> | null;
 };
 
 export async function getInvoices(): Promise<{
   data: InvoiceListItem[];
   error: string | null;
 }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
 
   const { data, error } = await supabase
     .from('invoices')
@@ -309,7 +319,10 @@ export async function getInvoices(): Promise<{
 export async function getInvoicesByCustomer(
   customerId: string
 ): Promise<{ data: InvoiceListItem[]; error: string | null }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
 
   const { data, error } = await supabase
     .from('invoices')
@@ -382,15 +395,20 @@ export async function getInvoiceFormOptions(): Promise<{
   };
   error: string | null;
 }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
-
-  const [customersResult, quotesResult, businessDefaultsResult] = await Promise.all([
-    getInvoiceCustomerOptions(supabase, user.id),
-    getInvoiceQuoteOptions(supabase, user.id),
-    getBusinessInvoiceDefaults(supabase, user.id, user.email ?? null),
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
   ]);
 
-  const error = customersResult.error ?? quotesResult.error ?? businessDefaultsResult.error;
+  const [customersResult, quotesResult, businessDefaultsResult] =
+    await Promise.all([
+      getInvoiceCustomerOptions(supabase, user.id),
+      getInvoiceQuoteOptions(supabase, user.id),
+      getBusinessInvoiceDefaults(supabase, user.id, user.email ?? null),
+    ]);
+
+  const error =
+    customersResult.error ?? quotesResult.error ?? businessDefaultsResult.error;
 
   return {
     data: {
@@ -414,28 +432,26 @@ function buildInvoiceDescriptionFromQuoteLineItem(item: {
 }
 
 export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
-  data:
-    | {
-        customer_id: string;
-        quote_id: string;
-        invoice_type: 'full';
-        status: 'draft';
-        business_abn: string | null;
-        payment_terms: string | null;
-        bank_details: string | null;
-        due_date: string | null;
-        paid_date: string | null;
-        payment_method: InvoicePaymentMethod | null;
-        linked_invoice_count: number;
-        has_linked_invoices: boolean;
-        notes: string | null;
-        line_items: Array<{
-          description: string;
-          quantity: number;
-          unit_price_cents: number;
-        }>;
-      }
-    | null;
+  data: {
+    customer_id: string;
+    quote_id: string;
+    invoice_type: 'full';
+    status: 'draft';
+    business_abn: string | null;
+    payment_terms: string | null;
+    bank_details: string | null;
+    due_date: string | null;
+    paid_date: string | null;
+    payment_method: InvoicePaymentMethod | null;
+    linked_invoice_count: number;
+    has_linked_invoices: boolean;
+    notes: string | null;
+    line_items: Array<{
+      description: string;
+      quantity: number;
+      unit_price_cents: number;
+    }>;
+  } | null;
   error: string | null;
 }> {
   const supabase = await createServerClient();
@@ -444,26 +460,30 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const [quoteResult, lineItemsResult, businessDefaultsResult, quoteInvoiceLinkStateResult] =
-    await Promise.all([
-      supabase
-        .from('quotes')
-        .select(
-          'id, customer_id, status, title, quote_number, subtotal_cents, total_cents, discount_cents, manual_adjustment_cents, deposit_percent'
-        )
-        .eq('id', quoteId)
-        .eq('user_id', user.id)
-        .maybeSingle(),
-      supabase
-        .from('quote_line_items')
-        .select(
-          'id, name, notes, quantity, unit_price_cents, total_cents, is_optional, is_selected, sort_order'
-        )
-        .eq('quote_id', quoteId)
-        .order('sort_order', { ascending: true }),
-      getBusinessInvoiceDefaults(supabase, user.id, user.email ?? null),
-      getQuoteInvoiceLinkState(supabase, user.id, quoteId),
-    ]);
+  const [
+    quoteResult,
+    lineItemsResult,
+    businessDefaultsResult,
+    quoteInvoiceLinkStateResult,
+  ] = await Promise.all([
+    supabase
+      .from('quotes')
+      .select(
+        'id, customer_id, status, title, quote_number, subtotal_cents, total_cents, discount_cents, manual_adjustment_cents, deposit_percent'
+      )
+      .eq('id', quoteId)
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('quote_line_items')
+      .select(
+        'id, name, notes, quantity, unit_price_cents, total_cents, is_optional, is_selected, sort_order'
+      )
+      .eq('quote_id', quoteId)
+      .order('sort_order', { ascending: true }),
+    getBusinessInvoiceDefaults(supabase, user.id, user.email ?? null),
+    getQuoteInvoiceLinkState(supabase, user.id, quoteId),
+  ]);
 
   if (quoteResult.error) {
     return { data: null, error: quoteResult.error.message };
@@ -487,7 +507,10 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
   }
 
   if (quote.status !== 'approved') {
-    return { data: null, error: 'Only approved quotes can be invoiced from the quote screen.' };
+    return {
+      data: null,
+      error: 'Only approved quotes can be invoiced from the quote screen.',
+    };
   }
 
   const presetResult = buildQuoteInvoicePresetLines({
@@ -506,7 +529,8 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
       quantity: Number(item.quantity),
       unit_price_cents: item.unit_price_cents,
       total_cents:
-        item.total_cents ?? Math.round(Number(item.quantity) * item.unit_price_cents),
+        item.total_cents ??
+        Math.round(Number(item.quantity) * item.unit_price_cents),
       is_optional: item.is_optional ?? false,
       is_selected: item.is_optional ? (item.is_selected ?? false) : true,
     })),
@@ -528,8 +552,10 @@ export async function getInvoiceDraftFromQuote(quoteId: string): Promise<{
       due_date: null,
       paid_date: null,
       payment_method: null,
-      linked_invoice_count: quoteInvoiceLinkStateResult.data?.linked_invoice_count ?? 0,
-      has_linked_invoices: quoteInvoiceLinkStateResult.data?.has_linked_invoices ?? false,
+      linked_invoice_count:
+        quoteInvoiceLinkStateResult.data?.linked_invoice_count ?? 0,
+      has_linked_invoices:
+        quoteInvoiceLinkStateResult.data?.has_linked_invoices ?? false,
       notes: quote.title?.trim()
         ? `Linked to approved quote ${quote.quote_number} - ${quote.title.trim()}`
         : `Linked to approved quote ${quote.quote_number}`,
@@ -543,7 +569,10 @@ export async function getInvoice(id: string): Promise<{
   data: InvoiceWithCustomer | null;
   error: string | null;
 }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
 
   const { data, error } = await supabase
     .from('invoices')
@@ -552,20 +581,29 @@ export async function getInvoice(id: string): Promise<{
     )
     .eq('id', id)
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
   let quoteStageLabel: string | null = null;
 
   if (data?.quote_id) {
-    const { data: linkedInvoices } = await supabase
+    const { data: linkedInvoices, error: linkedInvoicesError } = await supabase
       .from('invoices')
       .select('id, quote_id, created_at')
       .eq('user_id', user.id)
       .eq('quote_id', data.quote_id);
 
+    if (linkedInvoicesError) {
+      return { data: null, error: linkedInvoicesError.message };
+    }
+
     const stageByInvoiceId = buildQuoteInvoiceStageMap(
-      ((linkedInvoices as Array<{ id: string; quote_id: string | null; created_at: string }> | null) ??
-        []).map((invoice) => ({
+      (
+        (linkedInvoices as Array<{
+          id: string;
+          quote_id: string | null;
+          created_at: string;
+        }> | null) ?? []
+      ).map((invoice) => ({
         id: invoice.id,
         quote_id: invoice.quote_id,
         created_at: invoice.created_at,
@@ -587,15 +625,16 @@ export async function getInvoice(id: string): Promise<{
 }
 
 export async function getLinkedInvoicesForQuote(quoteId: string): Promise<{
-  data:
-    | {
-        invoices: InvoiceListItem[];
-        summary: QuoteInvoiceLinkState;
-      }
-    | null;
+  data: {
+    invoices: InvoiceListItem[];
+    summary: QuoteInvoiceLinkState;
+  } | null;
   error: string | null;
 }> {
-  const [supabase, user] = await Promise.all([createServerClient(), requireCurrentUser()]);
+  const [supabase, user] = await Promise.all([
+    createServerClient(),
+    requireCurrentUser(),
+  ]);
 
   const { data, error } = await supabase
     .from('invoices')
@@ -621,22 +660,21 @@ export async function getLinkedInvoicesForQuote(quoteId: string): Promise<{
       created_at: invoice.created_at,
     }))
   );
-  const summary =
-    buildQuoteInvoiceLinkStateMap(
-      rows.map((invoice) => ({
-        id: invoice.id,
-        quote_id: invoice.quote_id,
-        subtotal_cents: invoice.subtotal_cents,
-        total_cents: invoice.total_cents,
-        status: invoice.status,
-        created_at: invoice.created_at,
-      }))
-    ).get(quoteId) ?? {
-      linked_invoice_count: 0,
-      has_linked_invoices: false,
-      billed_subtotal_cents: 0,
-      billed_total_cents: 0,
-    };
+  const summary = buildQuoteInvoiceLinkStateMap(
+    rows.map((invoice) => ({
+      id: invoice.id,
+      quote_id: invoice.quote_id,
+      subtotal_cents: invoice.subtotal_cents,
+      total_cents: invoice.total_cents,
+      status: invoice.status,
+      created_at: invoice.created_at,
+    }))
+  ).get(quoteId) ?? {
+    linked_invoice_count: 0,
+    has_linked_invoices: false,
+    billed_subtotal_cents: 0,
+    billed_total_cents: 0,
+  };
 
   return {
     data: {
@@ -682,7 +720,8 @@ export async function createInvoice(
   if (resolvedStatus.error) {
     return { error: resolvedStatus.error };
   }
-  const statusToSave = resolvedStatus.status as CreateInvoiceActionInput['status'];
+  const statusToSave =
+    resolvedStatus.status as CreateInvoiceActionInput['status'];
 
   const { data: customer, error: customerError } = await supabase
     .from('customers')
@@ -713,9 +752,8 @@ export async function createInvoice(
     }
   }
 
-  const { line_items, subtotal_cents, gst_cents, total_cents } = calculateInvoiceLineItemTotals(
-    parsed.data.line_items
-  );
+  const { line_items, subtotal_cents, gst_cents, total_cents } =
+    calculateInvoiceLineItemTotals(parsed.data.line_items);
 
   const paymentTracking = resolveInvoicePaymentTracking({
     status: statusToSave,
@@ -731,7 +769,8 @@ export async function createInvoice(
 
   if (invoiceNumberError || !invoiceNumber) {
     return {
-      error: invoiceNumberError?.message ?? 'Invoice number could not be generated.',
+      error:
+        invoiceNumberError?.message ?? 'Invoice number could not be generated.',
     };
   }
 
@@ -779,11 +818,29 @@ export async function createInvoice(
     .insert(lineItems);
 
   if (lineItemsError) {
-    await supabase.from('invoices').delete().eq('id', invoice.id).eq('user_id', user.id);
+    await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', invoice.id)
+      .eq('user_id', user.id);
     return { error: lineItemsError.message };
   }
 
-  await supabase.rpc('calculate_invoice_totals', { invoice_uuid: invoice.id });
+  const { error: totalsError } = await supabase.rpc(
+    'calculate_invoice_totals',
+    {
+      invoice_uuid: invoice.id,
+    }
+  );
+
+  if (totalsError) {
+    await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', invoice.id)
+      .eq('user_id', user.id);
+    return { error: totalsError.message };
+  }
 
   revalidatePath('/invoices');
   revalidatePath('/dashboard');
@@ -845,7 +902,8 @@ export async function updateInvoice(
   if (resolvedStatus.error) {
     return { error: resolvedStatus.error };
   }
-  const statusToSave = resolvedStatus.status as CreateInvoiceActionInput['status'];
+  const statusToSave =
+    resolvedStatus.status as CreateInvoiceActionInput['status'];
 
   const { data: customer, error: customerError } = await supabase
     .from('customers')
@@ -876,9 +934,8 @@ export async function updateInvoice(
     }
   }
 
-  const { line_items, subtotal_cents, gst_cents, total_cents } = calculateInvoiceLineItemTotals(
-    parsed.data.line_items
-  );
+  const { line_items, subtotal_cents, gst_cents, total_cents } =
+    calculateInvoiceLineItemTotals(parsed.data.line_items);
 
   const paymentTracking = resolveInvoicePaymentTracking({
     status: statusToSave,
@@ -933,7 +990,9 @@ export async function updateInvoice(
   redirect(`/invoices/${id}`);
 }
 
-export async function sendInvoice(id: string): Promise<{ error: string } | void> {
+export async function sendInvoice(
+  id: string
+): Promise<{ error: string } | void> {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -1048,7 +1107,9 @@ export async function markInvoiceAsPaid(
 
   const subscription = await getSubscriptionSnapshotForUser(supabase, user.id);
   if (!subscription.active) {
-    return { error: getActiveSubscriptionRequiredMessage('invoice management') };
+    return {
+      error: getActiveSubscriptionRequiredMessage('invoice management'),
+    };
   }
 
   const paidDate = input.paid_date.trim();
@@ -1079,7 +1140,9 @@ export async function markInvoiceAsPaid(
   }
 
   if (invoice.status === 'draft') {
-    return { error: 'Draft invoices must be sent before they can be marked as paid.' };
+    return {
+      error: 'Draft invoices must be sent before they can be marked as paid.',
+    };
   }
 
   if (invoice.status === 'paid') {
@@ -1116,7 +1179,9 @@ export async function markInvoiceAsPaid(
   redirect(`/invoices/${id}`);
 }
 
-export async function deleteInvoice(id: string): Promise<{ error: string } | void> {
+export async function deleteInvoice(
+  id: string
+): Promise<{ error: string } | void> {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -1125,7 +1190,9 @@ export async function deleteInvoice(id: string): Promise<{ error: string } | voi
 
   const subscription = await getSubscriptionSnapshotForUser(supabase, user.id);
   if (!subscription.active) {
-    return { error: getActiveSubscriptionRequiredMessage('invoice management') };
+    return {
+      error: getActiveSubscriptionRequiredMessage('invoice management'),
+    };
   }
 
   const { error } = await supabase

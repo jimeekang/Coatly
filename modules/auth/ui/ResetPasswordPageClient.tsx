@@ -7,11 +7,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { AuthShell } from '@/modules/auth/ui/AuthShell';
+import { PasswordInput } from '@/modules/auth/ui/PasswordInput';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { APP_NAME } from '@/config/constants';
 import { createBrowserClient } from '@/lib/supabase/client';
-import { AuthShell } from '@/modules/auth/ui/AuthShell';
-import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import { FormField } from '@/components/forms/FormField';
 
 const resetPasswordSchema = z
   .object({
@@ -26,9 +26,6 @@ const resetPasswordSchema = z
 type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 type RecoveryState = 'checking' | 'ready' | 'invalid' | 'success';
-
-const linkClassName =
-  'rounded font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 export default function ResetPasswordPageClient() {
   const router = useRouter();
@@ -132,11 +129,14 @@ export default function ResetPasswordPageClient() {
     return (
       <AuthShell
         eyebrow="Password reset"
-        title="Checking your reset link"
-        description="Hang tight while we verify your reset link."
+        title="Checking your reset link."
+        description="This should only take a moment."
       >
-        <div className="flex items-center justify-center py-2">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
+        <div className="text-center">
+          <Loader2 className="text-primary mx-auto mb-4 h-6 w-6 animate-spin" />
+          <p className="text-on-surface-variant text-sm">
+            Preparing a secure password reset.
+          </p>
         </div>
       </AuthShell>
     );
@@ -146,15 +146,28 @@ export default function ResetPasswordPageClient() {
     return (
       <AuthShell
         eyebrow="Password reset"
-        title="Reset link expired"
-        description="This password reset link is invalid or has expired."
+        title="That reset link has expired."
+        description="Request a fresh link to choose a new password and return to your workspace."
         footer={
-          <Link href="/forgot-password" className={linkClassName}>
-            Request a new reset email
+          <Link
+            href="/login"
+            className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-3 font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Back to sign in
           </Link>
         }
       >
-        {serverError && <ErrorAlert>{serverError}</ErrorAlert>}
+        <div className="text-center">
+          {serverError && (
+            <ErrorAlert className="mb-4 text-left">{serverError}</ErrorAlert>
+          )}
+          <Link
+            href="/forgot-password"
+            className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 inline-flex h-12 w-full items-center justify-center rounded-xl px-4 text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          >
+            Request a new reset email
+          </Link>
+        </div>
       </AuthShell>
     );
   }
@@ -163,11 +176,17 @@ export default function ResetPasswordPageClient() {
     return (
       <AuthShell
         eyebrow="Password reset"
-        title="Password updated"
-        description={`Redirecting you back into ${APP_NAME}...`}
+        title="Password updated."
+        description={`Taking you back into ${APP_NAME} now.`}
       >
-        <div className="flex justify-center py-2">
-          <CheckCircle className="h-12 w-12 text-primary-container" aria-hidden="true" />
+        <div className="text-center">
+          <CheckCircle
+            className="text-primary-container mx-auto mb-4 h-12 w-12"
+            aria-hidden="true"
+          />
+          <p className="text-on-surface-variant text-sm">
+            Your new password is ready to use.
+          </p>
         </div>
       </AuthShell>
     );
@@ -176,46 +195,36 @@ export default function ResetPasswordPageClient() {
   return (
     <AuthShell
       eyebrow="Password reset"
-      title="Set new password"
-      description="Enter a new password for your account."
-      footer={
-        <>
-          Remembered your password?{' '}
-          <Link href="/login" className={linkClassName}>
-            Sign in
-          </Link>
-        </>
-      }
+      title="Choose a new password."
+      description="Use at least 8 characters, then sign in with your new password from now on."
     >
       {serverError && <ErrorAlert className="mb-4">{serverError}</ErrorAlert>}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-        <FormField
-          htmlFor="password"
+        <PasswordInput
+          id="password"
           label="New password"
-          type="password"
+          error={errors.password?.message}
           autoComplete="new-password"
           placeholder="Min. 8 characters"
           disabled={isPending}
-          error={errors.password?.message}
           {...register('password')}
         />
 
-        <FormField
-          htmlFor="confirmPassword"
+        <PasswordInput
+          id="confirmPassword"
           label="Confirm new password"
-          type="password"
+          error={errors.confirmPassword?.message}
           autoComplete="new-password"
           placeholder="Repeat your new password"
           disabled={isPending}
-          error={errors.confirmPassword?.message}
           {...register('confirmPassword')}
         />
 
         <button
           type="submit"
           disabled={isPending}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-primary text-on-primary hover:bg-primary/90 focus-visible:ring-primary/30 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

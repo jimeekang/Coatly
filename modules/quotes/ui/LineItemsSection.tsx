@@ -3,11 +3,17 @@
 import { useState } from 'react';
 import { Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { LineItemPicker } from './LineItemPicker';
-import { NumericInput, sanitizeDecimalInput, sanitizeIntegerInput } from '@/components/shared/NumericInput';
+import {
+  NumericInput,
+  sanitizeDecimalInput,
+  sanitizeIntegerInput,
+} from '@/components/shared/NumericInput';
 import type { MaterialItem } from '@/modules/materials/domain/types';
 import type { QuoteLineItemFormInput } from '@/modules/quotes/domain/quote-schema';
 import { calculateQuoteLineItemsSubtotal } from '@/modules/quotes/domain/quotes';
 import { formatAUD } from '@/utils/format';
+import { cn } from '@/lib/utils';
+import { formControlClassName } from '@/components/forms/FormField';
 
 interface LineItemEntry extends QuoteLineItemFormInput {
   _key: string;
@@ -37,7 +43,9 @@ function parseQuantityDraft(
     return null;
   }
 
-  const parsed = isWholeNumberQuantity(category) ? Number.parseInt(draft, 10) : Number.parseFloat(draft);
+  const parsed = isWholeNumberQuantity(category)
+    ? Number.parseInt(draft, 10)
+    : Number.parseFloat(draft);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return null;
   }
@@ -56,20 +64,28 @@ function QuantityInput({
     <NumericInput
       value={String(entry.quantity)}
       inputMode={isWholeNumberQuantity(entry.category) ? 'numeric' : 'decimal'}
-      sanitize={isWholeNumberQuantity(entry.category) ? sanitizeWholeNumberQuantityInput : sanitizeDecimalInput}
+      sanitize={
+        isWholeNumberQuantity(entry.category)
+          ? sanitizeWholeNumberQuantityInput
+          : sanitizeDecimalInput
+      }
       onValueChange={(draft) => {
         const nextQuantity = parseQuantityDraft(entry.category, draft);
         if (nextQuantity != null) {
           onChange(nextQuantity);
         }
       }}
-      className="min-h-11 w-20 rounded-xl border border-outline-variant bg-surface-container-lowest px-2 text-center text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+      className={cn(formControlClassName, 'w-20 px-2 text-center')}
       aria-label={`${entry.name} quantity`}
     />
   );
 }
 
-export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSectionProps) {
+export function LineItemsSection({
+  libraryItems,
+  value,
+  onChange,
+}: LineItemsSectionProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const entries: LineItemEntry[] = value.map((item, i) => ({
@@ -105,15 +121,15 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
 
   return (
     <>
-      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+      <section className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
+          <h3 className="text-on-surface-variant text-sm font-semibold tracking-wide uppercase">
             Materials &amp; Services
           </h3>
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-on-primary"
+            className="bg-primary text-on-primary focus-visible:ring-primary/30 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:outline-none"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Item
@@ -124,43 +140,54 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="mt-4 flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant py-6 text-on-surface-variant hover:border-primary hover:text-primary"
+            className="border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary focus-visible:ring-primary/30 mt-4 flex min-h-11 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-6 focus-visible:ring-2 focus-visible:outline-none"
           >
             <ShoppingBag className="h-7 w-7" strokeWidth={1.5} />
-            <span className="text-sm font-medium">Add paints, supplies, and services</span>
+            <span className="text-sm font-medium">
+              Add paints, supplies, and services
+            </span>
           </button>
         ) : (
           <div className="mt-4 space-y-2">
             {entries.map((entry, index) => (
               <div
                 key={entry._key}
-                className="rounded-xl border border-outline-variant bg-surface-container/40 px-3 py-3"
+                className="border-outline-variant bg-surface-container/40 rounded-2xl border px-3 py-3"
               >
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-on-surface">{entry.name}</p>
-                    <p className="mt-0.5 text-xs text-on-surface-variant">
+                    <p className="text-on-surface truncate text-sm font-medium">
+                      {entry.name}
+                    </p>
+                    <p className="text-on-surface-variant mt-0.5 text-xs">
                       {formatAUD(entry.unit_price_cents)} / {entry.unit}
                     </p>
                     {entry.notes && (
-                      <p className="mt-1 text-xs text-on-surface-variant">{entry.notes}</p>
+                      <p className="text-on-surface-variant mt-1 text-xs">
+                        {entry.notes}
+                      </p>
                     )}
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemove(index)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container hover:text-error"
+                    className="text-on-surface-variant hover:bg-error-container hover:text-error focus-visible:ring-error/30 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none"
                     aria-label={`Remove ${entry.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2 border-t border-outline-variant/70 pt-3">
+                <div className="border-outline-variant/70 mt-3 flex items-center gap-2 border-t pt-3">
                   <label className="sr-only">Quantity</label>
-                  <QuantityInput entry={entry} onChange={(quantity) => handleQtyChange(index, quantity)} />
-                  <span className="text-xs text-on-surface-variant">{entry.unit}</span>
-                  <span className="ml-2 text-sm font-semibold text-on-surface">
+                  <QuantityInput
+                    entry={entry}
+                    onChange={(quantity) => handleQtyChange(index, quantity)}
+                  />
+                  <span className="text-on-surface-variant text-xs">
+                    {entry.unit}
+                  </span>
+                  <span className="text-on-surface ml-2 text-sm font-semibold">
                     {formatAUD(entry.total_cents)}
                   </span>
                 </div>
@@ -168,18 +195,28 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
             ))}
 
             {/* Subtotal */}
-            <div className="mt-1 rounded-xl bg-primary/15 px-4 py-3">
+            <div className="bg-primary/15 mt-1 rounded-xl px-4 py-3">
               <div className="flex justify-between text-sm">
-                <span className="text-on-surface-variant">Items subtotal (ex GST)</span>
-                <span className="font-semibold text-on-surface">{formatAUD(subtotal)}</span>
+                <span className="text-on-surface-variant">
+                  Items subtotal (ex GST)
+                </span>
+                <span className="text-on-surface font-semibold">
+                  {formatAUD(subtotal)}
+                </span>
               </div>
-              <div className="flex justify-between text-xs mt-1">
+              <div className="mt-1 flex justify-between text-xs">
                 <span className="text-on-surface-variant">GST (10%)</span>
-                <span className="text-on-surface-variant">{formatAUD(gst)}</span>
+                <span className="text-on-surface-variant">
+                  {formatAUD(gst)}
+                </span>
               </div>
-              <div className="flex justify-between text-sm mt-1.5 border-t border-primary/20 pt-1.5">
-                <span className="font-semibold text-on-surface">Items total (inc GST)</span>
-                <span className="font-bold text-primary">{formatAUD(subtotal + gst)}</span>
+              <div className="border-primary/20 mt-1.5 flex justify-between border-t pt-1.5 text-sm">
+                <span className="text-on-surface font-semibold">
+                  Items total (inc GST)
+                </span>
+                <span className="text-primary font-bold">
+                  {formatAUD(subtotal + gst)}
+                </span>
               </div>
             </div>
           </div>

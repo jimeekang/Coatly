@@ -12,13 +12,14 @@ import {
 } from '@/modules/customers/application/actions';
 import type { QuoteListItem } from '@/modules/quotes/domain/quotes';
 import type { InvoiceListItem } from '@/modules/invoices/domain/invoice';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { CustomerForm } from '@/modules/customers/ui/CustomerForm';
 import {
   INVOICE_STATUS_TONE,
   QUOTE_STATUS_TONE,
+  type StatusTone,
 } from '@/lib/constants/status-colors';
 import { formatAUD, formatDate } from '@/utils/format';
 
@@ -85,10 +86,10 @@ function formatPropertyAddress(property: CustomerProperty) {
 function InfoRow({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <p className="mb-0.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
+      <p className="text-on-surface-variant mb-0.5 text-xs font-medium tracking-wide uppercase">
         {label}
       </p>
-      <p className="text-base text-on-surface">{value || '-'}</p>
+      <p className="text-on-surface text-base">{value || '-'}</p>
     </div>
   );
 }
@@ -99,12 +100,12 @@ function PhoneValue({ value, primary }: { value: string; primary: boolean }) {
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
       <a
         href={`tel:${tel}`}
-        className="min-w-0 break-all text-base text-primary underline-offset-2 hover:underline active:opacity-70"
+        className="text-primary focus-visible:ring-primary/30 hover:bg-primary/10 inline-flex min-h-11 min-w-0 items-center rounded-xl px-2 text-base break-all underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-none active:opacity-70"
       >
         {value}
       </a>
       {primary && (
-        <span className="shrink-0 rounded-full bg-success-container px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
+        <span className="bg-success-container text-primary shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
           Primary
         </span>
       )}
@@ -117,12 +118,12 @@ function EmailValue({ value, primary }: { value: string; primary: boolean }) {
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
       <a
         href={`mailto:${value}`}
-        className="min-w-0 break-all text-base text-primary underline-offset-2 hover:underline active:opacity-70"
+        className="text-primary focus-visible:ring-primary/30 hover:bg-primary/10 inline-flex min-h-11 min-w-0 items-center rounded-xl px-2 text-base break-all underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-none active:opacity-70"
       >
         {value}
       </a>
       {primary && (
-        <span className="shrink-0 rounded-full bg-success-container px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
+        <span className="bg-success-container text-primary shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
           Primary
         </span>
       )}
@@ -130,11 +131,30 @@ function EmailValue({ value, primary }: { value: string; primary: boolean }) {
   );
 }
 
-function getContactValues(values: string[] | undefined, fallback: string | null) {
+function getContactValues(
+  values: string[] | undefined,
+  fallback: string | null
+) {
   return values?.length ? values : fallback ? [fallback] : [];
 }
 
 type DialogType = 'cancel' | 'delete' | null;
+
+function formatStatusLabel(status: string) {
+  const normalized = status.trim().toLowerCase();
+  if (!normalized) return 'Unknown';
+  return normalized
+    .split(/[_\s-]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function resolveStatusTone(
+  status: string,
+  tones: Record<string, StatusTone>
+): StatusTone {
+  return tones[status.trim().toLowerCase()] ?? 'neutral';
+}
 
 interface Props {
   customer: Customer;
@@ -142,7 +162,11 @@ interface Props {
   invoices?: InvoiceListItem[];
 }
 
-export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) {
+export function CustomerDetail({
+  customer,
+  quotes = [],
+  invoices = [],
+}: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -197,14 +221,14 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setEditing(true)}
-            className="min-h-11 rounded-xl border border-outline bg-surface-container-lowest px-5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="border-outline bg-surface-container-lowest text-on-surface hover:bg-surface-container-low focus-visible:ring-primary/30 min-h-11 rounded-xl border px-5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             Edit
           </button>
           <button
             onClick={() => setDialog('delete')}
             disabled={deleting}
-            className="min-h-11 rounded-xl bg-error px-5 text-sm font-medium text-on-error transition-colors hover:bg-error/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+            className="bg-error text-on-error hover:bg-error/90 focus-visible:ring-error/30 min-h-11 rounded-xl px-5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
           >
             {deleting ? 'Deleting...' : 'Delete'}
           </button>
@@ -212,9 +236,9 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
 
         {error && <ErrorAlert>{error}</ErrorAlert>}
 
-        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
-          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        <section className="divide-outline border-outline bg-surface-container-lowest divide-y rounded-2xl border">
+          <div className="bg-surface-container-low rounded-t-2xl px-5 py-3">
+            <h3 className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Contact Details
             </h3>
           </div>
@@ -222,7 +246,7 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
             <InfoRow label="Full Name" value={customer.name} />
             <InfoRow label="Company" value={customer.company_name} />
             <div>
-              <p className="mb-0.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
+              <p className="text-on-surface-variant mb-0.5 text-xs font-medium tracking-wide uppercase">
                 Emails
               </p>
               <div className="min-w-0 space-y-1">
@@ -236,12 +260,12 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
                   )
                 )}
                 {!customer.email && !customer.emails?.length && (
-                  <p className="text-base text-on-surface">-</p>
+                  <p className="text-on-surface text-base">-</p>
                 )}
               </div>
             </div>
             <div>
-              <p className="mb-0.5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
+              <p className="text-on-surface-variant mb-0.5 text-xs font-medium tracking-wide uppercase">
                 Phone Numbers
               </p>
               <div className="min-w-0 space-y-1">
@@ -255,56 +279,65 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
                   )
                 )}
                 {!customer.phone && !customer.phones?.length && (
-                  <p className="text-base text-on-surface">-</p>
+                  <p className="text-on-surface text-base">-</p>
                 )}
               </div>
             </div>
           </div>
         </section>
 
-        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
-          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        <section className="divide-outline border-outline bg-surface-container-lowest divide-y rounded-2xl border">
+          <div className="bg-surface-container-low rounded-t-2xl px-5 py-3">
+            <h3 className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Site Address
             </h3>
           </div>
           <div className="space-y-3 px-5 py-4">
             {customer.properties?.length ? (
               customer.properties.map((property, index) => (
-                <div key={`${property.label}-${index}`} className="rounded-xl border border-outline bg-surface-container-low px-4 py-3">
+                <div
+                  key={`${property.label}-${index}`}
+                  className="border-outline bg-surface-container-low rounded-xl border px-4 py-3"
+                >
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-on-surface">{property.label || `Site ${index + 1}`}</p>
+                    <p className="text-on-surface font-medium">
+                      {property.label || `Site ${index + 1}`}
+                    </p>
                     {index === 0 && (
-                      <span className="rounded-full bg-success-container px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-primary">
+                      <span className="bg-success-container text-primary rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
                         Primary
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-on-surface-variant">
+                  <p className="text-on-surface-variant mt-1 text-sm">
                     {formatPropertyAddress(property) || '-'}
                   </p>
                   {property.notes && (
-                    <p className="mt-2 text-sm text-on-surface-variant">{property.notes}</p>
+                    <p className="text-on-surface-variant mt-2 text-sm">
+                      {property.notes}
+                    </p>
                   )}
                 </div>
               ))
             ) : (
-              <p className="text-base text-on-surface">-</p>
+              <p className="text-on-surface text-base">-</p>
             )}
           </div>
         </section>
 
-        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
-          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        <section className="divide-outline border-outline bg-surface-container-lowest divide-y rounded-2xl border">
+          <div className="bg-surface-container-low rounded-t-2xl px-5 py-3">
+            <h3 className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Billing Address
             </h3>
           </div>
           <div className="px-5 py-4">
             {customer.billing_same_as_site !== false ? (
-              <p className="text-sm text-on-surface-variant">Same as site address</p>
+              <p className="text-on-surface-variant text-sm">
+                Same as site address
+              </p>
             ) : (
-              <p className="text-base text-on-surface">
+              <p className="text-on-surface text-base">
                 {formatBillingAddress(customer) || '-'}
               </p>
             )}
@@ -312,68 +345,75 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
         </section>
 
         {customer.notes && (
-          <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
-            <div className="rounded-t-2xl bg-surface-container-low px-5 py-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+          <section className="divide-outline border-outline bg-surface-container-lowest divide-y rounded-2xl border">
+            <div className="bg-surface-container-low rounded-t-2xl px-5 py-3">
+              <h3 className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
                 Notes
               </h3>
             </div>
             <div className="px-5 py-4">
-              <p className="whitespace-pre-wrap text-base text-on-surface">{customer.notes}</p>
+              <p className="text-on-surface text-base whitespace-pre-wrap">
+                {customer.notes}
+              </p>
             </div>
           </section>
         )}
 
         {/* ── Quotes ── */}
-        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
-          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3 flex items-center justify-between gap-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        <section className="divide-outline border-outline bg-surface-container-lowest divide-y rounded-2xl border">
+          <div className="bg-surface-container-low flex items-center justify-between gap-3 rounded-t-2xl px-5 py-3">
+            <h3 className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Quotes
               {quotes.length > 0 && (
-                <span className="ml-2 text-on-surface">{quotes.length}</span>
+                <span className="text-on-surface ml-2">{quotes.length}</span>
               )}
             </h3>
             <Link
               href={`/quotes/new?customer_id=${customer.id}`}
-              className="inline-flex min-h-11 items-center rounded-lg text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-3 text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
             >
               + New Quote
             </Link>
           </div>
           {quotes.length === 0 ? (
             <div className="px-5 py-4">
-              <p className="text-sm text-on-surface-variant">No quotes yet.</p>
+              <p className="text-on-surface-variant text-sm">No quotes yet.</p>
             </div>
           ) : (
-            <ul className="divide-y divide-outline">
+            <ul className="divide-outline divide-y">
               {quotes.map((q) => {
+                const normalizedStatus = q.status.trim().toLowerCase();
+                const label = formatStatusLabel(q.status);
                 return (
                   <li key={q.id}>
                     <Link
                       href={`/quotes/${q.id}`}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low active:bg-surface-container-low transition-colors"
+                      className="hover:bg-surface-container-low active:bg-surface-container-low focus-visible:ring-primary/30 flex items-center gap-3 rounded-xl px-5 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-on-surface">
+                          <span className="text-on-surface text-sm font-semibold">
                             {q.quote_number}
                           </span>
                           {q.title && (
-                            <span className="truncate text-sm text-on-surface-variant">
+                            <span className="text-on-surface-variant truncate text-sm">
                               · {q.title}
                             </span>
                           )}
                         </div>
-                        <p className="mt-0.5 text-xs text-on-surface-variant">
+                        <p className="text-on-surface-variant mt-0.5 text-xs">
                           {formatDate(q.created_at)}
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
                         <StatusBadge
-                          tone={QUOTE_STATUS_TONE[q.status]}
-                          label={q.status}
+                          tone={resolveStatusTone(
+                            normalizedStatus,
+                            QUOTE_STATUS_TONE
+                          )}
+                          label={label}
                         />
-                        <span className="text-sm font-medium text-on-surface">
+                        <span className="text-on-surface text-sm font-medium">
                           {formatAUD(q.total_cents)}
                         </span>
                       </div>
@@ -386,47 +426,52 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
         </section>
 
         {/* ── Invoices ── */}
-        <section className="divide-y divide-outline rounded-2xl border border-outline bg-surface-container-lowest">
-          <div className="rounded-t-2xl bg-surface-container-low px-5 py-3 flex items-center justify-between gap-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
+        <section className="divide-outline border-outline bg-surface-container-lowest divide-y rounded-2xl border">
+          <div className="bg-surface-container-low flex items-center justify-between gap-3 rounded-t-2xl px-5 py-3">
+            <h3 className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
               Invoices
               {invoices.length > 0 && (
-                <span className="ml-2 text-on-surface">{invoices.length}</span>
+                <span className="text-on-surface ml-2">{invoices.length}</span>
               )}
             </h3>
             <Link
               href={`/invoices/new?customer_id=${customer.id}`}
-              className="inline-flex min-h-11 items-center rounded-lg text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="text-primary hover:bg-primary/10 focus-visible:ring-primary/30 inline-flex min-h-11 items-center rounded-xl px-3 text-xs font-medium focus-visible:ring-2 focus-visible:outline-none"
             >
               + New Invoice
             </Link>
           </div>
           {invoices.length === 0 ? (
             <div className="px-5 py-4">
-              <p className="text-sm text-on-surface-variant">No invoices yet.</p>
+              <p className="text-on-surface-variant text-sm">
+                No invoices yet.
+              </p>
             </div>
           ) : (
-            <ul className="divide-y divide-outline">
+            <ul className="divide-outline divide-y">
               {invoices.map((inv) => {
+                const normalizedStatus = inv.status.trim().toLowerCase();
                 const isOverdue = inv.status === 'overdue';
                 return (
                   <li key={inv.id}>
                     <Link
                       href={`/invoices/${inv.id}`}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low active:bg-surface-container-low transition-colors"
+                      className="hover:bg-surface-container-low active:bg-surface-container-low focus-visible:ring-primary/30 flex items-center gap-3 rounded-xl px-5 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-on-surface">
+                          <span className="text-on-surface text-sm font-semibold">
                             {inv.invoice_number}
                           </span>
                           {inv.quote_stage_label && (
-                            <span className="text-xs text-on-surface-variant">
+                            <span className="text-on-surface-variant text-xs">
                               · {inv.quote_stage_label}
                             </span>
                           )}
                         </div>
-                        <p className={`mt-0.5 text-xs ${isOverdue ? 'text-error font-medium' : 'text-on-surface-variant'}`}>
+                        <p
+                          className={`mt-0.5 text-xs ${isOverdue ? 'text-error font-medium' : 'text-on-surface-variant'}`}
+                        >
                           {inv.due_date
                             ? `Due ${formatDate(inv.due_date)}`
                             : formatDate(inv.created_at)}
@@ -434,10 +479,13 @@ export function CustomerDetail({ customer, quotes = [], invoices = [] }: Props) 
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
                         <StatusBadge
-                          tone={INVOICE_STATUS_TONE[inv.status]}
-                          label={inv.status}
+                          tone={resolveStatusTone(
+                            normalizedStatus,
+                            INVOICE_STATUS_TONE
+                          )}
+                          label={formatStatusLabel(inv.status)}
                         />
-                        <span className="text-sm font-medium text-on-surface">
+                        <span className="text-on-surface text-sm font-medium">
                           {formatAUD(inv.total_cents)}
                         </span>
                       </div>

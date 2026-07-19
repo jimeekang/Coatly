@@ -1,10 +1,11 @@
 'use client';
 
-import { useTransition, useOptimistic, useState } from 'react';
+import { useState, useTransition } from 'react';
 import { setPublicQuoteOptionalLineItemSelection } from '@/modules/quotes/application/actions';
 import { formatAUD } from '@/utils/format';
-import { SectionLabel } from '@/components/shared/SectionLabel';
 import { groupQuoteLineItemsByCategory } from '@/modules/quotes/domain/quotes';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 
 interface OptionalItem {
   id: string;
@@ -25,6 +26,11 @@ interface PublicOptionalItemsProps {
   onSelectionsChange: (selectedIds: Set<string>) => void;
 }
 
+interface SelectionOverride {
+  baseIsSelected: boolean;
+  isSelected: boolean;
+}
+
 export function PublicOptionalItems({
   quoteToken,
   items,
@@ -33,22 +39,37 @@ export function PublicOptionalItems({
 }: PublicOptionalItemsProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [selectionOverrides, setSelectionOverrides] = useState<
+    Record<string, SelectionOverride>
+  >({});
 
-  const [optimisticItems, toggleOptimistic] = useOptimistic(
-    items,
-    (current, { id, isSelected }: { id: string; isSelected: boolean }) =>
-      current.map((item) =>
-        item.id === id ? { ...item, is_selected: isSelected } : item
-      )
-  );
+  const displayItems = items.map((item) => {
+    const override = selectionOverrides[item.id];
+    if (!override || item.is_selected !== override.baseIsSelected) {
+      return item;
+    }
+    return { ...item, is_selected: override.isSelected };
+  });
 
   const handleToggle = (item: OptionalItem) => {
     if (!canEdit || isPending) return;
     const next = !item.is_selected;
+    const hadPreviousOverride = Object.prototype.hasOwnProperty.call(
+      selectionOverrides,
+      item.id
+    );
+    const previousOverride = selectionOverrides[item.id];
+
+    setSelectionOverrides((current) => ({
+      ...current,
+      [item.id]: {
+        baseIsSelected: item.is_selected,
+        isSelected: next,
+      },
+    }));
 
     startTransition(async () => {
       setError(null);
-      toggleOptimistic({ id: item.id, isSelected: next });
 
       const fd = new FormData();
       fd.append('quoteToken', quoteToken);
@@ -57,22 +78,48 @@ export function PublicOptionalItems({
       const result = await setPublicQuoteOptionalLineItemSelection(fd);
 
       if (result.error) {
-        toggleOptimistic({ id: item.id, isSelected: item.is_selected });
+        setSelectionOverrides((current) => {
+          const nextOverrides = { ...current };
+          if (hadPreviousOverride && previousOverride) {
+            nextOverrides[item.id] = previousOverride;
+          } else {
+            delete nextOverrides[item.id];
+          }
+          return nextOverrides;
+        });
         setError(result.error);
         return;
       }
 
       const nextSelected = new Set(result.selectedIds);
+      setSelectionOverrides((current) => {
+        const nextOverrides = { ...current };
+
+        for (const currentItem of items) {
+          const isSelected = nextSelected.has(currentItem.id);
+
+          if (isSelected === currentItem.is_selected) {
+            delete nextOverrides[currentItem.id];
+          } else {
+            nextOverrides[currentItem.id] = {
+              baseIsSelected: currentItem.is_selected,
+              isSelected,
+            };
+          }
+        }
+
+        return nextOverrides;
+      });
       onSelectionsChange(nextSelected);
     });
   };
 
-  const selectedTotal = optimisticItems
+  const selectedTotal = displayItems
     .filter((i) => i.is_selected)
     .reduce((sum, i) => sum + i.total_cents, 0);
 
-  const selectedCount = optimisticItems.filter((i) => i.is_selected).length;
-  const groupedItems = groupQuoteLineItemsByCategory(optimisticItems);
+  const selectedCount = displayItems.filter((i) => i.is_selected).length;
+  const groupedItems = groupQuoteLineItemsByCategory(displayItems);
 
   if (!canEdit && selectedCount === 0) {
     return (
@@ -84,18 +131,14 @@ export function PublicOptionalItems({
 
   return (
     <div className="space-y-3">
-      {error && (
-        <div className="rounded-xl border border-error/30 bg-error-container/50 px-4 py-3 text-sm text-on-error-container">
-          {error}
-        </div>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
 
       {/* Running total pill */}
       {selectedTotal > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-success/30 bg-success-container px-4 py-2.5">
+        <div className="border-success/30 bg-success-container flex items-center justify-between rounded-2xl border px-4 py-2.5">
           <div className="flex items-center gap-2">
             <svg
-              className="h-4 w-4 text-on-success-container"
+              className="text-on-success-container h-4 w-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -107,11 +150,11 @@ export function PublicOptionalItems({
                 d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span className="text-sm font-medium text-on-success-container">
+            <span className="text-on-success-container text-sm font-medium">
               {selectedCount} add-on{selectedCount !== 1 ? 's' : ''} selected
             </span>
           </div>
-          <span className="text-sm font-bold text-on-success-container">
+          <span className="text-on-success-container text-sm font-bold">
             +{formatAUD(selectedTotal)}
           </span>
         </div>
@@ -131,7 +174,7 @@ export function PublicOptionalItems({
                   disabled={!canEdit || isPending}
                   onClick={() => handleToggle(item)}
                   className={[
-                    'group w-full rounded-xl border-2 text-left transition-all duration-150',
+                    'group focus-visible:ring-primary/30 min-h-11 w-full rounded-xl border-2 text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
                     canEdit
                       ? 'cursor-pointer active:scale-[0.99]'
                       : 'cursor-default',
@@ -152,7 +195,7 @@ export function PublicOptionalItems({
                     >
                       {selected && (
                         <svg
-                          className="h-3 w-3 text-on-primary"
+                          className="text-on-primary h-3 w-3"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -189,7 +232,7 @@ export function PublicOptionalItems({
                           </p>
                           <span
                             className={[
-                              'mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase',
+                              'mt-1 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase',
                               selected
                                 ? 'bg-primary/10 text-primary'
                                 : 'bg-warning-container text-on-warning-container',

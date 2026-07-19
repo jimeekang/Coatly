@@ -110,4 +110,17 @@ describe('QuoteDetailPage', () => {
       screen.getByText('Quote email sent to accounts@example.com.')
     ).toBeInTheDocument();
   });
+
+  it('uses the centralized info tone for sent quote status', async () => {
+    render(
+      await QuoteDetailPage({
+        params: Promise.resolve({ id: 'quote-1' }),
+      })
+    );
+
+    expect(screen.getByText('Sent')).toHaveClass(
+      'bg-primary/10',
+      'text-primary'
+    );
+  });
 });

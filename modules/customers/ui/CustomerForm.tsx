@@ -17,8 +17,8 @@ import {
 } from '@/components/forms/FormField';
 import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
 import { FormSection } from '@/components/forms/FormSection';
-import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import type { ParsedGooglePlaceAddress } from '@/lib/google-places-address';
 
 const AU_STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
@@ -355,7 +355,7 @@ export function CustomerForm({
             {useCompanyName ? (
               <div className={formDisabledControlClassName}>
                 {form.company_name || (
-                  <span className="text-on-surface-variant">
+                  <span className="text-on-surface-variant-variant">
                     Auto-filled from company name
                   </span>
                 )}
@@ -408,9 +408,9 @@ export function CustomerForm({
               <button
                 type="button"
                 onClick={addEmail}
-                className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
+                className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/30 min-h-11 rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
-                + New Email
+                Add Email
               </button>
             </div>
             <div className="flex flex-col gap-2">
@@ -431,7 +431,7 @@ export function CustomerForm({
                     <button
                       type="button"
                       onClick={() => removeEmail(index)}
-                      className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-12 shrink-0 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
+                      className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/30 min-h-12 shrink-0 rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
                       Remove
                     </button>
@@ -443,13 +443,15 @@ export function CustomerForm({
 
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
-              <label className={formLabelClassName}>Phone Numbers{OPTIONAL}</label>
+              <label className={formLabelClassName}>
+                Phone Numbers{OPTIONAL}
+              </label>
               <button
                 type="button"
                 onClick={addPhone}
-                className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
+                className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/30 min-h-11 rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
-                + New Phone
+                Add Phone
               </button>
             </div>
             <div className="flex flex-col gap-2">
@@ -470,7 +472,7 @@ export function CustomerForm({
                     <button
                       type="button"
                       onClick={() => removePhone(index)}
-                      className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-12 shrink-0 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
+                      className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/30 min-h-12 shrink-0 rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     >
                       Remove
                     </button>
@@ -490,16 +492,16 @@ export function CustomerForm({
           <button
             type="button"
             onClick={addProperty}
-            className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
+            className="border-outline-variant text-on-surface bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/30 min-h-11 rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
-            + New Site
+            Add Site
           </button>
         </div>
         <div className="flex flex-col gap-4">
           {form.properties.map((property, index) => (
             <div
               key={index}
-              className="border-outline-variant bg-surface-container-lowest rounded-xl border p-4"
+              className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4"
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
@@ -509,7 +511,7 @@ export function CustomerForm({
                   <button
                     type="button"
                     onClick={() => removeProperty(index)}
-                    className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/40 min-h-11 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2"
+                    className="border-outline-variant text-on-surface-variant bg-surface-container-lowest hover:bg-surface-container-low focus-visible:ring-primary/30 min-h-11 rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
                     Remove
                   </button>
@@ -548,7 +550,9 @@ export function CustomerForm({
                   />
                 </div>
                 <div>
-                  <label className={formLabelClassName}>Unit / Apt{OPTIONAL}</label>
+                  <label className={formLabelClassName}>
+                    Unit / Apt{OPTIONAL}
+                  </label>
                   <input
                     type="text"
                     autoComplete={index === 0 ? 'address-line2' : 'off'}
@@ -575,7 +579,9 @@ export function CustomerForm({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={formLabelClassName}>State{OPTIONAL}</label>
+                    <label className={formLabelClassName}>
+                      State{OPTIONAL}
+                    </label>
                     <select
                       value={property.state}
                       onChange={(event) =>
@@ -592,7 +598,9 @@ export function CustomerForm({
                     </select>
                   </div>
                   <div>
-                    <label className={formLabelClassName}>Postcode{OPTIONAL}</label>
+                    <label className={formLabelClassName}>
+                      Postcode{OPTIONAL}
+                    </label>
                     <input
                       type="text"
                       autoComplete={index === 0 ? 'postal-code' : 'off'}
@@ -629,7 +637,7 @@ export function CustomerForm({
 
       {/* ── Billing Address ── */}
       <FormSection title="Billing Address">
-        <div className="border-outline-variant bg-surface-container-lowest rounded-xl border p-4">
+        <div className="border-outline-variant bg-surface-container-lowest rounded-2xl border p-4">
           <label className="flex cursor-pointer items-center gap-3 select-none">
             <input
               type="checkbox"
@@ -650,7 +658,9 @@ export function CustomerForm({
           {!form.billing_same_as_site && (
             <div className="mt-4 flex flex-col gap-4">
               <div>
-                <label className={formLabelClassName}>Street Address{OPTIONAL}</label>
+                <label className={formLabelClassName}>
+                  Street Address{OPTIONAL}
+                </label>
                 <GoogleAddressAutocomplete
                   autoComplete="billing address-line1"
                   placeholder="e.g. 12 Harbor St"
@@ -666,7 +676,9 @@ export function CustomerForm({
                 />
               </div>
               <div>
-                <label className={formLabelClassName}>Unit / Apt{OPTIONAL}</label>
+                <label className={formLabelClassName}>
+                  Unit / Apt{OPTIONAL}
+                </label>
                 <input
                   type="text"
                   autoComplete="billing address-line2"
@@ -719,7 +731,9 @@ export function CustomerForm({
                   </select>
                 </div>
                 <div>
-                  <label className={formLabelClassName}>Postcode{OPTIONAL}</label>
+                  <label className={formLabelClassName}>
+                    Postcode{OPTIONAL}
+                  </label>
                   <input
                     type="text"
                     autoComplete="billing postal-code"
@@ -762,28 +776,28 @@ export function CustomerForm({
 
       {/* ── CTA — 하단 고정 ── */}
       <FormFooter>
-          <FormFooterButton
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              if (onCancel) {
-                onCancel();
-                return;
-              }
-              router.back();
-            }}
-            disabled={loading}
-            className="flex-1 font-medium"
-          >
-            {cancelLabel}
-          </FormFooterButton>
-          <FormFooterButton
-            type="submit"
-            disabled={loading || !canSubmit}
-            className="flex-[2]"
-          >
-            {loading ? 'Saving…' : submitLabel}
-          </FormFooterButton>
+        <FormFooterButton
+          type="button"
+          variant="secondary"
+          onClick={() => {
+            if (onCancel) {
+              onCancel();
+              return;
+            }
+            router.back();
+          }}
+          disabled={loading}
+          className="flex-1 font-medium"
+        >
+          {cancelLabel}
+        </FormFooterButton>
+        <FormFooterButton
+          type="submit"
+          disabled={loading || !canSubmit}
+          className="flex-[2]"
+        >
+          {loading ? 'Saving…' : submitLabel}
+        </FormFooterButton>
       </FormFooter>
     </form>
   );

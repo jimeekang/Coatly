@@ -13,8 +13,8 @@ export function BackButton({ href, label, className }: BackButtonProps) {
       href={href}
       aria-label={label}
       className={cn(
-        'flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors hover:bg-primary-container hover:text-on-primary-container active:bg-outline-variant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-        className,
+        'bg-surface-container-low text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container active:bg-outline-variant focus-visible:ring-primary focus-visible:ring-offset-surface flex h-11 w-11 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+        className
       )}
     >
       <svg
@@ -27,6 +27,7 @@ export function BackButton({ href, label, className }: BackButtonProps) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        aria-hidden="true"
       >
         <path d="M15 18l-6-6 6-6" />
       </svg>

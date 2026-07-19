@@ -3,7 +3,7 @@ import { Manrope } from 'next/font/google';
 import { APP_DESCRIPTION, APP_NAME } from '@/config/constants';
 import { ToastProvider } from '@/components/ui/toast';
 import './globals.css';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 // Single app typeface. `--font-sans` feeds the Tailwind `font-sans` utility
 // and the `--font-heading` alias in globals.css.
@@ -41,8 +41,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en-AU" suppressHydrationWarning className={cn("h-full", manrope.variable, "font-sans")}>
-      <body suppressHydrationWarning className="min-h-full bg-surface text-on-surface">
+    <html
+      lang="en-AU"
+      suppressHydrationWarning
+      className={cn('h-full', manrope.variable, 'font-sans')}
+    >
+      <body
+        suppressHydrationWarning
+        className="bg-surface text-on-surface min-h-full"
+      >
         {children}
         <ToastProvider />
       </body>

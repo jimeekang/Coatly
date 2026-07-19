@@ -1,7 +1,7 @@
 # Audit & Tech Debt
 
 > Owner: **Claude** (Opus 4.8 · extra) — 분석/감사 산출물. 항목 실행은 Codex(high)가 담당.
-> 활성 리스크와 해결 이력을 한 파일에 압축해 추적합니다. 새 항목은 사용자 영향, 재현 조건, 담당 도구, 수용 기준을 포함해야 합니다. 2026-07-05 전체 앱 분석(12-agent 교차 검증) 결과 반영.
+> 활성 리스크와 해결 이력을 한 파일에 압축해 추적합니다. 새 항목은 사용자 영향, 재현 조건, 담당 도구, 수용 기준을 포함해야 합니다. 2026-07-05 전체 앱 분석(12-agent 교차 검증) 결과 반영. 2026-07-12 상품화/UX 분석(22-agent, [../../COMMERCIALIZATION.md](../../COMMERCIALIZATION.md))으로 A17–A20 추가.
 
 ## Active Findings
 
@@ -24,6 +24,10 @@
 | A15 | P2 | 죽은 라우트/IA 정리 | 부분 해결 | `/demo/schedule` 프로덕션 `notFound()` 가드 완료, `JobsWorkspace` 삭제 완료(2026-07-19). 잔여: `/jobs` UI 없는 리다이렉트 스텁 경유, `customers/[id]/edit` 부재 일관성 |
 | A21 | P1 | 전앱 디자인/UX 감사 2026-07-12 | **해결(2026-07-19)** | 91건 집행 완료 — C1 발송 액션, C2 삭제 확인, text-outline 대비, ErrorAlert/StatusBadge/ConfirmDialog 채택, loading.tsx 9 라우트, 온보딩 최소필수, 대시보드 Revenue 정의 통일 등. build/lint/test 그린. 잔여 long-tail 4건: [DESIGN-AUDIT-2026-07-12.md](./DESIGN-AUDIT-2026-07-12.md) §5 |
 | A16 | P2 | 동시성/오프라인 | 열림 | `generate_quote_number` RPC 동시 저장 시 번호 충돌 검토, PWA manifest만 있고 service worker/offline draft 보존 부재(현장 약한 네트워크 리스크 — A1과 연관) |
+| A17 | P1 | Quote 발송 진실성 | 열림 | 견적 상세에 Send/Resend 부재(재발송 = 편집 폼 전체 재제출), 영구 발송 기록 없음(`?emailSent=1` 배너뿐), 수동 "Mark as sent" 부재 — 직접/SMS 전달 견적이 Draft로 남아 파이프라인·follow-up 데이터 오염 |
+| A18 | P1 | 고객 이메일 reply_to 부재 | 열림 | 전 고객 메일이 전역 발신 주소로 발송, `reply_to` 사용 0건 — 고객이 답장(견적에 대한 가장 흔한 반응)하면 painter가 못 받음. painter 사업 이메일 reply_to + 발신 표시명 설정 |
+| A19 | P1 | Trial 부재 하드 페이월 | 열림 | 첫 견적 생성 전 결제 요구(checkout `trial_period_days` 미설정, `subscription-sync`는 `trialing`을 이미 active 취급) — Excel 대비 평가 순간의 최대 adoption 장벽. 30일 무카드 trial + A$39 단일 플랜 개편 |
+| A20 | P2 | 확인 없는 파괴적 액션 | 열림 | price item 삭제 즉시 실행(확인/undo 없음, 36px 히트영역에서 Edit 인접), 견적 "Approve Quote" 원탭 즉시 전환(복구 경로 없음) — quote delete의 DeleteModal 패턴으로 통일 |
 
 ## Finding Details
 
@@ -107,6 +111,9 @@ Exterior estimate path는 구현되어 있으나 과거 감사에서 편집 시 
 | TD10 | P1 | Sentry/구조화 로깅 도입 (A12) | Codex |
 | TD11 | P2 | ~~bg-white 치환·button.tsx~~ 완료(2026-07-19). 잔여: input↔FormField 정본화, types/database.ts 재생성, QuickEstimateTab NumericInput (A14 잔여) | Codex |
 | TD12 | P2 | demo route gating, /jobs 스텁 직결, profiles/businesses 정본화 (A13/A15) | Codex |
+| TD13 | P1 | Send/Resend + 발송 기록 + mark-as-sent + reply_to (A17/A18) | Claude plan → Codex |
+| TD14 | P1 | 30일 무카드 trial + A$39 단일 플랜 개편 (A19) | Claude plan → Codex |
+| TD15 | P2 | 파괴적 액션 확인 다이얼로그 통일 (A20) | Codex |
 
 ## Operational Checklist
 
