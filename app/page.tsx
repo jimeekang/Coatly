@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { BrandLogo } from '@/components/branding/BrandLogo';
-import { SectionLabel } from '@/components/shared/SectionLabel';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { APP_DESCRIPTION, APP_NAME } from '@/config/constants';
 
 export const metadata: Metadata = {

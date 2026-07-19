@@ -157,7 +157,10 @@ describe('PublicQuoteClient', () => {
     );
 
     const [status] = screen.getAllByText('Approved');
-    expect(status).toHaveClass('bg-success-container', 'text-success');
+    expect(status).toHaveClass(
+      'bg-success-container',
+      'text-on-success-container'
+    );
     expect(status.parentElement).toHaveClass('bg-surface-container-lowest');
     expect(screen.getByText('Prepared For')).toHaveClass(
       'font-bold',

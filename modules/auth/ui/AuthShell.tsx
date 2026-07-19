@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BrandLogo } from '@/components/branding/BrandLogo';
-import { SectionLabel } from '@/components/shared/SectionLabel';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 
 type AuthShellProps = {
   eyebrow?: string;
@@ -35,7 +35,7 @@ export function AuthShell({
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center sm:min-h-[calc(100vh-4rem)]">
         <div className="grid w-full items-center gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,430px)] lg:gap-10">
           <section className="hidden lg:block lg:pr-4">
-            <SectionLabel className="tracking-[0.18em] text-primary/80">
+            <SectionLabel className="text-primary/80">
               {eyebrow}
             </SectionLabel>
             <div className="mt-4">
@@ -50,7 +50,7 @@ export function AuthShell({
             <ol className="mt-8 divide-y divide-outline-variant border-y border-outline-variant">
               {sideHighlights.map((highlight, index) => (
                 <li key={highlight} className="grid grid-cols-[2.5rem_1fr] gap-3 py-4">
-                  <span className="font-mono text-xs font-bold tracking-[0.14em] text-primary">
+                  <span className="text-primary font-mono text-xs font-bold">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <p className="text-sm leading-6 text-on-surface">{highlight}</p>
@@ -65,7 +65,7 @@ export function AuthShell({
                 <div className="mb-5 lg:hidden">
                   <BrandLogo width={176} height={40} priority />
                 </div>
-                <SectionLabel className="tracking-[0.18em] text-primary/80">
+                <SectionLabel className="text-primary/80">
                   {eyebrow}
                 </SectionLabel>
                 <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.02em] text-on-surface">

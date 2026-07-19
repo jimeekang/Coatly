@@ -66,7 +66,7 @@ describe('ScheduleCalendar modal scroll lock', () => {
     const user = userEvent.setup();
     renderCalendar();
 
-    await user.click(screen.getAllByRole('button', { name: 'New Event' })[0]);
+    await user.click(screen.getAllByRole('button', { name: /New Event/ })[0]);
     expect(document.body.style.overflow).toBe('hidden');
 
     await user.click(screen.getByRole('button', { name: 'Close' }));

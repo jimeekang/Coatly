@@ -121,7 +121,7 @@ describe('auth visual conformance', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
-        name: 'The calm admin layer for busy painting teams.',
+        name: 'Less admin. More time on the tools.',
       })
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toHaveClass(

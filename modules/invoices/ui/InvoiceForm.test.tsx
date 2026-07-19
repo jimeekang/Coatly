@@ -65,7 +65,7 @@ describe('InvoiceForm', () => {
 
     expect(screen.getByText('Paid', { selector: 'span' })).toHaveClass(
       'bg-success-container',
-      'text-success',
+      'text-on-success-container',
       'font-bold',
       'uppercase'
     );
