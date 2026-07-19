@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { Pencil } from 'lucide-react';
 import {
@@ -121,6 +122,8 @@ export default async function QuoteDetailPage({
     quote && linkedInvoiceSummary
       ? Math.max(quote.total_cents - linkedInvoiceSummary.billed_total_cents, 0)
       : 0;
+  const approvalSignatureIsImage =
+    quote?.approval_signature?.startsWith('data:image/') ?? false;
 
   // Flatten all scope rows: rooms→surfaces + included line items
   const scopeRows = quote
@@ -211,9 +214,9 @@ export default async function QuoteDetailPage({
           </div>
 
           {/* ── detail-grid: main card + sidebar ── */}
-          <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
             {/* ── Main card: Line items + Totals ── */}
-            <div className="bg-surface-container-lowest border-outline-variant self-start rounded-2xl border shadow-sm">
+            <div className="bg-surface-container-lowest border-outline-variant min-w-0 self-start rounded-2xl border shadow-sm">
               <div className="p-4">
                 <p className="text-on-surface mb-3 text-[13px] font-bold tracking-[-0.005em]">
                   Line items
@@ -404,7 +407,7 @@ export default async function QuoteDetailPage({
             </div>
 
             {/* ── Sidebar: meta-boxes ── */}
-            <div className="flex flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-4">
               {/* Customer meta-box */}
               <div className="border-outline-variant bg-surface-container-low rounded-2xl border p-4 shadow-sm">
                 <SectionLabel className="text-on-surface mb-1.5">
@@ -567,7 +570,7 @@ export default async function QuoteDetailPage({
 
               {/* Approval */}
               {quote.approved_at && (
-                <div className="border-success/20 bg-success-container rounded-2xl border p-4 shadow-sm">
+                <div className="border-success/20 bg-success-container min-w-0 overflow-hidden rounded-2xl border p-4 shadow-sm">
                   <SectionLabel className="text-success mb-1.5">
                     Approved
                   </SectionLabel>
@@ -584,9 +587,19 @@ export default async function QuoteDetailPage({
                       {quote.approved_by_email}
                     </p>
                   )}
-                  {quote.approval_signature && (
-                    <p className="text-on-surface-variant mt-1 text-xs">
-                      Sig: {quote.approval_signature}
+                  {quote.approval_signature && approvalSignatureIsImage && (
+                    <Image
+                      src={quote.approval_signature}
+                      alt={`Signature by ${quote.approved_by_name || 'customer'}`}
+                      width={320}
+                      height={96}
+                      unoptimized
+                      className="mt-3 max-h-24 w-full max-w-xs rounded-xl border border-success/20 bg-surface-container-lowest object-contain p-2"
+                    />
+                  )}
+                  {quote.approval_signature && !approvalSignatureIsImage && (
+                    <p className="mt-1 break-words text-xs text-on-surface-variant">
+                      Signed: {quote.approval_signature}
                     </p>
                   )}
                 </div>
