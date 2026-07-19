@@ -122,9 +122,7 @@ export function PublicApprovalForm({
 
         {approvalSignature && (
           <div>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-              Signature on file
-            </p>
+            <SectionLabel className="mb-2">Signature on file</SectionLabel>
             {isSignatureImage(approvalSignature) ? (
               <div className="overflow-hidden rounded-xl border border-outline bg-surface-container-low p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -152,40 +150,34 @@ export function PublicApprovalForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1.5 text-sm">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-            Your Name
-          </span>
+          <SectionLabel as="span">Your Name</SectionLabel>
           <input
             name="approvedByName"
             type="text"
             required
             disabled={!canApprove || isPending || isRejectPending}
             defaultValue={customerName}
-            className="min-h-12 rounded-xl border border-outline bg-white px-4 py-3 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary-container focus:ring-2 focus:ring-primary-fixed/40 disabled:bg-surface-container-low"
+            className="min-h-12 rounded-xl border border-outline bg-surface-container-lowest px-4 py-3 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container-low"
             placeholder="Full name"
           />
         </label>
 
         <label className="grid gap-1.5 text-sm">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-            Your Email
-          </span>
+          <SectionLabel as="span">Your Email</SectionLabel>
           <input
             name="approvedByEmail"
             type="email"
             required
             disabled={!canApprove || isPending || isRejectPending}
             defaultValue={customerEmail ?? ''}
-            className="min-h-12 rounded-xl border border-outline bg-white px-4 py-3 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary-container focus:ring-2 focus:ring-primary-fixed/40 disabled:bg-surface-container-low"
+            className="min-h-12 rounded-xl border border-outline bg-surface-container-lowest px-4 py-3 text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container-low"
             placeholder="name@example.com"
           />
         </label>
       </div>
 
       <div className="grid gap-1.5">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-          Signature
-        </span>
+        <SectionLabel as="span">Signature</SectionLabel>
         <SignaturePad
           value={signature}
           onChange={setSignature}
@@ -193,14 +185,7 @@ export function PublicApprovalForm({
         />
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-error/30 bg-error-container/50 px-4 py-3">
-          <svg className="h-4 w-4 shrink-0 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-          </svg>
-          <p className="text-sm text-on-error-container">{error}</p>
-        </div>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
 
       {canApprove ? (
         <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -229,8 +214,8 @@ export function PublicApprovalForm({
           <button
             type="button"
             disabled={isPending || isRejectPending}
-            onClick={handleReject}
-            className="inline-flex min-h-14 w-full items-center justify-center rounded-xl border border-error/40 bg-white px-6 py-4 text-base font-bold text-on-error-container shadow-sm transition-all hover:bg-error-container/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-outline disabled:text-on-surface-variant sm:w-auto"
+            onClick={handleRejectClick}
+            className="inline-flex min-h-14 w-full items-center justify-center rounded-xl border border-error/40 bg-surface-container-lowest px-6 py-4 text-base font-bold text-on-error-container shadow-sm transition-all hover:bg-error-container/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-outline disabled:text-on-surface-variant sm:w-auto"
           >
             {isRejectPending ? 'Declining...' : 'Decline Quote'}
           </button>
@@ -243,6 +228,17 @@ export function PublicApprovalForm({
           <p className="text-sm text-on-surface-variant">Approval is not available for this quote.</p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showDeclineConfirm}
+        title="Decline quote?"
+        message="This will decline the quote and can't be undone. The painter will be notified."
+        confirmLabel="Decline quote"
+        cancelLabel="Keep reviewing"
+        destructive
+        onConfirm={handleRejectConfirm}
+        onCancel={() => setShowDeclineConfirm(false)}
+      />
     </form>
   );
 }

@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 
 export default function LandingPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[radial-gradient(circle_at_top,rgba(139,94,60,0.12),transparent_38%),linear-gradient(180deg,#fcf9f4_0%,#f2eee9_100%)] px-6 py-10">
-      <div className="max-w-md rounded-[28px] border border-white/70 bg-white/90 p-8 text-center shadow-[0_24px_60px_rgba(22,42,42,0.08)] backdrop-blur">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-6 py-10">
+      <div className="max-w-md rounded-2xl border border-outline-variant bg-surface-container-lowest p-8 text-center shadow-md">
         <div className="mb-5 flex justify-center">
           <BrandLogo width={220} height={50} priority />
         </div>
@@ -23,13 +23,13 @@ export default function LandingPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/login"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Login
           </Link>
           <Link
             href="/signup"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-6 py-3 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-6 py-3 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Sign Up Free
           </Link>

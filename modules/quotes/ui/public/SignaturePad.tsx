@@ -149,9 +149,9 @@ export function SignaturePad({ value, onChange, disabled }: SignaturePadProps) {
             disabled={disabled}
             onClick={() => switchTab(t)}
             className={[
-              'flex-1 rounded-lg py-2 text-sm font-medium transition-all',
+              'inline-flex min-h-11 flex-1 items-center justify-center rounded-lg py-2 text-sm font-medium transition-all',
               tab === t
-                ? 'bg-white text-on-surface shadow-sm'
+                ? 'bg-surface-container-lowest text-on-surface shadow-sm'
                 : 'text-on-surface-variant hover:text-on-surface',
               disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
             ].join(' ')}
@@ -166,7 +166,7 @@ export function SignaturePad({ value, onChange, disabled }: SignaturePadProps) {
         <div className="space-y-2">
           <div
             className={[
-              'relative overflow-hidden rounded-xl border-2 bg-white transition-colors',
+              'relative overflow-hidden rounded-xl border-2 bg-surface-container-lowest transition-colors',
               disabled
                 ? 'border-outline opacity-60'
                 : hasDrawing
@@ -192,7 +192,7 @@ export function SignaturePad({ value, onChange, disabled }: SignaturePadProps) {
             />
             {!hasDrawing && !disabled && (
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1">
-                <svg className="h-6 w-6 text-outline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="h-6 w-6 text-on-surface-variant" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
                 </svg>
                 <p className="text-sm text-on-surface-variant">Sign here with your finger or mouse</p>

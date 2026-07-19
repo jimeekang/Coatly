@@ -10,22 +10,12 @@ import {
 } from '@/modules/quotes/domain/quotes';
 import { formatAUD, formatDate } from '@/utils/format';
 import { DuplicateQuoteButton } from '@/modules/quotes/ui/DuplicateQuoteButton';
-
-const QUOTE_STATUS_STYLES: Record<QuoteStatus, string> = {
-  draft:    'bg-surface-container-highest text-on-surface-variant',
-  sent:     'bg-primary/10 text-primary',
-  approved: 'bg-success-container text-success',
-  rejected: 'bg-error-container text-error',
-  expired:  'bg-surface-container-highest text-on-surface-variant',
-};
-
-const QUOTE_LEFT_BORDER: Record<QuoteStatus, string> = {
-  draft:    'border-l-outline',
-  sent:     'border-l-primary',
-  approved: 'border-l-success',
-  rejected: 'border-l-error',
-  expired:  'border-l-outline',
-};
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { PrimaryActionLink } from '@/components/layout/PageHeader';
+import {
+  QUOTE_STATUS_TONE,
+  STATUS_TONE_BORDER,
+} from '@/lib/constants/status-colors';
 
 const STATUS_OPTIONS: Array<{ value: 'all' | QuoteStatus; label: string }> = [
   { value: 'all',      label: 'All' },
@@ -63,15 +53,6 @@ function getDateFilterCutoff(filter: DateFilter): Date | null {
   return null;
 }
 
-function QuoteStatusBadge({ status }: { status: QuoteStatus }) {
-  const style = QUOTE_STATUS_STYLES[status] ?? 'bg-surface-container-high text-on-surface-variant';
-  return (
-    <span className={`inline-flex max-w-full rounded px-2.5 py-1 text-[10px] font-bold uppercase ${style}`}>
-      {QUOTE_STATUS_LABELS[status]}
-    </span>
-  );
-}
-
 function matchesQuery(quote: QuoteListItem, query: string) {
   const value = query.toLowerCase();
   return (
@@ -104,7 +85,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
     <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
       {/* Search */}
       <div className="relative min-w-0">
-        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
+        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-on-surface-variant">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
@@ -115,13 +96,13 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search quotes..."
-          className="w-full rounded-lg border-none bg-surface-container py-3.5 pl-11 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary/20 sm:py-4 sm:pl-12"
+          className="w-full rounded-xl border border-outline-variant bg-surface-container py-3.5 pl-11 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-on-surface-variant focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-4 sm:pl-12"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="absolute inset-y-0 right-4 flex items-center text-outline hover:text-on-surface"
+            className="absolute inset-y-0 right-4 flex items-center text-on-surface-variant hover:text-on-surface"
             aria-label="Clear search"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -144,7 +125,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
               className={`min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors sm:px-4 ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
+                  : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
               }`}
             >
               {option.label}
@@ -165,7 +146,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
               className={`min-h-11 rounded-full border px-3 py-2 text-xs font-semibold transition-colors sm:px-4 ${
                 active
                   ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
+                  : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
               }`}
             >
               {option.label}
@@ -181,6 +162,9 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
           <p className="mt-1 text-sm text-on-surface-variant opacity-70">
             Create your first quote to get started.
           </p>
+          <div className="mt-5 flex justify-center">
+            <PrimaryActionLink href="/quotes/new">+ New Quote</PrimaryActionLink>
+          </div>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-12 text-center">
@@ -198,12 +182,12 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
           {/* Card list */}
           <ul className="flex min-w-0 flex-col gap-3">
             {filtered.map((quote) => {
-              const borderClass = QUOTE_LEFT_BORDER[quote.status] ?? 'border-l-outline';
+              const borderClass = STATUS_TONE_BORDER[QUOTE_STATUS_TONE[quote.status]];
               const expired = isQuoteExpired(quote.valid_until);
               return (
                 <li
                   key={quote.id}
-                  className={`relative min-w-0 rounded-lg border border-l-4 border-black/5 bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
+                  className={`relative min-w-0 rounded-2xl border border-l-4 border-outline-variant bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
                 >
                   <Link
                     href={`/quotes/${quote.id}`}
@@ -211,7 +195,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                   >
                     <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <p className="truncate text-[10px] font-bold uppercase text-outline sm:text-[11px]">
+                        <p className="truncate text-[10px] font-bold uppercase text-on-surface-variant sm:text-[11px]">
                           {quote.quote_number}
                         </p>
                         <h3 className="truncate text-base font-bold leading-tight text-on-surface">
@@ -221,11 +205,14 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                           {quote.title || 'Untitled quote'}
                         </p>
                       </div>
-                      <QuoteStatusBadge status={quote.status} />
+                      <StatusBadge
+                        tone={QUOTE_STATUS_TONE[quote.status]}
+                        label={QUOTE_STATUS_LABELS[quote.status]}
+                      />
                     </div>
                     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-0.5">
-                        <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
+                        <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-on-surface-variant">
                           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                             <line x1="16" y1="2" x2="16" y2="6"/>
@@ -236,7 +223,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                         </div>
                         {quote.valid_until && (
                           <div className={`flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-medium ${
-                            quote.status === 'expired' ? 'text-error' : 'text-outline'
+                            quote.status === 'expired' ? 'text-error' : 'text-on-surface-variant'
                           }`}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <circle cx="12" cy="12" r="10"/>
@@ -251,10 +238,10 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                         )}
                       </div>
                       <div className="min-w-0 sm:text-right">
-                        <p className="text-[10px] text-outline font-bold uppercase tracking-wider">Amount</p>
+                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Amount</p>
                         <p className="text-base font-extrabold text-on-surface sm:text-lg">
                           {formatAUD(quote.total_cents)}{' '}
-                          <span className="text-[10px] font-bold text-outline">AUD</span>
+                          <span className="text-[10px] font-bold text-on-surface-variant">AUD</span>
                         </p>
                       </div>
                     </div>

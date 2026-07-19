@@ -66,8 +66,8 @@ function WalletIcon() {
 const DUE_TONE_CLASS: Record<InvoiceDueTone, string> = {
   overdue: 'text-warning font-semibold',
   'due-soon': 'text-warning font-semibold',
-  due: 'text-outline font-medium',
-  paid: 'text-outline font-medium',
+  due: 'text-on-surface-variant font-medium',
+  paid: 'text-on-surface-variant font-medium',
 };
 
 const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
@@ -133,7 +133,7 @@ function getDateFilterCutoff(filter: DateFilter): Date | null {
 function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   const style = INVOICE_STATUS_STYLES[status] ?? 'bg-surface-container-high text-on-surface-variant';
   return (
-    <span className={`inline-flex max-w-full rounded px-2.5 py-1 text-[10px] font-bold uppercase ${style}`}>
+    <span className={`inline-flex max-w-full rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${style}`}>
       {STATUS_LABELS[status]}
     </span>
   );
@@ -210,7 +210,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
     <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
       {/* Search */}
       <div className="relative min-w-0">
-        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline">
+        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-on-surface-variant">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
@@ -221,13 +221,13 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by invoice, customer, or type..."
-          className="w-full rounded-lg border-none bg-surface-container py-3.5 pl-11 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-outline focus:ring-2 focus:ring-primary/20 sm:py-4 sm:pl-12"
+          className="w-full rounded-xl border-none bg-surface-container py-3.5 pl-11 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary/20 sm:py-4 sm:pl-12"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="absolute inset-y-0 right-4 flex items-center text-outline hover:text-on-surface"
+            className="absolute inset-y-0 right-4 flex items-center text-on-surface-variant hover:text-on-surface"
             aria-label="Clear search"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -282,14 +282,20 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
 
       {/* Empty states */}
       {invoices.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-16 text-center">
+        <div className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low px-6 py-16 text-center">
           <p className="text-base text-on-surface-variant">No invoices yet.</p>
           <p className="mt-1 text-sm text-on-surface-variant opacity-70">
             Create your first invoice to start tracking payments.
           </p>
+          <Link
+            href="/invoices/new"
+            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            + New Invoice
+          </Link>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low py-12 text-center">
+        <div className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low py-12 text-center">
           <p className="text-base text-on-surface-variant">No invoices match this search.</p>
           <button
             type="button"
@@ -315,12 +321,12 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
               return (
                 <li
                   key={invoice.id}
-                  className={`relative min-w-0 rounded-lg border border-l-4 border-outline-variant/60 bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
+                  className={`relative min-w-0 rounded-2xl border border-l-4 border-outline-variant/60 bg-surface-container-lowest shadow-sm transition-shadow hover:shadow-md ${borderClass}`}
                 >
                   <Link href={`/invoices/${invoice.id}`} className="block min-w-0 p-3 sm:p-5">
                     <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <p className="truncate text-[10px] font-bold uppercase text-outline sm:text-[11px]">
+                        <p className="truncate text-[10px] font-bold uppercase text-on-surface-variant sm:text-[11px]">
                           {invoice.invoice_number}
                         </p>
                         <h3 className="truncate text-base font-bold leading-tight text-on-surface">
@@ -341,7 +347,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                     </div>
                     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-1">
-                        <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-outline">
+                        <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-on-surface-variant">
                           <CalendarIcon />
                           Created {formatDate(invoice.created_at)}
                         </div>
@@ -359,12 +365,12 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                         )}
                       </div>
                       <div className="min-w-0 sm:text-right">
-                        <p className="text-[10px] text-outline font-bold uppercase tracking-wider">
+                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
                           {isPaid ? 'Paid' : 'Balance'}
                         </p>
                         <p className="text-base font-extrabold tabular-nums text-on-surface sm:text-lg">
                           {formatAUD(isPaid ? invoice.total_cents : invoice.balance_cents)}{' '}
-                          <span className="text-[10px] font-bold text-outline">AUD</span>
+                          <span className="text-[10px] font-bold text-on-surface-variant">AUD</span>
                         </p>
                       </div>
                     </div>
@@ -375,7 +381,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                         <button
                           type="button"
                           onClick={() => openMarkPaidForm(invoice)}
-                          className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 sm:w-auto"
+                          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 sm:w-auto"
                         >
                           Mark as Paid
                         </button>
@@ -393,7 +399,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                                 type="date"
                                 value={paidDate}
                                 onChange={(event) => setPaidDate(event.target.value)}
-                                className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                                className="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                               />
                             </label>
                             <label className="space-y-1.5">
@@ -413,7 +419,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                                       | ''
                                   )
                                 }
-                                className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary"
+                                className="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                               >
                                 <option value="">Select method</option>
                                 <option value="bank_transfer">Bank transfer</option>
@@ -437,7 +443,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                                 !paidDate ||
                                 !paymentMethod
                               }
-                              className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-60"
+                              className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-60"
                             >
                               {isSubmittingPayment && pendingInvoiceId === invoice.id
                                 ? 'Saving...'
@@ -446,7 +452,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceListItem[] }) {
                             <button
                               type="button"
                               onClick={closeMarkPaidForm}
-                              className="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
+                              className="inline-flex h-11 items-center justify-center rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
                             >
                               Cancel
                             </button>

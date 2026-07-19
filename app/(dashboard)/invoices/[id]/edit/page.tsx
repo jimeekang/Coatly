@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getInvoice, getInvoiceFormOptions, updateInvoice } from '@/modules/invoices/application/actions';
 import { InvoiceForm } from '@/modules/invoices/ui/InvoiceForm';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -32,9 +33,7 @@ export default async function EditInvoicePage({ params }: Props) {
       />
 
       {formError ? (
-        <div className="rounded-lg border border-error bg-error-container px-4 py-3">
-          <p className="text-sm text-on-error-container">{formError}</p>
-        </div>
+        <ErrorAlert>{formError}</ErrorAlert>
       ) : (
         <InvoiceForm
           customers={customers}

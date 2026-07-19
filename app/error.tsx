@@ -14,7 +14,7 @@ export default function RootError({ error, reset }: ErrorProps) {
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-surface-container-lowest">
       <ErrorPage
         code={500}
         title="Something went wrong"

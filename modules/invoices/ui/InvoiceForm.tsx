@@ -17,6 +17,7 @@ import {
 import { FormFooter, FormFooterButton } from '@/components/forms/FormFooter';
 import { FormSection } from '@/components/forms/FormSection';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { SectionLabel } from '@/components/shared/SectionLabel';
 
 /* ──────────────────────────────────────────────────────────
    Inline icon set — Lucide-style stroke paths. Keeps the new
@@ -588,7 +589,7 @@ export function InvoiceForm({
       <div className="flex flex-wrap items-center gap-2.5">
         <span
           className={cn(
-            'text-[11px] font-bold uppercase tracking-[0.16em] text-outline',
+            'text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant',
             /\d/.test(invoiceNumberPreview) && 'font-mono tracking-[0.18em]',
           )}
         >
@@ -596,7 +597,7 @@ export function InvoiceForm({
         </span>
         <span
           className={cn(
-            'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]',
+            'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]',
             badge.className
           )}
         >
@@ -765,9 +766,7 @@ export function InvoiceForm({
             {form.invoice_type === 'progress' && selectedQuote && (
               <div className="mt-4 rounded-xl border border-outline-variant bg-surface-container-low/60 p-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-                    Progress percent
-                  </span>
+                  <SectionLabel as="span">Progress percent</SectionLabel>
                   <span className="text-xl font-extrabold tabular-nums text-primary">
                     {progressPercent || 0}%
                   </span>
@@ -1215,7 +1214,7 @@ export function InvoiceForm({
         <aside className="space-y-5 xl:sticky xl:top-4 xl:self-start">
           {/* Amount due summary */}
           <section className="rounded-2xl bg-primary p-5 text-on-primary shadow-sm sm:p-6">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-on-primary/65">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-primary/65">
               Amount due
             </p>
             <p className="mt-2 text-[34px] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
@@ -1252,9 +1251,9 @@ export function InvoiceForm({
           {/* Quote items snapshot */}
           {selectedQuote && selectedQuoteIncludedItems.length > 0 && (
             <FormSection className={CARD_CLASS}>
-              <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
+              <SectionLabel as="h3" className="mb-3">
                 Quote items
-              </h3>
+              </SectionLabel>
               <div className="space-y-2">
                 {selectedQuoteIncludedItems.map((item, index) => (
                   <div
@@ -1286,9 +1285,9 @@ export function InvoiceForm({
           {/* Customer snapshot */}
           {selectedCustomer && (
             <FormSection className={CARD_CLASS}>
-              <h3 className="mb-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
+              <SectionLabel as="h3" className="mb-3">
                 Customer snapshot
-              </h3>
+              </SectionLabel>
               <div className="space-y-1 text-sm">
                 <p className="font-semibold text-on-surface">
                   {selectedCustomer.company_name || selectedCustomer.name}

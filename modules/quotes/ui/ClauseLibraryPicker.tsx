@@ -107,7 +107,7 @@ export function ClauseLibraryPicker({
               type="button"
               disabled={selected}
               onClick={() => addClause(clause)}
-              className="border-outline-variant text-on-surface hover:border-primary disabled:bg-surface-container disabled:text-on-surface-variant flex min-h-11 items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 text-left text-sm disabled:cursor-not-allowed"
+              className="border-outline-variant text-on-surface hover:border-primary disabled:bg-surface-container disabled:text-on-surface-variant flex min-h-11 items-center justify-between gap-3 rounded-lg border bg-surface-container-lowest px-3 py-2 text-left text-sm disabled:cursor-not-allowed"
             >
               <span>
                 <span className="block font-semibold">{clause.title}</span>
@@ -132,7 +132,7 @@ export function ClauseLibraryPicker({
           {value.map((clause, index) => (
             <div
               key={clause.client_id ?? clause.clause_key}
-              className="border-outline-variant rounded-xl border bg-white p-4"
+              className="border-outline-variant rounded-xl border bg-surface-container-lowest p-4"
             >
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>

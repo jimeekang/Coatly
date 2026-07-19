@@ -5,9 +5,16 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
 import { signUpWithEmail } from '@/modules/auth/application/actions';
 import { AuthShell } from '@/modules/auth/ui/AuthShell';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import {
+  FormField,
+  FormLabel,
+  formControlClassName,
+} from '@/components/forms/FormField';
+import { cn } from '@/lib/utils';
 
 const signupSchema = z
   .object({
@@ -23,13 +30,12 @@ const signupSchema = z
 
 type SignupInput = z.infer<typeof signupSchema>;
 
-const inputClass =
-  'w-full h-12 rounded-lg border border-outline bg-white px-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50';
-
 export default function SignupPage() {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [successState, setSuccessState] = useState<'idle' | 'check-email'>('idle');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -72,7 +78,7 @@ export default function SignupPage() {
           </p>
           <Link
             href="/login"
-            className="mt-6 inline-block text-sm font-medium text-primary/90 hover:underline"
+            className="mt-6 inline-block rounded text-sm font-medium text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Back to login
           </Link>
@@ -91,106 +97,106 @@ export default function SignupPage() {
       footer={
         <>
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-primary/90 hover:underline">
+          <Link
+            href="/login"
+            className="rounded font-medium text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
             Sign in
           </Link>
         </>
       }
     >
-      {serverError && (
-        <div
-          role="alert"
-          className="mb-4 rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container"
-        >
-          {serverError}
-        </div>
-      )}
+      {serverError && <ErrorAlert className="mb-4">{serverError}</ErrorAlert>}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-        <div>
-          <label htmlFor="businessName" className="mb-1.5 block text-sm font-medium text-on-surface">
-            Business Name
-          </label>
-          <input
-            id="businessName"
-            type="text"
-            autoComplete="organization"
-            placeholder="Smith's Painting"
-            disabled={isPending}
-            aria-invalid={!!errors.businessName}
-            aria-describedby={errors.businessName ? 'businessName-error' : undefined}
-            className={inputClass}
-            {...register('businessName')}
-          />
-          {errors.businessName && (
-            <p id="businessName-error" className="mt-1.5 text-xs text-error">
-              {errors.businessName.message}
-            </p>
-          )}
-        </div>
+        <FormField
+          htmlFor="businessName"
+          label="Business Name"
+          type="text"
+          autoComplete="organization"
+          placeholder="Smith's Painting"
+          disabled={isPending}
+          error={errors.businessName?.message}
+          {...register('businessName')}
+        />
+
+        <FormField
+          htmlFor="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder="you@example.com"
+          disabled={isPending}
+          error={errors.email?.message}
+          {...register('email')}
+        />
 
         <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-on-surface">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            placeholder="you@example.com"
-            disabled={isPending}
-            aria-invalid={!!errors.email}
-            aria-describedby={errors.email ? 'email-error' : undefined}
-            className={inputClass}
-            {...register('email')}
-          />
-          {errors.email && (
-            <p id="email-error" className="mt-1.5 text-xs text-error">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-on-surface">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Min. 8 characters"
-            disabled={isPending}
-            aria-invalid={!!errors.password}
-            aria-describedby={errors.password ? 'password-error' : undefined}
-            className={inputClass}
-            {...register('password')}
-          />
+          <FormLabel htmlFor="password">Password</FormLabel>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Min. 8 characters"
+              disabled={isPending}
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
+              className={cn(formControlClassName, 'pr-14 disabled:opacity-50')}
+              {...register('password')}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              disabled={isPending}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Eye className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
+          </div>
           {errors.password && (
-            <p id="password-error" className="mt-1.5 text-xs text-error">
+            <p id="password-error" className="mt-1 text-sm text-error">
               {errors.password.message}
             </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-on-surface">
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            placeholder="••••••••"
-            disabled={isPending}
-            aria-invalid={!!errors.confirmPassword}
-            aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
-            className={inputClass}
-            {...register('confirmPassword')}
-          />
+          <FormLabel htmlFor="confirmPassword">Confirm Password</FormLabel>
+          <div className="relative">
+            <input
+              id="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="••••••••"
+              disabled={isPending}
+              aria-invalid={!!errors.confirmPassword}
+              aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
+              className={cn(formControlClassName, 'pr-14 disabled:opacity-50')}
+              {...register('confirmPassword')}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((value) => !value)}
+              disabled={isPending}
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-on-surface-variant transition-colors hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
+            >
+              {showConfirmPassword ? (
+                <EyeOff className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Eye className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
+          </div>
           {errors.confirmPassword && (
-            <p id="confirmPassword-error" className="mt-1.5 text-xs text-error">
+            <p id="confirmPassword-error" className="mt-1 text-sm text-error">
               {errors.confirmPassword.message}
             </p>
           )}
@@ -199,7 +205,7 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={isPending}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
           Create account

@@ -230,7 +230,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
           {value.map((section, sectionIndex) => (
             <div
               key={section.client_id ?? sectionIndex}
-              className="border-outline-variant rounded-xl border bg-white p-4"
+              className="border-outline-variant rounded-xl border bg-surface-container-lowest p-4"
             >
               <div className="mb-4 flex items-start justify-between gap-3">
                 <p className="text-on-surface text-sm font-semibold">
@@ -259,7 +259,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                           .value as QuoteScopeSectionInput['section_kind'],
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-xl border px-3 text-sm"
                   >
                     {QUOTE_SCOPE_SECTION_KINDS.map((kind) => (
                       <option key={kind} value={kind}>
@@ -280,7 +280,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                       onChange={(event) =>
                         applyMaintenancePack(sectionIndex, event.target.value)
                       }
-                      className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                      className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-xl border px-3 text-sm"
                     >
                       <option value="">Select a supported pack</option>
                       {MAINTENANCE_JOB_PACKS.map((pack) => (
@@ -302,7 +302,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                     onChange={(event) =>
                       updateSection(sectionIndex, { title: event.target.value })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-xl border px-3 text-sm"
                   />
                 </div>
 
@@ -318,7 +318,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                         area_label: event.target.value,
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-xl border px-3 text-sm"
                   />
                 </div>
 
@@ -333,7 +333,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                         surface_category: event.target.value,
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-xl border px-3 text-sm"
                   />
                 </div>
 
@@ -350,7 +350,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                           .value as QuoteScopeSectionInput['pricing_status'],
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-xl border px-3 text-sm"
                   >
                     {QUOTE_SCOPE_PRICING_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -372,7 +372,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                           .value as QuoteScopeSectionInput['measurement_status'],
                       })
                     }
-                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                    className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-xl border px-3 text-sm"
                   >
                     {QUOTE_SCOPE_MEASUREMENT_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -396,7 +396,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                       description: event.target.value,
                     })
                   }
-                  className="border-outline-variant bg-surface-container-lowest text-on-surface w-full rounded-lg border px-3 py-2 text-sm"
+                  className="border-outline-variant bg-surface-container-lowest text-on-surface w-full rounded-xl border px-3 py-2 text-sm"
                 />
               </div>
 
@@ -426,7 +426,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                           visible_defects: normalizeDefects(event.target.value),
                         })
                       }
-                      className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-lg border px-3 text-sm"
+                      className="border-outline-variant bg-surface-container-lowest text-on-surface h-11 w-full rounded-xl border px-3 text-sm"
                     />
                   </div>
                 </div>
@@ -468,7 +468,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                                   .value as QuoteScopeStepInput['step_type'],
                               })
                             }
-                            className="border-outline-variant text-on-surface h-11 rounded-lg border bg-white px-3 text-sm"
+                            className="border-outline-variant text-on-surface h-11 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                           >
                             {QUOTE_SCOPE_STEP_TYPES.map((type) => (
                               <option key={type} value={type}>
@@ -484,7 +484,7 @@ export function ScopeBuilder({ jobType, value, onChange }: ScopeBuilderProps) {
                                 description: event.target.value,
                               })
                             }
-                            className="border-outline-variant text-on-surface h-11 rounded-lg border bg-white px-3 text-sm"
+                            className="border-outline-variant text-on-surface h-11 rounded-xl border bg-surface-container-lowest px-3 text-sm"
                           />
                           <button
                             type="button"

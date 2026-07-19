@@ -110,7 +110,7 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
     <PickerOverlay onClose={onClose}>
       <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
         <h2 className="text-base font-semibold text-on-surface">Add Item</h2>
-        <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+        <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -138,7 +138,7 @@ export function LineItemPicker({ libraryItems, onAdd, onClose }: LineItemPickerP
             className={`min-h-11 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors ${
               categoryFilter === cat
                 ? 'border-primary bg-primary text-on-primary'
-                : 'border-outline-variant bg-white text-on-surface-variant hover:border-primary'
+                : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-primary'
             }`}
           >
             {cat === 'all' ? 'All' : MATERIAL_ITEM_CATEGORY_LABELS[cat]}
@@ -203,7 +203,7 @@ const PickerOverlay = ({
     className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center"
     onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
   >
-    <div className="w-full max-w-md rounded-t-2xl bg-white p-5 shadow-xl md:rounded-2xl flex flex-col max-h-[90dvh]">
+    <div className="w-full max-w-md rounded-t-2xl bg-surface-container-lowest p-5 shadow-xl md:rounded-2xl flex flex-col max-h-[90dvh]">
       {children}
     </div>
   </div>
@@ -225,7 +225,7 @@ function ConfigureItem({
   return (
     <>
       <div className="flex items-center gap-2 pb-3 border-b border-outline-variant">
-        <button type="button" onClick={onBack} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+        <button type="button" onClick={onBack} aria-label="Back" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
           <X className="h-5 w-5" />
         </button>
         <h2 className="text-base font-semibold text-on-surface truncate">{item.name}</h2>
@@ -247,7 +247,7 @@ function ConfigureItem({
           inputMode={requiresWholeNumberQuantity(item.category) ? 'numeric' : 'decimal'}
           sanitize={requiresWholeNumberQuantity(item.category) ? sanitizeWholeNumberQuantityInput : sanitizeDecimalInput}
           onValueChange={setQtyDraft}
-          className="h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="h-12 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           aria-label={`${item.name} quantity`}
         />
       </div>
@@ -294,7 +294,7 @@ function CustomItemForm({
     notes: '',
   });
 
-  const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-white px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
+  const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
@@ -345,7 +345,7 @@ function CustomItemForm({
   return (
     <>
       <div className="flex items-center gap-2 pb-3 border-b border-outline-variant">
-        <button type="button" onClick={onBack} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container">
+        <button type="button" onClick={onBack} aria-label="Back" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
           <X className="h-5 w-5" />
         </button>
         <h2 className="text-base font-semibold text-on-surface">Custom Item</h2>

@@ -1846,7 +1846,7 @@ export function QuoteForm({
                             setSelectedPropertyIndex(event.target.value);
                             setError(null);
                           }}
-                          className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                          className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
                         >
                           {customerPropertyOptions.map((property, index) => (
                             <option
@@ -2266,7 +2266,7 @@ export function QuoteForm({
 
           {/* Room rate inputs — legacy method, shown read-only for existing quotes */}
           {pricingStrategy === 'room_rate' && (
-            <section className="border-outline-variant rounded-2xl border bg-white p-4">
+            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4">
               <div className="mb-4 flex items-start gap-2 rounded-xl border border-warning/30 bg-warning-container px-3 py-2.5 text-sm text-on-warning-container">
                 <span className="mt-0.5 shrink-0">⚠️</span>
                 <span>
@@ -2301,7 +2301,7 @@ export function QuoteForm({
                             preset.rate_cents
                           )
                         }
-                        className="border-primary/30 text-on-surface hover:border-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border bg-white px-3 text-xs font-medium"
+                        className="border-primary/30 text-on-surface hover:border-primary hover:bg-primary/15 inline-flex min-h-11 items-center rounded-full border bg-surface-container-lowest px-3 text-xs font-medium"
                       >
                         {preset.title} · {preset.sqm} sqm ·{' '}
                         {formatAUD(preset.rate_cents)}
@@ -2328,7 +2328,7 @@ export function QuoteForm({
                           )
                         }
                         placeholder="Room name"
-                        className="border-outline-variant rounded-lg border bg-white px-3 py-2 text-sm"
+                        className="border-outline-variant rounded-lg border bg-surface-container-lowest px-3 py-2 text-sm"
                       />
                       <select
                         value={item.room_type}
@@ -2345,7 +2345,7 @@ export function QuoteForm({
                             )
                           )
                         }
-                        className="border-outline-variant min-h-11 rounded-lg border bg-white px-2 text-sm"
+                        className="border-outline-variant min-h-11 rounded-lg border bg-surface-container-lowest px-2 text-sm"
                       >
                         {ROOM_TYPES.map((t) => (
                           <option key={t} value={t}>
@@ -2373,7 +2373,7 @@ export function QuoteForm({
                             )
                           );
                         }}
-                        className="border-outline-variant min-h-11 rounded-lg border bg-white px-2 text-sm"
+                        className="border-outline-variant min-h-11 rounded-lg border bg-surface-container-lowest px-2 text-sm"
                       >
                         {ROOM_SIZES.map((s) => (
                           <option key={s} value={s}>
@@ -2407,7 +2407,7 @@ export function QuoteForm({
                               )
                             );
                           }}
-                          className="border-outline-variant min-h-11 w-24 rounded-lg border bg-white px-2 text-sm"
+                          className="border-outline-variant min-h-11 w-24 rounded-lg border bg-surface-container-lowest px-2 text-sm"
                         />
                       </div>
                     </div>
@@ -2441,7 +2441,7 @@ export function QuoteForm({
 
           {/* Manual direct input */}
           {pricingStrategy === 'manual' && (
-            <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
               <div className="mb-4">
                 <h3 className="text-on-surface text-base leading-snug font-bold">
                   Direct Price Entry
@@ -2605,7 +2605,7 @@ export function QuoteForm({
           )}
 
           {/* Notes */}
-          <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+          <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
             <div className="mb-4">
               <h3 className="text-on-surface text-base leading-snug font-bold">
                 Notes
@@ -2645,7 +2645,7 @@ export function QuoteForm({
 
           {/* Markup Settings */}
           {pricingStrategy === 'hybrid' && (
-            <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+            <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
               <div className="mb-4">
                 <h3 className="text-on-surface text-base leading-snug font-bold">
                   Markup
@@ -2670,7 +2670,7 @@ export function QuoteForm({
                       step="1"
                       value={form.labour_markup}
                       onChange={handleChange}
-                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
+                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-surface-container-lowest pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
                     />
                     <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                       %
@@ -2694,7 +2694,7 @@ export function QuoteForm({
                       step="1"
                       value={form.material_markup}
                       onChange={handleChange}
-                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-white pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
+                      className="border-outline-variant text-on-surface focus:border-primary focus:ring-primary/20 h-12 w-full rounded-xl border bg-surface-container-lowest pr-10 pl-4 text-base focus:ring-2 focus:outline-none"
                     />
                     <span className="text-on-surface-variant pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium">
                       %
@@ -2741,7 +2741,7 @@ export function QuoteForm({
 
       {sendDialog && selectedCustomer && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 px-4 py-4 md:items-center md:justify-center">
-          <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
+          <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface-container-lowest p-5 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
@@ -2806,7 +2806,7 @@ export function QuoteForm({
                 )}
               </div>
 
-              <div className="border-outline-variant rounded-xl border bg-white px-4 py-3">
+              <div className="border-outline-variant rounded-xl border bg-surface-container-lowest px-4 py-3">
                 <p className="text-on-surface-variant text-xs font-semibold tracking-wide uppercase">
                   Quote Content
                 </p>
@@ -2841,7 +2841,7 @@ export function QuoteForm({
                 type="button"
                 onClick={() => setSendDialog(null)}
                 disabled={isPending}
-                className="border-outline-variant text-on-surface h-12 rounded-xl border bg-white px-4 text-sm font-medium disabled:opacity-50"
+                className="border-outline-variant text-on-surface h-12 rounded-xl border bg-surface-container-lowest px-4 text-sm font-medium disabled:opacity-50"
               >
                 Cancel
               </button>

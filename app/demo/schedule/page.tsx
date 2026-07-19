@@ -1,7 +1,8 @@
 /**
  * Demo page for testing ScheduleCalendar → job navigation.
- * Access at /demo/schedule — no auth required.
+ * Access at /demo/schedule — dev only (blocked in production).
  */
+import { notFound } from 'next/navigation';
 import { ScheduleCalendar, type CalendarJob, type CalendarGoogleEvent } from '@/modules/schedule/ui/ScheduleCalendar';
 import {
   addJobScheduleDay,
@@ -84,6 +85,10 @@ const DEMO_GOOGLE_EVENTS: CalendarGoogleEvent[] = [
 ];
 
 export default function DemoSchedulePage() {
+  if (process.env.NODE_ENV === 'production') {
+    notFound();
+  }
+
   return (
     <div className="mx-auto max-w-md px-4 py-8">
       <div className="mb-6 rounded-xl border border-warning/30 bg-warning-container px-4 py-3">

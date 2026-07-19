@@ -22,15 +22,10 @@ export async function completeOnboarding(data: {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  // 서버 사이드 필수 값 검증
+  // 서버 사이드 필수 값 검증 — business name + ABN만 필수, 나머지는 Settings에서 완료 가능
   const required: Array<[keyof typeof data, string]> = [
     ['businessName', 'Business name'],
     ['abn', 'ABN'],
-    ['phone', 'Phone'],
-    ['addressLine1', 'Street address'],
-    ['city', 'Suburb'],
-    ['state', 'State'],
-    ['postcode', 'Postcode'],
   ];
   for (const [key, label] of required) {
     const value = data[key];
@@ -43,8 +38,9 @@ export async function completeOnboarding(data: {
   const abn = data.abn.replace(/\s/g, '');
   if (!/^\d{11}$/.test(abn)) return { error: 'ABN must be 11 digits' };
 
-  // 우편번호 형식 검증 (4자리)
-  if (!/^\d{4}$/.test(data.postcode.trim())) {
+  // 우편번호 형식 검증 (입력된 경우에만 4자리)
+  const trimmedPostcode = data.postcode.trim();
+  if (trimmedPostcode && !/^\d{4}$/.test(trimmedPostcode)) {
     return { error: 'Postcode must be 4 digits' };
   }
 

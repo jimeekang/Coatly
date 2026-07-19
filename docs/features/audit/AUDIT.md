@@ -20,9 +20,9 @@
 | A11 | P1 | 판매 카피–scope 모순 | 열림 | `config/plans.ts:50-51` Pro가 보류(dormant)된 "AI Quote Drafting/AI Workspace Assistant"를 판매 feature로 노출 — 신뢰/ACL 리스크. 카피 제거 + `AIDraftPanel` UI gating 정합 |
 | A12 | P1 | 관측성 부재 | 열림 | 로깅이 `console.*`뿐, Sentry 등 에러 트래킹 없음. 1인 운영에서 최우선 인프라 |
 | A13 | P2 | profiles/businesses 이중화 | 열림 | business_name/abn/logo가 양쪽 존재, `access.ts`가 컬럼 부재를 런타임 방어(`hasMissingProfilesColumn`) — 정본 통합 필요 |
-| A14 | P2 | 디자인 토큰 우회 | 열림 | 실측 갱신: `bg-white` 241회/50파일, `ui/button.tsx`는 import 0건 死코드(32px 이슈 무의미→제거 대상), `ui/input` ↔ `forms/FormField` 이원화 — 전수·우선순위는 [DESIGN-AUDIT-2026-07-12.md](./DESIGN-AUDIT-2026-07-12.md) §3-A/§5 |
-| A15 | P2 | 죽은 라우트/IA 정리 | 열림 | `/demo/schedule` 무인증 프로덕션 노출(+실 mutation 배선 확인됨), `/jobs` UI 없는 리다이렉트 스텁 경유(`QuoteActions`, `JobDetail`), `customers/[id]/edit` 부재 일관성 |
-| A21 | P1 | 전앱 디자인/UX 감사 2026-07-12 | 열림 | 91건(C3·M29·m43·n16) — money screen 발송 액션 부재, 가격북 무확인 삭제, text-outline 대비 1.5:1, ErrorAlert 미채택 29곳, loading.tsx 5 라우트 누락 등. 글로벌 토큰층은 리프레시 v1.1로 해결 완료(uncommitted). 실행 큐: [DESIGN-AUDIT-2026-07-12.md](./DESIGN-AUDIT-2026-07-12.md) §5 |
+| A14 | P2 | 디자인 토큰 우회 | **해결(2026-07-19)** | `bg-white` 241→0, `text-outline`(텍스트) 70→0, `button.tsx` 死코드 삭제. 잔여: `ui/input`↔`FormField` 이원화 정본화만 남음 — [DESIGN-AUDIT-2026-07-12.md](./DESIGN-AUDIT-2026-07-12.md) §5 잔여 |
+| A15 | P2 | 죽은 라우트/IA 정리 | 부분 해결 | `/demo/schedule` 프로덕션 `notFound()` 가드 완료, `JobsWorkspace` 삭제 완료(2026-07-19). 잔여: `/jobs` UI 없는 리다이렉트 스텁 경유, `customers/[id]/edit` 부재 일관성 |
+| A21 | P1 | 전앱 디자인/UX 감사 2026-07-12 | **해결(2026-07-19)** | 91건 집행 완료 — C1 발송 액션, C2 삭제 확인, text-outline 대비, ErrorAlert/StatusBadge/ConfirmDialog 채택, loading.tsx 9 라우트, 온보딩 최소필수, 대시보드 Revenue 정의 통일 등. build/lint/test 그린. 잔여 long-tail 4건: [DESIGN-AUDIT-2026-07-12.md](./DESIGN-AUDIT-2026-07-12.md) §5 |
 | A16 | P2 | 동시성/오프라인 | 열림 | `generate_quote_number` RPC 동시 저장 시 번호 충돌 검토, PWA manifest만 있고 service worker/offline draft 보존 부재(현장 약한 네트워크 리스크 — A1과 연관) |
 
 ## Finding Details
@@ -89,6 +89,7 @@ Exterior estimate path는 구현되어 있으나 과거 감사에서 편집 시 
 | 2026-05 | Invoice reminder 멱등성 | `invoice_reminder_events` 추가 |
 | 2026-05 | DB linter/security hardening | migrations 043–049로 RPC/trigger/function 노출 축소 |
 | 2026-05 | Schedule/jobs 통합 | `/jobs`를 schedule list로 통합, job_schedule_days 추가 |
+| 2026-07-19 | 디자인 감사 91건 집행 (A21/A14) | 글로벌 v1.1 + 컴포넌트층 완료: bg-white/text-outline/alert 0건, C1 발송·C2 삭제확인·C3 토큰화, SectionLabel/loading.tsx 신설, 死코드 삭제, `aefa34d` 회귀 2건 복구. build/lint/test 그린 |
 
 ## Tech Debt Tracker
 
@@ -104,7 +105,7 @@ Exterior estimate path는 구현되어 있으나 과거 감사에서 편집 시 
 | TD8 | P1 | Stripe webhook idempotency + payment_failed + 중복 라우트 정리 (A10) | Codex |
 | TD9 | P1 | plans.ts AI 카피 제거 + AI UI gating (A11) | Claude plan → Codex |
 | TD10 | P1 | Sentry/구조화 로깅 도입 (A12) | Codex |
-| TD11 | P2 | bg-white → surface 토큰 치환 + button.tsx 교정 + 프리미티브 통합 (A14) | Codex |
+| TD11 | P2 | ~~bg-white 치환·button.tsx~~ 완료(2026-07-19). 잔여: input↔FormField 정본화, types/database.ts 재생성, QuickEstimateTab NumericInput (A14 잔여) | Codex |
 | TD12 | P2 | demo route gating, /jobs 스텁 직결, profiles/businesses 정본화 (A13/A15) | Codex |
 
 ## Operational Checklist

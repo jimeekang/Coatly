@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { Check, Pencil } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/toast';
 import { deleteJob, retryJobGoogleCalendarSync, updateJob } from '@/modules/jobs/application/actions';
 import { JOB_STATUS_LABELS, type JobDetail, type JobStatus } from '@/modules/jobs/domain/jobs';
 import { formatAUD, formatDate } from '@/utils/format';
@@ -43,7 +45,7 @@ function CompleteDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-sm rounded-2xl bg-surface-container-lowest p-6 shadow-xl">
         <div className="bg-success-container mb-1 flex h-12 w-12 items-center justify-center rounded-full">
           <Check className="text-success h-6 w-6" strokeWidth={2.5} />
         </div>
@@ -88,10 +90,12 @@ export function JobDetail({
   showHeader?: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [isPending, startTransition] = useTransition();
   const [isCompleting, startCompleteTransition] = useTransition();
   const [isRetryingGoogleSync, startGoogleSyncTransition] = useTransition();
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [googleSyncError, setGoogleSyncError] = useState<string | null>(null);
 
   const quoteLineItems = job.quoteLineItems ?? [];
@@ -104,11 +108,15 @@ export function JobDetail({
   const variationsSubtotal = variations.reduce((sum, v) => sum + v.total_cents, 0);
 
   function handleDelete() {
-    if (!window.confirm(`Delete "${job.title}"? This cannot be undone.`)) return;
+    setShowDeleteDialog(true);
+  }
+
+  function confirmDelete() {
+    setShowDeleteDialog(false);
     startTransition(async () => {
       const result = await deleteJob(job.id);
       if (result.error) {
-        alert(result.error);
+        toast.error(result.error);
         return;
       }
       router.push('/jobs');
@@ -127,7 +135,7 @@ export function JobDetail({
         notes: job.notes ?? undefined,
       });
       if (result.error) {
-        alert(result.error);
+        toast.error(result.error);
         return;
       }
       setShowCompleteDialog(true);
@@ -156,10 +164,21 @@ export function JobDetail({
         />
       )}
 
+      <ConfirmDialog
+        open={showDeleteDialog}
+        title="Delete job?"
+        message={`Delete "${job.title}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
+
       {showHeader && (
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="font-mono mb-1 text-[10.5px] font-bold tracking-[0.14em] text-outline uppercase">
+            <p className="font-mono mb-1 text-[10.5px] font-bold tracking-[0.14em] text-on-surface-variant uppercase">
               {job.quote?.quote_number ?? 'Standalone Job'}
             </p>
             <h1 className="text-[26px] leading-tight font-extrabold tracking-tight text-on-surface">
@@ -214,10 +233,10 @@ export function JobDetail({
       <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
         {/* Main detail card */}
         <div className="flex flex-col gap-4">
-          <div className="self-start bg-white border border-outline-variant rounded-2xl shadow-sm p-5 space-y-4 w-full">
+          <div className="self-start bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm p-5 space-y-4 w-full">
             {/* Dates */}
             <div>
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline mb-3">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface-variant mb-3">
                 Schedule
               </p>
               <div className="space-y-2 text-sm">
@@ -269,7 +288,7 @@ export function JobDetail({
                           type="button"
                           onClick={handleRetryGoogleSync}
                           disabled={isRetryingGoogleSync}
-                          className="text-error ring-error/30 hover:bg-error-container/60 mt-2 inline-flex h-8 items-center rounded-lg bg-white px-3 text-xs font-semibold ring-1 transition-colors disabled:opacity-60"
+                          className="text-error ring-error/30 hover:bg-error-container/60 mt-2 inline-flex h-8 items-center rounded-lg bg-surface-container-lowest px-3 text-xs font-semibold ring-1 transition-colors disabled:opacity-60"
                         >
                           {isRetryingGoogleSync ? 'Retrying...' : 'Retry sync'}
                         </button>
@@ -283,7 +302,7 @@ export function JobDetail({
             {/* Notes */}
             {job.notes && (
               <div className="border-t border-outline-variant pt-4">
-                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline mb-2">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface-variant mb-2">
                   Notes
                 </p>
                 <p className="text-sm text-on-surface whitespace-pre-wrap">{job.notes}</p>
@@ -293,9 +312,9 @@ export function JobDetail({
 
           {/* Quote scope */}
           {includedLineItems.length > 0 && (
-            <div className="bg-white border border-outline-variant rounded-2xl shadow-sm p-5">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm p-5">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
                   Quote Scope
                 </p>
                 {job.quote && (
@@ -336,8 +355,8 @@ export function JobDetail({
 
           {/* Variations */}
           {variations.length > 0 && (
-            <div className="bg-white border border-outline-variant rounded-2xl shadow-sm p-5">
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline mb-3">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm p-5">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface-variant mb-3">
                 Variations
               </p>
               <div className="space-y-1.5">

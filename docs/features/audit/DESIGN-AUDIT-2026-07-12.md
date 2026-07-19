@@ -3,7 +3,17 @@
 > Owner: **Claude** (Opus 4.8 · extra) — 분석/QA 리포트. 여기 기재된 컴포넌트 수정은 **Codex(high) 구현 대상**.
 
 방법: 전 화면 소스 감사(병렬 에이전트 5) + 정량 grep 인벤토리 + 로컬 브라우저 QA(모바일 375/데스크탑, before/after 스크린샷·computed style 검증). 기준: `docs/DESIGN.md` + CLAUDE.md Design Conventions.
-결과: **총 91건** (Critical 3 · Major 29 · Minor 43 · Nit 16). 글로벌 토큰층 이슈는 본 세션에서 해결 완료(§1), 컴포넌트층은 Codex 큐(§5).
+결과: **총 91건** (Critical 3 · Major 29 · Minor 43 · Nit 16). 글로벌 토큰층은 리프레시 v1.1로 해결(§1), 컴포넌트층은 **2026-07-19 집행 완료**(§5 현황).
+
+## 0. 집행 결과 (2026-07-19, 사용자 직접 지시로 실행)
+
+13-에이전트 워크플로(프리미티브 → 12모듈 병렬 → build gate)로 §2–§4 실행. 일부는 직전 커밋 `aefa34d`가 선반영. 검증: `next build` exit 0 (39 pages) · lint 0 · **테스트 530/530** · 브라우저 QA(랜딩/login/forgot/캘린더+모달 시맨틱/Esc, 콘솔·서버 에러 0).
+
+- **인벤토리 최종**: `bg-white` 241→**0** · `text-outline`(텍스트) 70→**0** · `alert()`/`window.confirm` 10→**0** (예외: PDF 템플릿·global-error·canvas API)
+- **회귀 2건 복구**: `aefa34d`가 남긴 ScheduleCalendar undefined `STATUS_BADGE` 참조(스케줄 화면 파손), PublicApprovalForm 미배선 Decline 핸들러(공개 견적 파손)
+- **신설**: `SectionLabel` 프리미티브 · `loading.tsx` 9개 라우트 · signup 비밀번호 토글 · `sendQuoteToClient`의 stale-column 수정(gate)
+- **삭제**: `components/ui/button.tsx` · `JobsWorkspace.tsx` (死코드, import 0건 재검증 후)
+- 변경 규모: 50파일 수정 + 9파일 신규, +838/−977 라인 (워크트리 uncommitted — 커밋은 Codex)
 
 ## 1. 이번 세션에서 해결됨 — 글로벌 디자인 리프레시 v1.1
 
@@ -82,12 +92,13 @@
 - **레이어**: Sidebar 데스크탑 `z-50`→`z-40` · PriceRatesForm sticky bar `z-10 bg-white/92`→`z-30`+토큰 · toast `z-[100]`는 문서화 완료
 - **일관성**: auth 셸 이원화(login/signup=AuthShell vs forgot/reset=단순 카드) · signup만 monolithic page(타 auth는 PageClient 분리) · Sidebar 로고 하드코딩("C" 박스, BrandLogo 미사용) + inline letterSpacing · UpgradePrompt 두 CTA 동일 목적지 · InvoiceDetail 타임라인 sent 시각을 created_at로 대체 표기 · 비밀번호 show/hide 토글 부재 · Follow-up 카드 aging 신호 부재 · QuickEstimateTab만 raw type="number"(NumericInput 미사용) · 진행바 inline width(동적 예외 — 문서화 필요)
 
-## 5. Codex 실행 큐 (권장 순서)
+## 5. 집행 현황 (2026-07-19 갱신)
 
-- **P0 (터치하는 화면당 1PR)**: C1 발송 액션 · C2 삭제 확인 · text-outline→on-surface-variant 일괄 · loading.tsx 5+2 라우트 · /demo/schedule 가드
-- **P1**: bg-white 241 일괄 치환(프리미티브 5개 우선: input/select/card/skeleton/modal) · ErrorAlert/StatusBadge/ConfirmDialog 정본 채택 · focus-visible 표준화 · 44px 미달 15곳 · 온보딩 최소필수화 · 대시보드 KPI/업셀 순서 + Revenue 정의 통일
-- **P2**: SectionLabel 신설+arbitrary px 수렴 · radius/입력 규격 정렬 · 카피 5건 · auth 셸 통일 · 死코드 제거(button.tsx, JobsWorkspace, dark: variant in BrandLogo) · 컨테이너 너비 3곳
-- **회귀 가드**: 치환 후 `npm run build` + 로그인/견적 상세/캘린더 모바일 스크린샷 비교. `bg-white`·`text-outline` grep 0건 목표(예외: PDF 템플릿·global-error는 정당한 hex 컨텍스트)
+- **P0 — 전부 완료**: C1 발송 액션(`sendQuoteToClient` + Send/Resend UI) · C2 삭제 ConfirmDialog · text-outline→on-surface-variant 일괄 · loading.tsx 9 라우트 · /demo/schedule 프로덕션 가드 + schedule 비로그인 redirect
+- **P1 — 전부 완료**: bg-white 0건 치환 · ErrorAlert/StatusBadge/ConfirmDialog/toast 정본 채택 · focus-visible 표준화 · 44px 터치 타겟 · 온보딩 최소필수(상호+ABN, 서버 검증 동기화) · 대시보드 KPI/업셀 순서 + Revenue 정의를 KPI 밴드 시맨틱으로 통일
+- **P2 — 대부분 완료**: SectionLabel 신설·채택 · radius/입력 규격 정렬 · 카피(+ New 패턴, 로그인 서브카피) · auth 셸 통일(forgot/reset→AuthShell) · 死코드 제거 · 컨테이너 너비 3곳
+- **잔여 (Codex 후속)**: ① `types/database.ts` 재생성(quotes.customer_email/address 미타입 → cast 우회 제거) ② QuickEstimateTab→NumericInput(테스트 12+ 동반 수정) ③ JobDetail/jobs 로컬 status map 3곳 StatusBadge 통합 + overline 10곳 SectionLabel(디자인 판단 필요) ④ 밀집 UI 의도적 예외 유지: PriceRatesForm rate-matrix rounded-lg, Sidebar 탭바 10px 캡션, JobDetail 헤더 compact Edit
+- **회귀 가드 결과**: build exit 0 · lint 0 · test 530/530 · `bg-white`/`text-outline`/`alert(` grep 0건 달성 (예외: PDF 템플릿·global-error·SignaturePad canvas API)
 
 ## 6. 잘된 점 (유지)
 

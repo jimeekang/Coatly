@@ -1166,7 +1166,7 @@ export async function sendQuoteToClient(
 
   const { data: quote, error: fetchError } = await supabase
     .from('quotes')
-    .select('id, status, customer_id, customer_email')
+    .select('id, status, customer_id')
     .eq('id', quoteId)
     .eq('user_id', user.id)
     .single();
@@ -1177,21 +1177,20 @@ export async function sendQuoteToClient(
     return { error: 'Only draft or sent quotes can be sent to the client.' };
   }
 
-  let recipientEmail = quote.customer_email?.trim() ?? '';
-  if (!recipientEmail) {
-    const { data: customer, error: customerError } = await supabase
-      .from('customers')
-      .select('email, emails')
-      .eq('id', quote.customer_id)
-      .eq('user_id', user.id)
-      .maybeSingle();
+  const { data: customer, error: customerError } = await supabase
+    .from('customers')
+    .select('email, emails')
+    .eq('id', quote.customer_id)
+    .eq('user_id', user.id)
+    .maybeSingle();
 
-    if (customerError) {
-      return { error: customerError.message };
-    }
-
-    recipientEmail = customer ? (normalizeCustomerEmails(customer)[0] ?? '') : '';
+  if (customerError) {
+    return { error: customerError.message };
   }
+
+  const recipientEmail = customer
+    ? (normalizeCustomerEmails(customer)[0] ?? '')
+    : '';
 
   if (!recipientEmail) {
     return { error: 'Add a customer email before sending this quote.' };

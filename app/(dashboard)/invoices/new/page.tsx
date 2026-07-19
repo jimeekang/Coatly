@@ -53,14 +53,14 @@ export default async function NewInvoicePage({
       {pageError ? (
         <ErrorAlert>{pageError}</ErrorAlert>
       ) : customers.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-5 py-8">
+        <div className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low px-5 py-8">
           <h2 className="text-base font-bold text-on-surface">Add a customer first</h2>
           <p className="mt-1 text-sm text-on-surface-variant">
             Invoices are linked to a saved customer in your workspace.
           </p>
           <Link
             href="/customers/new"
-            className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
+            className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
           >
             Go to New Customer
           </Link>

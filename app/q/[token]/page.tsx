@@ -18,9 +18,9 @@ export default async function PublicQuotePage({
 
   if (error || !data) {
     return (
-      <main className="min-h-screen bg-[#fcf9f4] px-4 py-12">
+      <main className="min-h-screen bg-surface px-4 py-12">
         <div className="mx-auto max-w-lg">
-          <div className="overflow-hidden rounded-2xl border border-error/30 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-error/30 bg-surface-container-lowest shadow-sm">
             <div className="border-b border-error/20 bg-error-container/40 px-5 py-3">
               <p className="text-xs font-semibold uppercase tracking-widest text-on-error-container">
                 Error
@@ -40,7 +40,7 @@ export default async function PublicQuotePage({
     : null;
 
   return (
-    <main className="min-h-screen bg-[#f6f3ee]">
+    <main className="min-h-screen bg-surface">
       <PublicQuoteClient
         token={token}
         quote={data.quote}

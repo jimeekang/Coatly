@@ -21,7 +21,7 @@ export default function SubscribeError({ error, reset }: ErrorProps) {
       <button
         type="button"
         onClick={reset}
-        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-6 text-base font-semibold text-on-primary transition-colors hover:bg-primary/90 active:bg-primary/90"
+        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-6 text-base font-semibold text-on-primary transition-colors hover:bg-primary/90 active:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         Try again
       </button>

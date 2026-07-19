@@ -12,18 +12,13 @@ import { QUOTE_COATING_LABELS, QUOTE_SURFACE_LABELS, QUOTE_STATUS_LABELS } from 
 import { formatAUD, formatDate } from '@/utils/format';
 import { ProfitabilityCard } from '@/modules/quotes/ui/ProfitabilityCard';
 import { QuoteActions } from '@/modules/quotes/ui/QuoteActions';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { QUOTE_STATUS_TONE } from '@/lib/constants/status-colors';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { getBusinessRateSettings } from '@/modules/settings/infrastructure/businesses';
 import { createServerClient } from '@/lib/supabase/server';
 
 export const metadata: Metadata = { title: 'Quote Detail' };
-
-const STATUS_BADGE: Record<string, string> = {
-  draft:    'bg-surface-container-highest text-on-surface-variant',
-  sent:     'bg-primary/10 text-primary',
-  approved: 'bg-success-container text-success',
-  rejected: 'bg-error-container text-error',
-  expired:  'bg-surface-container-highest text-on-surface-variant',
-};
 
 export default async function QuoteDetailPage({
   params,
@@ -144,9 +139,7 @@ export default async function QuoteDetailPage({
       </div>
 
       {error || !quote ? (
-        <div className="rounded-lg border border-error/20 bg-error-container px-4 py-3">
-          <p className="text-sm text-on-error-container">{error ?? 'Quote not found.'}</p>
-        </div>
+        <ErrorAlert>{error ?? 'Quote not found.'}</ErrorAlert>
       ) : (
         <>
           {/* Banners */}
@@ -173,7 +166,7 @@ export default async function QuoteDetailPage({
           {/* ── detail-head ── */}
           <div className="flex items-end justify-between gap-4 mb-4">
             <div className="min-w-0">
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline font-mono mb-1">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface-variant font-mono mb-1">
                 {quote.quote_number}
               </p>
               <h1 className="text-[26px] font-extrabold tracking-tight text-on-surface leading-tight mt-1">
@@ -184,15 +177,15 @@ export default async function QuoteDetailPage({
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span
-                className={`inline-flex items-center px-2.5 py-1 rounded text-[10.5px] font-bold uppercase tracking-[0.14em] ${STATUS_BADGE[quote.status] ?? 'bg-surface-container-highest text-on-surface-variant'}`}
-              >
-                {QUOTE_STATUS_LABELS[quote.status]}
-              </span>
+              <StatusBadge
+                tone={QUOTE_STATUS_TONE[quote.status]}
+                label={QUOTE_STATUS_LABELS[quote.status]}
+                size="md"
+              />
               {!quote.has_linked_invoices && (
                 <Link
                   href={`/quotes/${id}/edit`}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-on-primary hover:opacity-90 transition-opacity"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-on-primary hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   <Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />
                   Edit
@@ -205,7 +198,7 @@ export default async function QuoteDetailPage({
           <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
 
             {/* ── Main card: Line items + Totals ── */}
-            <div className="self-start bg-white border border-outline-variant rounded-2xl shadow-sm">
+            <div className="self-start bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm">
               <div className="p-4">
                 <p className="text-[13px] font-bold text-on-surface mb-3 tracking-[-0.005em]">
                   Line items
@@ -213,7 +206,7 @@ export default async function QuoteDetailPage({
 
                 {/* Table header — md+ only */}
                 {scopeRows.length > 0 && (
-                  <div className="hidden md:grid grid-cols-[1fr_90px_90px_90px] gap-3 pb-2 border-b border-outline-variant text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
+                  <div className="hidden md:grid grid-cols-[1fr_90px_90px_90px] gap-3 pb-2 border-b border-outline-variant text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
                     <div>Item</div>
                     <div className="text-right">Qty</div>
                     <div className="text-right">Rate</div>
@@ -233,13 +226,13 @@ export default async function QuoteDetailPage({
                       <div className="min-w-0">
                         <p className="font-semibold text-on-surface">{row.name}</p>
                         {row.sub && (
-                          <p className="text-xs text-outline mt-0.5">{row.sub}</p>
+                          <p className="text-xs text-on-surface-variant mt-0.5">{row.sub}</p>
                         )}
                         {row.notes && (
                           <p className="text-xs text-on-surface-variant mt-0.5 italic">{row.notes}</p>
                         )}
                         {/* Mobile: qty · rate inline */}
-                        <p className="text-xs text-outline mt-1 md:hidden">
+                        <p className="text-xs text-on-surface-variant mt-1 md:hidden">
                           {row.qtyLabel} · {row.rateLabel}
                         </p>
                       </div>
@@ -261,7 +254,7 @@ export default async function QuoteDetailPage({
                   <div className="mt-5 pt-5 border-t-2 border-dashed border-outline-variant space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
+                        <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
                           Optional Items
                         </p>
                         <p className="text-xs text-on-surface-variant mt-1">
@@ -322,7 +315,7 @@ export default async function QuoteDetailPage({
                                   type="submit"
                                   className={`inline-flex min-h-11 items-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
                                     item.is_selected
-                                      ? 'border border-outline-variant bg-white text-on-surface hover:bg-surface-container-low'
+                                      ? 'border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
                                       : 'bg-primary text-on-primary hover:opacity-90'
                                   }`}
                                 >
@@ -357,7 +350,7 @@ export default async function QuoteDetailPage({
                       <span className="text-[18px] font-extrabold tracking-tight text-on-surface tabular-nums">
                         {formatAUD(quote.total_cents)}
                       </span>
-                      <span className="ml-1 text-[10px] font-bold text-outline">AUD</span>
+                      <span className="ml-1 text-[10px] font-bold text-on-surface-variant">AUD</span>
                     </div>
                   </div>
                 </div>
@@ -439,7 +432,7 @@ export default async function QuoteDetailPage({
                         const roomLabour = room.surfaces.reduce((s, surf) => s + surf.labour_cost_cents, 0);
                         const roomMaterials = room.surfaces.reduce((s, surf) => s + surf.material_cost_cents, 0);
                         return (
-                          <div key={room.id} className="rounded-lg border border-warning/20 bg-white/60 px-3 py-2">
+                          <div key={room.id} className="rounded-lg border border-warning/20 bg-surface-container-lowest/60 px-3 py-2">
                             <div className="flex items-center justify-between">
                               <span className="font-semibold text-on-surface">{room.name}</span>
                               <span className="font-bold text-on-surface tabular-nums">{formatAUD(room.total_cents)}</span>
@@ -529,7 +522,7 @@ export default async function QuoteDetailPage({
 
               {/* Billing Progress — directly below Notes */}
               {linkedInvoices.length > 0 && (
-                <div className="rounded-2xl border border-outline-variant bg-white shadow-sm overflow-hidden">
+                <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm overflow-hidden">
                   <div className="bg-surface-container-low px-4 py-3 border-b border-outline-variant">
                     <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-on-surface">
                       Billing Progress

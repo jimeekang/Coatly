@@ -4,8 +4,8 @@ export function UpgradePrompt({
   badge = 'Pro Feature',
   title,
   description,
-  href = '/settings',
-  ctaLabel = 'View Plans',
+  href = '/subscribe',
+  ctaLabel = 'Upgrade to Pro',
 }: {
   badge?: string;
   title: string;
@@ -23,13 +23,13 @@ export function UpgradePrompt({
       <div className="mt-4 flex flex-wrap gap-3">
         <Link
           href={href}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 sm:px-5"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-5"
         >
           {ctaLabel}
         </Link>
         <Link
           href="/settings"
-          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high active:bg-outline-variant sm:px-5"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline-variant bg-surface-container px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high active:bg-outline-variant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-5"
         >
           Compare Plans
         </Link>

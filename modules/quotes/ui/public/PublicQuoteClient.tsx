@@ -440,7 +440,7 @@ export function PublicQuoteClient({
                             formatLabel(section.section_kind)}
                         </p>
                       </div>
-                      <span className="text-primary shrink-0 rounded-full bg-surface-container-lowest px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase">
+                      <span className="text-primary shrink-0 rounded-full bg-surface-container-lowest px-2.5 py-1 text-xs font-bold tracking-wide uppercase">
                         {formatLabel(section.pricing_status) ?? 'Included'}
                       </span>
                     </div>

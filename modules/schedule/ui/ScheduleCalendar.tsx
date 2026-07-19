@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -25,9 +25,8 @@ import {
 } from '@/modules/schedule/application/actions';
 import { useToast } from '@/components/ui/toast';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import { SectionLabel } from '@/components/shared/SectionLabel';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { JOB_STATUS_TONE, STATUS_TONE_BG } from '@/lib/constants/status-colors';
+import { JOB_STATUS_TONE } from '@/lib/constants/status-colors';
 import type { JobStatus } from '@/modules/jobs/domain/jobs';
 
 export type CalendarJob = {
@@ -801,7 +800,7 @@ function JobScheduleModal({
             <p className="text-sm font-semibold text-on-surface">{job.customerName}</p>
             <p className="mt-1 text-xs text-on-surface-variant">{job.title}</p>
           </div>
-          <div className="rounded-xl border border-outline bg-white p-4">
+          <div className="rounded-xl border border-outline bg-surface-container-low p-4">
             <div className="flex flex-col gap-1">
               <p className="text-sm font-semibold text-on-surface">Scheduled days</p>
               <p className="text-xs text-on-surface-variant">
@@ -831,7 +830,7 @@ function JobScheduleModal({
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-outline bg-white p-4">
+          <div className="rounded-xl border border-outline bg-surface-container-low p-4">
             <div className="flex flex-col gap-1">
               <p className="text-sm font-semibold text-on-surface">Add a day</p>
               <p className="text-xs text-on-surface-variant">
@@ -843,7 +842,7 @@ function JobScheduleModal({
                 type="date"
                 value={addDate}
                 onChange={(e) => setAddDate(e.target.value)}
-                className="h-11 flex-1 rounded-xl border border-outline bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                className="h-11 flex-1 rounded-xl border border-outline bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
               <button
                 type="button"
@@ -856,7 +855,7 @@ function JobScheduleModal({
               </button>
             </div>
           </div>
-          <div className="rounded-xl border border-outline bg-white p-4">
+          <div className="rounded-xl border border-outline bg-surface-container-low p-4">
             <div className="flex flex-col gap-1">
               <p className="text-sm font-semibold text-on-surface">Reset as date range</p>
               <p className="text-xs text-on-surface-variant">
@@ -890,7 +889,7 @@ function JobScheduleModal({
               {getInclusiveDayCount(startDate, endDate)} day range
             </p>
           </div>
-          {error && <p className="rounded-lg bg-error-container px-3 py-2 text-sm text-error">{error}</p>}
+          {error && <ErrorAlert>{error}</ErrorAlert>}
           <div className="flex gap-3 pt-1">
             <button
               type="button"
@@ -913,11 +912,24 @@ function JobScheduleModal({
   );
 }
 
-function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
+function ModalHeader({
+  title,
+  titleId,
+  onClose,
+  closeButtonRef,
+}: {
+  title: string;
+  titleId?: string;
+  onClose: () => void;
+  closeButtonRef?: RefObject<HTMLButtonElement | null>;
+}) {
   return (
     <div className="mb-5 flex items-center justify-between">
-      <h2 className="text-lg font-bold text-on-surface">{title}</h2>
+      <h2 id={titleId} className="text-lg font-bold text-on-surface">
+        {title}
+      </h2>
       <button
+        ref={closeButtonRef}
         onClick={onClose}
         className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-low"
         aria-label="Close"
@@ -964,7 +976,7 @@ function JobEventCard({
         e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className={`flex flex-col gap-2 rounded-xl border border-outline bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:gap-3 sm:rounded-2xl sm:p-4 ${
+      className={`flex flex-col gap-2 rounded-xl border border-outline bg-surface-container-lowest p-3 shadow-sm transition-shadow hover:shadow-md sm:gap-3 sm:rounded-2xl sm:p-4 ${
         dragPayload ? 'cursor-grab active:cursor-grabbing' : ''
       }`}
     >
@@ -979,11 +991,7 @@ function JobEventCard({
           {job.title && <p className="line-clamp-1 text-xs text-on-surface-variant">{job.title}</p>}
           {job.address && <p className="line-clamp-1 text-xs text-on-surface-variant">{job.address}</p>}
         </div>
-        <span
-          className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_BADGE[job.status]}`}
-        >
-          {jobStatusLabels[job.status]}
-        </span>
+        <StatusBadge tone={JOB_STATUS_TONE[job.status]} label={jobStatusLabels[job.status]} />
       </div>
       <div className="flex flex-wrap gap-2">
         <span className="max-w-full truncate rounded-full bg-surface-container-low px-2.5 py-1 text-[11px] font-medium text-on-surface-variant sm:text-xs">
@@ -1294,7 +1302,7 @@ export function ScheduleCalendar({
 
   return (
     <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
-      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-outline bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
+      <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-outline bg-surface-container-lowest p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
         <div className="flex flex-col gap-3">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
@@ -1303,7 +1311,7 @@ export function ScheduleCalendar({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search jobs, quotes, addresses..."
-              className="h-11 w-full rounded-xl border border-outline bg-white pl-9 pr-10 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              className="h-11 w-full rounded-xl border border-outline bg-surface-container-lowest pl-9 pr-10 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
             />
             {searchQuery && (
               <button
@@ -1382,7 +1390,7 @@ export function ScheduleCalendar({
       </div>
 
       {view === 'calendar' ? (
-        <div className="rounded-xl border border-outline bg-white p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
+        <div className="rounded-xl border border-outline bg-surface-container-lowest p-2.5 shadow-sm sm:rounded-2xl sm:p-3">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase text-on-surface-variant">Calendar month</p>
@@ -1408,7 +1416,7 @@ export function ScheduleCalendar({
               className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90 sm:min-w-[140px] sm:px-4"
             >
               <Plus className="h-4 w-4" />
-              Add event
+              New Event
             </button>
             <button
               onClick={nextMonth}
@@ -1420,7 +1428,7 @@ export function ScheduleCalendar({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 rounded-xl border border-outline bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:rounded-2xl sm:p-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-outline bg-surface-container-lowest p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:rounded-2xl sm:p-4">
           <div>
             <p className="text-xs font-semibold uppercase text-on-surface-variant">Job list</p>
             <p className="mt-1 text-sm text-on-surface-variant">
@@ -1432,7 +1440,7 @@ export function ScheduleCalendar({
             className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
-            Add event
+            New Event
           </button>
         </div>
       )}
@@ -1469,7 +1477,7 @@ export function ScheduleCalendar({
           <Legend googleConnected={googleConnected} />
           {selected && (
             <section className="flex flex-col gap-3">
-              <div className="rounded-xl border border-outline bg-white p-3 shadow-sm sm:rounded-2xl sm:p-4">
+              <div className="rounded-xl border border-outline bg-surface-container-lowest p-3 shadow-sm sm:rounded-2xl sm:p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase text-on-surface-variant">Selected day</p>
@@ -1682,7 +1690,7 @@ function CalendarGrid({
       <div className="min-w-0 pb-1">
         <div
           aria-label="Schedule calendar month"
-          className="w-full min-w-0 overflow-hidden rounded-xl border border-outline bg-white shadow-sm sm:rounded-2xl"
+          className="w-full min-w-0 overflow-hidden rounded-xl border border-outline bg-surface-container-lowest shadow-sm sm:rounded-2xl"
         >
           <div className="grid grid-cols-7 border-b border-outline bg-surface-container-low">
             {DAY_HEADERS.map((d) => (
@@ -1746,7 +1754,7 @@ function CalendarGrid({
                       <button
                         type="button"
                         onClick={() => onSelect(dateStr)}
-                        className="min-h-11 rounded border border-outline bg-white px-2 text-left text-xs font-semibold leading-tight text-on-surface-variant xl:min-h-6 xl:px-1 xl:text-[10px]"
+                        className="min-h-11 rounded border border-outline bg-surface-container-lowest px-2 text-left text-xs font-semibold leading-tight text-on-surface-variant xl:min-h-6 xl:px-1 xl:text-[10px]"
                       >
                         +{hiddenCount} more
                       </button>
@@ -1754,7 +1762,7 @@ function CalendarGrid({
                   </div>
                   <button
                     onClick={() => onAdd(dateStr)}
-                    className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-white text-on-surface-variant shadow-sm ring-1 ring-outline transition-colors hover:text-primary xl:hidden xl:group-hover:flex"
+                    className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-lowest text-on-surface-variant shadow-sm ring-1 ring-outline transition-colors hover:text-primary xl:hidden xl:group-hover:flex"
                     aria-label="Add schedule on this day"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -1784,7 +1792,7 @@ function EventStack({
 }) {
   if (events.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-outline bg-white px-6 py-8 text-center">
+      <div className="rounded-2xl border border-dashed border-outline bg-surface-container-lowest px-6 py-8 text-center">
         <p className="text-sm text-on-surface-variant">{emptyText}</p>
       </div>
     );
@@ -1818,13 +1826,13 @@ function EventStack({
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="rounded-2xl border border-dashed border-outline bg-white px-6 py-8 text-center">
+    <div className="rounded-2xl border border-dashed border-outline bg-surface-container-lowest px-6 py-8 text-center">
       <p className="text-sm text-on-surface-variant">No matching jobs or events.</p>
       <button
         onClick={onAdd}
         className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-primary hover:bg-primary/5"
       >
-        Add an event
+        New Event
       </button>
     </div>
   );
@@ -1832,7 +1840,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 function SummaryChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full border border-outline bg-white px-2 py-0.5 text-[11px] font-medium text-on-surface-variant sm:px-2.5 sm:py-1 sm:text-xs">
+    <span className="rounded-full border border-outline bg-surface-container-lowest px-2 py-0.5 text-[11px] font-medium text-on-surface-variant sm:px-2.5 sm:py-1 sm:text-xs">
       {children}
     </span>
   );
@@ -1855,7 +1863,7 @@ function SegmentButton({
       className={`flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-colors sm:gap-2 sm:px-3 sm:text-sm ${
         active
           ? 'border-primary bg-primary/10 text-primary'
-          : 'border-outline bg-white text-on-surface-variant hover:bg-surface-container-low'
+          : 'border-outline bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
       }`}
     >
       {children}
@@ -1879,7 +1887,7 @@ function FilterButton({
       className={`min-h-11 min-w-0 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
         active
           ? 'border-primary bg-primary/10 text-primary'
-          : 'border-outline bg-white text-on-surface-variant hover:bg-surface-container-low'
+          : 'border-outline bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
       }`}
     >
       {children}

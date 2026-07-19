@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { updateJob, saveJobVariations } from '@/modules/jobs/application/actions';
 import {
   JOB_STATUS_LABELS,
@@ -166,7 +167,7 @@ export function JobEditForm({
             value={form.title}
             onChange={(e) => setForm((c) => ({ ...c, title: e.target.value }))}
             placeholder="e.g. Harbour kitchen repaint"
-            className="h-11 rounded-lg border border-outline-variant bg-white px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+            className="h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           />
         </label>
 
@@ -176,7 +177,7 @@ export function JobEditForm({
             type="date"
             value={form.scheduled_date}
             onChange={(e) => setForm((c) => ({ ...c, scheduled_date: e.target.value }))}
-            className="h-11 rounded-lg border border-outline-variant bg-white px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+            className="h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           />
         </label>
 
@@ -185,7 +186,7 @@ export function JobEditForm({
           <select
             value={form.customer_id}
             onChange={(e) => handleCustomerChange(e.target.value)}
-            className="h-11 rounded-lg border border-outline-variant bg-white px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+            className="h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           >
             <option value="">Select a customer</option>
             {customers.map((c) => (
@@ -199,7 +200,7 @@ export function JobEditForm({
           <select
             value={form.quote_id}
             onChange={(e) => handleQuoteChange(e.target.value)}
-            className="h-11 rounded-lg border border-outline-variant bg-white px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+            className="h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           >
             <option value="">No linked quote</option>
             {filteredQuotes.map((q) => (
@@ -224,7 +225,7 @@ export function JobEditForm({
                 className={`min-h-11 rounded-full border px-4 text-xs font-semibold whitespace-nowrap transition-colors ${
                   active
                     ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-low'
+                    : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
                 }`}
               >
                 {JOB_STATUS_LABELS[status]}
@@ -241,7 +242,7 @@ export function JobEditForm({
           onChange={(e) => setForm((c) => ({ ...c, notes: e.target.value }))}
           rows={4}
           placeholder="Site access, paint spec, or handover notes"
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2.5 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+          className="rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-normal text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
         />
       </label>
 
@@ -252,7 +253,7 @@ export function JobEditForm({
           <button
             type="button"
             onClick={addVariation}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-outline-variant px-3 text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low"
+            className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-outline-variant px-3 text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14M5 12h14" />
@@ -268,7 +269,7 @@ export function JobEditForm({
         ) : (
           <div className="flex flex-col gap-2">
             {/* Header */}
-            <div className="hidden grid-cols-[1fr_80px_100px_100px_32px] gap-2 px-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant md:grid">
+            <div className="hidden grid-cols-[1fr_80px_100px_100px_44px] gap-2 px-1 text-xs font-semibold uppercase tracking-wider text-on-surface-variant md:grid">
               <span>Description</span>
               <span>Qty</span>
               <span>Unit price</span>
@@ -283,7 +284,7 @@ export function JobEditForm({
               return (
                 <div
                   key={row.key}
-                  className="grid grid-cols-1 gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-[1fr_80px_100px_100px_32px] md:items-center md:rounded-lg md:border-none md:bg-transparent md:p-0"
+                  className="grid grid-cols-1 gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-[1fr_80px_100px_100px_44px] md:items-center md:rounded-lg md:border-none md:bg-transparent md:p-0"
                 >
                   <div className="flex flex-col gap-1">
                     <input
@@ -291,14 +292,14 @@ export function JobEditForm({
                       value={row.name}
                       onChange={(e) => updateVariation(row.key, 'name', e.target.value)}
                       placeholder="Description"
-                      className="h-9 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                      className="h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                     />
                     <input
                       type="text"
                       value={row.notes}
                       onChange={(e) => updateVariation(row.key, 'notes', e.target.value)}
                       placeholder="Notes (optional)"
-                      className="h-8 rounded-lg border border-outline-variant bg-white px-3 text-xs text-on-surface-variant outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                      className="h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-xs text-on-surface-variant outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                     />
                   </div>
                   <input
@@ -308,7 +309,7 @@ export function JobEditForm({
                     min="0"
                     step="0.5"
                     placeholder="1"
-                    className="h-9 rounded-lg border border-outline-variant bg-white px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                    className="h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                   />
                   <div className="relative">
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-on-surface-variant">$</span>
@@ -319,7 +320,7 @@ export function JobEditForm({
                       min="0"
                       step="0.01"
                       placeholder="0.00"
-                      className="h-9 w-full rounded-lg border border-outline-variant bg-white pl-6 pr-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                      className="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest pl-6 pr-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                     />
                   </div>
                   <p className="text-right text-sm font-semibold text-on-surface self-center">
@@ -328,7 +329,7 @@ export function JobEditForm({
                   <button
                     type="button"
                     onClick={() => removeVariation(row.key)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-error-container hover:text-on-error-container self-center"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl text-on-surface-variant transition-colors hover:bg-error-container hover:text-on-error-container self-center"
                     aria-label="Remove variation"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -349,24 +350,20 @@ export function JobEditForm({
         )}
       </div>
 
-      {formError && (
-        <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3">
-          <p className="text-sm text-on-error-container">{formError}</p>
-        </div>
-      )}
+      {formError && <ErrorAlert>{formError}</ErrorAlert>}
 
       <div className="flex items-center justify-end gap-3">
         <button
           type="button"
           onClick={() => router.push(`/jobs/${job.id}`)}
-          className="inline-flex h-11 items-center rounded-lg border border-outline-variant px-5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+          className="inline-flex h-11 items-center rounded-xl border border-outline-variant px-5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex h-11 items-center rounded-lg bg-primary px-5 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-50"
+          className="inline-flex h-11 items-center rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary transition-colors hover:opacity-90 disabled:opacity-50"
         >
           {isPending ? 'Saving...' : 'Save Changes'}
         </button>

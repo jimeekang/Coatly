@@ -107,7 +107,7 @@ function ToggleGroup<T extends string>({
             size === 'sm' ? 'min-h-11 text-xs' : 'h-11 text-sm',
             value === opt
               ? 'border-primary bg-primary text-on-primary'
-              : 'border-outline-variant bg-white text-on-surface hover:border-primary hover:bg-primary/15',
+              : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary hover:bg-primary/15',
           ].join(' ')}
         >
           {labels?.[opt] ?? opt}
@@ -134,7 +134,7 @@ function Counter({
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
-        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-surface-container-lowest text-lg font-bold text-on-surface disabled:opacity-30"
         aria-label="Decrease"
       >
         −
@@ -144,7 +144,7 @@ function Counter({
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
-        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-white text-lg font-bold text-on-surface disabled:opacity-30"
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-surface-container-lowest text-lg font-bold text-on-surface disabled:opacity-30"
         aria-label="Increase"
       >
         +
@@ -170,13 +170,13 @@ function Toggle({
         'flex h-11 items-center gap-3 rounded-xl border px-4 text-sm font-medium transition-colors',
         checked
           ? 'border-primary bg-primary-container text-on-primary-container'
-          : 'border-outline-variant bg-white text-on-surface-variant',
+          : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant',
       ].join(' ')}
     >
       <span
         className={[
           'flex h-5 w-5 items-center justify-center rounded border-2 text-xs transition-colors',
-          checked ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant bg-white',
+          checked ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant bg-surface-container-lowest',
         ].join(' ')}
       >
         {checked ? '✓' : ''}
@@ -242,7 +242,7 @@ function RoomCard({
     availableWindowTypes.includes(room.window_type) ? room.window_type : availableWindowTypes[0];
 
   return (
-    <div className="rounded-2xl border border-outline-variant bg-white">
+    <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-4 py-3">
         <input
@@ -342,7 +342,7 @@ function RoomCard({
             />
 
             {/* Doors */}
-            <div className="rounded-xl border border-outline-variant bg-white p-3">
+            <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm font-medium text-on-surface">Doors</p>
                 <Counter
@@ -362,7 +362,7 @@ function RoomCard({
             </div>
 
             {/* Windows */}
-            <div className="rounded-xl border border-outline-variant bg-white p-3">
+            <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm font-medium text-on-surface">Windows</p>
                 <Counter
@@ -498,7 +498,7 @@ export function QuickQuoteBuilder({
   return (
     <div className="space-y-4">
       {/* Wall / Ceiling Coating — global for the whole job */}
-      <section className="rounded-2xl border border-outline-variant bg-white p-4">
+      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
           Wall &amp; Ceiling Coating
         </h3>
@@ -513,7 +513,7 @@ export function QuickQuoteBuilder({
                 'flex flex-col rounded-xl border p-3 text-left transition-colors',
                 value.wall_paint_system === sys
                   ? 'border-primary bg-primary-container text-on-primary-container'
-                  : 'border-outline-variant bg-white hover:border-primary',
+                  : 'border-outline-variant bg-surface-container-lowest hover:border-primary',
               ].join(' ')}
             >
               <span
@@ -566,7 +566,7 @@ export function QuickQuoteBuilder({
               key={preset.anchor}
               type="button"
               onClick={() => addRoom(preset)}
-              className="flex flex-col items-center gap-1 rounded-xl border border-outline-variant bg-white px-2 py-3 text-center transition-colors hover:border-primary hover:bg-primary/10 active:scale-95"
+              className="flex flex-col items-center gap-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-2 py-3 text-center transition-colors hover:border-primary hover:bg-primary/10 active:scale-95"
             >
               <span className="text-xl leading-none" role="img" aria-hidden>
                 {preset.emoji}
@@ -581,7 +581,7 @@ export function QuickQuoteBuilder({
 
       {/* Price summary + adjustment */}
       {value.rooms.length > 0 && (
-        <section className="rounded-2xl border border-outline-variant bg-white p-4">
+        <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">
             Estimate Totals
           </h3>
@@ -602,7 +602,7 @@ export function QuickQuoteBuilder({
                 <button
                   type="button"
                   onClick={() => adjustBy(-STEP)}
-                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-error hover:bg-error-container hover:text-error"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest text-base font-bold text-on-surface hover:border-error hover:bg-error-container hover:text-error"
                   aria-label="Decrease by $50"
                 >
                   −
@@ -620,7 +620,7 @@ export function QuickQuoteBuilder({
                 <button
                   type="button"
                   onClick={() => adjustBy(STEP)}
-                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-white text-base font-bold text-on-surface hover:border-primary hover:bg-primary/15 hover:text-primary"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container-lowest text-base font-bold text-on-surface hover:border-primary hover:bg-primary/15 hover:text-primary"
                   aria-label="Increase by $50"
                 >
                   +

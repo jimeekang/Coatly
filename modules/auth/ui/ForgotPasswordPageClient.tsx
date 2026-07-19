@@ -7,13 +7,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { requestPasswordReset } from '@/modules/auth/application/actions';
-import { BrandLogo } from '@/components/branding/BrandLogo';
+import { AuthShell } from '@/modules/auth/ui/AuthShell';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { FormField } from '@/components/forms/FormField';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email'),
 });
 
 type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+const linkClassName =
+  'rounded font-medium text-primary/90 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 export default function ForgotPasswordPageClient() {
   const [isPending, startTransition] = useTransition();
@@ -42,94 +47,67 @@ export default function ForgotPasswordPageClient() {
 
   if (sentEmail) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
-        <div className="w-full max-w-sm text-center">
-          <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-success-container flex items-center justify-center">
+      <AuthShell
+        eyebrow="Password reset"
+        title="Check your email"
+        description="Open the link in that email to set a new password."
+        footer={
+          <Link href="/login" className={linkClassName}>
+            Back to sign in
+          </Link>
+        }
+      >
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-container">
             <CheckCircle className="h-7 w-7 text-primary-container" aria-hidden="true" />
           </div>
-          <h1 className="mb-2 text-[22px] font-semibold text-on-surface">Check your email</h1>
-          <p className="text-sm text-on-surface-variant">
+          <p className="text-sm leading-6 text-on-surface-variant">
             We sent a password reset link to{' '}
             <span className="font-medium text-on-surface">{sentEmail}</span>.
           </p>
-          <p className="mt-2 text-sm text-on-surface-variant">
-            Open the link in that email to set a new password.
-          </p>
-          <Link
-            href="/login"
-            className="mt-6 inline-block text-sm font-medium text-primary/90 hover:underline"
-          >
-            Back to sign in
-          </Link>
         </div>
-      </main>
+      </AuthShell>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex justify-center">
-          <BrandLogo width={176} height={40} priority />
-        </div>
-
-        <div className="rounded-2xl border border-outline bg-white p-6">
-          <h1 className="mb-2 text-[22px] font-semibold text-on-surface">Forgot password</h1>
-          <p className="mb-6 text-sm text-on-surface-variant">
-            Enter your email and we&apos;ll send you a reset link.
-          </p>
-
-          {serverError && (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container"
-            >
-              {serverError}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-on-surface">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                placeholder="you@example.com"
-                disabled={isPending}
-                aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? 'email-error' : undefined}
-                className="h-12 w-full rounded-lg border border-outline bg-white px-4 text-sm text-on-surface placeholder:text-on-surface-variant focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
-                {...register('email')}
-              />
-              {errors.email && (
-                <p id="email-error" className="mt-1.5 text-xs text-error">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-              Send reset email
-            </button>
-          </form>
-        </div>
-
-        <p className="mt-5 text-center text-sm text-on-surface-variant">
+    <AuthShell
+      eyebrow="Password reset"
+      title="Forgot password"
+      description="Enter your email and we'll send you a reset link."
+      footer={
+        <>
           Remembered your password?{' '}
-          <Link href="/login" className="font-medium text-primary/90 hover:underline">
+          <Link href="/login" className={linkClassName}>
             Sign in
           </Link>
-        </p>
-      </div>
-    </main>
+        </>
+      }
+    >
+      {serverError && <ErrorAlert className="mb-4">{serverError}</ErrorAlert>}
+
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        <FormField
+          htmlFor="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder="you@example.com"
+          disabled={isPending}
+          error={errors.email?.message}
+          {...register('email')}
+        />
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          Send reset email
+        </button>
+      </form>
+    </AuthShell>
   );
 }

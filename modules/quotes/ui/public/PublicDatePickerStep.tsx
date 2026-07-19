@@ -253,7 +253,7 @@ export function PublicDatePickerStep({
               {customerName ? `Thank you, ${customerName.split(' ')[0]}!` : 'Thank you!'}{' '}
               Your job has been booked.
             </p>
-            <div className="mt-3 rounded-lg border border-primary/20 bg-white px-4 py-3 text-sm">
+            <div className="mt-3 rounded-lg border border-primary/20 bg-surface-container-lowest px-4 py-3 text-sm">
               <p className="font-medium text-on-surface">
                 {isSingleDay ? (
                   formatDisplayDate(bookedResult.startDate)
@@ -301,12 +301,12 @@ export function PublicDatePickerStep({
         </p>
       </div>
 
-      <label className="flex items-start gap-3 rounded-xl border border-outline bg-white px-4 py-3 shadow-sm">
+      <label className="flex items-start gap-3 rounded-xl border border-outline bg-surface-container-lowest px-4 py-3 shadow-sm">
         <input
           type="checkbox"
           checked={allowNonWorkingDates}
           onChange={(event) => handleNonWorkingToggle(event.target.checked)}
-          className="mt-1 h-5 w-5 rounded border-outline text-primary focus:ring-primary-fixed"
+          className="mt-1 h-5 w-5 rounded border-outline text-primary focus:ring-primary/20"
         />
         <span>
           <span className="block text-sm font-semibold text-on-surface">
@@ -319,7 +319,7 @@ export function PublicDatePickerStep({
       </label>
 
       {/* Calendar */}
-      <div className="rounded-2xl border border-outline bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-outline bg-surface-container-lowest p-4 shadow-sm">
         {isLoadingDates ? (
           <CalendarSkeleton />
         ) : isAvailabilityUnavailable ? (
@@ -338,7 +338,7 @@ export function PublicDatePickerStep({
                 {contractorPhone && (
                   <a
                     href={`tel:${contractorPhone}`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline bg-white px-4 py-3 text-sm font-semibold text-on-surface shadow-sm"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline bg-surface-container-lowest px-4 py-3 text-sm font-semibold text-on-surface shadow-sm"
                   >
                     Call contractor
                   </a>
@@ -346,7 +346,7 @@ export function PublicDatePickerStep({
                 {contractorEmail && (
                   <a
                     href={`mailto:${contractorEmail}`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline bg-white px-4 py-3 text-sm font-semibold text-on-surface shadow-sm"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-outline bg-surface-container-lowest px-4 py-3 text-sm font-semibold text-on-surface shadow-sm"
                   >
                     Email contractor
                   </a>
@@ -393,7 +393,7 @@ export function PublicDatePickerStep({
             {/* Day headers */}
             <div className="mb-1 grid grid-cols-7 gap-1">
               {DAY_LABELS.map((d) => (
-                <div key={d} className="py-1 text-center text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                <div key={d} className="py-1 text-center text-xs font-bold uppercase tracking-widest text-on-surface-variant">
                   {d}
                 </div>
               ))}
@@ -499,9 +499,9 @@ export function PublicDatePickerStep({
 
       {/* Booking summary + button */}
       {selectedStart && selectedEndDate && (
-        <div className="space-y-3 rounded-2xl border border-outline bg-white p-4 shadow-sm">
+        <div className="space-y-3 rounded-2xl border border-outline bg-surface-container-lowest p-4 shadow-sm">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+            <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
               Your Booking
             </p>
             <p className="mt-1.5 text-base font-semibold text-on-surface">

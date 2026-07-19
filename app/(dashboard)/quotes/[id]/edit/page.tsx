@@ -196,7 +196,7 @@ export default async function EditQuotePage({
   };
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-7xl">
+    <div className="mx-auto max-w-lg px-4 pt-4 lg:max-w-6xl">
       <PageHeader
         title="Edit Quote"
         subtitle={`${quote.quote_number}${quote.title ? ` · ${quote.title}` : ''}`}

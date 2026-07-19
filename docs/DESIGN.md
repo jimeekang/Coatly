@@ -83,7 +83,7 @@ PWA 크롬 정합: `viewport.themeColor` = `manifest.theme_color` = `manifest.ba
 - 제목: `text-lg` ~ `text-2xl`, 페이지 타이틀 상한 `text-4xl` = **32px** (글로벌 스케일에서 2rem으로 재정의 — 유틸리티 앱 스케일)
 - 숫자: **전역 `tabular-nums`** (body에 `font-variant-numeric` 적용됨) — 금액·날짜 컬럼 자동 정렬. 금액 강조는 `text-xl font-semibold`
 - 송장번호: `font-mono tracking-[0.18em]` (시스템 mono 폴백 — 전용 mono 폰트 미로드)
-- 마이크로 라벨(overline): `text-[10px]~[11px] font-bold uppercase` + tracking `0.14em`/`0.18em` 2종만 사용 — 신규 UI는 공유 `SectionLabel` 프리미티브 신설 후 수렴 예정 (arbitrary px 신규 추가 금지)
+- 마이크로 라벨(overline): 정본은 **`<SectionLabel>`** (`components/shared/SectionLabel.tsx` — `text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant`, `as` prop 지원). 기존 `text-[10px]~[11px]` 잔존분은 tracking `0.14em`/`0.18em` 2종만 허용, 신규 arbitrary px 추가 금지
 - `h1`/`h2`는 전역 `text-wrap: balance`
 - 모든 금액은 AUD 포맷: `$1,234.56` (`formatAUD`)
 
@@ -123,7 +123,7 @@ Radius 베이스는 `--radius: 0.75rem` (12px) — `rounded-lg`=12px, `xl`≈17p
 | 모달 · 오버레이 | `z-50` |
 | Toast (`ToastProvider`) | `z-[100]` |
 
-새 shared footer 적용 시 기존 `z-50` 모달을 낮추지 말 것. 데스크탑 sidebar의 현행 `z-50`은 `z-40`으로 하향 예정(모달 레이어 침범).
+새 shared footer 적용 시 기존 `z-50` 모달을 낮추지 말 것. 데스크탑 sidebar는 `z-40` 하향 완료(2026-07-19) — 모달이 sidebar 위에 정상 렌더.
 
 ## Container Width Rules
 
@@ -160,7 +160,7 @@ modules/
               infrastructure/pdf/ (invoice-template.tsx)
   customers/  ui/ (CustomerForm, CustomerTable, CustomerDetail, CreateScreen) ·
               application/ · infrastructure/
-  jobs/       ui/ (JobDetail, JobEditForm — JobsWorkspace는 미사용 死코드, 정리 대상) ·
+  jobs/       ui/ (JobDetail, JobEditForm — JobsWorkspace는 삭제됨 2026-07-19) ·
               application/ · domain/
   schedule/   ui/ (ScheduleCalendar)
   assistant/  ui/ (WorkspaceAssistant)
@@ -174,10 +174,10 @@ modules/
 
 components/
   ui/         → shadcn/ui primitives + ConfirmDialog, StatusBadge, toast, modal
-                (button.tsx는 import 0건 死코드 — 정리 대상)
+                (button.tsx 死코드는 삭제됨 2026-07-19)
   forms/      → FormField, FormSection, FormFooter, GoogleAddressAutocomplete
   layout/     → PageHeader(+PrimaryActionLink/SecondaryActionLink), BackButton, BackLink
-  shared/     → ErrorAlert, NumericInput
+  shared/     → ErrorAlert, NumericInput, SectionLabel
   dashboard/  → Sidebar
   branding/   → BrandLogo
 ```
@@ -201,11 +201,9 @@ components/
 
 ## Open Items
 
-디자인 부채 전수는 **[`docs/features/audit/DESIGN-AUDIT-2026-07-12.md`](./features/audit/DESIGN-AUDIT-2026-07-12.md)** (91건, 우선순위·해결층 분류)가 정본. 최상위 항목:
+감사 정본·집행 현황은 **[`docs/features/audit/DESIGN-AUDIT-2026-07-12.md`](./features/audit/DESIGN-AUDIT-2026-07-12.md)** 참조. 2026-07-19 집행으로 `bg-white`/`text-outline`(텍스트)/네이티브 `alert()` **전부 0건** (예외: PDF 템플릿·global-error). 잔여 long-tail:
 
-- **`bg-white` 하드코딩 241회/50파일** — PriceRatesForm 34 · ScheduleCalendar 28 · QuoteForm 15 등. 계층 토큰으로 치환 (Codex).
-- **`text-outline`을 정보 텍스트로 오용** — InvoiceDetail(16곳) 등 대비 ~1.5:1. `text-on-surface-variant`로 상향 (Codex).
-- **공유 프리미티브 15개 focus-visible 부재** + `ConfirmDialog`/커스텀 모달 focus trap 부재 (Codex).
-- **`loading.tsx` 5개 라우트 누락** — jobs·schedule·materials-service·price-rates·settings (Codex).
-- **`components/ui/button.tsx`·`JobsWorkspace` 死코드 정리** — Button import 0건(기본 h-8 이슈는 이로써 무의미), raw `<button>` 275개가 실제 표준 (Codex).
-- **프리미티브 이원화 (AUDIT A14)** — `components/ui/input.tsx` vs `components/forms/FormField.tsx` 병존. FormField를 정본으로 확정하고 auth/onboarding/settings/materials의 inline FIELD const를 이관 (Codex).
+- **`types/database.ts` 재생성** — `quotes.customer_email/customer_address`가 생성 타입에 없어 call site들이 cast로 우회 중 (Codex, DB).
+- **`QuickEstimateTab` → NumericInput 이관** — PriceRatesForm.test 12+ assertion 동반 수정 필요해 보류 (Codex).
+- **JobDetail/jobs 로컬 status map 3곳 → StatusBadge 통합** + JobDetail overline 10곳 SectionLabel 이관 (디자인 판단 후 Codex).
+- **PriceRatesForm 밀집 rate-matrix `rounded-lg`** — 의도적 밀도, 유지 판정. 재론 시 이 문서 갱신.

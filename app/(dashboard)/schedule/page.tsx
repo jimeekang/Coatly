@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import {
   addJobScheduleDay,
   deleteJobScheduleDay,
@@ -37,7 +38,7 @@ export default async function SchedulePage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return null;
+  if (!user) redirect('/login');
 
   const now = new Date();
   const today = now.toISOString().slice(0, 10);

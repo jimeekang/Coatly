@@ -81,7 +81,7 @@ describe('MaterialItemList', () => {
 
     render(<MaterialItemList initialItems={[]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Add First Item' }));
+    await user.click(screen.getByRole('button', { name: '+ New Item' }));
     await user.type(screen.getByLabelText('Item Name'), CREATED_ITEM.name);
     await user.click(screen.getByRole('button', { name: 'Add Item' }));
 
@@ -112,6 +112,10 @@ describe('MaterialItemList', () => {
     );
     await user.click(screen.getAllByLabelText('Delete Ceiling Paint Updated')[0]);
 
+    // Refactor replaced the native confirm prompt with the canonical
+    // ConfirmDialog: confirm the destructive action before the delete fires.
+    await user.click(await screen.findByRole('button', { name: 'Delete' }));
+
     await waitFor(() => expect(deleteMaterialItemMock).toHaveBeenCalledWith('db-item-1'));
   });
 
@@ -120,7 +124,7 @@ describe('MaterialItemList', () => {
 
     render(<MaterialItemList initialItems={[]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Add First Item' }));
+    await user.click(screen.getByRole('button', { name: '+ New Item' }));
     await user.selectOptions(screen.getByLabelText('Category'), 'paint');
     await user.type(screen.getByLabelText('Brand (optional)'), 'Dulux');
     await user.type(screen.getByLabelText('Item Name'), 'Wash & Wear');
@@ -147,7 +151,7 @@ describe('MaterialItemList', () => {
 
     render(<MaterialItemList initialItems={[]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Add First Item' }));
+    await user.click(screen.getByRole('button', { name: '+ New Item' }));
     await user.selectOptions(screen.getByLabelText('Category'), 'service');
 
     expect(screen.getByLabelText('Service Title')).toBeInTheDocument();

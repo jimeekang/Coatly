@@ -30,7 +30,7 @@ export function QuoteStatusCard({
   return (
     <div className="rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2.5">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-outline">Status</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Status</p>
         <StatusBadge tone={QUOTE_STATUS_TONE[status] ?? 'neutral'} label={QUOTE_STATUS_LABELS[status]} />
       </div>
       {meta && <p className="mt-2 text-xs text-on-surface-variant">{meta}</p>}

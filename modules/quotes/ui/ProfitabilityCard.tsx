@@ -97,7 +97,7 @@ export function ProfitabilityCard({
   if (isRoomRate || !split) {
     if (!isRoomRate) return null;
     return (
-      <section className="rounded-xl border border-outline-variant bg-white">
+      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest">
         {header}
         <div className="px-5 py-4">
           <p className="text-sm text-on-surface-variant">
@@ -128,7 +128,7 @@ export function ProfitabilityCard({
       : null;
 
   return (
-    <section className="rounded-xl border border-outline-variant bg-white">
+    <section className="rounded-xl border border-outline-variant bg-surface-container-lowest">
       {/* Header */}
       {header}
 

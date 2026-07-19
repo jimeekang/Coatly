@@ -1,4 +1,5 @@
 import type { InvoiceSummary } from '@/modules/invoices/domain/invoices';
+import { SectionLabel } from '@/components/shared/SectionLabel';
 import { formatAUD } from '@/utils/format';
 
 type KpiVariant = 'warning' | 'positive' | 'neutral';
@@ -23,9 +24,7 @@ function KpiTile({
   const styles = VARIANT_STYLES[variant];
   return (
     <div className={`rounded-xl border p-5 ${styles.tile}`}>
-      <p className="mb-3.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-        {label}
-      </p>
+      <SectionLabel className="mb-3.5">{label}</SectionLabel>
       <p
         className={`text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] tabular-nums sm:text-[32px] ${styles.value}`}
       >
@@ -45,9 +44,7 @@ export function InvoiceKpiBand({ summary }: { summary: InvoiceSummary }) {
 
   return (
     <section className="flex min-w-0 flex-col gap-3">
-      <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-outline">
-        This month
-      </p>
+      <SectionLabel>This month</SectionLabel>
       <div className="grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3.5">
         <KpiTile
           variant="warning"

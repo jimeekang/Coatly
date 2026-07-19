@@ -6,8 +6,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Sparkles } from 'lucide-react';
 import { GoogleAddressAutocomplete } from '@/components/forms/GoogleAddressAutocomplete';
+import {
+  FormField,
+  FormOptionalIndicator,
+  formControlClassName,
+} from '@/components/forms/FormField';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { normalizeAbn } from '@/lib/abn-lookup';
 import { useAbnLookup } from '@/hooks/useAbnLookup';
+import { cn } from '@/lib/utils';
 import {
   formatStreetAddressWithUnit,
   type ParsedGooglePlaceAddress,
@@ -24,6 +31,8 @@ const AU_STATES = [
   'WA',
 ] as const;
 
+// Only business name + ABN are required to finish onboarding; the rest can be
+// completed later in Settings. Optional fields still validate format if filled.
 const schema = z.object({
   businessName: z.string().min(1, 'Business name is required'),
   abn: z
@@ -31,28 +40,19 @@ const schema = z.object({
     .min(1, 'ABN is required')
     .transform((v) => v.replace(/\s/g, ''))
     .pipe(z.string().regex(/^\d{11}$/, 'ABN must be 11 digits')),
-  phone: z.string().min(1, 'Phone is required'),
-  addressLine1: z.string().min(1, 'Street address is required'),
-  city: z.string().min(1, 'Suburb is required'),
-  state: z.string().min(1, 'State is required'),
+  phone: z.string(),
+  addressLine1: z.string(),
+  city: z.string(),
+  state: z.string(),
   postcode: z
     .string()
-    .min(1, 'Postcode is required')
-    .regex(/^\d{4}$/, 'Postcode must be 4 digits'),
+    .refine((v) => v === '' || /^\d{4}$/.test(v), 'Postcode must be 4 digits'),
   createExampleData: z.boolean(),
 });
 
 type FormInput = z.infer<typeof schema>;
 
-const inputBase =
-  'w-full h-12 rounded-lg border px-4 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 focus:border-primary-container disabled:opacity-50 bg-white transition-colors';
-
-function inputClass(hasError: boolean) {
-  return `${inputBase} ${hasError ? 'border-error' : 'border-outline'}`;
-}
-
-const labelClass = 'block text-sm font-medium text-on-surface mb-1.5';
-const errorClass = 'mt-1.5 text-xs text-on-error-container';
+const errorTextClassName = 'mt-1 text-sm text-error';
 
 type CompleteOnboarding = (data: {
   businessName: string;
@@ -191,38 +191,32 @@ export default function OnboardingForm({
   }
 
   return (
-    <div className="border-outline rounded-2xl border bg-white p-6 shadow-sm">
-      {errors.root && (
-        <div
-          role="alert"
-          className="border-error bg-error-container text-on-error-container mb-5 rounded-lg border px-4 py-3 text-sm"
-        >
-          {errors.root.message}
-        </div>
-      )}
+    <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-sm">
+      <p className="mb-5 text-sm text-on-surface-variant">
+        Only your business name and ABN are needed to get started. You can finish
+        this later in Settings.
+      </p>
+
+      {errors.root && <ErrorAlert className="mb-5">{errors.root.message}</ErrorAlert>}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
         <div>
-          <label htmlFor="abn" className={labelClass}>
-            ABN <span className="text-error">*</span>
-          </label>
-          <input
-            id="abn"
+          <FormField
+            htmlFor="abn"
+            label="ABN"
+            required
             type="text"
             inputMode="numeric"
             autoComplete="off"
             placeholder="12 345 678 901"
             disabled={isPending}
-            className={inputClass(!!errors.abn)}
+            error={errors.abn?.message as string | undefined}
             {...register('abn')}
           />
-          {errors.abn && (
-            <p className={errorClass}>{errors.abn.message as string}</p>
-          )}
           <p
             className={`mt-1.5 text-xs ${
               abnLookup.status === 'error'
-                ? 'text-on-error-container'
+                ? 'text-error'
                 : abnLookup.status === 'success'
                   ? 'text-primary/90'
                   : 'text-on-surface-variant'
@@ -241,44 +235,35 @@ export default function OnboardingForm({
           </p>
         </div>
 
-        <div>
-          <label htmlFor="businessName" className={labelClass}>
-            Business Name <span className="text-error">*</span>
-          </label>
-          <input
-            id="businessName"
-            type="text"
-            autoComplete="organization"
-            placeholder="Smith's Painting"
-            disabled={isPending}
-            className={inputClass(!!errors.businessName)}
-            {...register('businessName')}
-          />
-          {errors.businessName && (
-            <p className={errorClass}>{errors.businessName.message}</p>
-          )}
-        </div>
+        <FormField
+          htmlFor="businessName"
+          label="Business Name"
+          required
+          type="text"
+          autoComplete="organization"
+          placeholder="Smith's Painting"
+          disabled={isPending}
+          error={errors.businessName?.message}
+          {...register('businessName')}
+        />
 
-        <div>
-          <label htmlFor="phone" className={labelClass}>
-            Phone <span className="text-error">*</span>
-          </label>
-          <input
-            id="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="0400 000 000"
-            disabled={isPending}
-            className={inputClass(!!errors.phone)}
-            {...register('phone')}
-          />
-          {errors.phone && <p className={errorClass}>{errors.phone.message}</p>}
-        </div>
+        <FormField
+          htmlFor="phone"
+          label="Phone"
+          optional
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="0400 000 000"
+          disabled={isPending}
+          error={errors.phone?.message}
+          {...register('phone')}
+        />
 
         <fieldset>
-          <legend className="text-on-surface mb-3 text-sm font-medium">
-            Business Address <span className="text-error">*</span>
+          <legend className="mb-3 flex items-center text-sm font-semibold text-on-surface">
+            Business Address
+            <FormOptionalIndicator />
           </legend>
 
           <div className="space-y-3">
@@ -297,10 +282,13 @@ export default function OnboardingForm({
                 }
                 onAddressSelected={applyGoogleAddress}
                 aria-invalid={!!errors.addressLine1}
-                className={inputClass(!!errors.addressLine1)}
+                className={cn(
+                  formControlClassName,
+                  errors.addressLine1 && 'border-error',
+                )}
               />
               {errors.addressLine1 && (
-                <p className={errorClass}>{errors.addressLine1.message}</p>
+                <p className={errorTextClassName}>{errors.addressLine1.message}</p>
               )}
             </div>
 
@@ -312,11 +300,14 @@ export default function OnboardingForm({
                   autoComplete="address-level2"
                   placeholder="Suburb"
                   disabled={isPending}
-                  className={inputClass(!!errors.city)}
+                  className={cn(
+                    formControlClassName,
+                    errors.city && 'border-error',
+                  )}
                   {...register('city')}
                 />
                 {errors.city && (
-                  <p className={errorClass}>{errors.city.message}</p>
+                  <p className={errorTextClassName}>{errors.city.message}</p>
                 )}
               </div>
 
@@ -329,11 +320,14 @@ export default function OnboardingForm({
                   placeholder="Postcode"
                   maxLength={4}
                   disabled={isPending}
-                  className={inputClass(!!errors.postcode)}
+                  className={cn(
+                    formControlClassName,
+                    errors.postcode && 'border-error',
+                  )}
                   {...register('postcode')}
                 />
                 {errors.postcode && (
-                  <p className={errorClass}>
+                  <p className={errorTextClassName}>
                     {errors.postcode.message as string}
                   </p>
                 )}
@@ -341,10 +335,16 @@ export default function OnboardingForm({
             </div>
 
             <div>
+              <label htmlFor="state" className="sr-only">
+                State
+              </label>
               <select
                 id="state"
                 disabled={isPending}
-                className={`${inputClass(!!errors.state)} text-on-surface`}
+                className={cn(
+                  formControlClassName,
+                  errors.state && 'border-error',
+                )}
                 {...register('state')}
               >
                 <option value="">Select state</option>
@@ -355,30 +355,30 @@ export default function OnboardingForm({
                 ))}
               </select>
               {errors.state && (
-                <p className={errorClass}>{errors.state.message}</p>
+                <p className={errorTextClassName}>{errors.state.message}</p>
               )}
             </div>
           </div>
         </fieldset>
 
-        <div className="border-success-container bg-success-container/70 rounded-xl border p-4">
+        <div className="rounded-xl border border-success-container bg-success-container/70 p-4">
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
               disabled={isPending}
-              className="border-primary-fixed text-primary focus:ring-primary-container mt-1 h-5 w-5 rounded focus:ring-2"
+              className="mt-1 h-5 w-5 rounded border-primary-fixed text-primary focus:ring-2 focus:ring-primary/40"
               {...register('createExampleData')}
             />
             <div>
-              <div className="text-primary flex items-center gap-2 text-sm font-semibold">
+              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
                 Add sample data
               </div>
-              <p className="text-primary/90 mt-1 text-sm">
+              <p className="mt-1 text-sm text-primary/90">
                 Optional. Add one sample customer, quote, and invoice so you can
                 explore the app straight away.
               </p>
-              <p className="text-primary-container mt-1 text-xs">
+              <p className="mt-1 text-xs text-primary-container">
                 This only runs when your workspace is empty.
               </p>
             </div>
@@ -388,7 +388,7 @@ export default function OnboardingForm({
         <button
           type="submit"
           disabled={isPending}
-          className="bg-primary hover:bg-primary/90 focus:ring-primary-container mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold text-on-primary transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending && (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

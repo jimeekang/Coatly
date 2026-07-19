@@ -7,10 +7,7 @@ import { NumericInput, sanitizeDecimalInput, sanitizeIntegerInput } from '@/comp
 import type { MaterialItem } from '@/modules/materials/domain/types';
 import type { QuoteLineItemFormInput } from '@/modules/quotes/domain/quote-schema';
 import { calculateQuoteLineItemsSubtotal } from '@/modules/quotes/domain/quotes';
-
-function formatAUD(cents: number) {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100);
-}
+import { formatAUD } from '@/utils/format';
 
 interface LineItemEntry extends QuoteLineItemFormInput {
   _key: string;
@@ -66,7 +63,7 @@ function QuantityInput({
           onChange(nextQuantity);
         }
       }}
-      className="min-h-11 w-20 rounded-lg border border-outline-variant bg-surface-container-lowest px-2 text-center text-sm text-on-surface focus:border-primary focus:outline-none"
+      className="min-h-11 w-20 rounded-xl border border-outline-variant bg-surface-container-lowest px-2 text-center text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
       aria-label={`${entry.name} quantity`}
     />
   );
@@ -116,7 +113,7 @@ export function LineItemsSection({ libraryItems, value, onChange }: LineItemsSec
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-on-primary"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-on-primary"
           >
             <Plus className="h-3.5 w-3.5" />
             Add Item

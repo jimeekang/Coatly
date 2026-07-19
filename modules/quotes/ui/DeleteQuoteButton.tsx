@@ -25,7 +25,7 @@ export function DeleteQuoteButton({ quoteId, quoteNumber }: { quoteId: string; q
       <button
         type="button"
         onClick={() => setShowModal(true)}
-        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-error/40 bg-white px-4 py-3 text-sm font-medium text-error transition-colors hover:bg-error/5 active:bg-error/10"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-error/40 bg-surface-container-lowest px-4 py-3 text-sm font-medium text-error transition-colors hover:bg-error/5 active:bg-error/10"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -54,7 +54,7 @@ export function DeleteQuoteButton({ quoteId, quoteNumber }: { quoteId: string; q
             if (e.target === e.currentTarget && !isPending) setShowModal(false);
           }}
         >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-sm rounded-2xl bg-surface-container-lowest p-6 shadow-xl">
             {/* Warning icon */}
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
               <svg

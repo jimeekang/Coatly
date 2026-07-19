@@ -61,7 +61,7 @@ function getStatusMessage(subscriptionState?: string) {
     return {
       title: 'Checkout canceled',
       body: `No charge was made. Pick a plan when you are ready to start using ${APP_NAME}.`,
-      tone: 'border-outline bg-white text-on-surface-variant',
+      tone: 'border-outline bg-surface-container-lowest text-on-surface-variant',
     };
   }
 
@@ -114,11 +114,11 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
   const statusMessage = getStatusMessage(resolvedSearchParams?.subscription);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(80,180,180,0.18),_transparent_42%),linear-gradient(180deg,_#f7fbfb_0%,_#eef5f4_100%)] px-4 py-8 md:px-6">
+    <main className="min-h-screen bg-surface px-4 py-8 md:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-center gap-8">
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-          <section className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_60px_rgba(22,42,42,0.08)] backdrop-blur md:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-primary-container">
+          <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-md md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-container">
               Activate {APP_NAME}
             </p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-on-surface md:text-4xl">
@@ -153,7 +153,7 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
                 </p>
                 <Link
                   href="/onboarding"
-                  className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-white"
+                  className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-outline px-4 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-lowest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   Back to onboarding
                 </Link>
@@ -161,7 +161,7 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-white/70 bg-white/92 p-5 shadow-[0_24px_60px_rgba(22,42,42,0.08)] backdrop-blur md:p-6">
+          <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-md md:p-6">
             <PricingSection
               subscription={subscription}
               mode="subscribe"

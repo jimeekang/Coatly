@@ -3,6 +3,7 @@
 import { useTransition, useOptimistic, useState } from 'react';
 import { setPublicQuoteOptionalLineItemSelection } from '@/modules/quotes/application/actions';
 import { formatAUD } from '@/utils/format';
+import { SectionLabel } from '@/components/shared/SectionLabel';
 import { groupQuoteLineItemsByCategory } from '@/modules/quotes/domain/quotes';
 
 interface OptionalItem {
@@ -120,9 +121,7 @@ export function PublicOptionalItems({
       <div className="space-y-4">
         {groupedItems.map((group) => (
           <div key={group.category} className="space-y-2">
-            <p className="text-on-surface-variant text-[10px] font-bold tracking-widest uppercase">
-              {group.label}
-            </p>
+            <SectionLabel>{group.label}</SectionLabel>
             {group.items.map((item) => {
               const selected = item.is_selected;
               return (
@@ -138,7 +137,7 @@ export function PublicOptionalItems({
                       : 'cursor-default',
                     selected
                       ? 'border-primary bg-success-container shadow-sm'
-                      : 'border-outline hover:border-primary-container/50 bg-white',
+                      : 'border-outline hover:border-primary-container/50 bg-surface-container-lowest',
                     !canEdit || isPending ? 'opacity-60' : '',
                   ].join(' ')}
                 >
@@ -148,12 +147,12 @@ export function PublicOptionalItems({
                         'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150',
                         selected
                           ? 'border-primary bg-primary'
-                          : 'border-outline group-hover:border-primary-container bg-white',
+                          : 'border-outline group-hover:border-primary-container bg-surface-container-lowest',
                       ].join(' ')}
                     >
                       {selected && (
                         <svg
-                          className="h-3 w-3 text-white"
+                          className="h-3 w-3 text-on-primary"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -190,7 +189,7 @@ export function PublicOptionalItems({
                           </p>
                           <span
                             className={[
-                              'mt-1 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide uppercase',
+                              'mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase',
                               selected
                                 ? 'bg-primary/10 text-primary'
                                 : 'bg-warning-container text-on-warning-container',

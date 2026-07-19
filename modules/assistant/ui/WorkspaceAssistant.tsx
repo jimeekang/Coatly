@@ -169,10 +169,10 @@ export function WorkspaceAssistant({
   }
 
   return (
-    <section className="mb-10 overflow-hidden rounded-2xl border border-outline bg-white shadow-sm">
-      <div className="border-b border-outline bg-gradient-to-br from-success-container via-white to-error-container px-4 py-5 md:px-5">
+    <section className="mb-10 overflow-hidden rounded-2xl border border-outline bg-surface-container-lowest shadow-sm">
+      <div className="border-b border-outline bg-gradient-to-br from-success-container via-surface-container-lowest to-error-container px-4 py-5 md:px-5">
         <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-white p-2.5 shadow-sm">
+          <div className="rounded-2xl bg-surface-container-lowest p-2.5 shadow-sm">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0">
@@ -186,13 +186,13 @@ export function WorkspaceAssistant({
               One prompt can find customers, quotes, and invoices or prepare a form draft
               for review before saving.
             </p>
-            <p className="mt-2 rounded-xl border border-white/70 bg-white/75 px-3 py-2 text-xs text-on-surface-variant">
+            <p className="mt-2 rounded-xl border border-outline-variant bg-surface-container-lowest/75 px-3 py-2 text-xs text-on-surface-variant">
               AI may use business, customer, quote, and invoice context. Review drafts before saving or sending.
             </p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-outline bg-white p-3 shadow-sm">
+        <div className="mt-4 rounded-2xl border border-outline bg-surface-container-lowest p-3 shadow-sm">
           <label htmlFor="workspace-ai-prompt" className="sr-only">
             Dashboard AI prompt
           </label>
@@ -212,7 +212,7 @@ export function WorkspaceAssistant({
                 key={example}
                 type="button"
                 onClick={() => setPrompt(example)}
-                className="rounded-full border border-outline bg-surface-container-low px-3 py-1.5 text-xs font-medium text-on-surface transition-colors hover:bg-white"
+                className="inline-flex min-h-11 items-center rounded-full border border-outline bg-surface-container-low px-3 text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-lowest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 {example}
               </button>
@@ -224,7 +224,7 @@ export function WorkspaceAssistant({
               type="button"
               onClick={handleRunPrompt}
               disabled={isPending || !prompt.trim()}
-              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
             >
               <Search className="h-4 w-4" />
               {isPending ? 'Working...' : 'Run Prompt'}
@@ -233,7 +233,7 @@ export function WorkspaceAssistant({
               type="button"
               onClick={clearAssistant}
               disabled={isPending && !result}
-              className="min-h-11 rounded-2xl border border-outline bg-white px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low disabled:opacity-50"
+              className="min-h-11 rounded-2xl border border-outline bg-surface-container-lowest px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50"
             >
               Clear
             </button>
@@ -246,16 +246,16 @@ export function WorkspaceAssistant({
           <div className="rounded-2xl border border-outline bg-surface-container-low p-4">
             {result && (
               <div className="flex items-start gap-3">
-                <div className="rounded-2xl bg-white p-2 shadow-sm">
+                <div className="rounded-2xl bg-surface-container-lowest p-2 shadow-sm">
                   <MessageSquareText className="h-4 w-4 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
                     {getIntentLabel(result.intent)}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-on-surface">{result.summary}</p>
                   {result.answer && (
-                    <p className="mt-3 rounded-2xl border border-outline bg-white px-4 py-3 text-sm text-on-surface">
+                    <p className="mt-3 rounded-2xl border border-outline bg-surface-container-lowest px-4 py-3 text-sm text-on-surface">
                       {result.answer}
                     </p>
                   )}
@@ -287,7 +287,7 @@ export function WorkspaceAssistant({
                   <Link
                     key={`${match.type}-${match.id}`}
                     href={match.href}
-                    className="rounded-2xl border border-outline bg-white p-4 shadow-sm transition-colors hover:bg-surface-container-low"
+                    className="rounded-2xl border border-outline bg-surface-container-lowest p-4 shadow-sm transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-3">
@@ -314,12 +314,12 @@ export function WorkspaceAssistant({
                         </span>
                       )}
                       {match.amount_cents != null && (
-                        <span className="rounded-full bg-white px-2.5 py-1 font-medium text-on-surface ring-1 ring-outline">
+                        <span className="rounded-full bg-surface-container-lowest px-2.5 py-1 font-medium text-on-surface ring-1 ring-outline">
                           {formatAUD(match.amount_cents)}
                         </span>
                       )}
                       {match.date_label && (
-                        <span className="rounded-full bg-white px-2.5 py-1 font-medium text-on-surface ring-1 ring-outline">
+                        <span className="rounded-full bg-surface-container-lowest px-2.5 py-1 font-medium text-on-surface ring-1 ring-outline">
                           {formatMatchDate(match.date_label)}
                         </span>
                       )}
@@ -333,9 +333,9 @@ export function WorkspaceAssistant({
           ) : null}
 
           {isCreateIntent && (
-            <div className="mt-5 rounded-2xl border border-outline bg-white p-4 shadow-sm">
+            <div className="mt-5 rounded-2xl border border-outline bg-surface-container-lowest p-4 shadow-sm">
               <div className="mb-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
                   Review Before Save
                 </p>
                 <h3 className="mt-1 text-lg font-bold text-on-surface">

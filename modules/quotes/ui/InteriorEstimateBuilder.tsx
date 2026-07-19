@@ -39,7 +39,7 @@ import {
 } from '@/modules/quotes/domain/interior-estimates';
 import type { QuickRoomSize, UserRateSettings } from '@/modules/price-rates/domain/rate-settings';
 
-const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-base text-on-surface';
+const FIELD = 'h-12 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 text-base text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
 const LABEL = 'mb-1.5 block text-sm font-medium text-on-surface';
 type RoomRef = '' | `${number}`;
 const INTERIOR_ADVANCED_ROOM_SNAPSHOT_VERSION = 1;

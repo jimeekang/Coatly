@@ -79,6 +79,7 @@ import type {
 } from '@/modules/materials/domain/types';
 import type { PricingMethod } from '@/modules/quotes/domain/quote';
 import { QuickEstimateTab } from '@/modules/price-rates/ui/QuickEstimateTab';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 
 // ─── Injected server actions ──────────────────────────────────────────────────
 // PriceRatesForm receives its server actions as props (wired in the price-rates
@@ -207,7 +208,7 @@ function EditableCell({
   ariaLabel: string;
 }) {
   return (
-    <span className="group/cell border-outline hover:border-on-surface-variant/45 hover:bg-surface-container-low focus-within:border-primary focus-within:ring-primary/20 inline-flex h-11 min-w-[7rem] items-center rounded-lg border bg-white pr-1.5 pl-2.5 transition-colors focus-within:bg-white focus-within:ring-2">
+    <span className="group/cell border-outline hover:border-on-surface-variant/45 hover:bg-surface-container-low focus-within:border-primary focus-within:ring-primary/20 inline-flex h-11 min-w-[7rem] items-center rounded-lg border bg-surface-container-lowest pr-1.5 pl-2.5 transition-colors focus-within:bg-surface-container-lowest focus-within:ring-2">
       <span className="text-on-surface-variant text-xs font-semibold">$</span>
       <NumericInput
         value={centsToDisplay(value)}
@@ -240,7 +241,7 @@ function DeleteIconButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="border-error/30 text-error hover:bg-error-container inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-white transition-colors"
+      className="border-error/30 text-error hover:bg-error-container inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-surface-container-lowest transition-colors"
     >
       <Trash2 className="h-4 w-4" />
     </button>
@@ -262,7 +263,7 @@ function RateSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-outline-variant overflow-hidden rounded-2xl border bg-white shadow-sm">
+    <section className="border-outline-variant overflow-hidden rounded-2xl border bg-surface-container-lowest shadow-sm">
       <header className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4 pb-3 sm:px-5 sm:pt-5">
         <SectionHeading eyebrow={eyebrow} title={title} subtitle={subtitle} />
         {actions && (
@@ -322,19 +323,19 @@ function RateMatrix({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-outline-variant bg-surface-container-low border-b">
-              <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
+              <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.14em] uppercase">
                 Surface
               </th>
               {cols.map((c) => (
                 <th
                   key={c.key}
-                  className="text-on-surface-variant px-3 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase"
+                  className="text-on-surface-variant px-3 py-2.5 text-center text-[10px] font-bold tracking-[0.14em] uppercase"
                 >
                   {c.label}
                 </th>
               ))}
               {extraCol && (
-                <th className="text-on-surface-variant px-3 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
+                <th className="text-on-surface-variant px-3 py-2.5 text-center text-[10px] font-bold tracking-[0.14em] uppercase">
                   {extraCol.header}
                 </th>
               )}
@@ -396,7 +397,7 @@ function RateMatrix({
         {rows.map((row) => (
           <li
             key={row.key}
-            className="border-outline-variant rounded-xl border bg-white p-3.5 shadow-sm"
+            className="border-outline-variant rounded-xl border bg-surface-container-lowest p-3.5 shadow-sm"
           >
             <div className="flex items-start justify-between gap-3 pb-2.5">
               <div className="min-w-0 flex-1">
@@ -501,7 +502,7 @@ function AddRateItemButton({
     <button
       type="button"
       onClick={onClick}
-      className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed bg-white px-4 text-sm font-medium"
+      className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-dashed bg-surface-container-lowest px-4 text-sm font-medium"
     >
       <Plus className="h-4 w-4" />
       {label}
@@ -692,7 +693,7 @@ function DoorRatesSection({
       <div className="flex flex-col gap-5">
         {/* Door scope availability */}
         <div>
-          <p className="text-on-surface-variant mb-2 text-[10px] font-bold tracking-[0.12em] uppercase">
+          <p className="text-on-surface-variant mb-2 text-[10px] font-bold tracking-[0.14em] uppercase">
             Available scopes — applies to all door types
           </p>
           <RateMatrix
@@ -764,7 +765,7 @@ function DoorRatesSection({
           </div>
         ))}
         {enabledDoorTypes.length === 0 && (
-          <div className="border-outline text-on-surface-variant rounded-xl border border-dashed bg-white p-8 text-center text-sm">
+          <div className="border-outline text-on-surface-variant rounded-xl border border-dashed bg-surface-container-lowest p-8 text-center text-sm">
             No door rates are active. Use Add Door Type to restore one.
           </div>
         )}
@@ -855,7 +856,7 @@ function WindowRatesSection({
           </div>
         ))}
         {enabledWindowTypes.length === 0 && (
-          <div className="border-outline text-on-surface-variant rounded-xl border border-dashed bg-white p-8 text-center text-sm">
+          <div className="border-outline text-on-surface-variant rounded-xl border border-dashed bg-surface-container-lowest p-8 text-center text-sm">
             No window rates are active. Use Add Window Type to restore one.
           </div>
         )}
@@ -875,7 +876,7 @@ function DayRateTab({
 }) {
   return (
     <div className="space-y-4">
-      <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
         <header className="mb-5">
           <SectionHeading
             title="Day Rate"
@@ -906,7 +907,7 @@ function DayRateTab({
                       });
                     }
                   }}
-                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-32 rounded-lg border bg-surface-container-lowest py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
                 />
                 <span className="text-on-surface-variant ml-1.5 text-xs">
                   /day
@@ -949,7 +950,7 @@ function DayRateTab({
                       });
                     }
                   }}
-                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-32 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-32 rounded-lg border bg-surface-container-lowest py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
                 />
                 <span className="text-on-surface-variant ml-1.5 text-xs">
                   /day
@@ -1008,7 +1009,7 @@ function DayRateTab({
                       onChange({ material_cost_percent: nextValue });
                     }
                   }}
-                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-20 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-20 rounded-lg border bg-surface-container-lowest px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
                 />
                 <span className="text-on-surface-variant text-sm">
                   % of labour cost
@@ -1064,7 +1065,7 @@ function RoomPresetForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Master Bedroom"
-          className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+          className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-full rounded-lg border bg-surface-container-lowest px-3 py-2 text-sm focus:ring-2 focus:outline-none"
         />
       </div>
       <div>
@@ -1078,7 +1079,7 @@ function RoomPresetForm({
             sanitize={sanitizeDecimalInput}
             onValueChange={setSqm}
             placeholder="20"
-            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-24 rounded-lg border bg-white px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
+            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-24 rounded-lg border bg-surface-container-lowest px-3 py-2 text-right text-sm focus:ring-2 focus:outline-none"
           />
           <span className="text-on-surface-variant ml-1.5 text-xs">sqm</span>
         </div>
@@ -1096,7 +1097,7 @@ function RoomPresetForm({
             sanitize={sanitizeDecimalInput}
             onValueChange={setRate}
             placeholder="450"
-            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-28 rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 w-28 rounded-lg border bg-surface-container-lowest py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
           />
         </div>
       </div>
@@ -1111,7 +1112,7 @@ function RoomPresetForm({
         <button
           type="button"
           onClick={onCancel}
-          className="border-outline text-on-surface hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-xl border bg-white px-4 text-sm font-medium"
+          className="border-outline text-on-surface hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-xl border bg-surface-container-lowest px-4 text-sm font-medium"
         >
           Cancel
         </button>
@@ -1139,7 +1140,7 @@ function RoomRateTab({
   const presets = rates.room_rate_presets;
 
   return (
-    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+    <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
           title="Room Rate Presets"
@@ -1161,16 +1162,16 @@ function RoomRateTab({
             <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="border-outline-variant bg-surface-container-low border-b">
-                  <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
+                  <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.14em] uppercase">
                     Room
                   </th>
-                  <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
+                  <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.14em] uppercase">
                     Size
                   </th>
-                  <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
+                  <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.14em] uppercase">
                     Flat Rate
                   </th>
-                  <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.12em] uppercase">
+                  <th className="text-on-surface-variant px-4 py-2.5 text-center text-[10px] font-bold tracking-[0.14em] uppercase">
                     $/sqm
                   </th>
                   <th className="px-4 py-3" />
@@ -1200,7 +1201,7 @@ function RoomRateTab({
                     <tr
                       key={preset.id}
                       className={
-                        i % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/40'
+                        i % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container-low/40'
                       }
                     >
                       <td className="text-on-surface px-4 py-3 font-medium">
@@ -1225,14 +1226,14 @@ function RoomRateTab({
                               setEditingId(preset.id);
                               setIsAdding(false);
                             }}
-                            className="border-outline text-on-surface hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-lg border bg-white px-3 text-xs font-medium"
+                            className="border-outline text-on-surface hover:bg-surface-container-low inline-flex min-h-11 items-center rounded-lg border bg-surface-container-lowest px-3 text-xs font-medium"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => onDelete(preset.id)}
-                            className="border-error/30 text-error hover:bg-error-container inline-flex min-h-11 items-center gap-1.5 rounded-lg border bg-white px-3 text-xs font-medium"
+                            className="border-error/30 text-error hover:bg-error-container inline-flex min-h-11 items-center gap-1.5 rounded-lg border bg-surface-container-lowest px-3 text-xs font-medium"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Delete
@@ -1249,7 +1250,7 @@ function RoomRateTab({
 
         {/* Empty state */}
         {presets.length === 0 && !isAdding && (
-          <div className="border-outline rounded-2xl border bg-white p-8 text-center">
+          <div className="border-outline rounded-2xl border bg-surface-container-lowest p-8 text-center">
             <p className="text-on-surface text-sm font-medium">
               No room presets yet
             </p>
@@ -1472,7 +1473,7 @@ function ManualTab({
   const previewItems = items.slice(0, 5);
 
   return (
-    <section className="border-outline-variant rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+    <section className="border-outline-variant rounded-2xl border bg-surface-container-lowest p-4 shadow-sm sm:p-6">
       <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
           title="Manual Quoting"
@@ -1526,11 +1527,7 @@ function ManualTab({
       </header>
 
       <div className="space-y-4">
-        {csvError && (
-          <p className="bg-error-container text-on-error-container border-error rounded-lg border px-4 py-3 text-sm">
-            {csvError}
-          </p>
-        )}
+        {csvError && <ErrorAlert>{csvError}</ErrorAlert>}
 
         {csvMessage && (
           <p className="border-outline-variant bg-surface text-on-surface rounded-lg border px-4 py-3 text-sm">
@@ -1559,7 +1556,7 @@ function ManualTab({
                     name: event.target.value,
                   }))
                 }
-                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
               />
             </div>
             <div>
@@ -1578,7 +1575,7 @@ function ManualTab({
                     unit: event.target.value,
                   }))
                 }
-                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
               >
                 {MANUAL_PRICE_BOOK_UNITS.map((unit) => (
                   <option key={unit} value={unit}>
@@ -1605,7 +1602,7 @@ function ManualTab({
                   onValueChange={(value) =>
                     setNewItem((prev) => ({ ...prev, price: value }))
                   }
-                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
+                  className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-surface-container-lowest py-2 pr-2 pl-6 text-right text-sm focus:ring-2 focus:outline-none"
                 />
               </div>
             </div>
@@ -1625,7 +1622,7 @@ function ManualTab({
                     description: event.target.value,
                   }))
                 }
-                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-white px-3 text-sm focus:ring-2 focus:outline-none"
+                className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full rounded-lg border bg-surface-container-lowest px-3 text-sm focus:ring-2 focus:outline-none"
               />
             </div>
             <div className="flex items-end">
@@ -1641,7 +1638,7 @@ function ManualTab({
         )}
 
         {pendingImportItems.length > 0 && (
-          <div className="border-outline-variant rounded-xl border bg-white p-4">
+          <div className="border-outline-variant rounded-xl border bg-surface-container-lowest p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-on-surface text-sm font-semibold">
                 Review {pendingImportItems.length} item
@@ -1654,7 +1651,7 @@ function ManualTab({
                     setPendingImportItems([]);
                     setCsvMessage(null);
                   }}
-                  className="border-outline text-on-surface hover:bg-surface-container-low inline-flex h-11 items-center rounded-xl border bg-white px-4 text-sm font-medium"
+                  className="border-outline text-on-surface hover:bg-surface-container-low inline-flex h-11 items-center rounded-xl border bg-surface-container-lowest px-4 text-sm font-medium"
                 >
                   Cancel
                 </button>
@@ -1672,13 +1669,13 @@ function ManualTab({
               <table className="w-full min-w-[520px] text-sm">
                 <thead>
                   <tr className="border-outline-variant bg-surface-container-low border-b">
-                    <th className="text-on-surface-variant px-3 py-2 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
+                    <th className="text-on-surface-variant px-3 py-2 text-left text-[10px] font-bold tracking-[0.14em] uppercase">
                       Item
                     </th>
-                    <th className="text-on-surface-variant px-3 py-2 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
+                    <th className="text-on-surface-variant px-3 py-2 text-left text-[10px] font-bold tracking-[0.14em] uppercase">
                       Unit
                     </th>
-                    <th className="text-on-surface-variant px-3 py-2 text-right text-[10px] font-bold tracking-[0.12em] uppercase">
+                    <th className="text-on-surface-variant px-3 py-2 text-right text-[10px] font-bold tracking-[0.14em] uppercase">
                       Price
                     </th>
                   </tr>
@@ -1717,7 +1714,7 @@ function ManualTab({
                 Description.
               </p>
             </div>
-            <span className="border-outline-variant text-on-surface-variant rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold">
+            <span className="border-outline-variant text-on-surface-variant rounded-lg border bg-surface-container-lowest px-3 py-1.5 text-xs font-semibold">
               {items.length} item{items.length === 1 ? '' : 's'}
             </span>
           </div>
@@ -1728,16 +1725,16 @@ function ManualTab({
             <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-outline-variant bg-surface-container-low border-b">
-                  <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
+                  <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.14em] uppercase">
                     Item
                   </th>
-                  <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
+                  <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.14em] uppercase">
                     Unit
                   </th>
-                  <th className="text-on-surface-variant px-4 py-2.5 text-right text-[10px] font-bold tracking-[0.12em] uppercase">
+                  <th className="text-on-surface-variant px-4 py-2.5 text-right text-[10px] font-bold tracking-[0.14em] uppercase">
                     Price
                   </th>
-                  <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.12em] uppercase">
+                  <th className="text-on-surface-variant px-4 py-2.5 text-left text-[10px] font-bold tracking-[0.14em] uppercase">
                     Category
                   </th>
                 </tr>
@@ -1840,7 +1837,7 @@ function ExteriorRatesSection({
             }
             placeholder="Surface name"
             aria-label="Custom surface name"
-            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full min-w-[8rem] rounded-lg border bg-white px-2.5 text-sm font-semibold outline-none focus:ring-2"
+            className="border-outline text-on-surface focus:border-primary focus:ring-primary/20 h-11 w-full min-w-[8rem] rounded-lg border bg-surface-container-lowest px-2.5 text-sm font-semibold outline-none focus:ring-2"
           />
           <div className="border-outline bg-surface-container-low inline-flex w-fit rounded-lg border p-0.5">
             {EXTERIOR_RATE_UNITS.map((unit) => (
@@ -1850,7 +1847,7 @@ function ExteriorRatesSection({
                 onClick={() => onCustomUpdate(custom.id, { unit })}
                 className={`min-h-11 rounded-lg px-3 text-xs font-semibold transition-colors ${
                   custom.unit === unit
-                    ? 'text-primary bg-white shadow-sm'
+                    ? 'text-primary bg-surface-container-lowest shadow-sm'
                     : 'text-on-surface-variant'
                 }`}
               >
@@ -1942,7 +1939,7 @@ function ExteriorRatesSection({
               key={surface}
               type="button"
               onClick={() => onSurfaceToggle(surface, true)}
-              className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-11 items-center gap-1.5 rounded-xl border border-dashed bg-white px-4 text-xs font-medium"
+              className="border-primary/50 text-primary hover:border-primary hover:bg-primary/5 inline-flex h-11 items-center gap-1.5 rounded-xl border border-dashed bg-surface-container-lowest px-4 text-xs font-medium"
             >
               <Plus className="h-3.5 w-3.5" />
               Restore {EXTERIOR_SURFACE_LABELS[surface]}
@@ -2346,7 +2343,7 @@ export function PriceRatesForm({
       {/* ── Method bar ──────────────────────────────────────────────────────── */}
       <div>
         <div
-          className="border-outline-variant no-scrollbar flex gap-1 overflow-x-auto rounded-xl border bg-white p-1 shadow-sm"
+          className="border-outline-variant no-scrollbar flex gap-1 overflow-x-auto rounded-xl border bg-surface-container-lowest p-1 shadow-sm"
           role="tablist"
           aria-label="Pricing method"
         >
@@ -2447,7 +2444,7 @@ export function PriceRatesForm({
                     onClick={() => setActiveScope(scope)}
                     className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all ${
                       isActive
-                        ? 'text-on-surface bg-white shadow-sm'
+                        ? 'text-on-surface bg-surface-container-lowest shadow-sm'
                         : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
@@ -2507,7 +2504,7 @@ export function PriceRatesForm({
 
       {/* ── Sticky save bar ─────────────────────────────────────────────────── */}
       {activeTab !== 'manual' && (
-        <div className="border-outline-variant sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 flex items-center justify-between gap-4 rounded-2xl border bg-white/92 px-5 py-3.5 shadow-md backdrop-blur-sm md:bottom-4">
+        <div className="border-outline-variant sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 flex items-center justify-between gap-4 rounded-2xl border bg-surface-container-lowest/95 px-5 py-3.5 shadow-md backdrop-blur-sm md:bottom-4">
           <div className="flex items-center gap-2 text-xs">
             {error && (
               <span className="text-error flex items-center gap-1.5">
@@ -2530,7 +2527,7 @@ export function PriceRatesForm({
           <button
             type="submit"
             disabled={isPending}
-            className="bg-primary text-on-primary hover:bg-primary/90 disabled:bg-surface-container-high disabled:text-outline disabled:hover:bg-surface-container-high inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
+            className="bg-primary text-on-primary hover:bg-primary/90 disabled:bg-surface-container-high disabled:text-on-surface-variant disabled:hover:bg-surface-container-high inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors disabled:cursor-not-allowed"
           >
             <Save className="h-4 w-4" />
             {isPending ? 'Saving…' : 'Save Rates'}

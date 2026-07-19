@@ -25,7 +25,16 @@ export default async function InvoiceDetailPage({ params }: Props) {
     getInvoiceFormOptions(),
   ]);
 
-  if (!invoice || error) notFound();
+  if (error) {
+    // Supabase `.single()` returns a PGRST116 "no rows" error when the invoice
+    // does not exist or is hidden by RLS — that is a genuine 404. Its message is
+    // either "…multiple (or no) rows returned" or "Cannot coerce the result to a
+    // single JSON object"; both contain "JSON object". Any other error is a real
+    // failure that must surface to the route error boundary, not be masked as 404.
+    if (/json object/i.test(error)) notFound();
+    throw new Error(error);
+  }
+  if (!invoice) notFound();
   const linkedQuote =
     invoice.quote_id
       ? formOptions.quotes.find((quote) => quote.id === invoice.quote_id) ?? null

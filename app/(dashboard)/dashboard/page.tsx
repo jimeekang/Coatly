@@ -52,7 +52,7 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('invoices')
-      .select('id, status, total_cents, amount_paid_cents, paid_at, due_date, paid_date')
+      .select('id, status, total_cents, amount_paid_cents, due_date, paid_date')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
     getInvoiceQuoteOptions(supabase, user.id),
@@ -108,11 +108,14 @@ export default async function DashboardPage() {
 
   const customerCount = customers?.length ?? 0;
 
+  // Mirror InvoiceKpiBand's "Paid this month" (summarizeInvoices): resolved
+  // status 'paid' + paid_date in the current Sydney month, summing amount_paid_cents.
+  // Keeps this figure identical to the invoices KPI band on the adjacent screen.
   const revenueThisMonthCents =
     invoiceSummaries.reduce((sum, invoice) => {
-      if (!invoice.paid_at) return sum;
-      if (getSydneyYearMonth(invoice.paid_at) !== currentSydneyMonth) return sum;
-      return sum + (invoice.amount_paid_cents ?? invoice.total_cents ?? 0);
+      if (invoice.effective_status !== 'paid') return sum;
+      if (!invoice.paid_date?.startsWith(currentSydneyMonth)) return sum;
+      return sum + (invoice.amount_paid_cents ?? 0);
     }, 0);
 
   // KPI: Quote approval rate this month
@@ -226,13 +229,13 @@ export default async function DashboardPage() {
           ? `${approvedQuoteCount} approved quote${approvedQuoteCount === 1 ? '' : 's'} can become invoices.`
           : 'Keep sent and overdue invoices visible before they slip.',
       href: pendingInvoiceCount > 0 ? '/invoices' : '/invoices/new',
-      cta: pendingInvoiceCount > 0 ? 'Open Invoices' : 'New Invoice',
+      cta: pendingInvoiceCount > 0 ? 'Open Invoices' : '+ New Invoice',
       variant: overdueInvoiceCount > 0 ? 'warning' : 'secondary',
     },
   ] as const;
 
   return (
-    <div className="min-w-0 space-y-5 sm:space-y-8">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
       {/* Welcome header */}
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-on-surface leading-tight sm:text-4xl">
@@ -321,9 +324,9 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Workspace assistant — primary action surface */}
-      <div>
-        {subscription.features.ai ? (
+      {/* Workspace assistant — primary action surface for Pro users */}
+      {subscription.features.ai && (
+        <div>
           <WorkspaceAssistant
             customers={customerOptions}
             quotes={quoteOptions}
@@ -333,14 +336,8 @@ export default async function DashboardPage() {
             createQuote={createQuote}
             createInvoice={createInvoice}
           />
-        ) : (
-          <UpgradePrompt
-            badge="Pro Plan"
-            title="Dashboard AI is available on Pro"
-            description="Starter keeps the core quoting and invoicing tools. Upgrade to Pro to ask the dashboard AI to search records or prepare customer, quote, and invoice drafts from one prompt."
-          />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Quote pipeline — quotes that need action */}
       <section aria-labelledby="pipeline-heading">
@@ -439,6 +436,15 @@ export default async function DashboardPage() {
           ))}
         </div>
       </section>
+
+      {/* Upgrade upsell — after the daily work queue, not ahead of it */}
+      {!subscription.features.ai && (
+        <UpgradePrompt
+          badge="Pro Plan"
+          title="Dashboard AI is available on Pro"
+          description="Starter keeps the core quoting and invoicing tools. Upgrade to Pro to ask the dashboard AI to search records or prepare customer, quote, and invoice drafts from one prompt."
+        />
+      )}
     </div>
   );
 }

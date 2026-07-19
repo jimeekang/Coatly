@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react';
 import { duplicateQuote } from '@/modules/quotes/application/actions';
+import { useToast } from '@/components/ui/toast';
 
 type Props = {
   quoteId: string;
@@ -11,6 +12,7 @@ type Props = {
 
 export function DuplicateQuoteButton({ quoteId, variant = 'full' }: Props) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
 
   function handleDuplicate(e: React.MouseEvent) {
     e.preventDefault();
@@ -18,7 +20,7 @@ export function DuplicateQuoteButton({ quoteId, variant = 'full' }: Props) {
     startTransition(async () => {
       const result = await duplicateQuote(quoteId);
       if (result?.error) {
-        alert(result.error);
+        toast.error(result.error);
       }
     });
   }
@@ -31,7 +33,7 @@ export function DuplicateQuoteButton({ quoteId, variant = 'full' }: Props) {
         disabled={isPending}
         title="Duplicate quote"
         aria-label="Duplicate quote"
-        className="flex h-11 w-11 items-center justify-center rounded-lg border border-outline-variant bg-surface-container text-on-surface-variant transition-colors hover:bg-surface-container-high active:bg-surface-container-highest disabled:opacity-50"
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-outline-variant bg-surface-container text-on-surface-variant transition-colors hover:bg-surface-container-high active:bg-surface-container-highest disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         {isPending ? (
           <svg
@@ -73,7 +75,7 @@ export function DuplicateQuoteButton({ quoteId, variant = 'full' }: Props) {
       type="button"
       onClick={handleDuplicate}
       disabled={isPending}
-      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-outline-variant bg-white px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container active:bg-surface-container disabled:opacity-60"
+      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container active:bg-surface-container disabled:opacity-60"
     >
       {isPending ? (
         <>

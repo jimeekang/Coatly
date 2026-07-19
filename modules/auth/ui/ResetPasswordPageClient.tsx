@@ -7,9 +7,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import { BrandLogo } from '@/components/branding/BrandLogo';
 import { APP_NAME } from '@/config/constants';
 import { createBrowserClient } from '@/lib/supabase/client';
+import { AuthShell } from '@/modules/auth/ui/AuthShell';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { FormField } from '@/components/forms/FormField';
 
 const resetPasswordSchema = z
   .object({
@@ -24,6 +26,9 @@ const resetPasswordSchema = z
 type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 type RecoveryState = 'checking' | 'ready' | 'invalid' | 'success';
+
+const linkClassName =
+  'rounded font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 export default function ResetPasswordPageClient() {
   const router = useRouter();
@@ -125,149 +130,99 @@ export default function ResetPasswordPageClient() {
 
   if (recoveryState === 'checking') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
-        <div className="w-full max-w-sm rounded-2xl border border-outline bg-white p-6 text-center shadow-sm">
-          <Loader2 className="mx-auto mb-4 h-6 w-6 animate-spin text-primary" />
-          <p className="text-sm text-on-surface-variant">Checking your reset link...</p>
+      <AuthShell
+        eyebrow="Password reset"
+        title="Checking your reset link"
+        description="Hang tight while we verify your reset link."
+      >
+        <div className="flex items-center justify-center py-2">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
         </div>
-      </main>
+      </AuthShell>
     );
   }
 
   if (recoveryState === 'invalid') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 flex justify-center">
-            <BrandLogo width={176} height={40} priority />
-          </div>
-
-          <div className="rounded-2xl border border-outline bg-white p-6 text-center shadow-sm">
-            <h1 className="mb-2 text-xl font-bold text-on-surface">Reset link expired</h1>
-            <p className="text-sm text-on-surface-variant">
-              This password reset link is invalid or has expired.
-            </p>
-            {serverError && (
-              <p className="mt-3 text-sm text-on-error-container">{serverError}</p>
-            )}
-            <Link
-              href="/forgot-password"
-              className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-            >
-              Request a new reset email
-            </Link>
-          </div>
-        </div>
-      </main>
+      <AuthShell
+        eyebrow="Password reset"
+        title="Reset link expired"
+        description="This password reset link is invalid or has expired."
+        footer={
+          <Link href="/forgot-password" className={linkClassName}>
+            Request a new reset email
+          </Link>
+        }
+      >
+        {serverError && <ErrorAlert>{serverError}</ErrorAlert>}
+      </AuthShell>
     );
   }
 
   if (recoveryState === 'success') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
-        <div className="w-full max-w-sm rounded-2xl border border-outline bg-white p-6 text-center shadow-sm">
-          <CheckCircle
-            className="mx-auto mb-4 h-12 w-12 text-primary-container"
-            aria-hidden="true"
-          />
-          <h1 className="mb-2 text-xl font-bold text-on-surface">Password updated</h1>
-          <p className="text-sm text-on-surface-variant">Redirecting you back into {APP_NAME}...</p>
+      <AuthShell
+        eyebrow="Password reset"
+        title="Password updated"
+        description={`Redirecting you back into ${APP_NAME}...`}
+      >
+        <div className="flex justify-center py-2">
+          <CheckCircle className="h-12 w-12 text-primary-container" aria-hidden="true" />
         </div>
-      </main>
+      </AuthShell>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface-container-low px-4 py-8">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex justify-center">
-          <BrandLogo width={176} height={40} priority />
-        </div>
+    <AuthShell
+      eyebrow="Password reset"
+      title="Set new password"
+      description="Enter a new password for your account."
+      footer={
+        <>
+          Remembered your password?{' '}
+          <Link href="/login" className={linkClassName}>
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      {serverError && <ErrorAlert className="mb-4">{serverError}</ErrorAlert>}
 
-        <div className="rounded-2xl border border-outline bg-white p-6 shadow-sm">
-          <h1 className="mb-2 text-xl font-bold text-on-surface">Set new password</h1>
-          <p className="mb-6 text-sm text-on-surface-variant">
-            Enter a new password for your account.
-          </p>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        <FormField
+          htmlFor="password"
+          label="New password"
+          type="password"
+          autoComplete="new-password"
+          placeholder="Min. 8 characters"
+          disabled={isPending}
+          error={errors.password?.message}
+          {...register('password')}
+        />
 
-          {serverError && (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg border border-error bg-error-container px-4 py-3 text-sm text-on-error-container"
-            >
-              {serverError}
-            </div>
+        <FormField
+          htmlFor="confirmPassword"
+          label="Confirm new password"
+          type="password"
+          autoComplete="new-password"
+          placeholder="Repeat your new password"
+          disabled={isPending}
+          error={errors.confirmPassword?.message}
+          {...register('confirmPassword')}
+        />
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isPending && (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           )}
-
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-on-surface"
-              >
-                New password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Min. 8 characters"
-                disabled={isPending}
-                aria-invalid={!!errors.password}
-                aria-describedby={errors.password ? 'password-error' : undefined}
-                className="h-12 w-full rounded-lg border border-outline px-4 text-sm text-on-surface focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
-                {...register('password')}
-              />
-              {errors.password && (
-                <p id="password-error" className="mt-1.5 text-xs text-on-error-container">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-1.5 block text-sm font-medium text-on-surface"
-              >
-                Confirm new password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Repeat your new password"
-                disabled={isPending}
-                aria-invalid={!!errors.confirmPassword}
-                aria-describedby={
-                  errors.confirmPassword ? 'confirmPassword-error' : undefined
-                }
-                className="h-12 w-full rounded-lg border border-outline px-4 text-sm text-on-surface focus:border-primary-container focus:outline-none focus:ring-2 focus:ring-primary-fixed/30 disabled:opacity-50"
-                {...register('confirmPassword')}
-              />
-              {errors.confirmPassword && (
-                <p
-                  id="confirmPassword-error"
-                  className="mt-1.5 text-xs text-on-error-container"
-                >
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-on-primary transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isPending && (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              )}
-              Update password
-            </button>
-          </form>
-        </div>
-      </div>
-    </main>
+          Update password
+        </button>
+      </form>
+    </AuthShell>
   );
 }
