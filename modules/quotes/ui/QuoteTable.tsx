@@ -222,24 +222,24 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                 >
                   <Link
                     href={`/quotes/${quote.id}`}
-                    className="focus-visible:ring-primary/30 block min-w-0 rounded-2xl p-3 pr-12 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset sm:p-5 sm:pr-14"
+                    className="focus-visible:ring-primary/30 block min-w-0 rounded-2xl p-3 pr-16 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset sm:p-5 sm:pr-20"
                   >
-                    <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
+                    <div className="mb-3 min-w-0">
+                      <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
                         <SectionLabel className="truncate">
                           {quote.quote_number}
                         </SectionLabel>
-                        <h3 className="text-on-surface truncate text-base leading-tight font-bold">
-                          {quote.customer.company_name || quote.customer.name}
-                        </h3>
-                        <p className="text-on-surface-variant mt-0.5 truncate text-sm font-medium">
-                          {quote.title || 'Untitled quote'}
-                        </p>
+                        <StatusBadge
+                          tone={tone}
+                          label={QUOTE_STATUS_LABELS[quote.status]}
+                        />
                       </div>
-                      <StatusBadge
-                        tone={tone}
-                        label={QUOTE_STATUS_LABELS[quote.status]}
-                      />
+                      <h3 className="text-on-surface truncate text-base leading-tight font-bold">
+                        {quote.customer.company_name || quote.customer.name}
+                      </h3>
+                      <p className="text-on-surface-variant mt-0.5 truncate text-sm font-medium">
+                        {quote.title || 'Untitled quote'}
+                      </p>
                     </div>
                     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-0.5">
@@ -315,7 +315,7 @@ export function QuoteTable({ quotes }: { quotes: QuoteListItem[] }) {
                     </div>
                   </Link>
                   {/* Duplicate button — sits outside the Link to prevent event bubbling */}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute right-3 top-3 sm:right-5 sm:top-5">
                     <DuplicateQuoteButton quoteId={quote.id} variant="icon" />
                   </div>
                 </li>
