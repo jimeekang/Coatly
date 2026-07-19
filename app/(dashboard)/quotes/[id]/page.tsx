@@ -222,7 +222,7 @@ export default async function QuoteDetailPage({
           />
 
           {/* ── detail-grid: main card + sidebar ── */}
-          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(18rem,0.9fr)] xl:gap-6">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[2fr_1fr] xl:gap-6">
             <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
               {/* ── Main card: Line items + Totals ── */}
               <section className="border-outline-variant bg-surface-container-lowest min-w-0 rounded-2xl border shadow-sm">
