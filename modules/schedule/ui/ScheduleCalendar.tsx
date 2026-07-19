@@ -223,6 +223,17 @@ function useTabletAgendaViewport(): boolean {
   );
 }
 
+function useBodyScrollLock(): void {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+}
+
 function ymd(year: number, month: number, day: number): string {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
@@ -546,6 +557,7 @@ function EventModal({
 }) {
   const router = useRouter();
   const toast = useToast();
+  useBodyScrollLock();
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [form, setForm] = useState<EventFormState>(
@@ -754,6 +766,7 @@ function JobScheduleModal({
 }) {
   const router = useRouter();
   const toast = useToast();
+  useBodyScrollLock();
   const [isPending, startTransition] = useTransition();
   const [isManagingDays, startManageDaysTransition] = useTransition();
   const initialStart = job.startDate ?? job.scheduledDate;
