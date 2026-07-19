@@ -282,7 +282,7 @@ export function QuoteActions({
             disabled={anyPending}
             aria-expanded={isMoreOpen}
             aria-haspopup="menu"
-            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high focus-visible:ring-primary/30 flex min-h-11 flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+            className="border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-container-high focus-visible:ring-primary/30 flex min-h-16 w-full flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -413,7 +413,9 @@ export function QuoteActions({
           type="button"
           onClick={() => setShowDeleteModal(true)}
           disabled={anyPending || hasLinkedInvoices}
-          className="border-error/30 bg-error/5 text-error hover:bg-error/10 focus-visible:ring-error/30 flex min-h-11 flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-[11px] font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+          className={`border-error/30 bg-error/5 text-error hover:bg-error/10 focus-visible:ring-error/30 flex min-h-11 flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50 ${
+            publicQuoteUrl ? 'col-span-2 sm:col-span-1' : ''
+          }`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
