@@ -55,7 +55,7 @@ export default async function NewQuotePage({
         className="mb-5"
       />
 
-      {quoteUsage && (
+      {quoteUsage && quoteUsage.limit !== null && (
         <div className="border-outline-variant bg-surface-container-low mb-5 rounded-xl border px-4 py-3">
           <SectionLabel>Starter Usage</SectionLabel>
           <p className="text-on-surface mt-1 text-base font-semibold">
